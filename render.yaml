@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: golmok-battle
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: INVITE_CODE
+        sync: false
+      - key: GIST_ID
+        sync: false
+      - key: GIST_TOKEN
+        sync: false

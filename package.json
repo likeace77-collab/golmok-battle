@@ -1,0 +1,19 @@
+{
+  "name": "golmok-battle",
+  "version": "1.0.0",
+  "description": "골목대전: 친구와 하는 턴제 요괴 배틀",
+  "main": "server/index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node --test test/engine.test.js"
+  },
+  "dependencies": {
+    "ws": "^8.21.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

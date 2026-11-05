@@ -1,0 +1,60 @@
+# 골목대전
+
+친구와 둘이서 하는 턴제 요괴 배틀 웹게임입니다. 서버 한 대를 켜 두면 둘 다 브라우저(폰 포함)로 접속해서 플레이합니다.
+
+## 실행
+
+Node.js 18 이상이 필요합니다.
+
+```bash
+npm install
+npm start
+```
+
+`http://localhost:3000` 으로 접속합니다.
+
+## 친구와 같이 하기
+
+서버가 필요해서 GitHub Pages 같은 정적 호스팅에서는 돌아가지 않습니다.
+
+**같은 와이파이**: 서버를 켠 컴퓨터의 내부 IP로 접속합니다. 예: `http://192.168.0.10:3000`
+
+**인터넷 너머 (EC2 등)**: 항상 켜져 있는 서버에 올립니다.
+
+```bash
+# 서버에서
+npm install --omit=dev
+npm i -g pm2
+INVITE_CODE=우리끼리 PORT=3000 pm2 start server/index.js --name golmok
+pm2 save
+```
+
+보안 그룹에서 TCP 3000번을 열고 `http://서버IP:3000` 으로 접속합니다. 주소가 공개되므로 `INVITE_CODE`는 꼭 설정하세요. 이 방식은 HTTPS가 아니라서 비밀번호가 암호화되지 않습니다. 다른 곳에 쓰는 비밀번호는 쓰지 마세요. HTTPS를 쓰려면 앞에 Nginx나 Caddy를 두거나 Cloudflare Tunnel을 쓰면 됩니다. 프록시에서 WebSocket 업그레이드(`/ws`)를 허용하고 `X-Forwarded-Proto`를 넘겨 주어야 합니다.
+
+**폰만 있을 때 (Render 무료)**: `render.yaml`이 들어 있어서 GitHub 저장소를 Render에 연결하면 바로 뜹니다. 무료 서버는 쉬면 파일이 지워지므로 아래의 `GIST_ID`, `GIST_TOKEN`을 꼭 넣으세요. 15분 동안 접속이 없으면 잠들고, 다음 접속 때 1분쯤 걸려 깨어납니다.
+
+## 설정
+
+| 환경변수 | 기본값 | 설명 |
+| --- | --- | --- |
+| `PORT` | 3000 | 서버 포트 |
+| `INVITE_CODE` | 없음 | 설정하면 계정 만들 때 코드가 필요 |
+| `TURN_SECONDS` | 90 | 턴 제한 시간. 넘기면 자동으로 행동 |
+| `DATA_DIR` | `./data` | 계정과 전적이 저장되는 폴더 |
+| `GIST_ID` | 없음 | 데이터를 함께 저장할 비밀 Gist의 id |
+| `GIST_TOKEN` | 없음 | `gist` 권한만 준 GitHub 토큰 |
+
+계정, 아바타, 팀, 전적은 `data/db.json`에 저장됩니다. 이 폴더를 지우면 전부 사라집니다. 재시작하면 파일이 초기화되는 호스팅에서는 `DATA_DIR`을 영구 디스크로 지정하세요. 진행 중인 대전은 메모리에만 있어서 서버를 재시작하면 사라집니다.
+
+## 고쳐 보기
+
+- 요괴, 스킬, 상성, 밸런스: `server/data.js`
+- 요괴와 아바타 그림: `public/js/art.js` (새 요괴는 같은 id로 그림을 추가)
+- 전투 규칙: `server/engine.js`
+
+## 테스트
+
+```bash
+npm test                 # 전투 규칙과 봇 대전 3000판
+node test/e2e.js         # 브라우저 2개로 온라인 대전 (playwright 필요)
+```
