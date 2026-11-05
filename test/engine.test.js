@@ -122,6 +122,14 @@ test('대전 전: 선봉을 고르기 전까지 숨기고, 고른 요괴가 나�
   assert.equal(E.viewFor(b, 1).opp.active.species, 'daeya');
 });
 
+test('모든 스킬에 전용 연출이 있다', () => {
+  const fx = require('fs').readFileSync(require('path').join(__dirname, '../public/js/fx.js'), 'utf8');
+  const body = fx.slice(fx.indexOf('const MOVE_FX'), fx.indexOf('function weatherFx'));
+  for (const id of [...Object.keys(MOVES), 'struggle']) {
+    assert.match(body, new RegExp(`\\n    ${id}(:|\\()`), id);
+  }
+});
+
 test('선제 기술은 스피드가 느려도 먼저 나간다', () => {
   const b = battle(custom('jangseung', ['ambush']), custom('bangpae', ['highvolt']));
   move(b, 0, 'ambush');

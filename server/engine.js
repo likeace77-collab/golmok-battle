@@ -172,7 +172,7 @@ function faintCheck(b, s, m, ev) {
 function publicMon(m) {
   return {
     species: m.species, name: m.name, types: m.types,
-    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages,
+    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded,
   };
 }
 
@@ -283,7 +283,7 @@ function useMove(b, s, index, ev) {
   if (slot) slot.pp--;
 
   ev.push({
-    t: 'move', side: s, move: mv.n, type: mv.type, cat: mv.cat,
+    t: 'move', side: s, id: slot ? slot.id : 'struggle', move: mv.n, type: mv.type, cat: mv.cat,
     text: `${josa(me.name, '은/는')} ${josa(mv.n, '을/를')} 썼다!`,
   });
 
@@ -405,7 +405,7 @@ function statusMove(b, s, me, o, foe, mv, ev) {
     const hair = mv.seed === 'any';
     if (foe.seeded || (!hair && foe.types.includes('grass'))) { msg(ev, '그러나 효과가 없었다.'); return; }
     foe.seeded = hair ? 'hair' : 'seed';
-    msg(ev, hair ? `머리카락이 ${foe.name}에게 엉겨붙었다!` : `${foe.name}에게 씨앗을 심었다!`);
+    ev.push({ t: 'seed', side: o, kind: foe.seeded, text: hair ? `머리카락이 ${foe.name}에게 엉겨붙었다!` : `${foe.name}에게 씨앗을 심었다!` });
     return;
   }
   if (mv.foe) for (const [k, v] of Object.entries(mv.foe)) changeStage(b, o, foe, k, v, ev);

@@ -13,17 +13,32 @@ const Battle = (() => {
   const WEATHER = { sun: '땡볕', rain: '소나기', dust: '황사' };
   const $ = (s) => app.querySelector(s);
 
+  // 바닥에 깔린 압정. 자리는 쪽마다 고정이라 판 내내 같은 곳에 보입니다.
+  function tackLayer(side, cx, cy, rx, ry) {
+    const spots = [[-.9, .1], [-.62, -.5], [-.5, .55], [-.2, -.1], [-.05, .8], [.1, -.7], [.32, .3], [.55, -.35], [.7, .6], [.92, -.05]];
+    return `<g class="tk tk-${side}">${spots.map(([x, y], i) => {
+      const tx = cx + x * rx, ty = cy + y * ry;
+      return `<g transform="translate(${tx} ${ty}) rotate(${(i * 47) % 40 - 20})"><path d="M-1 0L0 7L1 0z" fill="#C7CDD6" stroke="#1a1433" stroke-width="1"/><ellipse rx="5" ry="2.5" fill="#F2B705" stroke="#1a1433" stroke-width="1.2"/></g>`;
+    }).join('')}</g>`;
+  }
+
   const SCENE = `<svg class="bg" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-    <rect width="400" height="300" fill="#F27A4B"/><rect y="70" width="400" height="60" fill="#F7A24B"/>
-    <circle cx="300" cy="96" r="34" fill="#FFD23F"/>
+    <rect class="sky" width="400" height="300" fill="#F27A4B"/><rect class="sky2" y="70" width="400" height="60" fill="#F7A24B"/>
+    <g class="wx wx-sun"><g class="rays">${Array.from({ length: 12 }, (_, i) => `<path d="M0 -62L10 -130L-10 -130Z" fill="#FFE45C" transform="rotate(${i * 30})"/>`).join('')}</g></g>
+    <circle class="sun" cx="300" cy="96" r="34" fill="#FFD23F"/>
     <path d="M0 150V96l34-18 34 18v-6h52v-22l44-14 40 14v30h34V72l52-16 52 16v22h58v56z" fill="#6A3A8C"/>
     <path d="M0 160v-34h80v-30l40-12 40 12v30h60v-22h76v22h50V96h54v64z" fill="#3B2A78"/>
     <g fill="#FFD23F"><rect x="22" y="134" width="12" height="12"/><rect x="124" y="108" width="12" height="12"/><rect x="238" y="124" width="12" height="12"/><rect x="346" y="112" width="12" height="12"/><rect x="366" y="134" width="12" height="12"/></g>
     <rect x="186" y="34" width="9" height="130" fill="#1a1433"/><rect x="162" y="48" width="56" height="6" fill="#1a1433"/>
     <path d="M0 40Q90 74 162 50M218 50q90 26 182-12M0 60q90 34 166 0" fill="none" stroke="#1a1433" stroke-width="2"/>
-    <rect y="160" width="400" height="140" fill="#5C5A72"/><rect y="160" width="400" height="9" fill="#3a3550"/>
+    <rect class="road" y="160" width="400" height="140" fill="#5C5A72"/><rect y="160" width="400" height="9" fill="#3a3550"/>
     <path d="M0 232h400" stroke="#FFD23F" stroke-width="4" stroke-dasharray="30 22"/>
+    <g class="wx wx-rain"><path d="M0 0h400v46q-18 16-40 4-20 18-46 2-24 18-52 0-22 16-48 0-26 16-50-2-24 14-46 0-24 14-44 2-34 16-74-4z" fill="#3a3550"/>
+      <path d="M0 0h400v24q-30 12-60 0-34 14-70 0-30 12-66 0-34 12-68 0-34 14-70 0-30 12-66 0z" fill="#59606c"/>
+      <ellipse cx="60" cy="196" rx="44" ry="7" fill="#7fc8e8aa"/><ellipse cx="346" cy="250" rx="46" ry="8" fill="#7fc8e8aa"/><ellipse cx="206" cy="282" rx="52" ry="8" fill="#7fc8e8aa"/></g>
+    <g class="wx wx-dust"><path d="M0 170q50-40 110-16t110-12 180 10v148H0z" fill="#D9B66A88"/></g>
     <ellipse cx="288" cy="166" rx="74" ry="15" fill="#1a143355"/><ellipse cx="106" cy="274" rx="92" ry="18" fill="#1a143355"/>
+    ${tackLayer('opp', 288, 172, 74, 14)}${tackLayer('me', 106, 268, 94, 20)}
   </svg>`;
 
   const mine = () => disp.me.mons[disp.me.active];
@@ -98,13 +113,15 @@ const Battle = (() => {
         <div class="mon opp" id="m-opp"></div>
         <div class="mon me" id="m-me"></div>
         <div class="fx"></div>
+        <canvas class="fxc" id="fxc"></canvas>
         <div class="plate opp" id="p-opp"></div>
         <div class="plate me" id="p-me"></div>
-        <div class="tag" id="wtag" hidden></div>
+        <div class="field" id="field"></div>
       </section>
       <div class="say" id="say" role="status"></div>
       <div id="panel"></div>`;
     $('#say').onclick = () => skip?.();
+    Fx.attach($('#scene'), $('#fxc'));
   }
 
   function say(text) { const s = $('#say'); if (s) s.textContent = text; }
@@ -139,6 +156,7 @@ const Battle = (() => {
     const lb = { atk: '공', def: '방', spa: '특공', spd: '특방', spe: '속', acc: '명' };
     $(`#p-${key}`).innerHTML = `<div class="nm">${m.name}
       ${m.status ? `<span class="badge">${STATUS[m.status]}</span>` : ''}
+      ${m.seeded ? `<span class="badge">${m.seeded === 'hair' ? '머리카락' : '씨앗'}</span>` : ''}
       ${stages.map(([k, v]) => `<span class="badge">${lb[k]}${v > 0 ? '+' : ''}${v}</span>`).join('')}</div>
       <div class="bar"><i></i></div>${key === 'me' ? '<div class="num"></div>' : ''}`;
     setBar(key, m);
@@ -161,10 +179,13 @@ const Battle = (() => {
   }
 
   function drawWeather() {
-    const s = $('#scene'), tag = $('#wtag');
-    s.className = `scene${disp.weather ? ` w-${disp.weather}` : ''}`;
-    tag.hidden = !disp.weather;
-    tag.textContent = disp.weather ? WEATHER[disp.weather] : '';
+    const s = $('#scene');
+    s.className = `scene${disp.weather ? ` w-${disp.weather}` : ''}${disp.me.hazard ? ' haz-me' : ''}${disp.opp.hazard ? ' haz-opp' : ''}`;
+    const chips = [];
+    if (disp.weather) chips.push(`<span class="f-${disp.weather}">${WEATHER[disp.weather]} ${disp.weatherTurns}턴</span>`);
+    if (disp.opp.hazard) chips.push('<span class="f-tack">상대 쪽 압정</span>');
+    if (disp.me.hazard) chips.push('<span class="f-tack">내 쪽 압정</span>');
+    $('#field').innerHTML = chips.join('');
   }
 
   function syncAll() {
@@ -207,8 +228,8 @@ const Battle = (() => {
       case 'turn': break;
       case 'msg': await wait(850); break;
       case 'move':
-        if (e.cat !== 'x') anim(key, 'lunge', 340);
-        await wait(800); break;
+        await wait(Math.max(760, Fx.play(e.id, key)));
+        break;
       case 'miss': await wait(800); break;
       case 'hp': {
         const m = dispMon(key);
@@ -220,7 +241,7 @@ const Battle = (() => {
             burst(key, G.data.TYPES[e.moveType].c);
             pop(key, e.crit ? `급소! ${e.dmg}` : e.eff > 1 ? `${e.dmg}!` : String(e.dmg), e.crit || e.eff > 1);
           } else pop(key, String(e.dmg));
-        } else if (e.healed) pop(key, '회복');
+        } else if (e.healed) { pop(key, '회복'); Fx.heal(key); }
         await wait(620); break;
       }
       case 'faint': {
@@ -248,15 +269,22 @@ const Battle = (() => {
       }
       case 'status':
         dispMon(key).status = e.status; drawPlate(key, dispMon(key));
+        Fx.status(key, e.status);
+        await wait(850); break;
+      case 'seed':
+        dispMon(key).seeded = e.kind; drawPlate(key, dispMon(key));
         await wait(850); break;
       case 'stage':
         dispMon(key).stages[e.stat] = e.value; drawPlate(key, dispMon(key));
         pop(key, e.up ? '상승' : '하락');
+        Fx.stage(key, e.up);
         await wait(800); break;
       case 'weather':
-        disp.weather = e.weather; drawWeather();
+        disp.weather = e.weather; disp.weatherTurns = e.weather ? 5 : 0; drawWeather();
         await wait(1000); break;
-      case 'hazard': await wait(900); break;
+      case 'hazard':
+        disp[key].hazard = e.on; drawWeather();
+        await wait(900); break;
       case 'over': await wait(1200); break;
       default:
     }

@@ -1,0 +1,534 @@
+// 스킬 연출. 전투 장면 위 캔버스에 그리고, 요괴에게는 동작 클래스를 붙입니다.
+const Fx = (() => {
+  const INK = '#1a1433';
+  const SPEED = Number(new URLSearchParams(location.search).get('speed') ?? 1);
+  const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let scene, cv, ctx, W = 1, H = 1, u = 1, raf = 0, items = [];
+
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const lerp = (a, b, p) => a + (b - a) * p;
+  const out = (p) => 1 - (1 - p) ** 2;
+  const fade = (p, tail = .3) => (p > 1 - tail ? (1 - p) / tail : 1);
+
+  function attach(sceneEl, canvas) { scene = sceneEl; cv = canvas; ctx = cv.getContext('2d'); measure(); }
+
+  function measure() {
+    const r = scene.getBoundingClientRect();
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    if (cv.width !== Math.round(r.width * dpr)) {
+      cv.width = Math.round(r.width * dpr);
+      cv.height = Math.round(r.height * dpr);
+    }
+    W = r.width; H = r.height; u = W / 400;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function spot(key) {
+    const s = scene.getBoundingClientRect();
+    const m = document.getElementById(`m-${key}`).getBoundingClientRect();
+    const size = m.width || W * .35;
+    const x = m.left - s.left + size / 2, y = m.top - s.top + size / 2;
+    return { x, y, r: size / 2, foot: y + size * .42 };
+  }
+
+  function add(dur, draw, delay = 0) {
+    items.push({ t0: performance.now() + delay * SPEED, dur: dur * SPEED, draw });
+    if (!raf) raf = requestAnimationFrame(loop);
+  }
+
+  function loop(now) {
+    ctx.clearRect(0, 0, W, H);
+    items = items.filter((it) => {
+      const p = (now - it.t0) / it.dur;
+      if (p < 0) return true;
+      if (p >= 1) return false;
+      ctx.save();
+      it.draw(p);
+      ctx.restore();
+      return true;
+    });
+    raf = items.length ? requestAnimationFrame(loop) : 0;
+    if (!raf) ctx.clearRect(0, 0, W, H);
+  }
+
+  /* ---------- 작은 그림 ---------- */
+  const line = (w = 1.2) => { ctx.strokeStyle = INK; ctx.lineWidth = w; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; };
+  const paint = (fill, w) => { ctx.fillStyle = fill; ctx.fill(); line(w); ctx.stroke(); };
+  const blob = (fill) => { ctx.beginPath(); ctx.arc(0, 0, 8, 0, 7); paint(fill); };
+  const teardrop = (fill) => {
+    ctx.beginPath(); ctx.moveTo(0, -11); ctx.bezierCurveTo(9, -1, 8, 8, 0, 8); ctx.bezierCurveTo(-8, 8, -9, -1, 0, -11); paint(fill);
+  };
+  const star = (fill, n = 4, inner = .3) => {
+    ctx.beginPath();
+    for (let i = 0; i < n * 2; i++) {
+      const a = (i * Math.PI) / n, r = i % 2 ? 10 * inner : 10;
+      ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+    }
+    ctx.closePath(); paint(fill, .9);
+  };
+  const SPRITE = {
+    flame() { teardrop('#F2622E'); ctx.scale(.5, .5); ctx.translate(0, 3); teardrop('#FFD23F'); },
+    wisp() { teardrop('#4B6BFF'); ctx.scale(.5, .5); ctx.translate(0, 3); teardrop('#BFE4FF'); },
+    drop() { teardrop('#2F7DE1'); },
+    broth() { teardrop('#D9301F'); },
+    honey() { blob('#E7A020'); },
+    mustard() { blob('#7A4A2A'); },
+    glob() { blob('#9A4FB8'); },
+    bubble() { ctx.beginPath(); ctx.arc(0, 0, 8, 0, 7); ctx.fillStyle = '#C993DD'; ctx.fill(); line(); ctx.stroke(); ctx.beginPath(); ctx.arc(-3, -3, 2, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); },
+    leaf() { ctx.beginPath(); ctx.moveTo(-11, 0); ctx.quadraticCurveTo(0, -9, 11, 0); ctx.quadraticCurveTo(0, 9, -11, 0); paint('#3FA34D'); ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.stroke(); },
+    shard() { ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(5, 0); ctx.lineTo(0, 12); ctx.lineTo(-5, 0); ctx.closePath(); paint('#BCE9F2'); },
+    snow() { star('#fff', 6, .4); },
+    rock() { ctx.beginPath(); [[-9, -3], [-3, -9], [6, -8], [10, 1], [4, 9], [-7, 7]].forEach(([x, y]) => ctx.lineTo(x, y)); ctx.closePath(); paint('#8c8b84'); },
+    dirt() { ctx.beginPath(); ctx.arc(0, 0, 5, 0, 7); paint('#A9713A'); },
+    dust() { ctx.beginPath(); ctx.arc(0, 0, 6, 0, 7); ctx.fillStyle = '#D9B66A'; ctx.fill(); },
+    tack() {
+      ctx.beginPath(); ctx.moveTo(-2, 1); ctx.lineTo(0, 10); ctx.lineTo(2, 1); ctx.closePath(); paint('#C7CDD6', .8);
+      ctx.beginPath(); ctx.ellipse(0, 0, 7, 3.5, 0, 0, 7); paint('#F2B705', .9);
+    },
+    spark() { star('#FFE45C', 4, .28); },
+    sparkle() { star('#fff', 4, .22); },
+    petal() { ctx.beginPath(); ctx.ellipse(0, 0, 8, 4, 0, 0, 7); paint('#FFD23F', .9); },
+    spore() { ctx.beginPath(); ctx.arc(0, 0, 4, 0, 7); paint('#D7F2B4', .8); },
+    seed() { ctx.beginPath(); ctx.ellipse(0, 0, 4.5, 7, 0, 0, 7); paint('#8B5A2B'); },
+    coin() { ctx.beginPath(); ctx.ellipse(0, 0, 8, 8, 0, 0, 7); paint('#FFD23F'); ctx.beginPath(); ctx.rect(-2.5, -2.5, 5, 5); ctx.stroke(); },
+    scrap() { ctx.beginPath(); ctx.moveTo(-8, 6); ctx.lineTo(0, -9); ctx.lineTo(9, 3); ctx.closePath(); paint('#AEB7C2'); },
+    needle() { ctx.beginPath(); ctx.moveTo(-14, -2); ctx.lineTo(14, 0); ctx.lineTo(-14, 2); ctx.closePath(); paint('#9A4FB8', .9); },
+    crescent() { ctx.beginPath(); ctx.arc(0, 0, 14, -1.3, 1.3); ctx.arc(-9, 0, 15, .95, -.95, true); ctx.closePath(); paint('#E6FFF4', 1); },
+    hair() { ctx.beginPath(); ctx.moveTo(-12, 0); ctx.bezierCurveTo(-6, -9, -2, 9, 3, 0); ctx.bezierCurveTo(6, -6, 9, 5, 12, -2); ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.stroke(); },
+    z() { ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.strokeText('Z', 0, 0); ctx.fillStyle = '#fff'; ctx.fillText('Z', 0, 0); },
+    arrowUp() { ctx.beginPath(); [[0, -11], [9, 0], [3.5, 0], [3.5, 10], [-3.5, 10], [-3.5, 0], [-9, 0]].forEach(([x, y]) => ctx.lineTo(x, y)); ctx.closePath(); paint('#E8402C'); },
+    arrowDown() { ctx.rotate(Math.PI); ctx.beginPath(); [[0, -11], [9, 0], [3.5, 0], [3.5, 10], [-3.5, 10], [-3.5, 0], [-9, 0]].forEach(([x, y]) => ctx.lineTo(x, y)); ctx.closePath(); paint('#2F7DE1'); },
+    plate() { ctx.beginPath(); ctx.rect(-10, -7, 20, 14); paint('#D7DDE5'); ctx.beginPath(); ctx.moveTo(-6, -3); ctx.lineTo(0, -3); ctx.strokeStyle = '#fff'; ctx.stroke(); },
+    brick() { ctx.beginPath(); ctx.rect(-12, -6, 24, 12); paint('#B5502F'); },
+    heart() { ctx.beginPath(); ctx.moveTo(0, 8); ctx.bezierCurveTo(-13, -2, -6, -11, 0, -4); ctx.bezierCurveTo(6, -11, 13, -2, 0, 8); paint('#7BE08A', .9); },
+    /* 큰 소품 */
+    hammer() { ctx.fillStyle = '#8B5A2B'; ctx.beginPath(); ctx.rect(-2.5, -2, 5, 20); paint('#8B5A2B'); ctx.beginPath(); ctx.rect(-11, -11, 22, 11); paint('#7C8798'); },
+    bucket() { ctx.beginPath(); ctx.moveTo(-10, -8); ctx.lineTo(10, -8); ctx.lineTo(7, 10); ctx.lineTo(-7, 10); ctx.closePath(); paint('#AEB7C2'); ctx.beginPath(); ctx.arc(0, -8, 10, Math.PI, 0); ctx.stroke(); },
+    club() { ctx.beginPath(); ctx.moveTo(-3, 16); ctx.lineTo(3, 16); ctx.lineTo(8, -12); ctx.quadraticCurveTo(0, -18, -8, -12); ctx.closePath(); paint('#8B5A2B'); [[-3, -8], [3, -4], [-1, 2]].forEach(([x, y]) => { ctx.beginPath(); ctx.arc(x, y, 1.6, 0, 7); ctx.fillStyle = '#FFD23F'; ctx.fill(); ctx.stroke(); }); },
+    lid() { ctx.beginPath(); ctx.ellipse(0, 0, 13, 13, 0, 0, 7); paint('#6e7380'); ctx.beginPath(); ctx.ellipse(0, 0, 8, 8, 0, 0, 7); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.moveTo(0, -8); ctx.lineTo(0, 8); ctx.stroke(); },
+    magnet() { ctx.beginPath(); ctx.arc(0, -2, 10, Math.PI, 0); ctx.lineTo(10, 10); ctx.lineTo(4, 10); ctx.lineTo(4, -2); ctx.arc(0, -2, 4, 0, Math.PI, true); ctx.lineTo(-4, 10); ctx.lineTo(-10, 10); ctx.closePath(); paint('#E8402C'); },
+    plunger() { ctx.beginPath(); ctx.rect(-2, -16, 4, 18); paint('#C9924F'); ctx.beginPath(); ctx.moveTo(-11, 12); ctx.quadraticCurveTo(-10, 0, 0, 0); ctx.quadraticCurveTo(10, 0, 11, 12); ctx.closePath(); paint('#D52C2C'); },
+    teeth() { ctx.beginPath(); [[-12, -6], [-8, 3], [-4, -6], [0, 3], [4, -6], [8, 3], [12, -6]].forEach(([x, y]) => ctx.lineTo(x, y)); ctx.closePath(); paint('#fff'); },
+    fist() { ctx.beginPath(); ctx.arc(0, 0, 10, 0, 7); paint('#FFD23F'); ctx.beginPath(); ctx.moveTo(-3, -9); ctx.lineTo(-3, -2); ctx.moveTo(3, -9); ctx.lineTo(3, -2); ctx.stroke(); },
+    paddle() { ctx.beginPath(); ctx.rect(-2, 2, 4, 16); paint('#A9713A'); ctx.beginPath(); ctx.rect(-6, -16, 12, 18); paint('#C9924F'); },
+  };
+
+  function sprite(kind, x, y, size, rot = 0, alpha = 1) {
+    ctx.save();
+    ctx.translate(x, y); ctx.rotate(rot); ctx.scale((size * u) / 10, (size * u) / 10);
+    ctx.globalAlpha = alpha;
+    SPRITE[kind]();
+    ctx.restore();
+  }
+
+  /* ---------- 기본 동작 ---------- */
+  function act(key, name, ms) {
+    const el = document.getElementById(`m-${key}`);
+    if (!el) return;
+    el.style.setProperty('--d', `${ms * SPEED}ms`);
+    el.classList.remove('lunge', 'hit', 'enter');
+    [...el.classList].filter((c) => c.startsWith('act-')).forEach((c) => el.classList.remove(c));
+    void el.offsetWidth;
+    el.classList.add(`act-${name}`);
+    setTimeout(() => el.classList.remove(`act-${name}`), ms * SPEED);
+  }
+  function tint(key, name, ms, delay = 0) {
+    setTimeout(() => {
+      const el = document.getElementById(`m-${key}`);
+      if (!el) return;
+      el.style.setProperty('--t', `${ms * SPEED}ms`);
+      el.classList.add(`tint-${name}`);
+      setTimeout(() => el.classList.remove(`tint-${name}`), ms * SPEED);
+    }, delay * SPEED);
+  }
+  function shake(mag, dur, delay = 0) {
+    add(dur, (p) => {
+      const m = mag * u * (1 - p);
+      scene.style.transform = p > .96 ? '' : `translate(${rnd(-m, m)}px,${rnd(-m, m)}px)`;
+    }, delay);
+    setTimeout(() => { scene.style.transform = ''; }, (dur + delay + 60) * SPEED);
+  }
+  const flash = (color, dur, delay = 0, a = .55) => add(dur, (p) => { ctx.globalAlpha = a * (1 - p); ctx.fillStyle = color; ctx.fillRect(0, 0, W, H); }, delay);
+
+  // from에서 to로 물체를 날립니다. arc는 포물선 높이.
+  function spray(kind, from, to, { n = 8, dur = 420, gap = 50, size = 9, spread = 14, arc = 0, spin = 0, delay = 0, grow = 0, aim = false } = {}) {
+    for (let i = 0; i < n; i++) {
+      const ox = rnd(-spread, spread) * u, oy = rnd(-spread, spread) * u, r0 = rnd(0, 6), sp = rnd(.6, 1) * spin * (Math.random() < .5 ? -1 : 1);
+      const angle = Math.atan2(to.y - from.y, to.x - from.x);
+      add(dur, (p) => {
+        const e = out(p);
+        const x = lerp(from.x, to.x + ox, e), y = lerp(from.y, to.y + oy, e) - Math.sin(p * Math.PI) * arc * u;
+        sprite(kind, x, y, size * (1 + grow * p), aim ? angle : spin ? r0 + sp * p : 0, fade(p, .15));
+      }, delay + i * gap);
+    }
+    return delay + n * gap + dur;
+  }
+  function burst(kind, at, { n = 10, dist = 60, dur = 450, size = 8, delay = 0, spin = 3 } = {}) {
+    for (let i = 0; i < n; i++) {
+      const a = rnd(0, 6.28), d = rnd(.5, 1) * dist * u, r0 = rnd(0, 6);
+      add(dur, (p) => {
+        const e = out(p);
+        sprite(kind, at.x + Math.cos(a) * d * e, at.y + Math.sin(a) * d * e + p * p * 14 * u, size * (1 - p * .4), r0 + spin * p, fade(p));
+      }, delay + rnd(0, 60));
+    }
+    return delay + dur + 60;
+  }
+  function rise(kind, at, { n = 8, dur = 800, size = 8, spread = 40, height = 70, delay = 0, gap = 70 } = {}) {
+    for (let i = 0; i < n; i++) {
+      const ox = rnd(-spread, spread) * u, sway = rnd(-10, 10) * u;
+      add(dur, (p) => sprite(kind, at.x + ox + Math.sin(p * 6) * sway, at.y + 20 * u - height * u * p, size, 0, fade(p, .4)), delay + i * gap);
+    }
+    return delay + n * gap + dur;
+  }
+  function fall(kind, at, { n = 10, dur = 450, size = 9, spread = 40, height = 180, delay = 0, gap = 60, rot = 0 } = {}) {
+    for (let i = 0; i < n; i++) {
+      const ox = rnd(-spread, spread) * u;
+      add(dur, (p) => sprite(kind, at.x + ox, at.y - height * u * (1 - p * p), size, rot, fade(p, .12)), delay + i * gap);
+    }
+    return delay + n * gap + dur;
+  }
+  function orbit(kind, at, { n = 8, r = 50, dur = 900, size = 8, delay = 0, turns = 1.5, rising = 0, squash = .4 } = {}) {
+    for (let i = 0; i < n; i++) {
+      const a0 = (i / n) * 6.28;
+      add(dur, (p) => {
+        const a = a0 + p * turns * 6.28;
+        sprite(kind, at.x + Math.cos(a) * r * u * (1 - p * .15), at.y + Math.sin(a) * r * u * squash - rising * u * p, size, a, fade(p));
+      }, delay);
+    }
+    return delay + dur;
+  }
+  function ring(at, { color = '#fff', r0 = 10, r1 = 80, dur = 450, w = 4, delay = 0, squash = 1 } = {}) {
+    add(dur, (p) => {
+      ctx.globalAlpha = 1 - p; ctx.strokeStyle = color; ctx.lineWidth = w * u * (1 - p * .7);
+      ctx.beginPath(); ctx.ellipse(at.x, at.y, lerp(r0, r1, out(p)) * u, lerp(r0, r1, out(p)) * u * squash, 0, 0, 7); ctx.stroke();
+    }, delay);
+    return delay + dur;
+  }
+  function cloud(at, colors, { n = 12, dur = 1000, size = 24, spread = 50, delay = 0 } = {}) {
+    for (let i = 0; i < n; i++) {
+      const ox = rnd(-spread, spread) * u, oy = rnd(-spread * .6, spread * .6) * u, c = colors[i % colors.length];
+      add(dur, (p) => {
+        ctx.globalAlpha = .75 * Math.sin(Math.min(1, p * 1.2) * Math.PI) ** .6;
+        ctx.fillStyle = c;
+        ctx.beginPath(); ctx.arc(at.x + ox, at.y + oy - p * 12 * u, size * u * (.5 + p * .7), 0, 7); ctx.fill();
+      }, delay + i * 35);
+    }
+    return delay + n * 35 + dur;
+  }
+  function beam(a, b, { color = '#7fc8e8', core = '#fff', w = 16, dur = 600, delay = 0 } = {}) {
+    add(dur, (p) => {
+      const on = Math.min(1, p * 5), wid = w * u * Math.sin(Math.min(1, p * 1.15) * Math.PI) ** .5 * (1 + Math.sin(p * 40) * .12);
+      const x = lerp(a.x, b.x, on), y = lerp(a.y, b.y, on);
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = INK; ctx.lineWidth = wid + 3 * u; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(x, y); ctx.stroke();
+      ctx.strokeStyle = color; ctx.lineWidth = wid; ctx.stroke();
+      ctx.strokeStyle = core; ctx.lineWidth = wid * .35; ctx.stroke();
+    }, delay);
+    return delay + dur;
+  }
+  function jag(a, b, wob) {
+    const n = 7, pts = [[a.x, a.y]];
+    for (let i = 1; i < n; i++) {
+      const t = i / n;
+      pts.push([lerp(a.x, b.x, t) + rnd(-wob, wob) * u, lerp(a.y, b.y, t) + rnd(-wob, wob) * u]);
+    }
+    pts.push([b.x, b.y]);
+    return pts;
+  }
+  // 번개: 프레임마다 모양이 바뀌어 지지직거립니다.
+  function bolt(a, b, { dur = 600, w = 4, wob = 16, color = '#FFE45C', delay = 0, flick = 3 } = {}) {
+    let pts = jag(a, b, wob), last = -1;
+    add(dur, (p) => {
+      const step = Math.floor(p * dur * SPEED / (28 * flick));
+      if (step !== last) { pts = jag(a, b, wob); last = step; }
+      if (step % 4 === 3) return;
+      ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      const path = () => { ctx.beginPath(); pts.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.stroke(); };
+      ctx.strokeStyle = INK; ctx.lineWidth = (w + 3) * u; path();
+      ctx.strokeStyle = color; ctx.lineWidth = w * u; path();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = w * .35 * u; path();
+    }, delay);
+    return delay + dur;
+  }
+  function whip(a, b, { color = '#3FA34D', dur = 420, delay = 0, curve = 70, w = 6 } = {}) {
+    add(dur, (p) => {
+      const c = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - curve * u * (1 - p * 2) };
+      const reach = Math.min(1, p * 2.2);
+      ctx.lineCap = 'round';
+      const path = () => { ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(c.x, c.y, lerp(a.x, b.x, reach), lerp(a.y, b.y, reach)); ctx.stroke(); };
+      ctx.globalAlpha = fade(p, .25);
+      ctx.strokeStyle = INK; ctx.lineWidth = (w + 3) * u; path();
+      ctx.strokeStyle = color; ctx.lineWidth = w * u; path();
+    }, delay);
+    return delay + dur;
+  }
+  function slash(at, { angle = -.8, len = 90, color = '#fff', dur = 260, delay = 0, w = 7 } = {}) {
+    add(dur, (p) => {
+      const dx = Math.cos(angle) * len * u, dy = Math.sin(angle) * len * u, h = Math.min(1, p * 2), t = Math.max(0, p * 2 - 1);
+      ctx.lineCap = 'round';
+      const path = () => { ctx.beginPath(); ctx.moveTo(at.x - dx * (.5 - t), at.y - dy * (.5 - t)); ctx.lineTo(at.x - dx * (.5 - h), at.y - dy * (.5 - h)); ctx.stroke(); };
+      ctx.strokeStyle = INK; ctx.lineWidth = (w + 3) * u; path();
+      ctx.strokeStyle = color; ctx.lineWidth = w * u; path();
+    }, delay);
+    return delay + dur;
+  }
+  // 커다란 소품을 움직입니다.
+  function prop(kind, { from, to, dur = 500, size = 40, rot0 = 0, rot1 = 0, delay = 0, hold = 0 } = {}) {
+    add(dur + hold, (p) => {
+      const q = Math.min(1, p * (dur + hold) / dur), e = q * q;
+      sprite(kind, lerp(from.x, to.x, e), lerp(from.y, to.y, e), size, lerp(rot0, rot1, e), fade(p, .15));
+    }, delay);
+    return delay + dur;
+  }
+  function tornado(at, { dur = 1000, kind = 'dust', color = '#CFEDE1', delay = 0 } = {}) {
+    add(dur, (p) => {
+      const b = at.foot, top = at.y - 70 * u;
+      ctx.globalAlpha = fade(p, .25);
+      for (let i = 0; i < 9; i++) {
+        const t = i / 8, y = lerp(b, top, t), rx = lerp(8, 56, t) * u, ph = p * 26 + i;
+        ctx.strokeStyle = INK; ctx.lineWidth = 5 * u; ctx.beginPath(); ctx.ellipse(at.x + Math.sin(ph) * 6 * u, y, rx, rx * .28, 0, 0, 7); ctx.stroke();
+        ctx.strokeStyle = color; ctx.lineWidth = 3 * u; ctx.stroke();
+      }
+    }, delay);
+    return delay + dur;
+  }
+  function windLines(a, b, { n = 7, dur = 340, delay = 0, gap = 50, spread = 34, color = '#E6FFF4', len = .35 } = {}) {
+    for (let i = 0; i < n; i++) {
+      const o = rnd(-spread, spread) * u;
+      add(dur, (p) => {
+        const t0 = Math.max(0, p * 1.4 - len), t1 = Math.min(1, p * 1.4);
+        ctx.lineCap = 'round';
+        const pt = (t) => [lerp(a.x, b.x, t), lerp(a.y, b.y, t) + o + Math.sin(t * 6) * 6 * u];
+        const path = () => { ctx.beginPath(); ctx.moveTo(...pt(t0)); ctx.lineTo(...pt(t1)); ctx.stroke(); };
+        ctx.strokeStyle = INK; ctx.lineWidth = 5 * u; path();
+        ctx.strokeStyle = color; ctx.lineWidth = 2.5 * u; path();
+      }, delay + i * gap);
+    }
+    return delay + n * gap + dur;
+  }
+  function cracks(at, { delay = 0, dur = 900 } = {}) {
+    const rays = Array.from({ length: 7 }, () => { const a = rnd(0, 6.28); return [Math.cos(a), Math.sin(a) * .35, rnd(50, 110)]; });
+    add(dur, (p) => {
+      ctx.globalAlpha = fade(p, .3); ctx.strokeStyle = INK; ctx.lineWidth = 3 * u; ctx.lineJoin = 'round';
+      rays.forEach(([dx, dy, l]) => {
+        const len = l * u * Math.min(1, p * 5);
+        ctx.beginPath(); ctx.moveTo(at.x, at.foot); ctx.lineTo(at.x + dx * len * .5 + 6 * u, at.foot + dy * len * .5); ctx.lineTo(at.x + dx * len, at.foot + dy * len); ctx.stroke();
+      });
+    }, delay);
+  }
+
+  /* ---------- 스킬별 연출: 값은 총 재생 시간(ms) ---------- */
+  const above = (p, h = 120) => ({ x: p.x, y: Math.max(52 * u, p.y - h * u), foot: p.foot, r: p.r });
+  const ground = (p) => ({ x: p.x, y: p.foot, foot: p.foot, r: p.r });
+
+  const MOVE_FX = {
+    // 불
+    ember: (A, T, k, t) => { act(k, 'cast', 420); spray('flame', A, T, { n: 6, gap: 70, arc: 24, size: 8 }); burst('flame', T, { delay: 500, n: 6, dist: 34 }); return 850; },
+    flame: (A, T, k, t) => { act(k, 'cast', 800); spray('flame', A, T, { n: 24, gap: 26, dur: 340, size: 10, grow: .7, spread: 18 }); tint(t, 'burn', 600, 350); return 1050; },
+    blaze(A, T, k, t) { act(k, 'charge', 620); orbit('flame', A, { n: 8, r: 46, dur: 520, size: 8 }); prop('flame', { from: above(A, 40), to: T, delay: 520, dur: 300, size: 50 }); ring(T, { color: '#F2622E', delay: 820, r1: 130, w: 9 }); ring(T, { color: '#FFD23F', delay: 900, r1: 100 }); burst('flame', T, { delay: 820, n: 22, dist: 110, size: 12 }); flash('#FFB52E', 420, 820); shake(10, 450, 820); tint(t, 'burn', 600, 820); return 1400; },
+    coalhead(A, T, k, t) { orbit('flame', A, { n: 6, r: 40, dur: 340, size: 7 }); act(k, 'dash', 640); burst('flame', T, { delay: 320, n: 14, dist: 70, size: 10 }); ring(T, { color: '#F28A1E', delay: 320 }); return 900; },
+    firerush(A, T, k, t) { act(k, 'dash', 720); spray('flame', A, T, { n: 16, gap: 18, dur: 300, size: 12, spread: 24 }); burst('flame', T, { delay: 340, n: 20, dist: 95, size: 12 }); flash('#F2622E', 280, 340, .4); shake(8, 300, 340); return 1050; },
+    heatwave(A) { return weatherFx('sun'); },
+    // 물
+    squirt: (A, T, k) => { act(k, 'cast', 400); beam(A, T, { color: '#7fc8e8', w: 7, dur: 400 }); burst('drop', T, { delay: 240, n: 7, dist: 36, size: 6 }); return 760; },
+    bucket(A, T, k) {
+      act(k, 'throw', 420);
+      const top = above(T, 92);
+      prop('bucket', { from: above(T, 170), to: top, dur: 300, size: 34 });
+      prop('bucket', { from: top, to: top, delay: 300, dur: 160, size: 34, rot0: 0, rot1: 2.4, hold: 300 });
+      fall('drop', T, { delay: 420, n: 16, gap: 16, dur: 240, height: 88, spread: 26, size: 8 });
+      burst('drop', ground(T), { delay: 640, n: 12, dist: 62, size: 6 });
+      return 1050;
+    },
+    hose(A, T, k) { act(k, 'cast', 950); beam(A, T, { color: '#2F7DE1', core: '#BFE4FF', w: 26, dur: 880 }); burst('drop', T, { delay: 240, n: 26, dist: 95, size: 8, dur: 620 }); shake(6, 500, 300); return 1150; },
+    paddle(A, T, k) { act(k, 'lunge', 440); prop('paddle', { from: above(T, 56), to: { x: T.x + 8 * u, y: T.y - 6 * u }, dur: 240, size: 38, rot0: -1.4, rot1: 1, delay: 90 }); burst('drop', T, { delay: 320, n: 12, dist: 62 }); return 800; },
+    rainy() { return weatherFx('rain'); },
+    // 풀
+    leafcut(A, T, k) { act(k, 'cast', 380); spray('leaf', A, T, { n: 8, gap: 42, dur: 300, size: 10, spin: 14 }); slash(T, { delay: 360, color: '#D7F2B4' }); slash(T, { delay: 440, angle: .8, color: '#D7F2B4' }); return 780; },
+    vinewhip(A, T, k) { act(k, 'cast', 620); whip(A, T, { curve: 80 }); whip(A, T, { delay: 300, curve: -60 }); slash(T, { delay: 190, color: '#7ED08A', w: 5 }); slash(T, { delay: 480, angle: .7, color: '#7ED08A', w: 5 }); return 860; },
+    sapdrain(A, T, k, t) { act(k, 'cast', 900); tint(t, 'drain', 800); spray('heart', T, A, { n: 12, gap: 55, dur: 420, size: 7, arc: 24, spread: 20 }); rise('sparkle', A, { delay: 620, n: 5, dur: 420, size: 6 }); return 1150; },
+    pollen(A, T, k) { act(k, 'cast', 500); cloud(T, ['#FFE9A0', '#FFD23F'], { delay: 280, n: 10, dur: 800, size: 22 }); orbit('petal', T, { delay: 160, n: 16, r: 66, dur: 950, turns: 1.2, rising: 20 }); spray('petal', A, T, { n: 10, gap: 26, dur: 340, spin: 8, size: 9 }); return 1250; },
+    seed(A, T, k) { act(k, 'throw', 400); spray('seed', A, ground(T), { n: 4, gap: 90, arc: 70, dur: 460, spin: 10, size: 8, spread: 18 }); burst('leaf', ground(T), { delay: 700, n: 8, dist: 42, size: 7 }); return 1050; },
+    sunbathe(A, T, k) { act(k, 'charge', 900); fall('sparkle', A, { n: 10, gap: 60, height: 130, size: 9, dur: 520 }); rise('leaf', A, { n: 8, dur: 750, size: 7 }); ring(A, { color: '#FFE45C', r1: 76, delay: 180, dur: 700 }); return 1150; },
+    lullaby(A, T, k, t) { act(k, 'sway', 900); spray('spore', A, T, { n: 16, gap: 36, dur: 620, arc: 40, size: 9, spread: 26 }); rise('z', T, { delay: 650, n: 4, gap: 110, dur: 620, size: 9, spread: 24 }); return 1250; },
+    // 전기
+    static(A, T, k, t) { act(k, 'cast', 380); bolt(A, T, { dur: 260, w: 2.2, wob: 11 }); burst('spark', T, { delay: 160, n: 8, dist: 38, size: 7 }); tint(t, 'zap', 340, 170); return 720; },
+    // 고압 전류: 선이 이어진 채로 지지직 지지는 연출
+    highvolt(A, T, k, t) {
+      act(k, 'charge', 1050);
+      [0, 90, 180].forEach((d) => bolt(A, T, { delay: d, dur: 950 - d, w: 4, wob: 22 }));
+      for (let i = 0; i < 5; i++) {
+        const a = rnd(0, 6.28);
+        bolt(T, { x: T.x + Math.cos(a) * T.r, y: T.y + Math.sin(a) * T.r }, { delay: 150 + i * 150, dur: 240, w: 2.4, wob: 8 });
+      }
+      burst('spark', T, { delay: 180, n: 12, dist: 62, size: 8, dur: 380 });
+      burst('spark', T, { delay: 520, n: 12, dist: 62, size: 8, dur: 380 });
+      [160, 420, 680].forEach((d) => flash('#FFF7C2', 130, d, .35));
+      tint(t, 'zap', 900, 140);
+      shake(4, 820, 140);
+      return 1250;
+    },
+    bolt(A, T, k, t) {
+      act(k, 'charge', 520);
+      cloud({ x: T.x, y: 24 * u }, ['#3a3550', '#59606c'], { n: 8, dur: 1000, size: 28, spread: 58 });
+      const top = { x: T.x + 14 * u, y: 8 * u };
+      [420, 520, 640].forEach((d) => bolt(top, T, { delay: d, dur: 240, w: 9, wob: 30, flick: 2 }));
+      flash('#fff', 260, 420, .85); flash('#FFF7C2', 260, 640, .5);
+      ring(ground(T), { color: '#FFE45C', delay: 460, r1: 110, squash: .35, w: 7 });
+      burst('spark', T, { delay: 450, n: 18, dist: 92, size: 10 });
+      tint(t, 'zap', 620, 430); shake(12, 460, 430);
+      return 1280;
+    },
+    shortfist(A, T, k, t) { act(k, 'lunge', 440); prop('fist', { from: A, to: T, dur: 210, size: 28, delay: 70 }); bolt(A, T, { delay: 80, dur: 200, w: 2.6 }); burst('spark', T, { delay: 270, n: 14, dist: 64, size: 8 }); tint(t, 'zap', 380, 270); return 800; },
+    shock(A, T, k, t) { act(k, 'cast', 420); ring(T, { color: '#FFE45C', r0: 90, r1: 18, dur: 400 }); for (let i = 0; i < 6; i++) { const a = i * 1.05; bolt({ x: T.x + Math.cos(a) * 92 * u, y: T.y + Math.sin(a) * 60 * u }, T, { delay: 160 + i * 40, dur: 260, w: 2.6, wob: 10 }); } tint(t, 'zap', 460, 280); return 900; },
+    charge(A, T, k) { act(k, 'charge', 920); for (let i = 0; i < 7; i++) { const a = i * .9; bolt({ x: A.x + Math.cos(a) * 110 * u, y: A.y + Math.sin(a) * 90 * u }, A, { delay: i * 90, dur: 260, w: 2.4, wob: 12 }); } ring(A, { color: '#FFE45C', r1: 86, delay: 600 }); rise('spark', A, { n: 7, dur: 500, size: 7, delay: 340 }); return 1150; },
+    // 얼음
+    frost(A, T, k, t) { act(k, 'cast', 420); windLines(A, T, { n: 6, color: '#BFE4FF' }); spray('snow', A, T, { n: 10, gap: 34, size: 6, spin: 5 }); tint(t, 'cold', 360, 420); return 840; },
+    icestorm(A, T, k, t) { act(k, 'cast', 620); orbit('shard', T, { n: 12, r: 72, dur: 800, size: 10, turns: 1.6 }); orbit('snow', T, { n: 8, r: 44, dur: 800, size: 6, turns: -1.2 }); burst('shard', T, { delay: 720, n: 12, dist: 74, size: 9 }); tint(t, 'cold', 500, 600); return 1180; },
+    blizzard(A, T, k, t) {
+      act(k, 'charge', 620); add(1100, (p) => { ctx.globalAlpha = .55 * Math.sin(p * Math.PI); ctx.fillStyle = '#E8F8FF'; ctx.fillRect(0, 0, W, H); });
+      const left = { x: W + 20 * u, y: 20 * u }, c = { x: -20 * u, y: H * .9 };
+      spray('snow', left, c, { n: 70, gap: 13, dur: 520, size: 7, spread: 120, spin: 6 });
+      spray('shard', A, T, { n: 8, gap: 70, delay: 300, dur: 300, size: 11, aim: false });
+      tint(t, 'cold', 620, 660);
+      return 1360;
+    },
+    icicle(A, T, k, t) { act(k, 'throw', 420); const a = Math.atan2(T.y - A.y, T.x - A.x) + 1.57; const sp = above(A, 56); prop('shard', { from: sp, to: sp, dur: 260, size: 28, rot0: a, rot1: a }); prop('shard', { from: sp, to: T, delay: 260, dur: 200, size: 28, rot0: a, rot1: a }); burst('snow', T, { delay: 450, n: 12, dist: 62 }); tint(t, 'cold', 380, 450); return 880; },
+    brainfrz(A, T, k, t) { act(k, 'cast', 420); const h = above(T, 44); spray('snow', A, h, { n: 8, gap: 34, size: 7 }); ring(h, { color: '#4CC3D9', delay: 400, r1: 58 }); prop('shard', { from: above(T, 88), to: h, delay: 380, dur: 170, size: 22, rot0: 0 }); tint(t, 'cold', 500, 450); shake(5, 280, 450); return 1000; },
+    // 땅
+    dirt(A, T, k) { act(k, 'throw', 380); spray('dirt', ground(A), T, { n: 16, gap: 18, arc: 40, dur: 380, size: 8, spread: 26 }); cloud(T, ['#A9713A88', '#D9B66A88'], { delay: 360, n: 6, dur: 420, size: 18, spread: 34 }); return 900; },
+    quake(A, T, k, t) { act(k, 'jump', 520); shake(14, 720, 420); ring(ground(A), { color: '#A9713A', delay: 420, r1: 230, squash: .28, w: 8, dur: 640 }); cracks(T, { delay: 480 }); burst('rock', ground(T), { delay: 500, n: 14, dist: 84, size: 9 }); burst('dust', ground(T), { delay: 460, n: 16, dist: 92, size: 12 }); return 1250; },
+    rockthrow(A, T, k) { act(k, 'throw', 400); spray('rock', A, T, { n: 1, dur: 400, arc: 80, size: 24, spin: 7, spread: 0, delay: 120 }); burst('dirt', T, { delay: 480, n: 12, dist: 60 }); shake(5, 200, 500); return 880; },
+    grind(A, T, k) { act(k, 'cast', 500); const l = { x: T.x - 30 * u, y: T.y }, r = { x: T.x + 30 * u, y: T.y }; prop('rock', { from: { x: l.x - 70 * u, y: l.y }, to: l, dur: 340, size: 38, rot1: 6 }); prop('rock', { from: { x: r.x + 70 * u, y: r.y }, to: r, dur: 340, size: 38, rot1: -6 }); burst('dirt', T, { delay: 320, n: 10, dist: 50 }); return 800; },
+    wall(A, T, k) { act(k, 'charge', 760); [[-26, 32], [26, 32], [-26, 8], [26, 8], [0, 20], [0, -6]].forEach(([x, y], i) => { const to = { x: A.x + (k === 'me' ? 52 : -52) * u + x * .4 * u, y: A.y + y * u }; prop('brick', { from: above(to, 120), to, delay: i * 90, dur: 240, size: 13, hold: 500 }); }); return 1200; },
+    dust() { return weatherFx('dust'); },
+    // 바람
+    gust(A, T, k) { act(k, 'cast', 420); windLines(A, T, { n: 10, gap: 34, spread: 40 }); spray('leaf', A, T, { n: 3, gap: 80, spin: 9, size: 6 }); return 820; },
+    twister(A, T, k, t) { act(k, 'spin', 620); tornado(T, { dur: 1050, color: '#CFEDE1' }); orbit('leaf', T, { n: 8, r: 54, dur: 950, size: 6, turns: 3, rising: 50 }); act(t, 'lift', 980); return 1220; },
+    razorwind(A, T, k) { act(k, 'lunge', 380); spray('crescent', A, T, { n: 3, gap: 110, dur: 260, size: 18, spread: 18, aim: true }); slash(T, { delay: 310, color: '#E6FFF4' }); slash(T, { delay: 420, angle: .9, color: '#E6FFF4' }); slash(T, { delay: 520, angle: 0, color: '#E6FFF4' }); return 860; },
+    windcut(A, T, k) { act(k, 'dash', 420); windLines(A, T, { n: 8, gap: 18, dur: 240, spread: 44 }); slash(T, { delay: 210, angle: -.3, len: 120 }); return 680; },
+    breeze(A, T, k) { act(k, 'spin', 620); orbit('leaf', A, { n: 6, r: 62, dur: 800, size: 6, turns: 2, rising: 30 }); ring(ground(A), { color: '#CFEDE1', r1: 90, squash: .3, dur: 620 }); return 1000; },
+    // 독
+    spit(A, T, k, t) { act(k, 'throw', 380); spray('glob', A, T, { n: 3, gap: 100, arc: 36, dur: 340, size: 10 }); burst('bubble', T, { delay: 520, n: 8, dist: 44, size: 6 }); tint(t, 'poison', 380, 520); return 960; },
+    sting(A, T, k) { act(k, 'lunge', 380); spray('needle', A, T, { n: 3, gap: 80, dur: 200, size: 15, aim: true, spread: 10 }); burst('bubble', T, { delay: 360, n: 7, dist: 38, size: 5 }); return 760; },
+    sludge(A, T, k, t) { act(k, 'charge', 420); spray('glob', A, T, { n: 1, delay: 300, dur: 400, arc: 92, size: 34, spread: 0 }); burst('glob', T, { delay: 700, n: 18, dist: 88, size: 9 }); ring(T, { color: '#9A4FB8', delay: 700, r1: 96, w: 7 }); tint(t, 'poison', 480, 700); shake(5, 220, 700); return 1240; },
+    fog(A, T, k, t) { act(k, 'cast', 480); cloud(T, ['#9A4FB8', '#6c3a86', '#C993DD'], { n: 16, dur: 880, delay: 160, size: 26, spread: 62 }); rise('bubble', T, { n: 6, delay: 300, dur: 560, size: 6 }); tint(t, 'poison', 660, 460); return 1300; },
+    stench(A, T, k) { act(k, 'cast', 500); [0, 180, 360].forEach((d) => spray('hair', A, T, { n: 3, gap: 60, delay: d, dur: 520, size: 13, spread: 26, arc: 14 })); cloud(T, ['#9CAE5A', '#7A8E3E'], { n: 9, delay: 340, dur: 640, size: 22, spread: 50 }); return 1200; },
+    // 쇠
+    ironhead(A, T, k) { act(k, 'dash', 560); ring(T, { delay: 280, color: '#D7DDE5', r1: 76, w: 7 }); burst('sparkle', T, { delay: 280, n: 12, dist: 74, size: 10 }); flash('#fff', 150, 280, .4); shake(6, 220, 280); return 820; },
+    // 해머: 위에서 커다랗게 떨어짐
+    hammer(A, T, k) { act(k, 'jump', 440); const top = above(T, 124); prop('hammer', { from: top, to: top, dur: 320, size: 48, rot0: .3, rot1: -1.2 }); prop('hammer', { from: top, to: above(T, 26), delay: 320, dur: 190, size: 48, rot0: -1.2, rot1: 1.1, hold: 220 }); shake(13, 340, 510); ring(ground(T), { delay: 510, color: '#AEB7C2', r1: 120, squash: .3, w: 8 }); burst('scrap', T, { delay: 510, n: 12, dist: 82 }); cracks(T, { delay: 510, dur: 520 }); return 1140; },
+    scrap(A, T, k) { act(k, 'throw', 380); spray('scrap', A, T, { n: 16, gap: 28, dur: 300, spin: 12, size: 7, spread: 28 }); return 800; },
+    magnet(A, T, k) { act(k, 'charge', 760); const front = { x: lerp(A.x, T.x, .22), y: lerp(A.y, T.y, .22) }; prop('magnet', { from: above(front, 34), to: front, dur: 200, size: 28, hold: 560 }); [0, 130, 260, 390].forEach((d) => ring(T, { delay: 180 + d, color: '#E8402C', r0: 106, r1: 12, dur: 280, w: 5 })); spray('scrap', T, front, { delay: 300, n: 7, gap: 46, dur: 280, size: 6, spin: 8 }); return 1040; },
+    // 압정: 손을 휘둘러 상대 쪽 바닥에 흩뿌림. 바닥에 남는 것은 필드 표시가 맡음.
+    tacks(A, T, k) {
+      act(k, 'throw', 460);
+      const g = ground(T);
+      for (let i = 0; i < 14; i++) {
+        const x = g.x + rnd(-78, 78) * u, y = g.y + rnd(-16, 18) * u, h = rnd(50, 96), r0 = rnd(0, 6);
+        add(560, (p) => {
+          const px = lerp(A.x, x, p), py = lerp(A.y, y, p) - Math.sin(p * Math.PI) * h * u;
+          sprite('tack', px, py, 8, r0 + p * 12);
+        }, 120 + i * 28);
+        add(260, (p) => sprite('tack', x, y - Math.abs(Math.sin(p * 6.28)) * 8 * u * (1 - p), 8, 0, fade(p, .3)), 680 + i * 28);
+      }
+      return 1250;
+    },
+    armor(A, T, k) { act(k, 'charge', 760); for (let i = 0; i < 6; i++) { const a = i * 1.05, from = { x: A.x + Math.cos(a) * 120 * u, y: A.y + Math.sin(a) * 90 * u }; prop('plate', { from, to: { x: A.x + Math.cos(a) * 18 * u, y: A.y + Math.sin(a) * 18 * u }, delay: i * 70, dur: 260, size: 14, rot0: a, rot1: a + 3, hold: 120 }); } ring(A, { color: '#D7DDE5', delay: 620, r1: 84 }); burst('sparkle', A, { delay: 640, n: 8, dist: 64 }); return 1120; },
+    // 혼
+    wisp(A, T, k, t) { act(k, 'sway', 760); orbit('wisp', A, { n: 3, r: 54, dur: 500, size: 11, turns: 1 }); spray('wisp', A, T, { n: 3, delay: 480, gap: 90, dur: 340, arc: 44, size: 13, spread: 18 }); tint(t, 'burn', 460, 840); return 1250; },
+    scold(A, T, k, t) { act(k, 'cast', 560); [0, 130, 260, 390].forEach((d) => { ring(A, { delay: d, color: '#7A6BE0', r0: 22, r1: 160, dur: 460, w: 6 }); }); ring(T, { delay: 400, color: '#4B3F9E', r1: 86, w: 7 }); tint(t, 'hex', 420, 460); return 1000; },
+    ambush(A, T, k) {
+      act(k, 'vanish', 640);
+      const back = { x: T.x + (k === 'me' ? 46 : -46) * u, y: T.y };
+      add(280, (p) => { ctx.globalAlpha = .75 * fade(p, .4); ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(back.x, back.y, 26 * u, 46 * u * Math.min(1, p * 2.4), 0, 0, 7); ctx.fill(); }, 210);
+      slash(T, { delay: 340, color: '#7A6BE0', len: 110, w: 9 });
+      return 760;
+    },
+    nightmare(A, T, k, t) { act(k, 'sway', 780); cloud(above(T, 26), ['#1a1433', '#3b2a78'], { n: 11, dur: 900, size: 26, spread: 56 }); add(800, (p) => { sprite('sparkle', T.x - 15 * u, T.y - 26 * u, 9, 0, Math.sin(p * 3.14)); sprite('sparkle', T.x + 15 * u, T.y - 26 * u, 9, 0, Math.sin(p * 3.14)); }, 160); rise('z', T, { n: 3, delay: 620, gap: 120, dur: 520, size: 9 }); tint(t, 'hex', 620, 430); return 1250; },
+    club(A, T, k) { act(k, 'lunge', 460); const sign = k === 'me' ? -1 : 1; prop('club', { from: { x: T.x + sign * 62 * u, y: T.y - 72 * u }, to: { x: T.x + sign * 8 * u, y: T.y - 6 * u }, dur: 250, delay: 90, size: 52, rot0: sign * 1.5, rot1: -sign * .7, hold: 160 }); burst('coin', T, { delay: 340, n: 8, dist: 66, size: 7 }); shake(8, 230, 340); return 880; },
+    ttukttak(A, T, k) { act(k, 'jump', 480); fall('coin', A, { n: 16, gap: 36, dur: 430, height: 140, size: 9, spread: 62 }); burst('sparkle', above(A, 44), { delay: 280, n: 10, dist: 66, size: 9 }); ring(A, { color: '#FFD23F', delay: 420, r1: 88 }); return 1100; },
+    soulrush(A, T, k) { cloud(A, ['#1a1433', '#4B3F9E'], { n: 8, dur: 620, size: 22, spread: 42 }); act(k, 'dash', 640); spray('wisp', A, T, { n: 12, gap: 24, dur: 280, size: 11, spread: 24 }); ring(T, { delay: 320, color: '#7A6BE0', r1: 118, w: 9 }); flash('#4B3F9E', 300, 320, .5); shake(10, 300, 320); return 1040; },
+    // 보통
+    tackle(A, T, k) { act(k, 'dash', 480); ring(T, { delay: 240, color: '#fff', r1: 52, w: 5, dur: 260 }); return 660; },
+    struggle(A, T, k) { act(k, 'dash', 520); burst('dust', T, { delay: 260, n: 8, dist: 46 }); return 720; },
+    guard(A, T, k) { act(k, 'charge', 620); add(800, (p) => { ctx.globalAlpha = .7 * fade(p, .3); ctx.strokeStyle = INK; ctx.lineWidth = 6 * u; ctx.fillStyle = '#BFE4FF66'; ctx.beginPath(); ctx.arc(A.x, A.y, A.r * 1.2 * out(Math.min(1, p * 3)), 0, 7); ctx.fill(); ctx.stroke(); ctx.strokeStyle = '#BFE4FF'; ctx.lineWidth = 3 * u; ctx.stroke(); }); return 880; },
+    nap(A, T, k) { act(k, 'sway', 900); rise('z', A, { n: 5, gap: 150, dur: 640, size: 9, spread: 26 }); rise('heart', A, { n: 8, dur: 620, size: 7 }); return 1250; },
+    spirit_up(A, T, k) { act(k, 'charge', 620); rise('flame', A, { n: 8, gap: 40, dur: 500, size: 8 }); ring(ground(A), { color: '#E8402C', r1: 76, squash: .35 }); burst('sparkle', A, { delay: 420, n: 8, dist: 58 }); return 960; },
+    // 신캐 전용
+    lid(A, T, k) { act(k, 'throw', 420); prop('lid', { from: A, to: T, delay: 180, dur: 300, size: 34, rot1: 18 }); ring(T, { delay: 470, color: '#D7DDE5', r1: 74, w: 6 }); burst('scrap', T, { delay: 470, n: 8, dist: 58 }); shake(6, 240, 470); return 900; },
+    gnaw(A, T, k) { act(k, 'dash', 460); const up = { x: T.x, y: T.y - 28 * u }, dn = { x: T.x, y: T.y + 28 * u }; add(360, (p) => { const c = Math.min(1, p * 2); sprite('teeth', T.x, lerp(up.y - 16 * u, T.y - 6 * u, c), 22, 0, fade(p)); sprite('teeth', T.x, lerp(dn.y + 16 * u, T.y + 6 * u, c), 22, 3.14, fade(p)); }, 150); burst('bubble', T, { delay: 320, n: 6, dist: 40, size: 5 }); return 700; },
+    // 역류: 상대 발밑에서 물기둥이 솟구침
+    backflow(A, T, k) {
+      act(k, 'cast', 460);
+      const g = ground(T);
+      add(760, (p) => {
+        const h = 170 * u * Math.sin(Math.min(1, p * 1.05) * 3.14), w = 44 * u;
+        ctx.fillStyle = '#2F7DE1'; ctx.strokeStyle = INK; ctx.lineWidth = 3 * u;
+        ctx.beginPath(); ctx.moveTo(g.x - w, g.y); ctx.quadraticCurveTo(g.x - w * .3, g.y - h * .5, g.x - w * .5, g.y - h); ctx.quadraticCurveTo(g.x, g.y - h - 16 * u, g.x + w * .5, g.y - h); ctx.quadraticCurveTo(g.x + w * .3, g.y - h * .5, g.x + w, g.y); ctx.closePath(); ctx.fill(); ctx.stroke();
+      }, 220);
+      burst('drop', { x: g.x, y: g.y - 96 * u }, { delay: 440, n: 16, dist: 92, size: 7 });
+      ring(g, { color: '#7fc8e8', delay: 220, r1: 88, squash: .3 });
+      return 1080;
+    },
+    tangle(A, T, k) { act(k, 'sway', 700); for (let i = 0; i < 7; i++) whip(ground(T), { x: T.x + rnd(-36, 36) * u, y: T.y - rnd(0, 56) * u }, { delay: i * 70, color: '#3b3640', curve: rnd(-70, 70), dur: 520, w: 3 }); orbit('hair', T, { n: 8, r: 46, dur: 720, delay: 240, size: 12, turns: 1 }); return 1120; },
+    // 뻥 뚫기: 뚫어뻥을 내리꽂고 뽑음
+    plunge(A, T, k) { act(k, 'jump', 460); const top = above(T, 120), mid = above(T, 24); prop('plunger', { from: top, to: mid, delay: 150, dur: 240, size: 44, hold: 120 }); prop('plunger', { from: mid, to: above(T, 110), delay: 510, dur: 200, size: 44 }); ring(ground(T), { delay: 390, color: '#fff', r1: 122, squash: .34, w: 8 }); burst('dirt', T, { delay: 390, n: 14, dist: 78 }); shake(9, 260, 390); return 920; },
+    broth(A, T, k, t) { act(k, 'throw', 420); spray('broth', A, T, { n: 16, gap: 18, dur: 380, arc: 62, size: 8, spread: 22 }); burst('broth', T, { delay: 500, n: 10, dist: 58, size: 6 }); rise('flame', T, { delay: 540, n: 4, gap: 50, dur: 360, size: 6 }); tint(t, 'burn', 420, 520); return 1000; },
+    mustard(A, T, k) { act(k, 'lunge', 460); prop('mustard', { from: A, to: T, delay: 100, dur: 240, size: 22 }); burst('mustard', T, { delay: 340, n: 12, dist: 56, size: 6 }); return 800; },
+    refill(A, T, k) { act(k, 'charge', 760); const top = above(A, 92); prop('bucket', { from: above(A, 170), to: top, dur: 240, size: 28, rot1: 2.4, hold: 400 }); fall('drop', A, { delay: 240, n: 14, gap: 26, dur: 260, height: 82, spread: 24, size: 7 }); rise('heart', A, { delay: 520, n: 7, dur: 560, size: 7 }); return 1200; },
+    honeybomb(A, T, k) { act(k, 'dash', 620); prop('honey', { from: A, to: T, dur: 300, size: 28 }); ring(T, { delay: 300, color: '#E7A020', r1: 120, w: 9 }); burst('honey', T, { delay: 300, n: 18, dist: 92, size: 8 }); burst('flame', T, { delay: 340, n: 10, dist: 72, size: 8 }); flash('#FFD23F', 260, 300, .45); shake(9, 260, 300); return 1000; },
+    molt(A, T, k) { act(k, 'charge', 760); [0, 150, 300].forEach((d) => ring(A, { delay: d, color: '#E7C98A', r0: A.r, r1: A.r * 1.7 / u, dur: 480, w: 5 })); burst('seed', A, { delay: 380, n: 12, dist: 84, size: 8 }); rise('sparkle', A, { delay: 380, n: 7, dur: 460, size: 8 }); return 1120; },
+  };
+
+  function weatherFx(w) {
+    if (w === 'sun') {
+      const c = { x: W * .72, y: H * .2 };
+      for (let i = 0; i < 12; i++) ring(c, { delay: i * 26, color: '#FFD23F', r0: 20, r1: 150, dur: 620, w: 5 });
+      flash('#FFD23F', 700, 80, .5);
+      return 1100;
+    }
+    if (w === 'rain') {
+      cloud({ x: W / 2, y: 26 * u }, ['#3a3550', '#59606c', '#7a8298'], { n: 16, dur: 1000, size: 34, spread: 180 });
+      for (let i = 0; i < 40; i++) {
+        const x = rnd(0, W);
+        add(420, (p) => sprite('drop', x, p * H, 6, 0, fade(p, .1)), 200 + i * 18);
+      }
+      return 1250;
+    }
+    if (w === 'dust') {
+      const left = { x: -30 * u, y: H * .5 }, right = { x: W + 30 * u, y: H * .5 };
+      spray('dust', left, right, { n: 60, gap: 12, dur: 620, size: 16, spread: 120 });
+      flash('#D9B66A', 900, 100, .45);
+      return 1250;
+    }
+    return 700;
+  }
+
+  /* ---------- 바깥에서 부르는 함수 ---------- */
+  function play(id, key) {
+    const foe = key === 'me' ? 'opp' : 'me';
+    const run = MOVE_FX[id] || MOVE_FX.tackle;
+    if (REDUCED) return 500;
+    measure();
+    return (run(spot(key), spot(foe), key, foe) || 700);
+  }
+  function status(key, s) {
+    if (REDUCED || !s) return;
+    measure();
+    const at = spot(key);
+    ({
+      brn: () => { rise('flame', at, { n: 8, gap: 50, dur: 520, size: 8 }); tint(key, 'burn', 620); },
+      psn: () => { rise('bubble', at, { n: 9, gap: 50, dur: 560, size: 7 }); tint(key, 'poison', 620); },
+      par: () => { burst('spark', at, { n: 12, dist: 62, size: 8 }); tint(key, 'zap', 520); },
+      slp: () => { rise('z', at, { n: 4, gap: 120, dur: 560, size: 9, spread: 24 }); },
+      frz: () => { burst('shard', at, { n: 12, dist: 60, size: 9 }); ring(at, { color: '#BCE9F2', r1: 76 }); tint(key, 'cold', 620); },
+    }[s] || (() => {}))();
+  }
+  function statusTick(key, s) { if (!REDUCED) status(key, s); }
+  function heal(key) { if (!REDUCED) { measure(); rise('heart', spot(key), { n: 6, gap: 60, dur: 520, size: 7 }); } }
+  function stage(key, up) { if (!REDUCED) { measure(); rise(up ? 'arrowUp' : 'arrowDown', spot(key), { n: 4, gap: 90, dur: 460, size: 9, spread: 34, height: up ? 60 : -40 }); } }
+  function weather(w) { if (REDUCED || !w) return 700; measure(); return weatherFx(w); }
+
+  return { attach, play, status, statusTick, heal, stage, weather, ids: () => Object.keys(MOVE_FX) };
+})();

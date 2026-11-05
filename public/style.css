@@ -158,9 +158,24 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 
 .scene { position: relative; aspect-ratio: 4 / 3; overflow: hidden; border: var(--line); border-radius: 10px; background: #F27A4B; transition: filter .5s; }
 .scene .bg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.scene.w-sun { filter: saturate(1.3) brightness(1.1); }
-.scene.w-dust { filter: sepia(.75) saturate(1.3); }
+.sky, .sky2, .road, .sun { transition: fill .6s; }
+.wx, .tk { opacity: 0; transition: opacity .5s; }
+.wx-sun { transform: translate(300px, 96px); }
+.rays { animation: rays 14s linear infinite; }
+@keyframes rays { to { transform: rotate(360deg); } }
+.w-sun .wx-sun, .w-rain .wx-rain, .w-dust .wx-dust, .haz-me .tk-me, .haz-opp .tk-opp { opacity: 1; }
+.w-sun .sky { fill: #FFB52E; } .w-sun .sky2 { fill: #FFD23F; } .w-sun .sun { fill: #FFF3A0; } .w-sun .road { fill: #8A7468; }
+.w-rain .sky { fill: #5b6a8a; } .w-rain .sky2 { fill: #6f7f9e; } .w-rain .sun { fill: #6f7f9e; } .w-rain .road { fill: #454660; }
+.w-dust .sky { fill: #C9A25A; } .w-dust .sky2 { fill: #D9B66A; } .w-dust .sun { fill: #E8D7A8; } .w-dust .road { fill: #8F7C5C; }
 .fx { position: absolute; inset: 0; pointer-events: none; display: none; }
+.scene.w-sun .fx { display: block; background: radial-gradient(circle at 75% 32%, #fff3a055, transparent 62%); animation: glow 1.8s ease-in-out infinite alternate; }
+@keyframes glow { to { opacity: .45; } }
+.scene.w-dust .fx { display: block; background-image: radial-gradient(#E8D7A8 1.4px, transparent 1.6px), radial-gradient(#C9A25A 2px, transparent 2.2px); background-size: 37px 29px, 61px 43px; animation: dust 1.4s linear infinite; }
+@keyframes dust { to { background-position: 74px 14px, 122px -21px; } }
+.fxc { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.field { position: absolute; top: 4%; right: 2%; max-width: 46%; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; pointer-events: none; }
+.field span { font-family: var(--ui); font-size: clamp(12px, 3.4vw, 15px); line-height: 1; padding: 4px 7px 3px; color: #fff; background: var(--ink); border: 2px solid #fff; border-radius: 6px; }
+.field .f-sun { background: #D9720F; } .field .f-rain { background: #2F5FB5; } .field .f-dust { background: #8F6A2A; } .field .f-tack { color: var(--ink); background: var(--yellow); border-color: var(--ink); }
 .scene.w-rain .fx { display: block; background: repeating-linear-gradient(105deg, transparent 0 9px, #bfe4ff90 9px 11px, transparent 11px 22px); background-size: 200% 200%; animation: rain .6s linear infinite; }
 @keyframes rain { to { background-position: -66px 132px; } }
 
@@ -174,10 +189,42 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 @keyframes enter { from { transform: scale(.1); opacity: 0; } }
 .mon.faint { animation: faint .55s ease-in forwards; }
 @keyframes faint { to { transform: translateY(45%) scaleY(.1); opacity: 0; } }
-.mon.me.lunge { animation: lungeMe .32s ease-out; }
-.mon.opp.lunge { animation: lungeOpp .32s ease-out; }
-@keyframes lungeMe { 45% { transform: translate(28%, -20%) rotate(6deg); } }
-@keyframes lungeOpp { 45% { transform: translate(-28%, 20%) rotate(-6deg); } }
+/* 공격자 동작: --sx, --sy는 상대 쪽 방향 */
+.mon.me { --sx: 1; --sy: -1; }
+.mon.opp { --sx: -1; --sy: 1; }
+.mon[class*=act-] { animation-duration: var(--d, .5s); animation-timing-function: ease-in-out; }
+.mon.act-lunge { animation-name: aLunge; }
+@keyframes aLunge { 20% { transform: translate(calc(var(--sx) * -8%), calc(var(--sy) * -5%)); } 55% { transform: translate(calc(var(--sx) * 32%), calc(var(--sy) * 24%)) rotate(calc(var(--sx) * 7deg)); } }
+.mon.act-dash { animation-name: aDash; }
+@keyframes aDash { 25% { transform: translate(calc(var(--sx) * -14%), calc(var(--sy) * -9%)) scaleX(.86); } 55% { transform: translate(calc(var(--sx) * 150%), calc(var(--sy) * 104%)) scaleX(1.12); } 72% { transform: translate(calc(var(--sx) * 130%), calc(var(--sy) * 90%)); } }
+.mon.act-cast { animation-name: aCast; }
+@keyframes aCast { 30% { transform: translate(calc(var(--sx) * -7%), 2%) rotate(calc(var(--sx) * -6deg)); } 60% { transform: translate(calc(var(--sx) * 7%), -3%) rotate(calc(var(--sx) * 4deg)); } }
+.mon.act-throw { animation-name: aThrow; }
+@keyframes aThrow { 35% { transform: translate(calc(var(--sx) * -11%), 2%) rotate(calc(var(--sx) * -15deg)); } 58% { transform: translate(calc(var(--sx) * 11%), -2%) rotate(calc(var(--sx) * 13deg)); } }
+.mon.act-charge { animation-name: aCharge; }
+@keyframes aCharge { 0%, 100% { transform: none; } 10%, 30%, 50%, 70%, 90% { transform: translateX(-2.5%) scale(1.05); filter: brightness(1.3); } 20%, 40%, 60%, 80% { transform: translateX(2.5%) scale(1.05); filter: brightness(1.05); } }
+.mon.act-jump { animation-name: aJump; animation-timing-function: ease-out; }
+@keyframes aJump { 40% { transform: translateY(-46%); } 70% { transform: translateY(3%) scaleY(.84); } }
+.mon.act-spin { animation-name: aSpin; }
+@keyframes aSpin { to { transform: rotateY(1080deg); } }
+.mon.act-sway { animation-name: aSway; }
+@keyframes aSway { 25% { transform: rotate(-8deg); } 75% { transform: rotate(8deg); } }
+.mon.act-vanish { animation-name: aVanish; }
+@keyframes aVanish { 15% { opacity: 1; } 28%, 76% { opacity: 0; transform: scaleX(.2); } }
+.mon.act-lift { animation-name: aLift; }
+@keyframes aLift { 45% { transform: translateY(-34%) rotate(190deg); } 80% { transform: translateY(-6%) rotate(350deg); } }
+/* 맞는 쪽 색 변화 */
+.mon[class*=tint-] svg { animation-duration: var(--t, .5s); }
+.mon.tint-zap svg { animation: tZap .09s steps(2) infinite; }
+@keyframes tZap { 50% { filter: invert(1) brightness(1.7) sepia(1) hue-rotate(5deg) saturate(4); } }
+.mon.tint-burn svg { animation: tBurn .26s steps(2) infinite; }
+@keyframes tBurn { 50% { filter: sepia(1) hue-rotate(-25deg) saturate(6) brightness(.85); } }
+.mon.tint-cold svg { filter: saturate(.25) brightness(1.3) hue-rotate(160deg); }
+.mon.tint-poison svg { animation: tPoison .3s steps(2) infinite; }
+@keyframes tPoison { 50% { filter: sepia(1) hue-rotate(225deg) saturate(3.5); } }
+.mon.tint-hex svg { filter: brightness(.4) saturate(.4); }
+.mon.tint-drain svg { animation: tDrain .35s ease-in-out infinite alternate; }
+@keyframes tDrain { to { filter: saturate(.2) brightness(.75); } }
 .mon.hit { animation: hit .4s steps(2) 2; }
 @keyframes hit { 50% { transform: translateX(7%); opacity: .35; } }
 .burst { position: absolute; left: 50%; top: 50%; width: 110%; aspect-ratio: 1; translate: -50% -50%; pointer-events: none; animation: burst .4s ease-out forwards; }
