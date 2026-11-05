@@ -100,6 +100,7 @@ function renderLobby() {
   const rival = Object.entries(u.h2h || {}).map(([n, r]) => `${esc(n)}: ${r.w}승 ${r.l}패${r.d ? ` ${r.d}무` : ''}`).join(', ');
   app.innerHTML = `
     ${L.incoming.map((c) => `<div class="notice"><b>${esc(c.name)}님의 ${c.size}대${c.size} 대전 신청</b>
+      <p style="margin-bottom:8px">내 덱: ${esc(u.decks[u.active].name)}</p>
       <div class="row"><button class="btn mint" data-acc="${esc(c.from)}">받기</button><button class="btn paper" data-dec="${esc(c.from)}">거절</button></div></div>`).join('')}
     <section class="panel">
       <div class="profile">
@@ -111,7 +112,7 @@ function renderLobby() {
         </div>
       </div>
       <div class="nav">
-        <button class="btn paper" id="go-team">팀 편성</button>
+        <button class="btn paper" id="go-team">덱 관리</button>
         <button class="btn paper" id="go-ava">아바타 꾸미기</button>
         <button class="btn mint" id="go-dex" style="grid-column:1/-1">도감</button>
       </div>
@@ -123,7 +124,10 @@ function renderLobby() {
           ${[3, 6].map((n) => `<button data-size="${n}" aria-pressed="${G.size === n}">${n}대${n}</button>`).join('')}
         </div>
       </div>
-      <p class="muted">팀 순서대로 앞의 ${G.size}마리가 나갑니다.</p>
+      <h2 style="margin-top:12px">사용할 덱</h2>
+      <div class="chips deckpick">${u.decks.map((d, i) => `<button data-deck="${i}" aria-pressed="${i === u.active}">${esc(d.name)}</button>`).join('')}</div>
+      <div class="mini big">${u.decks[u.active].team.map((m, i) => `<span class="${i < G.size ? '' : 'off'}">${monsterSVG(m.species)}</span>`).join('')}</div>
+      <p class="muted">덱 앞에서부터 ${G.size}마리가 나갑니다. 대전 전에 상대 덱을 보고 먼저 낼 요괴를 고릅니다.</p>
     </section>
     <section class="panel">
       <h2>접속 중인 친구</h2>
@@ -141,7 +145,7 @@ function renderLobby() {
       <button class="btn wide mint" id="go-bot">골목대장과 ${G.size}대${G.size}</button>
     </section>
     <p style="text-align:center;margin-top:16px"><button class="btn small paper" id="logout">로그아웃</button></p>`;
-  app.querySelector('#go-team').onclick = showTeam;
+  app.querySelector('#go-team').onclick = showDecks;
   app.querySelector('#go-ava').onclick = showAvatar;
   app.querySelector('#go-dex').onclick = showDex;
   app.querySelector('#go-bot').onclick = () => wsSend({ t: 'practice', size: G.size });
@@ -149,6 +153,11 @@ function renderLobby() {
     await api('POST', '/api/logout'); G.user = null; G.ws?.close(); showAuth();
   };
   app.querySelectorAll('[data-size]').forEach((b) => { b.onclick = () => { G.size = +b.dataset.size; renderLobby(); }; });
+  app.querySelectorAll('[data-deck]').forEach((b) => {
+    b.onclick = async () => {
+      try { await saveDecks(cloneDecks(), +b.dataset.deck); renderLobby(); } catch (e) { toast(e.message); }
+    };
+  });
   app.querySelectorAll('[data-ch]').forEach((b) => { b.onclick = () => wsSend({ t: 'challenge', to: b.dataset.ch, size: G.size }); });
   app.querySelectorAll('[data-cancel]').forEach((b) => { b.onclick = () => wsSend({ t: 'cancel' }); });
   app.querySelectorAll('[data-acc]').forEach((b) => { b.onclick = () => wsSend({ t: 'accept', from: b.dataset.acc }); });
@@ -190,11 +199,58 @@ function showAvatar() {
 /* ---------- 팀 편성 ---------- */
 const STAT_LABEL = { hp: '체력', atk: '공격', def: '방어', spa: '특공', spd: '특방', spe: '스피드' };
 
-function showTeam() {
+const cloneDecks = () => JSON.parse(JSON.stringify(G.user.decks));
+
+async function saveDecks(decks, active) {
+  G.user = (await api('PUT', '/api/decks', { decks, active })).user;
+}
+
+function showDecks() {
+  G.screen = 'decks';
+  const decks = G.user.decks;
+  app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>덱 관리</h1></div>
+    <p style="color:#fff;margin-bottom:12px">덱 ${decks.length}/5개. 덱을 눌러 이름과 요괴, 기술을 바꿉니다.</p>
+    ${decks.map((d, i) => `<div class="deck ${i === G.user.active ? 'on' : ''}">
+      <button class="deck-main" data-open="${i}">
+        <b>${esc(d.name)}</b>${i === G.user.active ? '<em>대전에 사용</em>' : ''}
+        <span class="mini">${d.team.map((m) => monsterSVG(m.species)).join('')}</span>
+      </button>
+      <div class="deck-acts">
+        <button class="btn small mint" data-use="${i}" ${i === G.user.active ? 'disabled' : ''}>사용</button>
+        <button class="btn small paper" data-del="${i}" ${decks.length > 1 ? '' : 'disabled'}>삭제</button>
+      </div></div>`).join('')}
+    ${decks.length < 5 ? '<button class="slot empty" id="new-deck">새 덱 만들기</button>' : ''}`;
+  app.querySelector('#back').onclick = showLobby;
+  app.querySelectorAll('[data-open]').forEach((b) => { b.onclick = () => showTeam(+b.dataset.open); });
+  app.querySelectorAll('[data-use]').forEach((b) => {
+    b.onclick = async () => {
+      try { await saveDecks(cloneDecks(), +b.dataset.use); showDecks(); } catch (e) { toast(e.message); }
+    };
+  });
+  app.querySelectorAll('[data-del]').forEach((b) => {
+    b.onclick = async () => {
+      if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = '정말 삭제'; b.classList.add('red'); return; }
+      const i = +b.dataset.del, next = cloneDecks();
+      next.splice(i, 1);
+      const act = G.user.active;
+      try { await saveDecks(next, act === i ? 0 : act > i ? act - 1 : act); showDecks(); } catch (e) { toast(e.message); }
+    };
+  });
+  app.querySelector('#new-deck')?.addEventListener('click', () => {
+    const base = G.user.decks[G.user.active].team;
+    showTeam(G.user.decks.length, { name: `새 덱 ${G.user.decks.length + 1}`, team: JSON.parse(JSON.stringify(base)) });
+  });
+}
+
+function showTeam(index, draft) {
   G.screen = 'team';
-  const team = G.user.team.map((m) => ({ species: m.species, moves: [...m.moves] }));
+  const deck = draft || JSON.parse(JSON.stringify(G.user.decks[index]));
+  const team = deck.team;
   const render = () => {
-    app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>팀 편성</h1></div>
+    app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">취소</button><h1>덱 편집</h1></div>
+      <section class="panel" style="margin-bottom:14px">
+        <label class="field" style="margin:0">덱 이름<input id="deck-name" maxlength="12" value="${esc(deck.name)}"></label>
+      </section>
       ${team.map((m, i) => {
         const sp = G.data.MONSTERS[m.species];
         return `<div class="slot">
@@ -209,10 +265,13 @@ function showTeam() {
           </div></div>`;
       }).join('')}
       ${team.length < 6 ? '<button class="slot empty" id="add">요괴 추가</button>' : ''}
-      <button class="btn wide" id="save">팀 저장하기</button>`;
-    app.querySelector('#back').onclick = showLobby;
+      <button class="btn wide" id="save">덱 저장하기</button>`;
+    app.querySelector('#deck-name').oninput = (e) => { deck.name = e.target.value; };
+    app.querySelector('#back').onclick = showDecks;
     app.querySelector('#save').onclick = async () => {
-      try { G.user = (await api('PUT', '/api/team', { team })).user; toast('팀을 저장했습니다.'); showLobby(); }
+      const decks = cloneDecks();
+      decks[index] = deck;
+      try { await saveDecks(decks, G.user.active); toast('덱을 저장했습니다.'); showDecks(); }
       catch (e) { toast(e.message); }
     };
     app.querySelector('#add')?.addEventListener('click', () => pickMonster(team, render));

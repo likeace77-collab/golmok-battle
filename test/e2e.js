@@ -30,7 +30,7 @@ async function signup(ctx, name) {
 async function playStep(page) {
   return page.evaluate(() => {
     if (document.querySelector('.result')) return true;
-    (document.querySelector('.mb:not([disabled])') || document.querySelector('.sw:not([disabled])'))?.click();
+    (document.querySelector('.pv-lead:not([disabled])') || document.querySelector('.mb:not([disabled])') || document.querySelector('.sw:not([disabled])'))?.click();
     return false;
   });
 }
@@ -50,11 +50,34 @@ async function playStep(page) {
   await a.page.click('#save');
   await a.page.waitForSelector('#go-team');
   await a.page.click('#go-team');
+  await a.page.waitForSelector('#new-deck');
+  // 덱 5개까지 만들고 이름 붙이기
+  for (let i = 0; i < 4; i++) {
+    await a.page.click('#new-deck');
+    await a.page.fill('#deck-name', `<b>덱${i + 2}`);
+    await a.page.click('#save');
+    await a.page.waitForSelector('.deck:nth-of-type(' + (i + 2) + ')');
+    await a.page.waitForFunction((n) => document.querySelectorAll('.deck').length === n, i + 2);
+  }
+  if (await a.page.$('#new-deck')) throw new Error('덱이 5개를 넘을 수 있음');
+  // 두 번째 덱만 구성을 다르게
+  await a.page.click('[data-open="1"]');
+  await a.page.waitForSelector('[data-rm="5"]');
+  await a.page.click('[data-rm="5"]');
   await a.page.click('[data-edit="0"]');
   await a.page.waitForSelector('.sheet');
   await shot(a.page, 'team-sheet');
   await a.page.click('[data-x]');
   await a.page.click('#save');
+  await a.page.waitForSelector('[data-use="1"]');
+  await a.page.click('[data-use="1"]');
+  await a.page.waitForSelector('.deck.on [data-use="1"][disabled]');
+  await shot(a.page, 'decks');
+  const sizes = await a.page.$$eval('.deck .mini', (l) => l.map((x) => x.children.length));
+  if (sizes[0] !== 6 || sizes[1] !== 5) throw new Error(`덱 구성이 섞임: ${sizes}`);
+  await a.page.click('[data-del="4"]'); await a.page.click('[data-del="4"]');
+  await a.page.waitForFunction(() => document.querySelectorAll('.deck').length === 4);
+  await a.page.click('#back');
   await a.page.waitForSelector('#go-team');
 
   // 대전 신청과 수락
@@ -63,7 +86,17 @@ async function playStep(page) {
   await a.page.click('[data-ch]');
   await b.page.waitForSelector('[data-acc]');
   await b.page.click('[data-acc]');
+  await a.page.waitForSelector('.pv-lead'); await b.page.waitForSelector('.pv-lead');
+  if (await a.page.locator('.pv-lead').count() !== 3) throw new Error('3대3인데 내 덱 수가 다름');
+  await shot(a.page, 'preview');
+  await a.page.click('[data-lead="2"]');
+  await a.page.waitForSelector('.sw.picked');
+  await shot(a.page, 'preview-wait');
+  await b.page.click('[data-lead="1"]');
   await a.page.waitForSelector('.mb'); await b.page.waitForSelector('.mb');
+  const leads = await a.page.$$eval('.plate .nm', (l) => l.map((x) => x.textContent.trim()));
+  console.log('선봉:', leads);
+  if (!/맷돌이/.test(leads[0]) && !/주전이/.test(leads[0])) throw new Error(`상대 선봉이 다름: ${leads}`);
   await shot(a.page, 'battle-start');
 
   // 몇 턴 진행 후 재접속 확인
@@ -115,6 +148,7 @@ async function playStep(page) {
   await a.page.click('[data-ch]');
   await b.page.waitForSelector('[data-acc]');
   await b.page.click('[data-acc]');
+  await a.page.click('[data-lead="0"]'); await b.page.click('[data-lead="0"]');
   await a.page.waitForSelector('.mb'); await b.page.waitForSelector('.mb');
   await b.page.reload();
   await b.page.waitForSelector('.mb');
@@ -145,7 +179,7 @@ async function playStep(page) {
   await a.page.waitForSelector('#go-bot');
   await a.page.waitForTimeout(800);
   await a.page.click('#go-bot');
-  await a.page.waitForSelector('.mb');
+  await a.page.waitForSelector('.pv-lead');
   for (let i = 0; i < 3000 && !(await playStep(a.page)); i++) await a.page.waitForTimeout(120);
   if (!await a.page.$('.result')) throw new Error('연습전이 끝나지 않음');
   console.log('연습전 완주 OK');

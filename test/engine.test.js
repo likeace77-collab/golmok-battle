@@ -102,6 +102,26 @@ test('나가면 나간 쪽이 진다', () => {
   assert.match(ev[0].text, /나갔다/);
 });
 
+test('대전 전: 선봉을 고르기 전까지 숨기고, 고른 요괴가 나온다', () => {
+  const players = [{ name: '가', team: teamOf(['kkaebi', 'horong', 'daeya']) }, { name: '나', team: teamOf(['maetdol', 'fan', 'orak']) }];
+  const b = E.createBattle(players, 3, { preview: true });
+  const v = E.viewFor(b, 0);
+  assert.equal(v.phase, 'preview');
+  assert.equal(v.opp.active, null);
+  assert.equal(v.opp.roster.length, 3);
+  assert.equal(v.opp.roster[0].moves, undefined);
+  assert.equal(E.choose(b, 0, { type: 'move', index: 0 }).ok, false);
+  assert.equal(E.choose(b, 0, { type: 'lead', index: 3 }).ok, false);
+  assert.equal(E.choose(b, 0, { type: 'lead', index: 2 }).events, null);
+  assert.equal(E.viewFor(b, 1).opp.active, null);
+  assert.equal(E.viewFor(b, 0).lead, 2);
+  const { events } = E.choose(b, 1, E.botAction(b, 1));
+  assert.equal(events.filter((e) => e.t === 'switch').length, 2);
+  assert.equal(b.phase, 'choose');
+  assert.equal(E.activeOf(b, 0).species, 'daeya');
+  assert.equal(E.viewFor(b, 1).opp.active.species, 'daeya');
+});
+
 test('선제 기술은 스피드가 느려도 먼저 나간다', () => {
   const b = battle(custom('jangseung', ['ambush']), custom('bangpae', ['highvolt']));
   move(b, 0, 'ambush');
@@ -174,7 +194,7 @@ test('상대 정보가 뷰에서 숨겨진다', () => {
   const v = E.viewFor(b, 0);
   assert.equal(v.opp.active.moves, undefined);
   assert.equal(v.opp.mons, undefined);
-  assert.equal(v.opp.left, 3);
+  assert.equal(v.opp.roster.filter((m) => !m.out).length, 3);
 });
 
 test('봇끼리 3000판: 항상 끝나고 예외가 없으며, 체력이 범위를 벗어나지 않는다', () => {

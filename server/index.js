@@ -15,6 +15,7 @@ const LEAVE_GRACE_SECONDS = Number(process.env.LEAVE_GRACE_SECONDS) || 15; // �
 const PUBLIC = path.join(__dirname, '..', 'public');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const SESSION_DAYS = 30;
+const MAX_DECKS = 5;
 
 /* ---------- 저장소 ---------- */
 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -106,6 +107,32 @@ function validAvatar(a) {
   return out;
 }
 
+function validDecks(list) {
+  if (!Array.isArray(list) || list.length < 1 || list.length > MAX_DECKS) return null;
+  const out = [];
+  for (const d of list) {
+    const name = String(d?.name ?? '').trim();
+    const team = validTeam(d?.team);
+    if (!team || !name || [...name].length > 12 || /[\u0000-\u001f]/.test(name)) return null;
+    out.push({ name, team });
+  }
+  return out;
+}
+const deckOf = (u) => u.decks[u.active];
+
+// 예전의 팀 하나짜리 계정을 덱 구조로 옮깁니다.
+function migrate() {
+  let changed = false;
+  for (const u of Object.values(db.users)) {
+    if (u.decks) continue;
+    u.decks = [{ name: '기본 덱', team: u.team || defaultTeam() }];
+    u.active = 0;
+    delete u.team;
+    changed = true;
+  }
+  if (changed) save();
+}
+
 function validTeam(t) {
   if (!Array.isArray(t) || t.length < 3 || t.length > 6) return null;
   const seen = new Set(), out = [];
@@ -122,7 +149,7 @@ function validTeam(t) {
 }
 
 const publicUser = (u) => ({
-  name: u.name, avatar: u.avatar, team: u.team,
+  name: u.name, avatar: u.avatar, decks: u.decks, active: u.active,
   wins: u.wins, losses: u.losses, draws: u.draws, h2h: u.h2h,
 });
 
@@ -205,7 +232,7 @@ async function api(req, res, url) {
     if (db.users[key]) return json(res, 409, { error: '이미 있는 아이디입니다.' });
     const salt = crypto.randomBytes(16).toString('hex');
     db.users[key] = {
-      name, salt, hash: hashPw(password, salt), avatar: randomAvatar(), team: defaultTeam(),
+      name, salt, hash: hashPw(password, salt), avatar: randomAvatar(), decks: [{ name: '기본 덱', team: defaultTeam() }], active: 0,
       wins: 0, losses: 0, draws: 0, h2h: {},
     };
     createSession(res, req, key);
@@ -228,10 +255,12 @@ async function api(req, res, url) {
     user.avatar = a; save(); broadcastLobby();
     return json(res, 200, { user: publicUser(user) });
   }
-  if (route === 'PUT /api/team') {
-    const t = validTeam((await readBody(req)).team);
-    if (!t) return json(res, 400, { error: '팀은 서로 다른 요괴 3~6마리, 요괴마다 기술 1~4개여야 합니다.' });
-    user.team = t; save();
+  if (route === 'PUT /api/decks') {
+    const body = await readBody(req);
+    const decks = validDecks(body.decks);
+    if (!decks) return json(res, 400, { error: '덱은 1~5개, 이름은 12자 이내, 요괴는 서로 다른 3~6마리, 기술은 1~4개여야 합니다.' });
+    const active = Number.isInteger(body.active) && body.active >= 0 && body.active < decks.length ? body.active : 0;
+    user.decks = decks; user.active = active; save();
     return json(res, 200, { user: publicUser(user) });
   }
   return json(res, 404, { error: '없는 경로입니다.' });
@@ -296,13 +325,14 @@ function botTeam(size) {
 
 function startBattle(keys, size) {
   const players = keys.map((k) => (k === BOT
-    ? { name: '골목대장', avatar: randomAvatar(), team: botTeam(size) }
-    : { name: db.users[k].name, avatar: db.users[k].avatar, team: db.users[k].team.slice(0, size) }));
-  const room = { id: crypto.randomUUID(), keys, b: E.createBattle(players), deadline: 0, timer: null, ended: false, leaveTimers: {} };
+    ? { name: '골목대장', avatar: randomAvatar(), deck: '골목대장의 덱', team: botTeam(size) }
+    : { name: db.users[k].name, avatar: db.users[k].avatar, deck: deckOf(db.users[k]).name, team: deckOf(db.users[k]).team.slice(0, size) }));
+  const room = { id: crypto.randomUUID(), keys, b: E.createBattle(players, undefined, { preview: true }), deadline: 0, timer: null, ended: false, leaveTimers: {} };
   battles.set(room.id, room);
   keys.forEach((k) => { if (k !== BOT) { inBattle.set(k, room); clearChallenges(k); } });
   armTimer(room);
   keys.forEach((k, s) => { if (k !== BOT) syncBattle(room, s); });
+  pumpBot(room);
   broadcastLobby();
 }
 
@@ -421,7 +451,7 @@ function onMessage(key, msg) {
     case 'practice': {
       if (room) return;
       const size = msg.size === 6 ? 6 : 3;
-      if (db.users[key].team.length < size) return toast(key, `팀에 요괴가 ${size}마리 있어야 합니다.`);
+      if (deckOf(db.users[key]).team.length < size) return toast(key, `선택한 덱에 요괴가 ${size}마리 있어야 합니다.`);
       startBattle([key, BOT], size);
       break;
     }
@@ -430,7 +460,7 @@ function onMessage(key, msg) {
       const size = msg.size === 6 ? 6 : 3;
       if (room || to === key || !online.has(to)) return toast(key, '지금은 신청할 수 없습니다.');
       if (inBattle.has(to)) return toast(key, '상대가 대전 중입니다.');
-      if (db.users[key].team.length < size) return toast(key, `팀에 요괴가 ${size}마리 있어야 합니다.`);
+      if (deckOf(db.users[key]).team.length < size) return toast(key, `선택한 덱에 요괴가 ${size}마리 있어야 합니다.`);
       challenges.set(key, { to, size });
       broadcastLobby();
       break;
@@ -449,7 +479,8 @@ function onMessage(key, msg) {
       const from = keyOf(String(msg.from ?? ''));
       const c = challenges.get(from);
       if (!c || c.to !== key || room || !online.has(from) || inBattle.has(from)) return toast(key, '이미 끝난 신청입니다.');
-      if (db.users[key].team.length < c.size) return toast(key, `팀에 요괴가 ${c.size}마리 있어야 합니다.`);
+      if (deckOf(db.users[key]).team.length < c.size) return toast(key, `선택한 덱에 요괴가 ${c.size}마리 있어야 합니다.`);
+      if (deckOf(db.users[from]).team.length < c.size) return toast(key, '상대의 덱 인원이 모자랍니다.');
       startBattle([from, key], c.size);
       break;
     }
@@ -521,6 +552,7 @@ setInterval(() => {
     try { await loadGist(); }
     catch (e) { console.error(e.message); process.exit(1); }
   }
+  migrate();
   server.listen(PORT, () => console.log(`골목대전 서버 실행 중: http://localhost:${PORT}`));
 })();
 

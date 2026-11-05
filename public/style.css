@@ -123,14 +123,36 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .mu > span { flex: none; width: 76px; }
 .mu p { line-height: 1.9; }
 
+/* 덱 */
+.deck { display: flex; gap: 8px; align-items: center; padding: 8px; margin-bottom: 10px; background: var(--paper); border: var(--line); border-radius: 10px; box-shadow: var(--pop); }
+.deck.on { background: var(--yellow); }
+.deck-main { flex: 1; min-width: 0; padding: 0; text-align: left; background: none; border: 0; }
+.deck-main b { font-family: var(--ui); font-weight: 400; font-size: 20px; overflow-wrap: anywhere; }
+.deck-main em { font-family: var(--ui); font-style: normal; font-size: 12px; margin-left: 6px; padding: 2px 5px; color: var(--yellow); background: var(--ink); border-radius: 4px; }
+.deck-acts { display: flex; flex-direction: column; gap: 6px; }
+.mini { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 4px; }
+.mini svg { width: 34px; height: 34px; }
+.mini.big { margin: 10px 0 6px; }
+.mini.big span { width: 15%; max-width: 62px; }
+.mini.big svg { width: 100%; height: auto; }
+.mini.big .off { opacity: .3; filter: grayscale(1); }
+.deckpick button { font-size: 16px; }
+.grid.pv { grid-template-columns: repeat(3, 1fr); }
+.grid.pv .card svg { height: 76px; margin: 0 auto; }
+.grid.pv .card p { margin-top: 4px; }
+.grid.pv .type { margin: 0 1px; }
+.sw.picked, .sw.picked:disabled { background: var(--yellow); opacity: 1; }
+.sw em { font-family: var(--ui); font-style: normal; padding: 3px 6px; background: var(--ink); color: var(--yellow); border-radius: 5px; }
+.sw .inf small { display: block; font-family: var(--body); font-size: 13px; color: #5f5870; }
+
 /* 배틀 */
 #app.in-battle { padding: 8px 8px calc(10px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 8px; min-height: 100dvh; }
 .bhead { display: flex; align-items: center; gap: 8px; color: #fff; font-family: var(--ui); padding: 0 2px; }
 .bhead .ava { width: 36px; height: 36px; border-width: 2px; }
 .bhead .who { flex: 1; min-width: 0; line-height: 1.15; overflow-wrap: anywhere; }
 .pips { display: flex; gap: 3px; margin-top: 2px; }
-.pips i { width: 9px; height: 9px; border-radius: 50%; background: var(--yellow); border: 1.5px solid var(--ink); }
-.pips i.out { background: #5c6580; }
+.pips span { width: 24px; height: 24px; padding: 1px; background: #fff; border: 1.5px solid var(--ink); border-radius: 50%; }
+.pips span.out { opacity: .35; filter: grayscale(1); }
 .clock { font-family: var(--display); font-size: 22px; color: var(--yellow); min-width: 42px; text-align: right; }
 .clock.low { color: #ff8d7e; }
 

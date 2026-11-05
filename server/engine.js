@@ -48,12 +48,12 @@ const freshVolatile = () => ({
   seeded: false, flinched: false, protecting: false, protectStreak: 0,
 });
 
-function createBattle(players, seed = (Math.random() * 2 ** 31) | 0) {
+function createBattle(players, seed = (Math.random() * 2 ** 31) | 0, { preview = false } = {}) {
   const b = {
-    seed, turn: 1, phase: 'choose', winner: null, weather: null, weatherTurns: 0,
+    seed, turn: 1, phase: preview ? 'preview' : 'choose', winner: null, weather: null, weatherTurns: 0,
     pending: [null, null], needs: [true, true],
     sides: players.map((p) => ({
-      name: p.name, avatar: p.avatar, active: 0, hazard: false,
+      name: p.name, avatar: p.avatar, deck: p.deck, active: 0, hazard: false,
       mons: p.team.map(makeMon),
     })),
   };
@@ -68,6 +68,7 @@ const effOf = (moveType, types) =>
 function legalActions(b, s) {
   const side = b.sides[s];
   if (b.phase === 'over' || !b.needs[s]) return [];
+  if (b.phase === 'preview') return side.mons.map((_, i) => ({ type: 'lead', index: i }));
   const switches = side.mons
     .map((m, i) => ({ m, i }))
     .filter(({ m, i }) => alive(m) && i !== side.active)
@@ -92,7 +93,13 @@ function choose(b, s, action) {
 
 function resolve(b) {
   const ev = [];
-  if (b.phase === 'switch') {
+  if (b.phase === 'preview') {
+    for (const s of [0, 1]) b.sides[s].active = b.pending[s].index;
+    for (const s of [0, 1]) {
+      const m = activeOf(b, s);
+      ev.push({ t: 'switch', side: s, mon: publicMon(m), text: `${b.sides[s].name}: 가라, ${m.name}!` });
+    }
+  } else if (b.phase === 'switch') {
     for (const s of [0, 1]) if (b.pending[s]) doSwitch(b, s, b.pending[s].index, ev);
   } else {
     ev.push({ t: 'turn', turn: b.turn });
@@ -472,21 +479,23 @@ function forfeit(b, s, left = false) {
 function viewFor(b, s) {
   const me = b.sides[s], opp = b.sides[1 - s];
   const lock = b.pending[s] !== null;
+  const preview = b.phase === 'preview';
   return {
     you: s, turn: b.turn, phase: b.phase, winner: b.winner,
     weather: b.weather, weatherTurns: b.weatherTurns,
     mustAct: b.needs[s] && !lock,
+    lead: preview && lock ? b.pending[s].index : null,
     me: {
-      name: me.name, avatar: me.avatar, active: me.active, hazard: me.hazard,
+      name: me.name, avatar: me.avatar, deck: me.deck, active: me.active, hazard: me.hazard,
       mons: me.mons.map((m) => ({
         ...publicMon(m), stats: m.stats,
         moves: m.moves.map((x) => ({ id: x.id, pp: x.pp })),
       })),
     },
     opp: {
-      name: opp.name, avatar: opp.avatar, hazard: opp.hazard,
-      active: publicMon(activeOf(b, 1 - s)),
-      left: opp.mons.filter(alive).length, total: opp.mons.length,
+      name: opp.name, avatar: opp.avatar, deck: opp.deck, hazard: opp.hazard,
+      active: preview ? null : publicMon(activeOf(b, 1 - s)), // 고르기 전에는 선봉을 숨김
+      roster: opp.mons.map((m) => ({ species: m.species, name: m.name, types: m.types, out: !alive(m) })),
     },
   };
 }
@@ -495,6 +504,12 @@ function viewFor(b, s) {
 function botAction(b, s) {
   const acts = legalActions(b, s);
   if (!acts.length) return null;
+  if (b.phase === 'preview') {
+    const score = (mon) => b.sides[1 - s].mons.reduce((sum, f) => sum
+      + Math.max(...mon.types.map((t) => effOf(t, f.types)))
+      - Math.max(...f.types.map((t) => effOf(t, mon.types))), rand(b));
+    return acts.map((a) => ({ a, v: score(b.sides[s].mons[a.index]) })).sort((x, y) => y.v - x.v)[0].a;
+  }
   const foe = activeOf(b, 1 - s);
   const switches = acts.filter((a) => a.type === 'switch');
   const matchup = (mon) => {
