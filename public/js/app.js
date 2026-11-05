@@ -80,12 +80,13 @@ function onServer(m) {
       if (G.screen === 'lobby') renderLobby();
       break;
     case 'toast': toast(m.text); break;
-    case 'me': G.user = m.user; break;
+    case 'me': G.user = m.user; if (G.screen === 'lobby') renderLobby(); break;
+    case 'no_battle': Battle.onNoBattle(); break;
     case 'battle': Battle.enter(m); break;
     case 'turn': Battle.onTurn(m); break;
     case 'chosen': Battle.onChosen(m); break;
     case 'opp_ready': Battle.setNote('상대가 행동을 골랐습니다.'); break;
-    case 'opp_conn': Battle.setNote(m.online ? '상대가 돌아왔습니다.' : '상대 연결이 끊겼습니다. 재접속을 기다립니다.'); break;
+    case 'opp_conn': Battle.setNote(m.online ? '상대가 돌아왔습니다.' : `상대가 나갔습니다. ${m.grace}초 안에 돌아오지 않으면 승리합니다.`); break;
     default:
   }
 }
@@ -112,6 +113,7 @@ function renderLobby() {
       <div class="nav">
         <button class="btn paper" id="go-team">팀 편성</button>
         <button class="btn paper" id="go-ava">아바타 꾸미기</button>
+        <button class="btn mint" id="go-dex" style="grid-column:1/-1">도감</button>
       </div>
     </section>
     <section class="panel">
@@ -141,6 +143,7 @@ function renderLobby() {
     <p style="text-align:center;margin-top:16px"><button class="btn small paper" id="logout">로그아웃</button></p>`;
   app.querySelector('#go-team').onclick = showTeam;
   app.querySelector('#go-ava').onclick = showAvatar;
+  app.querySelector('#go-dex').onclick = showDex;
   app.querySelector('#go-bot').onclick = () => wsSend({ t: 'practice', size: G.size });
   app.querySelector('#logout').onclick = async () => {
     await api('POST', '/api/logout'); G.user = null; G.ws?.close(); showAuth();
@@ -285,6 +288,63 @@ function editMon(team, i, done) {
     });
   };
   render();
+}
+
+/* ---------- 도감 ---------- */
+function showDex() {
+  G.screen = 'dex';
+  const ids = Object.keys(G.data.MONSTERS);
+  const types = Object.keys(G.data.TYPES).filter((t) => t !== 'none');
+  G.dexType ??= 'all';
+  const render = () => {
+    const list = ids.filter((id) => G.dexType === 'all' || G.data.MONSTERS[id].types.includes(G.dexType));
+    app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>도감</h1></div>
+      <section class="panel">
+        <p class="muted" style="margin-bottom:8px">요괴 ${list.length}마리</p>
+        <div class="chips">
+          <button data-t="all" aria-pressed="${G.dexType === 'all'}">전체</button>
+          ${types.map((t) => `<button data-t="${t}" aria-pressed="${G.dexType === t}" style="background:${G.data.TYPES[t].c};color:${['elec', 'ice', 'wind'].includes(t) ? 'var(--ink)' : '#fff'}">${G.data.TYPES[t].n}</button>`).join('')}
+        </div>
+        <div class="grid">${list.map((id) => `<button class="card" data-dex="${id}" style="--tc:${G.data.TYPES[G.data.MONSTERS[id].types[0]].c}">${monsterSVG(id)}<span>${ids.indexOf(id) + 1}. ${G.data.MONSTERS[id].n}</span></button>`).join('')}</div>
+      </section>`;
+    app.querySelector('#back').onclick = showLobby;
+    app.querySelectorAll('[data-t]').forEach((b) => { b.onclick = () => { G.dexType = b.dataset.t; render(); }; });
+    app.querySelectorAll('[data-dex]').forEach((b) => { b.onclick = () => openDexEntry(b.dataset.dex); });
+  };
+  render();
+}
+
+function matchups(id) {
+  const groups = {};
+  for (const atk of Object.keys(G.data.TYPES)) {
+    if (atk === 'none') continue;
+    const eff = G.data.MONSTERS[id].types.reduce((x, t) => x * (G.data.CHART[atk][t] ?? 1), 1);
+    if (eff !== 1) (groups[eff] ||= []).push(atk);
+  }
+  return [[4, '4배로 받음'], [2, '2배로 받음'], [.5, '절반만 받음'], [.25, '1/4만 받음'], [0, '안 받음']]
+    .filter(([e]) => groups[e])
+    .map(([e, label]) => `<div class="mu"><span>${label}</span><p>${groups[e].map(typeChip).join('')}</p></div>`).join('');
+}
+
+function openDexEntry(id) {
+  const sp = G.data.MONSTERS[id];
+  const total = Object.values(sp.base).reduce((a, b) => a + b, 0);
+  const no = Object.keys(G.data.MONSTERS).indexOf(id) + 1;
+  const bg = openSheet(`<div class="row" style="margin-bottom:10px"><h2>${no}. ${sp.n}</h2><button class="btn small paper" data-x>닫기</button></div>
+    <div class="row" style="align-items:flex-start;margin-bottom:12px">
+      <div class="detail-pic" style="--tc:${G.data.TYPES[sp.types[0]].c}">${monsterSVG(id)}</div>
+      <div style="flex:1;min-width:0">
+        <p style="margin-bottom:4px">${typesOf(id)}</p>
+        ${Object.entries(sp.base).map(([k, v]) => `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${v}</span><i style="width:${Math.min(100, v / 1.3)}%"></i></div>`).join('')}
+        <p class="muted" style="text-align:right;line-height:1.3">합계 ${total}</p>
+      </div>
+    </div>
+    <p style="margin-bottom:12px">${sp.flavor}</p>
+    <h3 class="dex-h">타입 상성</h3>
+    ${matchups(id)}
+    <h3 class="dex-h">배울 수 있는 스킬 ${sp.moves.length}개</h3>
+    ${sp.moves.map((m) => `<div class="mv">${typeChip(G.data.MOVES[m].type)}<b>${G.data.MOVES[m].n}</b><small>${moveLine(m)}</small></div>`).join('')}`);
+  bg.querySelector('[data-x]').onclick = closeSheet;
 }
 
 /* ---------- 시작 ---------- */

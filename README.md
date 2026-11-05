@@ -40,6 +40,7 @@ pm2 save
 | `PORT` | 3000 | 서버 포트 |
 | `INVITE_CODE` | 없음 | 설정하면 계정 만들 때 코드가 필요 |
 | `TURN_SECONDS` | 90 | 턴 제한 시간. 넘기면 자동으로 행동 |
+| `LEAVE_GRACE_SECONDS` | 15 | 대전 중 연결이 끊긴 뒤 패배 처리까지 기다리는 시간 |
 | `DATA_DIR` | `./data` | 계정과 전적이 저장되는 폴더 |
 | `GIST_ID` | 없음 | 데이터를 함께 저장할 비밀 Gist의 id |
 | `GIST_TOKEN` | 없음 | `gist` 권한만 준 GitHub 토큰 |

@@ -47,6 +47,61 @@ test('2배 상성은 1배보다 약 2배 피해를 주고, 절반 상성은 약 
   assert.ok(Math.abs(weak / neutral - .5) < .1, `${weak}/${neutral}`);
 });
 
+test('모든 요괴에게 그림이 있고 스킬이 겹치지 않는다', () => {
+  const art = require('fs').readFileSync(require('path').join(__dirname, '../public/js/art.js'), 'utf8');
+  for (const [id, m] of Object.entries(MONSTERS)) {
+    assert.match(art, new RegExp(`\\b${id}: wrap`), id);
+    assert.equal(new Set(m.moves).size, m.moves.length, id);
+  }
+  assert.equal(Object.keys(MONSTERS).length, 31);
+});
+
+test('역류는 소나기에서 2배, 뻥 뚫기는 막기를 뚫고 압정을 치운다', () => {
+  const hit = (weather) => {
+    const b = battle(custom('batji', ['backflow']), custom('kkaebi', ['tackle']), 5);
+    b.weather = weather; b.weatherTurns = 5;
+    const foe = b.sides[1].mons[0]; foe.hp = foe.maxHp = 3000; foe.stats = { ...foe.stats, spe: 1 };
+    E.choose(b, 0, { type: 'move', index: 0 }); E.choose(b, 1, { type: 'move', index: 0 });
+    return 3000 - foe.hp;
+  };
+  const dry = hit(null), wet = hit('rain');
+  assert.ok(wet / dry > 2.5, `소나기 1.5배 + 역류 2배: ${wet}/${dry}`);
+
+  const c = battle(custom('ppeong', ['plunge']), custom('kkaebi', ['guard']));
+  c.sides[0].hazard = true;
+  const hp = E.activeOf(c, 1).hp;
+  E.choose(c, 0, { type: 'move', index: 0 }); E.choose(c, 1, { type: 'move', index: 0 });
+  assert.ok(E.activeOf(c, 1).hp < hp);
+  assert.equal(c.sides[0].hazard, false);
+});
+
+test('엉겨붙기는 풀 타입에도 걸리고, 씨앗 심기는 안 걸린다', () => {
+  const b = battle(custom('meokarak', ['tangle']), custom('kongsiru', ['guard']), 9);
+  for (let i = 0; i < 12 && !E.activeOf(b, 1).seeded; i++) {
+    E.choose(b, 0, { type: 'move', index: 0 }); E.choose(b, 1, { type: 'switch', index: 1 });
+    E.choose(b, 0, { type: 'move', index: 0 }); E.choose(b, 1, { type: 'switch', index: 0 });
+  }
+  const anySeeded = b.sides[1].mons.some((m) => m.seeded === 'hair');
+  assert.ok(anySeeded);
+});
+
+test('국물 리필은 회복하고 상태이상을 고치며, 허물 벗기는 능력치를 바꾼다', () => {
+  const b = battle(custom('eomuk', ['refill']), custom('ppeondegi', ['molt']));
+  const m = E.activeOf(b, 0);
+  m.status = 'psn'; m.hp = 50;
+  E.choose(b, 0, { type: 'move', index: 0 }); E.choose(b, 1, { type: 'move', index: 0 });
+  assert.equal(m.status, null);
+  assert.ok(m.hp > 50);
+  assert.deepEqual(E.activeOf(b, 1).stages, { atk: 1, def: -1, spa: 1, spd: -1, spe: 1, acc: 0 });
+});
+
+test('나가면 나간 쪽이 진다', () => {
+  const b = battle(custom('kkaebi', ['club']), custom('horong', ['ember']));
+  const ev = E.forfeit(b, 1, true);
+  assert.equal(b.winner, 0);
+  assert.match(ev[0].text, /나갔다/);
+});
+
 test('선제 기술은 스피드가 느려도 먼저 나간다', () => {
   const b = battle(custom('jangseung', ['ambush']), custom('bangpae', ['highvolt']));
   move(b, 0, 'ambush');

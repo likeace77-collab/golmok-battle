@@ -257,6 +257,7 @@ function damageOf(b, atk, def, mv, crit, roll) {
   let dmg = (((2 * LEVEL) / 5 + 2) * mv.pow * a) / d / 50 + 2;
   if (b.weather === 'sun') dmg *= mv.type === 'fire' ? 1.5 : mv.type === 'water' ? .5 : 1;
   if (b.weather === 'rain') dmg *= mv.type === 'water' ? 1.5 : mv.type === 'fire' ? .5 : 1;
+  if (mv.rainBoost && b.weather === 'rain') dmg *= 2;
   if (crit) dmg *= 1.5;
   dmg *= roll;
   if (atk.types.includes(mv.type)) dmg *= 1.5;
@@ -293,7 +294,10 @@ function useMove(b, s, index, ev) {
 
   const foe = activeOf(b, o);
   if (!alive(foe)) { msg(ev, '그러나 맞힐 상대가 없었다!'); return; }
-  if (foe.protecting) { msg(ev, `${josa(foe.name, '은/는')} 공격을 막아냈다!`); return; }
+  if (foe.protecting) {
+    if (!mv.breakGuard) { msg(ev, `${josa(foe.name, '은/는')} 공격을 막아냈다!`); return; }
+    msg(ev, `${foe.name}의 막기를 뚫었다!`);
+  }
 
   if (mv.acc !== null) {
     const accuracy = mv.acc * stageMul(me.stages.acc);
@@ -324,6 +328,10 @@ function useMove(b, s, index, ev) {
   if (mv.type === 'fire' && foe.status === 'frz' && alive(foe)) {
     foe.status = null;
     ev.push({ t: 'status', side: o, status: null, text: `${foe.name}의 얼음이 녹았다!` });
+  }
+  if (mv.clearHazard && b.sides[s].hazard) {
+    b.sides[s].hazard = false;
+    ev.push({ t: 'hazard', side: s, on: false, text: `${b.sides[s].name} 쪽 압정이 말끔히 치워졌다!` });
   }
   if (mv.drain && alive(me)) {
     if (heal(b, s, me, total * mv.drain, ev)) msg(ev, `${josa(me.name, '은/는')} 양분을 빨아들였다!`);
@@ -362,8 +370,10 @@ function selfMove(b, s, me, mv, ev) {
     return;
   }
   if (mv.heal) {
-    if (me.hp === me.maxHp) { msg(ev, '체력이 이미 가득하다!'); return; }
-    heal(b, s, me, me.maxHp * mv.heal, ev);
+    const curable = mv.cure && me.status;
+    if (me.hp === me.maxHp && !curable) { msg(ev, '체력이 이미 가득하다!'); return; }
+    if (me.hp < me.maxHp) heal(b, s, me, me.maxHp * mv.heal, ev);
+    if (curable) { me.status = null; ev.push({ t: 'status', side: s, status: null, text: `${me.name}의 상태이상이 나았다!` }); }
     msg(ev, `${josa(me.name, '은/는')} 기운을 되찾았다!`);
     return;
   }
@@ -385,9 +395,10 @@ function statusMove(b, s, me, o, foe, mv, ev) {
   }
   if (mv.st) { applyStatus(b, o, foe, mv.st.s, ev, false); return; }
   if (mv.seed) {
-    if (foe.types.includes('grass') || foe.seeded) { msg(ev, '그러나 효과가 없었다.'); return; }
-    foe.seeded = true;
-    msg(ev, `${foe.name}에게 씨앗을 심었다!`);
+    const hair = mv.seed === 'any';
+    if (foe.seeded || (!hair && foe.types.includes('grass'))) { msg(ev, '그러나 효과가 없었다.'); return; }
+    foe.seeded = hair ? 'hair' : 'seed';
+    msg(ev, hair ? `머리카락이 ${foe.name}에게 엉겨붙었다!` : `${foe.name}에게 씨앗을 심었다!`);
     return;
   }
   if (mv.foe) for (const [k, v] of Object.entries(mv.foe)) changeStage(b, o, foe, k, v, ev);
@@ -418,7 +429,7 @@ function endOfTurn(b, ev) {
     }
     if (alive(m) && m.seeded) {
       const foe = activeOf(b, 1 - s);
-      msg(ev, `씨앗이 ${m.name}의 체력을 빨아들인다!`);
+      msg(ev, `${m.seeded === 'hair' ? '머리카락' : '씨앗'}이 ${m.name}의 체력을 빨아들인다!`);
       const taken = hurt(b, s, m, m.maxHp / 8, ev);
       if (alive(foe)) heal(b, 1 - s, foe, taken, ev);
       faintCheck(b, s, m, ev);
@@ -451,9 +462,10 @@ function updatePhase(b, ev) {
   else { b.phase = 'choose'; b.needs = [true, true]; }
 }
 
-function forfeit(b, s) {
+function forfeit(b, s, left = false) {
   b.phase = 'over'; b.winner = 1 - s; b.needs = [false, false]; b.pending = [null, null];
-  return [{ t: 'over', winner: b.winner, text: `${josa(b.sides[s].name, '이/가')} 기권했다. ${josa(b.sides[1 - s].name, '이/가')} 이겼다!` }];
+  const how = left ? '게임을 나갔다' : '기권했다';
+  return [{ t: 'over', winner: b.winner, text: `${josa(b.sides[s].name, '이/가')} ${how}. ${josa(b.sides[1 - s].name, '이/가')} 이겼다!` }];
 }
 
 // 플레이어별 화면 정보. 상대의 기술과 안 나온 요괴는 숨깁니다.
@@ -510,7 +522,7 @@ function botAction(b, s) {
       if ((mv.heal || mv.nap) && me.hp > me.maxHp * .5) v = 2;
       if (mv.st && foe.status) v = 0;
       if (mv.st && mv.immune && effOf(mv.type, foe.types) === 0) v = 0;
-      if (mv.seed && (foe.seeded || foe.types.includes('grass'))) v = 0;
+      if (mv.seed && (foe.seeded || (mv.seed !== 'any' && foe.types.includes('grass')))) v = 0;
       if (mv.hazard && b.sides[1 - s].hazard) v = 0;
       if (mv.weather && b.weather === mv.weather) v = 0;
     } else {

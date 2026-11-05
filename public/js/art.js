@@ -163,6 +163,84 @@ const ART = {
     ${eyes(46, 74, 60, 8)}${smile(60, 78, 8)}`),
 };
 
+Object.assign(ART, {
+ manhol: wrap(`
+  <ellipse cx="60" cy="94" rx="50" ry="17" fill="#17121f"/>
+  <path d="M10 88a50 18 0 0 0 100 0v-14H10z" fill="#4a4d58"/>
+  <ellipse cx="60" cy="72" rx="50" ry="34" fill="#6e7380"/>
+  <ellipse cx="60" cy="72" rx="40" ry="26" fill="none" stroke-width="2"/>
+  <path d="M26 58l68 28M94 58L26 86M60 46v52M20 72h80" fill="none" stroke="#4a4d58" stroke-width="2"/>
+  <path d="M80 44h22v8H80z" fill="#a9713a" stroke-width="2"/>
+  ${eyes(44,76,68,8)}${angry(44,76,68)}${frown(60,84,8)}`),
+ sigung: wrap(`
+  <path d="M86 92q26 2 22-16-3-12-14-8" fill="none" stroke="#c78b8f" stroke-width="6"/>
+  <circle cx="34" cy="28" r="15" fill="#6c6a5c"/><circle cx="34" cy="28" r="7" fill="#c78b8f"/>
+  <circle cx="82" cy="28" r="15" fill="#6c6a5c"/><circle cx="82" cy="28" r="7" fill="#c78b8f"/>
+  <path d="M18 74q0-52 40-52t42 52q2 32-42 32T18 74z" fill="#7d7a68"/>
+  <path d="M26 96q6-12 12 0 6 10 14 0 8-8 16 0t14 0 10-4v10q-34 14-66-6z" fill="#5fae4a"/>
+  <path d="M42 34q-8 10-4 18M78 34q6 10 4 18" fill="none" stroke-width="2"/>
+  ${eyes(44,74,56,8)}${angry(44,74,56)}
+  <ellipse cx="59" cy="68" rx="6" ry="5" fill="#c78b8f"/>
+  <path d="M46 78q13 7 26 0" fill="none"/><path d="M53 81l2 9 5-7zM61 83l5 7 2-9z" fill="#fff" stroke-width="2"/>
+  <path d="M14 60l-10-3M14 68H3M104 60l10-3M104 68h11" fill="none" stroke-width="2"/>`),
+ batji: wrap(`
+  <rect x="8" y="14" width="104" height="94" rx="6" fill="#59606c"/>
+  <rect x="20" y="26" width="80" height="70" fill="#101323"/>
+  <path d="M20 86q14-10 26 0t28 0 26 0v10H20z" fill="#2F7DE1"/>
+  <circle cx="45" cy="52" r="9" fill="#FFD23F"/><circle cx="75" cy="52" r="9" fill="#FFD23F"/>
+  <circle cx="45" cy="53" r="3.5" fill="${K}" stroke="none"/><circle cx="75" cy="53" r="3.5" fill="${K}" stroke="none"/>
+  ${[30,60,90].map(x=>`<rect x="${x-3}" y="24" width="7" height="74" fill="#8a8f98"/>`).join('')}
+  <path d="M16 106q0 8-3 9-3-1-3-5M104 106q0 6 3 8 3-1 3-4" fill="#7fc8e8" stroke-width="2"/>`),
+ meokarak: wrap(`
+  <path d="M60 110C20 112 2 86 14 58 6 44 22 22 38 26 48 8 74 8 82 26c20-2 32 22 22 36 12 26-8 50-44 48z" fill="#1d1a24"/>
+  <path d="M22 36q-14 16-6 34M36 22q-8 4-8 16M84 24q12 6 10 18M102 58q6 14 0 26M30 96q-12-4-16-16M62 12q8-6 16-2" fill="none" stroke="#5b5270" stroke-width="2"/>
+  <path d="M30 88q10 6 14-2t12 2 12-4 14 4M34 48q10-8 20-2M66 42q12-6 22 4M38 100q12 4 22 0t22-2" fill="none" stroke="#5b5270" stroke-width="2"/>
+  <path d="M14 112q8-8 2-16M108 110q-6-8-2-16M60 118q-4-5 0-9" fill="none" stroke-width="3"/>
+  ${eye(46,62,10)}${eye(76,66,6)}
+  <path d="M50 84q8-5 16 0t14-2" fill="none" stroke="#FFF" stroke-width="2"/>`),
+ ppeong: wrap(`
+  <path d="M54 8h12v44H54z" fill="#c9924f"/>
+  <path d="M60 46c30 0 42 26 44 48q0 10-10 10H26q-10 0-10-10c2-22 14-48 44-48z" fill="#D52C2C"/>
+  <path d="M16 96q44-12 88 0v10q0 6-8 6H24q-8 0-8-6z" fill="#8f1b1b"/>
+  <path d="M38 60q-8 8-10 22" fill="none" stroke="#ff9a8c" stroke-width="4"/>
+  ${eyes(46,74,74,7)}${angry(46,74,74)}${grin(60,86,9)}`),
+ tteokppo: wrap(`
+  <path d="M6 58h108q2 46-54 48Q4 104 6 58z" fill="#2e8f6f"/>
+  <ellipse cx="60" cy="58" rx="54" ry="20" fill="#d9301f"/>
+  ${[[34,50,20],[58,44,-16],[82,52,24],[46,62,-10],[72,64,14]].map(([x,y,r])=>`<rect x="${x-13}" y="${y-5}" width="26" height="10" rx="5" fill="#fff3d9" transform="rotate(${r} ${x} ${y})" stroke-width="2"/>`).join('')}
+  <path d="M52 56l14-5 6 9-16 5z" fill="#E7A84B" stroke-width="2"/>
+  ${eyes(44,76,84,7)}${smile(60,94,6)}
+  <path d="M28 30q-6-8 0-14M60 24q-6-8 0-14M92 30q6-8 0-14" fill="none" stroke="#d9301f"/>`),
+ sundae: wrap(`
+  <path d="M14 66c-8 28 14 42 30 30 8 10 28 10 36 0 16 12 36-2 28-30-2-34-26-46-48-46S16 32 14 66z" fill="#3b2b33"/>
+  <path d="M28 40q-8 24 2 54M92 40q8 24-2 54M46 26q-6 34 0 72M74 26q6 34 0 72" fill="none" stroke="#1a1433" stroke-width="2"/>
+  ${[[34,50],[52,38],[70,44],[86,62],[30,76],[62,92],[86,84],[48,88]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="2.5" fill="#d9c6a8" stroke="none"/>`).join('')}
+  <path d="M100 20l10-8 4 5-8 10z" fill="#c9924f" stroke-width="2"/><path d="M100 24L80 42" stroke="#c9924f" stroke-width="5"/>
+  ${eyes(44,76,58,8)}${smile(60,74,8)}`),
+ eomuk: wrap(`
+  <path d="M60 2v116" stroke="#c9924f" stroke-width="5"/>
+  <path d="M34 16q20-10 50 0-8 8 0 14-28 10-52 0 8-8 2-14z" fill="#E7C98A"/>
+  <path d="M28 38q30-12 62 0-8 12 0 20-32 12-64 0 10-10 2-20z" fill="#E7C98A"/>
+  <path d="M26 66q32-12 66 0-10 12 0 22-34 12-68 0 12-12 2-22z" fill="#E7C98A"/>
+  <path d="M6 92h108l-10 22H16z" fill="#2F7DE1"/><path d="M6 92q14-8 27 0t27 0 27 0 27 0" fill="none" stroke="#bfe4ff" stroke-width="2"/>
+  <path d="M30 80q0-12 8-6M90 22q6 4 0 10" fill="none" stroke="#a97a50" stroke-width="2"/>
+  ${eyes(46,74,46,7)}${smile(60,58,6)}`),
+ hotteok: wrap(`
+  <path d="M8 66c0-30 24-44 52-44s52 14 52 44-24 40-52 40S8 96 8 66z" fill="#C98438"/>
+  <path d="M18 62c2-22 20-30 42-30s40 8 42 30" fill="none" stroke="#8d5420" stroke-width="2"/>
+  <path d="M84 96q6 16 16 12 2-8-6-14-2-10-10 2z" fill="#6c2f12"/>
+  ${[[34,46],[50,40],[70,42],[86,52]].map(([x,y])=>`<ellipse cx="${x}" cy="${y}" rx="4" ry="2.5" fill="#3a2010" stroke-width="1"/>`).join('')}
+  ${eyes(44,76,66,8)}${angry(44,76,66)}${grin(60,80,10)}
+  <path d="M30 22q-5-6 0-12M90 22q5-6 0-12" fill="none" stroke="#fff"/>`),
+ ppeondegi: wrap(`
+  <path d="M24 56h72l-12 58H36z" fill="#F4ECD8"/>
+  <path d="M24 72h72M26 82h68" fill="none" stroke="#E8402C" stroke-width="3"/>
+  ${[[34,50],[52,44],[70,46],[86,52]].map(([x,y],i)=>`<g transform="rotate(${i%2?20:-20} ${x} ${y})"><ellipse cx="${x}" cy="${y}" rx="10" ry="15" fill="#7a4f28"/><path d="M${x-9} ${y-6}h18M${x-10} ${y}h20M${x-9} ${y+6}h18" fill="none" stroke="#3b2413" stroke-width="2"/></g>`).join('')}
+  <path d="M50 24q10-14 24 0 6 8 2 20H50q-6-10 0-20z" fill="#8c5c30"/>
+  <path d="M50 30h26M48 37h29" fill="none" stroke="#3b2413" stroke-width="2"/>
+  ${eyes(52,70,96,6)}${frown(61,104,4)}`),
+});
+
 function monsterSVG(id, cls = '') {
   return `<svg class="${cls}" viewBox="0 0 120 120" aria-hidden="true">${ART[id] || ''}</svg>`;
 }

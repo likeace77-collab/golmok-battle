@@ -11,6 +11,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const INVITE_CODE = process.env.INVITE_CODE || '';
 const TURN_SECONDS = Number(process.env.TURN_SECONDS) || 90;
+const LEAVE_GRACE_SECONDS = Number(process.env.LEAVE_GRACE_SECONDS) || 15; // 끊긴 뒤 패배까지 기다리는 시간
 const PUBLIC = path.join(__dirname, '..', 'public');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const SESSION_DAYS = 30;
@@ -261,6 +262,7 @@ const online = new Map();   // 유저 키 → 소켓
 const battles = new Map();  // 대전 id → room
 const inBattle = new Map(); // 유저 키 → room
 const challenges = new Map(); // 신청자 키 → { to, size }
+const notices = new Map();    // 다음 접속 때 알려 줄 말
 
 const send = (ws, msg) => { if (ws?.readyState === 1) ws.send(JSON.stringify(msg)); };
 const toast = (key, text) => send(online.get(key), { t: 'toast', text });
@@ -296,7 +298,7 @@ function startBattle(keys, size) {
   const players = keys.map((k) => (k === BOT
     ? { name: '골목대장', avatar: randomAvatar(), team: botTeam(size) }
     : { name: db.users[k].name, avatar: db.users[k].avatar, team: db.users[k].team.slice(0, size) }));
-  const room = { id: crypto.randomUUID(), keys, b: E.createBattle(players), deadline: 0, timer: null, ended: false };
+  const room = { id: crypto.randomUUID(), keys, b: E.createBattle(players), deadline: 0, timer: null, ended: false, leaveTimers: {} };
   battles.set(room.id, room);
   keys.forEach((k) => { if (k !== BOT) { inBattle.set(k, room); clearChallenges(k); } });
   armTimer(room);
@@ -337,9 +339,19 @@ function onTimeout(room) {
 function dissolve(room) {
   room.ended = true;
   clearTimeout(room.timer); clearTimeout(room.idle);
+  Object.values(room.leaveTimers).forEach(clearTimeout);
   room.keys.forEach((k) => inBattle.delete(k));
   battles.delete(room.id);
   broadcastLobby();
+}
+
+// 대전 중 나간 사람은 패배, 상대는 승리. 새로고침과 잠깐의 끊김은 유예 시간 안에 돌아오면 이어집니다.
+function onLeaveTimeout(room, key) {
+  if (room.ended || online.has(key)) return;
+  const s = room.keys.indexOf(key);
+  if (!online.has(room.keys[1 - s])) return dissolve(room); // 둘 다 나갔으면 무효
+  notices.set(key, '대전을 나가서 패배 처리되었습니다.');
+  afterTurn(room, E.forfeit(room.b, s, true));
 }
 
 function apply(room, s, action) {
@@ -473,14 +485,21 @@ server.on('upgrade', (req, socket, head) => {
         const s = room.keys.indexOf(key);
         const other = room.keys[1 - s];
         if (other === BOT) room.idle = setTimeout(() => { if (!online.has(key)) dissolve(room); }, 10 * 60000);
-        else send(online.get(other), { t: 'opp_conn', online: false });
+        else {
+          send(online.get(other), { t: 'opp_conn', online: false, grace: LEAVE_GRACE_SECONDS });
+          room.leaveTimers[key] = setTimeout(() => onLeaveTimeout(room, key), LEAVE_GRACE_SECONDS * 1000);
+        }
       }
       broadcastLobby();
     });
 
+    send(ws, { t: 'me', user: publicUser(db.users[key]) });
+    if (notices.has(key)) { send(ws, { t: 'toast', text: notices.get(key) }); notices.delete(key); }
     const room = inBattle.get(key);
+    if (!room) send(ws, { t: 'no_battle' });
     if (room) {
       clearTimeout(room.idle);
+      clearTimeout(room.leaveTimers[key]);
       syncBattle(room, room.keys.indexOf(key));
       const other = room.keys[1 - room.keys.indexOf(key)];
       if (other !== BOT) send(online.get(other), { t: 'opp_conn', online: true });
@@ -494,7 +513,7 @@ setInterval(() => {
     if (!ws.alive) { ws.terminate(); continue; }
     ws.alive = false; ws.ping();
   }
-}, 30000).unref();
+}, 15000).unref();
 
 (async () => {
   if (GIST_ID) {

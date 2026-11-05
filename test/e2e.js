@@ -6,7 +6,7 @@ const fs = require('fs'), os = require('os'), path = require('path');
 const OUT = process.env.OUT || '.'; const PORT = 3000 + Math.floor(Math.random() * 5000); const URL = `http://localhost:${PORT}`;
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gm-'));
 const startServer = () => new Promise((res) => {
-  const p = spawn('node', ['server/index.js'], { env: { ...process.env, PORT, DATA_DIR: dataDir, TURN_SECONDS: 20 }, stdio: ['ignore', 'pipe', 'inherit'] });
+  const p = spawn('node', ['server/index.js'], { env: { ...process.env, PORT, DATA_DIR: dataDir, TURN_SECONDS: 20, LEAVE_GRACE_SECONDS: 4 }, stdio: ['ignore', 'pipe', 'inherit'] });
   process.once('exit', () => p.kill());
   p.stdout.once('data', () => res(p));
 });
@@ -89,6 +89,53 @@ async function playStep(page) {
   const rec = await a.page.textContent('.profile .muted');
   console.log('전적 표시:', rec);
   if (!/1승|1패|1무/.test(rec)) throw new Error('전적이 반영되지 않음');
+
+  // 도감: 31마리, 상세에 소개, 스탯, 상성, 전체 스킬
+  await b.page.click('#to-lobby');
+  await b.page.waitForSelector('#go-team');
+  await a.page.click('#go-dex');
+  await a.page.waitForSelector('[data-dex]');
+  const cnt = await a.page.locator('[data-dex]').count();
+  if (cnt !== 31) throw new Error(`도감 수 ${cnt}`);
+  await shot(a.page, 'dex');
+  await a.page.click('[data-dex=meokarak]');
+  await a.page.waitForSelector('.sheet .mv');
+  await a.page.waitForTimeout(100);
+  await a.page.screenshot({ path: path.join(OUT, 'dex-entry.png') });
+  const skills = await a.page.locator('.sheet .mv').count();
+  if (skills !== 8) throw new Error(`도감 스킬 수 ${skills}`);
+  await a.page.click('.sheet [data-x]');
+  await a.page.click('[data-t=water]');
+  if (await a.page.locator('[data-dex]').count() >= 31) throw new Error('타입 필터 안 됨');
+  await a.page.click('#back');
+  await a.page.waitForSelector('#go-team');
+
+  // 대전 중 나가면 패배: 잠깐의 새로고침은 이어지고, 안 돌아오면 상대 승리
+  await a.page.waitForSelector('[data-ch]');
+  await a.page.click('[data-ch]');
+  await b.page.waitForSelector('[data-acc]');
+  await b.page.click('[data-acc]');
+  await a.page.waitForSelector('.mb'); await b.page.waitForSelector('.mb');
+  await b.page.reload();
+  await b.page.waitForSelector('.mb');
+  await a.page.waitForTimeout(5000);
+  if (await a.page.$('.result')) throw new Error('새로고침했는데 패배 처리됨');
+  console.log('유예 안 재접속 OK');
+  await b.page.close();
+  await a.page.waitForSelector('#say');
+  await a.page.waitForFunction(() => /상대가 나갔습니다/.test(document.body.textContent), null, { timeout: 3000 });
+  await shot(a.page, 'leave-note');
+  await a.page.waitForSelector('.result', { timeout: 9000 });
+  const verdict = await a.page.textContent('.result .title');
+  if (verdict !== '승리') throw new Error(`탈주 결과: ${verdict}`);
+  await a.page.click('#to-lobby');
+  await a.page.waitForSelector('#go-team');
+  const b2 = await c2.newPage();
+  await b2.goto(`${URL}/?speed=0.02`);
+  await b2.waitForSelector('#go-team');
+  await b2.waitForFunction(() => /패배 처리/.test(document.getElementById('toast').textContent), null, { timeout: 3000 });
+  console.log('탈주 패배 OK:', await a.page.textContent('.profile .muted'), '/', await b2.textContent('.profile .muted'));
+  await a.page.waitForTimeout(300);
 
   // 서버 재시작 후 로그인 유지, 연습전 한 판
   await a.page.waitForTimeout(400);

@@ -32,7 +32,7 @@ const Battle = (() => {
   function enter(m) {
     practice = m.practice;
     const fresh = !view || G.screen !== 'battle';
-    view = m.view; note = m.oppOnline ? '' : '상대 연결이 끊겼습니다. 재접속을 기다립니다.';
+    view = m.view; note = m.oppOnline ? '' : '상대가 나갔습니다. 곧 돌아오지 않으면 승리합니다.';
     closeSheet();
     G.screen = 'battle';
     app.className = 'in-battle';
@@ -237,6 +237,10 @@ const Battle = (() => {
   }
 
   function onChosen(m) { view = m.view; renderPanel(); }
+  function onNoBattle() {
+    // 끊긴 사이 대전이 끝났으면 멈춘 화면에 남지 않게 로비로 돌아감
+    if (G.screen === 'battle' && !playing && !document.querySelector('.result')) { view = null; showLobby(); }
+  }
   function setNote(text) { note = text; if (!playing) renderPanel(); }
   const act = (action) => { wsSend({ t: 'action', action }); $('#panel').innerHTML = '<p class="wait">기다리는 중...</p>'; };
 
@@ -316,5 +320,5 @@ const Battle = (() => {
     div.querySelector('#to-lobby').onclick = () => { view = null; showLobby(); };
   }
 
-  return { enter, onTurn, onChosen, setNote };
+  return { enter, onTurn, onChosen, setNote, onNoBattle };
 })();
