@@ -202,6 +202,7 @@ function doSwitch(b, s, idx, ev) {
     ev.push({ t: 'recall', side: s, text: `${side.name}: ${out.name}, 돌아와!` });
   }
   side.active = idx;
+  side.lastSwitch = b.turn;
   const m = activeOf(b, s);
   Object.assign(m, freshVolatile());
   ev.push({ t: 'switch', side: s, mon: publicMon(m), text: `${side.name}: 가라, ${m.name}!` });
@@ -521,8 +522,8 @@ function viewFor(b, s) {
   };
 }
 
-// 연습 상대: 예상 피해를 계산해 고르되, 약간의 변덕을 섞습니다.
-function botAction(b, s) {
+// 보통: 예상 피해를 계산해 고르되, 약간의 변덕을 섞습니다.
+function normalAction(b, s) {
   const acts = legalActions(b, s);
   if (!acts.length) return null;
   if (b.phase === 'preview') {
@@ -573,6 +574,155 @@ function botAction(b, s) {
   return pick;
 }
 
+
+/* ---------- 골목대장 난이도: 0 쉬움, 1 보통, 2 어려움, 3 지옥 ---------- */
+const pickRandom = (b, list) => list[Math.floor(rand(b) * list.length)];
+
+function easyAction(b, s) {
+  const acts = legalActions(b, s);
+  if (b.phase !== 'choose') return pickRandom(b, acts);
+  return pickRandom(b, acts.filter((a) => a.type === 'move'));
+}
+
+// 기술 하나의 예상 피해. 면역이면 0.
+function rawDamage(b, atk, def, mv) {
+  if (mv.cat === 'x' || effOf(mv.type, def.types) === 0) return 0;
+  const hits = mv.hits ? (mv.hits[0] + mv.hits[1]) / 2 : 1;
+  return damageOf(b, atk, def, mv, false, .92) * hits;
+}
+
+// 상대가 나에게 줄 수 있는 최대 피해. 지옥은 실제 기술을 알고, 어려움은 타입으로 짐작합니다.
+function threatOf(b, foe, mon, level) {
+  if (level >= 3) {
+    return Math.max(0, ...foe.moves.filter((x) => x.pp > 0).map((x) => rawDamage(b, foe, mon, MOVES[x.id])));
+  }
+  const cat = foe.stats.atk >= foe.stats.spa ? 'p' : 's';
+  return Math.max(...foe.types.map((type) => rawDamage(b, foe, mon, { type, cat, pow: 85, acc: 100 })));
+}
+
+function smartAction(b, s, level) {
+  const acts = legalActions(b, s);
+  const side = b.sides[s], foe = activeOf(b, 1 - s);
+  const switches = acts.filter((a) => a.type === 'switch').map((a) => {
+    const mon = side.mons[a.index];
+    const risk = threatOf(b, foe, mon, level) / mon.hp;
+    const reach = Math.max(0, ...mon.moves.map((x) => rawDamage(b, mon, foe, MOVES[x.id]))) / foe.hp;
+    return { a, risk, v: reach - risk };
+  }).sort((x, y) => y.v - x.v);
+  if (b.phase === 'switch') return switches[0].a;
+
+  const me = activeOf(b, s);
+  const moves = acts.filter((a) => a.type === 'move');
+  if (moves[0].index === -1) return moves[0];
+  const threat = threatOf(b, foe, me, level);
+  const faster = speedOf(b, s) > speedOf(b, 1 - s);
+  const finish = (a) => {
+    if (!canMega(b, s)) return a;
+    const go = b.turn >= 2 || threat >= me.hp * .5;
+    return go ? { ...a, mega: true } : a;
+  };
+
+  const rows = moves.map((a) => ({ a, mv: MOVES[me.moves[a.index].id] })).map((r) => ({ ...r, raw: rawDamage(b, me, foe, r.mv) }));
+  const kills = rows.filter((r) => r.raw >= foe.hp).sort((x, y) => y.mv.pri - x.mv.pri || (y.mv.acc ?? 100) - (x.mv.acc ?? 100));
+  if (kills.length && (faster || kills[0].mv.pri > 0 || threat < me.hp)) return finish(kills[0].a);
+
+  // 맞으면 쓰러지는데 먼저 못 때리면 잘 버티는 동료로 교체
+  if (threat >= me.hp && !faster && switches.length && b.turn - (side.lastSwitch ?? -9) > 1 && switches[0].risk < .5) {
+    return switches[0].a;
+  }
+
+  const foeStrong = foe.stats.atk >= foe.stats.spa;
+  const left = b.sides[1 - s].mons.filter(alive).length;
+  const support = (mv) => {
+    const acc = (mv.acc ?? 100) / 100;
+    if (mv.protect) return (foe.seeded || foe.status === 'psn' || foe.status === 'brn') && me.protectStreak === 0 ? 30 : 0;
+    if (mv.heal) return me.hp < me.maxHp * .5 && threat < me.maxHp * mv.heal * 1.2 ? 80 : 0;
+    if (mv.nap) return me.hp < me.maxHp * .35 && threat < me.hp ? 60 : 0;
+    if (mv.st) {
+      const blocked = foe.status || (mv.immune && effOf(mv.type, foe.types) === 0)
+        || foe.types.includes({ brn: 'fire', psn: 'poison', par: 'elec', frz: 'ice' }[mv.st.s])
+        || (mv.st.s === 'psn' && foe.types.includes('steel'));
+      if (blocked || foe.hp < foe.maxHp * .4) return 0;
+      const worth = { slp: 52, brn: foeStrong ? 46 : 28, par: faster ? 26 : 46, psn: 30 }[mv.st.s] ?? 28;
+      return worth * acc;
+    }
+    if (mv.seed) return foe.seeded || (mv.seed !== 'any' && foe.types.includes('grass')) ? 0 : 30 * acc;
+    if (mv.hazard) return !b.sides[1 - s].hazard && left >= 3 ? 30 : 0;
+    if (mv.weather) {
+      if (b.weather === mv.weather) return 0;
+      const fit = { rain: 'water', sun: 'fire' }[mv.weather];
+      return me.moves.some((x) => MOVES[x.id].type === fit && MOVES[x.id].cat !== 'x') ? 30 : 8;
+    }
+    if (mv.self) {
+      const raised = Object.keys(mv.self).reduce((n, k) => n + Math.max(0, me.stages[k]), 0);
+      return threat < me.hp * .35 && raised <= 1 ? 48 : 0;
+    }
+    if (mv.foe) return foe.hp > foe.maxHp * .5 ? 18 * acc : 0;
+    return 0;
+  };
+  const value = (r) => (r.mv.cat === 'x'
+    ? support(r.mv)
+    : ((r.raw * (r.mv.acc ?? 100)) / 100 / foe.maxHp) * 100 * (r.mv.recoil && me.hp < me.maxHp * .35 ? .6 : 1));
+  const best = rows.map((r) => ({ a: r.a, v: value(r) + rand(b) * 3 })).sort((x, y) => y.v - x.v)[0];
+  return finish(best.a);
+}
+
+function botAction(b, s, level = 1) {
+  if (b.phase === 'preview' || level === 1) return normalAction(b, s);
+  return level === 0 ? easyAction(b, s) : smartAction(b, s, level);
+}
+
+const shuffled = (list) => list.map((x) => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map((p) => p[1]);
+
+// 어려움 이상은 강한 기술, 다른 타입 기술, 보조 기술을 고루 갖춥니다.
+function smartMoves(species, enemyTypes) {
+  const sp = MONSTERS[species];
+  const worth = (id) => {
+    const m = MOVES[id];
+    const stat = m.cat === 'p' ? sp.base.atk : sp.base.spa;
+    const hits = m.hits ? (m.hits[0] + m.hits[1]) / 2 : 1;
+    const fit = enemyTypes.length ? enemyTypes.reduce((n, t) => n + effOf(m.type, t), 0) / enemyTypes.length : 1;
+    return m.pow * hits * ((m.acc ?? 100) / 100) * stat * (sp.types.includes(m.type) ? 1.5 : 1) * fit;
+  };
+  const attacks = sp.moves.filter((m) => MOVES[m].cat !== 'x').sort((x, y) => worth(y) - worth(x));
+  const chosen = [];
+  const sigMove = MOVES[sp.sig].cat !== 'x' ? sp.sig : null;
+  for (const m of [...(sigMove ? [sigMove] : []), ...attacks]) {
+    if (chosen.length >= 3) break;
+    if (!chosen.includes(m) && !chosen.some((c) => MOVES[c].type === MOVES[m].type)) chosen.push(m);
+  }
+  const rank = (id) => { const m = MOVES[id]; return m.sig ? 6 : m.self ? 5 : m.heal ? 4 : m.st ? 3 : m.seed || m.hazard ? 2 : m.weather ? 1 : 0; };
+  const extras = sp.moves.filter((m) => MOVES[m].cat === 'x' && !MOVES[m].protect).sort((x, y) => rank(y) - rank(x));
+  return [...chosen, ...extras, ...attacks.filter((m) => !chosen.includes(m))].slice(0, 4);
+}
+
+function botTeam(level, size, enemy = []) {
+  const ids = Object.keys(MONSTERS);
+  const enemyTypes = enemy.map((m) => MONSTERS[m.species].types);
+  if (level === 0) {
+    return shuffled(ids).slice(0, size).map((species) => ({ species, moves: shuffled(MONSTERS[species].moves).slice(0, 4) }));
+  }
+  if (level === 1) {
+    return shuffled(ids).slice(0, size).map((species) => {
+      const all = MONSTERS[species].moves;
+      const attacks = shuffled(all.filter((m) => MOVES[m].cat !== 'x')).slice(0, 3);
+      return { species, moves: [...attacks, ...shuffled(all.filter((m) => !attacks.includes(m)))].slice(0, 4) };
+    });
+  }
+  if (level === 2) return shuffled(ids).slice(0, size).map((species) => ({ species, moves: smartMoves(species, []) }));
+  // 지옥: 내 덱의 타입을 보고 상성이 좋은 요괴로 팀을 짭니다.
+  const score = (id) => {
+    const mon = MONSTERS[id];
+    const total = Object.values(mon.base).reduce((a, c) => a + c, 0) / 100;
+    const edge = enemyTypes.reduce((n, types) => n
+      + Math.max(...mon.types.map((t) => effOf(t, types)))
+      - Math.max(...types.map((t) => effOf(t, mon.types))), 0);
+    return total + edge + Math.random() * .6;
+  };
+  return ids.map((id) => [score(id), id]).sort((x, y) => y[0] - x[0]).slice(0, size)
+    .map(([, species]) => ({ species, moves: smartMoves(species, enemyTypes) }));
+}
+
 module.exports = {
-  createBattle, choose, legalActions, viewFor, botAction, forfeit, calcStats, effOf, josa, activeOf, canMega,
+  createBattle, choose, legalActions, viewFor, botAction, botTeam, forfeit, calcStats, effOf, josa, activeOf, canMega,
 };

@@ -281,6 +281,16 @@ const SIGNATURE = {
   hotteok: ['honeybomb', '호떡 UFO', '뒤집개로 하늘을 난다. 꿀 광선을 맞으면 입천장이 벗겨진다.', [0, 35, 20, 25, 20, 0]],
   ppeondegi: ['molt', '직장인 나방', '허물을 벗고 드디어 날개를 얻었다. 그런데 정장을 입고 출근한다.', [10, 0, 0, 45, 0, 45]],
 };
+// 모든 요괴가 기술 10개가 되도록 채우는 추가 기술
+const EXTRA_MOVES = {
+  bungbbang: ['rockthrow'], horong: ['nap'], usan: ['icestorm'], kongsiru: ['vinewhip'], ssaribi: ['tackle'],
+  ttaengcho: ['guard'], jeonbot: ['guard'], orak: ['magnet'], bangpae: ['tackle'], bingsu: ['icicle'],
+  bonaeng: ['tackle'], jangdok: ['guard'], maetdol: ['guard'], jangseung: ['tackle'], fan: ['guard'],
+  kkaebi: ['dirt'], kkangtong: ['tackle'], bongdari: ['wisp'], meokarak: ['ambush'], ppeong: ['dirt', 'squirt'],
+  tteokppo: ['stench'],
+};
+for (const [id, list] of Object.entries(EXTRA_MOVES)) MONSTERS[id].moves.push(...list);
+
 const STAT_KEYS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
 for (const [id, [sig, n, d, boost]] of Object.entries(SIGNATURE)) {
   const mon = MONSTERS[id];

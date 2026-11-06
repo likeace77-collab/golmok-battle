@@ -161,6 +161,43 @@ test('메가진화: 행동을 쓰지 않고, 능력치가 오르며, 한 판에 
   assert.equal(E.viewFor(b, 0).me.mons[0].mega, true);
 });
 
+test('모든 요괴의 배울 수 있는 기술은 10개다', () => {
+  for (const [id, m] of Object.entries(MONSTERS)) {
+    assert.equal(m.moves.length, 10, id);
+    assert.equal(new Set(m.moves).size, 10, id);
+  }
+});
+
+test('난이도가 높을수록 이긴다', () => {
+  const fight = (hi, lo, games = 240) => {
+    let wins = 0, played = 0, seed = 1000 + hi * 7 + lo;
+    for (let g = 0; g < games; g++) {
+      const t0 = E.botTeam(lo, 3);
+      const t1 = E.botTeam(hi, 3, t0);
+      const flip = g % 2;
+      const b = E.createBattle([{ name: '가', team: flip ? t1 : t0 }, { name: '나', team: flip ? t0 : t1 }], seed++, { preview: true });
+      const level = flip ? [hi, lo] : [lo, hi];
+      let guard = 0;
+      while (b.phase !== 'over' && ++guard < 3000) {
+        for (const s of [0, 1]) {
+          if (b.phase === 'over' || !b.needs[s] || b.pending[s]) continue;
+          assert.ok(E.choose(b, s, E.botAction(b, s, level[s])).ok, `불법 행동 level ${level[s]}`);
+        }
+      }
+      assert.equal(b.phase, 'over');
+      if (b.winner === null) continue;
+      played++;
+      if (b.winner === (flip ? 0 : 1)) wins++;
+    }
+    return Math.round((wins / played) * 100);
+  };
+  const r = [fight(1, 0), fight(2, 1), fight(3, 2), fight(3, 0)];
+  console.log(`보통>쉬움 ${r[0]}%, 어려움>보통 ${r[1]}%, 지옥>어려움 ${r[2]}%, 지옥>쉬움 ${r[3]}%`);
+  assert.ok(r[0] > 70, `보통 대 쉬움 ${r[0]}`);
+  assert.ok(r[1] > 55, `어려움 대 보통 ${r[1]}`);
+  assert.ok(r[2] > 60, `지옥 대 어려움 ${r[2]}`);
+});
+
 test('선제 기술은 스피드가 느려도 먼저 나간다', () => {
   const b = battle(custom('jangseung', ['ambush']), custom('bangpae', ['highvolt']));
   move(b, 0, 'ambush');

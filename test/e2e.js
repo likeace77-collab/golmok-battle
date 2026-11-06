@@ -151,7 +151,7 @@ async function playStep(page) {
   await a.page.waitForTimeout(100);
   await a.page.screenshot({ path: path.join(OUT, 'dex-entry.png') });
   const skills = await a.page.locator('.sheet .mv').count();
-  if (skills !== 8) throw new Error(`도감 스킬 수 ${skills}`);
+  if (skills !== 10) throw new Error(`도감 스킬 수 ${skills}`);
   await a.page.click('.sheet [data-x]');
   await a.page.click('[data-t=water]');
   if (await a.page.locator('[data-dex]').count() >= 31) throw new Error('타입 필터 안 됨');
@@ -193,8 +193,12 @@ async function playStep(page) {
   await a.page.reload();
   await a.page.waitForSelector('#go-bot');
   await a.page.waitForTimeout(800);
+  await a.page.click('[data-level="3"]');
+  if (!/지옥/.test(await a.page.textContent('#go-bot'))) throw new Error('난이도 표시 안 됨');
+  await shot(a.page, 'lobby-level');
   await a.page.click('#go-bot');
   await a.page.waitForSelector('.pv-lead');
+  if (!/골목대장\(지옥\)/.test(await a.page.textContent('.bhead'))) throw new Error('지옥 상대가 아님');
   for (let i = 0; i < 3000 && !(await playStep(a.page)); i++) await a.page.waitForTimeout(120);
   if (!await a.page.$('.result')) throw new Error('연습전이 끝나지 않음');
   console.log('연습전 완주 OK');

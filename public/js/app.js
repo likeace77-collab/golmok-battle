@@ -1,7 +1,14 @@
 // 화면 전환, 로그인, 로비, 아바타, 팀 편성
 const app = document.getElementById('app');
 const sheetRoot = document.getElementById('sheet-root');
-const G = { data: null, user: null, ws: null, lobby: { players: [], incoming: [], outgoing: null }, size: 3, screen: 'auth' };
+const BOT_LEVELS = [
+  ['쉬움', '기술을 아무거나 쓰고 교체도 메가진화도 안 합니다.'],
+  ['보통', '상성을 보고 싸우고, 메가진화도 씁니다.'],
+  ['어려움', '위험하면 교체하고, 보조 기술과 메가진화를 잘 씁니다.'],
+  ['지옥', '내 덱을 보고 팀을 짜고, 내 기술까지 알고 싸웁니다.'],
+];
+function savedLevel() { try { const v = +localStorage.getItem('botLevel'); return localStorage.getItem('botLevel') !== null && BOT_LEVELS[v] ? v : 1; } catch { return 1; } }
+const G = { botLevel: savedLevel(), data: null, user: null, ws: null, lobby: { players: [], incoming: [], outgoing: null }, size: 3, screen: 'auth' };
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 let toastTimer;
@@ -142,13 +149,22 @@ function renderLobby() {
     </section>
     <section class="panel">
       <h2>혼자 연습</h2>
-      <button class="btn wide mint" id="go-bot">골목대장과 ${G.size}대${G.size}</button>
+      <div class="seg levels">${BOT_LEVELS.map(([n], i) => `<button data-level="${i}" aria-pressed="${G.botLevel === i}">${n}</button>`).join('')}</div>
+      <p class="muted" style="margin:6px 0 10px">${BOT_LEVELS[G.botLevel][1]}</p>
+      <button class="btn wide mint" id="go-bot">골목대장(${BOT_LEVELS[G.botLevel][0]})과 ${G.size}대${G.size}</button>
     </section>
     <p style="text-align:center;margin-top:16px"><button class="btn small paper" id="logout">로그아웃</button></p>`;
   app.querySelector('#go-team').onclick = showDecks;
   app.querySelector('#go-ava').onclick = showAvatar;
   app.querySelector('#go-dex').onclick = showDex;
-  app.querySelector('#go-bot').onclick = () => wsSend({ t: 'practice', size: G.size });
+  app.querySelector('#go-bot').onclick = () => wsSend({ t: 'practice', size: G.size, level: G.botLevel });
+  app.querySelectorAll('[data-level]').forEach((b) => {
+    b.onclick = () => {
+      G.botLevel = +b.dataset.level;
+      try { localStorage.setItem('botLevel', G.botLevel); } catch { /* 저장 못 해도 이번 접속에는 적용 */ }
+      renderLobby();
+    };
+  });
   app.querySelector('#logout').onclick = async () => {
     await api('POST', '/api/logout'); G.user = null; G.ws?.close(); showAuth();
   };

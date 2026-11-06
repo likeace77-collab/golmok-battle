@@ -72,6 +72,8 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .seg { display: inline-flex; border: var(--line); border-radius: 8px; overflow: hidden; }
 .seg button { font-family: var(--ui); padding: 6px 12px; background: #fff; border: 0; }
 .seg button[aria-pressed=true] { background: var(--ink); color: var(--yellow); }
+.seg.levels { display: flex; }
+.seg.levels button { flex: 1; padding: 8px 2px; }
 .notice { background: var(--yellow); border: var(--line); border-radius: 10px; box-shadow: var(--pop); padding: 12px 14px; margin-bottom: 14px; }
 .notice b { font-family: var(--ui); font-weight: 400; font-size: 19px; display: block; margin-bottom: 8px; }
 

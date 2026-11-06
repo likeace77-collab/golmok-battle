@@ -313,21 +313,13 @@ function clearChallenges(key) {
 }
 
 const BOT = 'bot';
-function botTeam(size) {
-  const ids = Object.keys(Data.MONSTERS).sort(() => Math.random() - .5).slice(0, size);
-  return ids.map((species) => {
-    const all = Data.MONSTERS[species].moves;
-    const attacks = all.filter((m) => Data.MOVES[m].cat !== 'x').sort(() => Math.random() - .5).slice(0, 3);
-    const rest = all.filter((m) => !attacks.includes(m)).sort(() => Math.random() - .5);
-    return { species, moves: [...attacks, ...rest].slice(0, 4) };
-  });
-}
+const BOT_LEVELS = ['쉬움', '보통', '어려움', '지옥'];
 
-function startBattle(keys, size) {
+function startBattle(keys, size, level = 1) {
   const players = keys.map((k) => (k === BOT
-    ? { name: '골목대장', avatar: randomAvatar(), deck: '골목대장의 덱', team: botTeam(size) }
+    ? { name: `골목대장(${BOT_LEVELS[level]})`, avatar: randomAvatar(), deck: `${BOT_LEVELS[level]} 덱`, team: E.botTeam(level, size, deckOf(db.users[keys[0]]).team.slice(0, size)) }
     : { name: db.users[k].name, avatar: db.users[k].avatar, deck: deckOf(db.users[k]).name, team: deckOf(db.users[k]).team.slice(0, size) }));
-  const room = { id: crypto.randomUUID(), keys, b: E.createBattle(players, undefined, { preview: true }), deadline: 0, timer: null, ended: false, leaveTimers: {} };
+  const room = { id: crypto.randomUUID(), keys, b: E.createBattle(players, undefined, { preview: true }), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: level };
   battles.set(room.id, room);
   keys.forEach((k) => { if (k !== BOT) { inBattle.set(k, room); clearChallenges(k); } });
   armTimer(room);
@@ -404,7 +396,7 @@ function pumpBot(room) {
   if (b.phase !== 'over' && b.needs[s] && !b.pending[s]) {
     // 교체 단계에서 사람도 골라야 하면 먼저 골라 두고, 봇만 고르면 되면 바로 처리
     if (b.phase === 'choose' && !b.pending[1 - s]) return;
-    apply(room, s, E.botAction(b, s));
+    apply(room, s, E.botAction(b, s, room.botLevel));
   }
 }
 
@@ -452,7 +444,7 @@ function onMessage(key, msg) {
       if (room) return;
       const size = msg.size === 6 ? 6 : 3;
       if (deckOf(db.users[key]).team.length < size) return toast(key, `선택한 덱에 요괴가 ${size}마리 있어야 합니다.`);
-      startBattle([key, BOT], size);
+      startBattle([key, BOT], size, [0, 1, 2, 3].includes(msg.level) ? msg.level : 1);
       break;
     }
     case 'challenge': {
