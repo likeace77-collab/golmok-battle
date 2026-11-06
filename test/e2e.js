@@ -28,6 +28,7 @@ async function signup(ctx, name) {
   return { page, errors };
 }
 
+const errsOf = (u) => u.errors.join('|');
 // 지금 할 수 있는 행동을 하나 합니다. 끝나면 true.
 async function playStep(page) {
   return page.evaluate(() => {
@@ -100,7 +101,7 @@ async function playStep(page) {
   await shot(a.page, 'preview-wait');
   await b.page.click('[data-lead="1"]');
   await a.page.waitForSelector('.mb'); await b.page.waitForSelector('.mb');
-  const leads = await a.page.$$eval('.plate .nm', (l) => l.map((x) => x.textContent.trim()));
+  const leads = [(await a.page.textContent('#p-opp .nm')).trim(), (await a.page.textContent('#p-me .nm')).trim()];
   console.log('선봉:', leads);
   if (!/맷돌이/.test(leads[0]) && !/주전이/.test(leads[0])) throw new Error(`상대 선봉이 다름: ${leads}`);
   await shot(a.page, 'battle-start');
@@ -125,9 +126,11 @@ async function playStep(page) {
     if (!midShot && i > 8 && await a.page.$('.mb')) { midShot = true; await shot(a.page, 'battle-mid'); }
     if (!reconnected && turns > 30) {
       reconnected = true;
-      await b.page.reload();
-      await b.page.waitForSelector('.scene');
-      console.log('재접속 복귀 OK');
+      if (!await a.page.$('.result') && !await b.page.$('.result')) {
+        await b.page.reload();
+        await b.page.waitForSelector('.scene, #go-team');
+        console.log('재접속 복귀:', await b.page.$('.scene') ? 'OK' : '이미 끝남', await b.page.evaluate(() => document.getElementById('app').className), errsOf(b));
+      }
     }
   }
   if (!await a.page.$('.result')) { await shot(a.page, 'stuck-a'); await shot(b.page, 'stuck-b'); throw new Error('온라인 대전이 끝나지 않음'); }
@@ -144,7 +147,7 @@ async function playStep(page) {
   await a.page.click('#go-dex');
   await a.page.waitForSelector('[data-dex]');
   const cnt = await a.page.locator('[data-dex]').count();
-  if (cnt !== 31) throw new Error(`도감 수 ${cnt}`);
+  if (cnt !== 36) throw new Error(`도감 수 ${cnt}`);
   await shot(a.page, 'dex');
   await a.page.click('[data-dex=meokarak]');
   await a.page.waitForSelector('.sheet .mv');
@@ -172,7 +175,7 @@ async function playStep(page) {
   console.log('유예 안 재접속 OK');
   await b.page.close();
   await a.page.waitForSelector('#say');
-  await a.page.waitForFunction(() => /상대가 나갔습니다/.test(document.body.textContent), null, { timeout: 3000 });
+  await a.page.waitForFunction(() => /님이 나갔습니다/.test(document.body.textContent), null, { timeout: 3000 });
   await shot(a.page, 'leave-note');
   await a.page.waitForSelector('.result', { timeout: 9000 });
   const verdict = await a.page.textContent('.result .title');
@@ -185,6 +188,63 @@ async function playStep(page) {
   await b2.waitForFunction(() => /패배 처리/.test(document.getElementById('toast').textContent), null, { timeout: 3000 });
   console.log('탈주 패배 OK:', await a.page.textContent('.profile .muted'), '/', await b2.textContent('.profile .muted'));
   await a.page.waitForTimeout(300);
+
+  // 관전: 세 번째 사람이 대전을 끝까지 봄
+  const c3rd = await browser.newContext({ ...phone });
+  const w = await signup(c3rd, '구경꾼');
+  await a.page.waitForSelector('[data-ch]');
+  await a.page.click('[data-ch]');
+  await b2.waitForSelector('[data-acc]');
+  await b2.click('[data-acc]');
+  await w.page.waitForSelector('[data-watch]');
+  await shot(w.page, 'lobby-live');
+  await w.page.click('[data-watch]');
+  await w.page.waitForSelector('#leave-spec');
+  if (await w.page.$('[data-lead]:not([disabled])')) throw new Error('관전자가 선봉을 고를 수 있음');
+  for (let i = 0; i < 1500; i++) {
+    const [d1, d2] = await Promise.all([playStep(a.page), playStep(b2)]);
+    if (d1 && d2) break;
+    await a.page.waitForTimeout(60);
+  }
+  await w.page.waitForSelector('.result', { timeout: 15000 });
+  await shot(w.page, 'watch-result');
+  console.log('관전 OK:', await w.page.textContent('.result .title'));
+  await w.page.click('#to-lobby');
+  await a.page.click('#to-lobby');
+  await b2.click('#to-lobby');
+  await a.page.waitForSelector('#tag-new');
+
+  // 태그: 사람 셋 + 봇 하나
+  await a.page.click('#tag-new');
+  await b2.waitForSelector('[data-seat="2"]');
+  await b2.click('[data-seat="2"]');
+  await w.page.waitForSelector('[data-seat="1"]');
+  await w.page.click('[data-seat="1"]');
+  await a.page.waitForSelector('#tag-start');
+  await a.page.waitForFunction(() => document.querySelectorAll('.tslot .ava').length === 3);
+  await shot(a.page, 'tag-room');
+  await a.page.click('#tag-start');
+  await Promise.all([a.page, b2, w.page].map((p) => p.waitForSelector('.pv-lead')));
+  await shot(a.page, 'tag-preview');
+  let tagShot = false, targetSeen = false;
+  for (let i = 0; i < 2500; i++) {
+    for (const p of [a.page, b2, w.page]) {
+      await p.evaluate(() => {
+        if (document.querySelector('.result')) return;
+        const el = document.querySelector('.pv-lead:not([disabled])') || document.querySelector('.tg') || document.querySelector('.mb:not([disabled])') || document.querySelector('.sw:not([disabled])');
+        el?.click();
+      });
+    }
+    if (!targetSeen && await a.page.$('.tg')) { targetSeen = true; await shot(a.page, 'tag-target'); }
+    if (!tagShot && await a.page.$('.scene.dbl') && await a.page.$('.mb')) { tagShot = true; await shot(a.page, 'tag-battle'); }
+    if (await a.page.$('.result')) break;
+    await a.page.waitForTimeout(30);
+  }
+  await a.page.waitForSelector('.result', { timeout: 15000 });
+  console.log('태그 완주 OK:', await a.page.textContent('.result .title'), '대상 고르기', targetSeen);
+  if (!targetSeen) throw new Error('태그 대상 고르기가 안 나옴');
+  for (const p of [a.page, b2, w.page]) await p.click('#to-lobby');
+  await a.page.waitForSelector('#go-bot');
 
   // 서버 재시작 후 로그인 유지, 연습전 한 판
   await a.page.waitForTimeout(400);

@@ -110,6 +110,8 @@ const Fx = (() => {
     plunger() { ctx.beginPath(); ctx.rect(-2, -16, 4, 18); paint('#C9924F'); ctx.beginPath(); ctx.moveTo(-11, 12); ctx.quadraticCurveTo(-10, 0, 0, 0); ctx.quadraticCurveTo(10, 0, 11, 12); ctx.closePath(); paint('#D52C2C'); },
     teeth() { ctx.beginPath(); [[-12, -6], [-8, 3], [-4, -6], [0, 3], [4, -6], [8, 3], [12, -6]].forEach(([x, y]) => ctx.lineTo(x, y)); ctx.closePath(); paint('#fff'); },
     fist() { ctx.beginPath(); ctx.arc(0, 0, 10, 0, 7); paint('#FFD23F'); ctx.beginPath(); ctx.moveTo(-3, -9); ctx.lineTo(-3, -2); ctx.moveTo(3, -9); ctx.lineTo(3, -2); ctx.stroke(); },
+    pheart() { ctx.beginPath(); ctx.moveTo(0, 8); ctx.bezierCurveTo(-13, -2, -6, -11, 0, -4); ctx.bezierCurveTo(6, -11, 13, -2, 0, 8); paint('#F27FA5', .9); },
+    lips() { ctx.beginPath(); ctx.moveTo(-11, 0); ctx.quadraticCurveTo(-5, -7, 0, -3); ctx.quadraticCurveTo(5, -7, 11, 0); ctx.quadraticCurveTo(0, 9, -11, 0); paint('#E0123E'); },
     bag() { ctx.beginPath(); ctx.moveTo(-11, -6); ctx.lineTo(-13, -14); ctx.lineTo(-6, -8); ctx.quadraticCurveTo(0, -5, 6, -8); ctx.lineTo(13, -14); ctx.lineTo(11, -6); ctx.quadraticCurveTo(15, 12, 0, 13); ctx.quadraticCurveTo(-15, 12, -11, -6); paint('#2f2b38'); },
     can() { ctx.beginPath(); ctx.rect(-8, -11, 16, 22); paint('#AEB7C2'); ctx.beginPath(); ctx.rect(-8, -3, 16, 8); paint('#E8402C', .9); },
     bean() { ctx.beginPath(); ctx.moveTo(0, 12); ctx.quadraticCurveTo(-3, 0, 3, -6); ctx.strokeStyle = '#E9E2B5'; ctx.lineWidth = 3; ctx.stroke(); ctx.beginPath(); ctx.ellipse(4, -8, 5, 3.5, .4, 0, 7); paint('#F2D64B', .9); },
@@ -482,6 +484,15 @@ const Fx = (() => {
     mustard(A, T, k) { act(k, 'lunge', 460); prop('mustard', { from: A, to: T, delay: 100, dur: 240, size: 22 }); burst('mustard', T, { delay: 340, n: 12, dist: 56, size: 6 }); return 800; },
     refill(A, T, k) { act(k, 'charge', 760); const top = above(A, 92); prop('bucket', { from: above(A, 170), to: top, dur: 240, size: 28, rot1: 2.4, hold: 400 }); fall('drop', A, { delay: 240, n: 14, gap: 26, dur: 260, height: 82, spread: 24, size: 7 }); rise('heart', A, { delay: 520, n: 7, dur: 560, size: 7 }); return 1200; },
     honeybomb(A, T, k) { act(k, 'dash', 620); prop('honey', { from: A, to: T, dur: 300, size: 28 }); ring(T, { delay: 300, color: '#E7A020', r1: 120, w: 9 }); burst('honey', T, { delay: 300, n: 18, dist: 92, size: 8 }); burst('flame', T, { delay: 340, n: 10, dist: 72, size: 8 }); flash('#FFD23F', 260, 300, .45); shake(9, 260, 300); return 1000; },
+    // 페어리와 로봇
+    pixiedust(A, T, k) { act(k, 'sway', 560); spray('sparkle', A, T, { n: 16, gap: 26, dur: 420, arc: 30, size: 8, spread: 26 }); burst('pheart', T, { delay: 560, n: 8, dist: 52 }); return 980; },
+    charm(A, T, k, t) { act(k, 'sway', 620); spray('pheart', A, T, { n: 8, gap: 60, dur: 420, arc: 26, size: 10, spread: 22 }); tint(t, 'hex', 360, 620); return 1050; },
+    fairydance(A, T, k) { act(k, 'spin', 760); orbit('sparkle', A, { n: 10, r: 62, dur: 820, size: 9, turns: 2, rising: 28 }); rise('pheart', A, { n: 6, dur: 560, size: 7 }); return 1040; },
+    neonwink(A, T, k, t) { act(k, 'cast', 480); ['#ff4fa8', '#37e0ff'].forEach((c, i) => beam(A, T, { delay: i * 120, color: c, core: '#fff', w: 8, dur: 480 })); burst('pheart', T, { delay: 420, n: 10, dist: 66 }); flash('#ff4fa8', 240, 420, .35); tint(t, 'zap', 360, 430); return 1000; },
+    lipmark(A, T, k, t) { act(k, 'lunge', 480); prop('lips', { from: A, to: T, delay: 80, dur: 300, size: 30, hold: 300 }); burst('pheart', T, { delay: 380, n: 8, dist: 54 }); tint(t, 'hex', 340, 380); return 900; },
+    canburst(A, T, k) { act(k, 'cast', 620); spray('can', A, T, { n: 8, gap: 56, dur: 240, size: 11, spin: 12, spread: 20 }); burst('scrap', T, { delay: 300, n: 8, dist: 52 }); return 880; },
+    bulletdash(A, T, k) { act(k, 'dash', 420); windLines(A, T, { n: 10, gap: 12, dur: 220, spread: 40, color: '#FFE45C' }); prop('plate', { from: A, to: T, dur: 190, size: 22 }); ring(T, { delay: 190, color: '#FFD23F', r1: 76 }); return 640; },
+    spincycle(A, T, k, t) { act(k, 'spin', 760); act(t, 'lift', 760); orbit('drop', T, { n: 12, r: 58, dur: 760, size: 8, turns: 3 }); orbit('bubble', T, { n: 8, r: 34, dur: 760, size: 6, turns: -2 }); ring(T, { color: '#BFE4FF', r1: 92, delay: 640 }); return 1040; },
     // 전용기
     gugong(A, T, k, t) { act(k, 'dash', 640); orbit('flame', A, { n: 10, r: 44, dur: 300, size: 7 }); prop('brick', { from: A, to: T, dur: 300, size: 24, rot1: 8 }); ring(T, { delay: 310, color: '#F28A1E', r1: 124, w: 9 }); burst('flame', T, { delay: 310, n: 20, dist: 100, size: 11 }); burst('dirt', T, { delay: 320, n: 10, dist: 80 }); shake(8, 280, 310); return 1020; },
     headfirst(A, T, k) { spray('bread', A, T, { n: 1, dur: 220, size: 30, spread: 0 }); act(k, 'dash', 420); add(280, (p) => { const c = Math.min(1, p * 2.4); sprite('teeth', T.x, lerp(T.y - 44 * u, T.y - 7 * u, c), 24, 0, fade(p)); sprite('teeth', T.x, lerp(T.y + 44 * u, T.y + 7 * u, c), 24, 3.14, fade(p)); }, 170); burst('flame', T, { delay: 260, n: 8, dist: 52 }); return 660; },
@@ -532,8 +543,8 @@ const Fx = (() => {
   }
 
   /* ---------- 바깥에서 부르는 함수 ---------- */
-  function play(id, key) {
-    const foe = key === 'me' ? 'opp' : 'me';
+  function play(id, key, target) {
+    const foe = target || (key === 'me' ? 'opp' : 'me');
     const run = MOVE_FX[id] || MOVE_FX.tackle;
     if (REDUCED) return 500;
     measure();

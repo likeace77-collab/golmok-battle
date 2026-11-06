@@ -93,12 +93,56 @@ function onServer(m) {
     case 'turn': Battle.onTurn(m); break;
     case 'chosen': Battle.onChosen(m); break;
     case 'opp_ready': Battle.setNote('상대가 행동을 골랐습니다.'); break;
-    case 'opp_conn': Battle.setNote(m.online ? '상대가 돌아왔습니다.' : `상대가 나갔습니다. ${m.grace}초 안에 돌아오지 않으면 승리합니다.`); break;
+    case 'opp_conn': Battle.setNote(m.online ? `${m.name}님이 돌아왔습니다.` : `${m.name}님이 나갔습니다. ${m.grace}초 안에 돌아오지 않으면 ${m.tag ? '골목대장이 자리를 맡습니다' : '승리합니다'}.`); break;
+    case 'kicked': if (m.text) toast(m.text); Battle.exit(); break;
     default:
   }
 }
 
 /* ---------- 로비 ---------- */
+function liveHTML(L) {
+  const list = (L.live || []);
+  return `<section class="panel"><h2>진행 중인 대전</h2>
+    ${list.length ? list.map((r) => `<div class="player"><div class="nm">${r.names.map(esc).join(r.tag ? ', ' : ' 대 ')}
+      <small>${r.tag ? '태그 2대2' : r.practice ? '연습전' : '1대1'}${r.watchers ? `, ${r.watchers}명 관전 중` : ''}</small></div>
+      <button class="btn small" data-watch="${esc(r.id)}" ${r.names.includes(G.user.name) ? 'disabled' : ''}>관전</button></div>`).join('')
+      : '<p class="muted">지금 진행 중인 대전이 없습니다.</p>'}</section>`;
+}
+
+function tagSlot(room, seat, mine) {
+  const p = room.slots[seat];
+  if (p) return `<div class="tslot"><div class="ava">${avatarSVG(p.avatar)}</div><span>${esc(p.name)}${room.host === p.key ? ' (방장)' : ''}</span></div>`;
+  return `<button class="tslot empty" data-room="${esc(room.id)}" data-seat="${seat}">${mine ? '여기로 이동' : '참가'}<small>비우면 골목대장</small></button>`;
+}
+
+function tagHTML(L) {
+  const me = G.user.name.toLowerCase();
+  const rooms = L.tags || [];
+  const mine = rooms.find((r) => r.slots.some((p) => p?.key === me));
+  if (mine) {
+    const host = mine.host === me;
+    return `<section class="panel"><h2>태그 2대2 방</h2>
+      <div class="tteams">
+        <div><b>1팀</b>${tagSlot(mine, 0, true)}${tagSlot(mine, 1, true)}</div>
+        <div><b>2팀</b>${tagSlot(mine, 2, true)}${tagSlot(mine, 3, true)}</div>
+      </div>
+      <p class="muted" style="margin:8px 0 4px">빈자리 골목대장 난이도</p>
+      <div class="seg levels">${BOT_LEVELS.map(([n], i) => `<button data-tlevel="${i}" aria-pressed="${mine.level === i}" ${host ? '' : 'disabled'}>${n}</button>`).join('')}</div>
+      <p class="muted" style="margin:6px 0 10px">각자 사용할 덱의 앞 3마리가 나갑니다.</p>
+      <div class="row">
+        <button class="btn paper" id="tag-leave">방 나가기</button>
+        <button class="btn mint" id="tag-start" style="flex:1" ${host ? '' : 'disabled'}>${host ? '대전 시작' : '방장을 기다리는 중'}</button>
+      </div></section>`;
+  }
+  return `<section class="panel"><h2>태그 2대2</h2>
+    ${rooms.map((r) => `<div class="troom"><p class="muted">${r.slots.filter(Boolean).map((p) => esc(p.name)).join(', ')}의 방</p>
+      <div class="tteams">
+        <div><b>1팀</b>${tagSlot(r, 0)}${tagSlot(r, 1)}</div>
+        <div><b>2팀</b>${tagSlot(r, 2)}${tagSlot(r, 3)}</div>
+      </div></div>`).join('')}
+    <button class="btn wide" id="tag-new">태그 방 만들기</button></section>`;
+}
+
 function showLobby() { G.screen = 'lobby'; app.className = ''; closeSheet(); renderLobby(); }
 
 function renderLobby() {
@@ -147,6 +191,8 @@ function renderLobby() {
         </div>`;
       }).join('') : '<p class="muted">아직 아무도 없습니다. 친구에게 이 주소를 보내세요.</p>'}
     </section>
+    ${liveHTML(L)}
+    ${tagHTML(L)}
     <section class="panel">
       <h2>혼자 연습</h2>
       <div class="seg levels">${BOT_LEVELS.map(([n], i) => `<button data-level="${i}" aria-pressed="${G.botLevel === i}">${n}</button>`).join('')}</div>
@@ -155,6 +201,12 @@ function renderLobby() {
     </section>
     <p style="text-align:center;margin-top:16px"><button class="btn small paper" id="logout">로그아웃</button></p>`;
   app.querySelector('#go-team').onclick = showDecks;
+  app.querySelectorAll('[data-watch]').forEach((b) => { b.onclick = () => wsSend({ t: 'spectate', id: b.dataset.watch }); });
+  app.querySelector('#tag-new')?.addEventListener('click', () => wsSend({ t: 'tag_create' }));
+  app.querySelector('#tag-leave')?.addEventListener('click', () => wsSend({ t: 'tag_leave' }));
+  app.querySelector('#tag-start')?.addEventListener('click', () => wsSend({ t: 'tag_start' }));
+  app.querySelectorAll('[data-seat]').forEach((b) => { b.onclick = () => wsSend({ t: 'tag_seat', id: b.dataset.room, seat: +b.dataset.seat }); });
+  app.querySelectorAll('[data-tlevel]').forEach((b) => { b.onclick = () => wsSend({ t: 'tag_level', level: +b.dataset.tlevel }); });
   app.querySelector('#go-ava').onclick = showAvatar;
   app.querySelector('#go-dex').onclick = showDex;
   app.querySelector('#go-bot').onclick = () => wsSend({ t: 'practice', size: G.size, level: G.botLevel });

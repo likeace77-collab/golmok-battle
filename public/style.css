@@ -133,6 +133,37 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .megabox .stat b { font-family: var(--ui); font-weight: 400; color: var(--yellow); }
 .megabox .stat i { background: var(--yellow); }
 
+/* 태그 */
+.tteams { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tteams b { font-family: var(--ui); font-weight: 400; display: block; margin-bottom: 4px; }
+.tslot { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 54px; padding: 4px 6px; margin-bottom: 6px; font-family: var(--ui); font-size: 15px; line-height: 1.15; background: #fff; border: 2px solid var(--ink); border-radius: 8px; overflow-wrap: anywhere; }
+.tslot .ava { width: 40px; height: 40px; border-width: 2px; }
+.tslot.empty { flex-direction: column; justify-content: center; gap: 1px; background: none; border-style: dashed; }
+.tslot.empty small { font-family: var(--body); font-size: 12px; color: #5f5870; }
+.troom { padding-bottom: 8px; margin-bottom: 8px; border-bottom: 2px dashed #1a143340; }
+.seg button:disabled { color: #8a8498; }
+.title.small { font-size: clamp(34px, 10vw, 54px); }
+.owner { font-size: 11px; line-height: 1; color: #5f5870; font-family: var(--ui); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.scene.dbl .plate { width: 41%; padding: 2px 6px 4px; box-shadow: 2px 2px 0 var(--ink); }
+.scene.dbl .plate .nm { font-size: clamp(12px, 3.4vw, 15px); }
+.scene.dbl .plate .bar { height: 8px; margin-top: 1px; }
+.scene.dbl .plate .num { font-size: 11px; margin-top: 0; }
+.scene.dbl .plate.opp { top: 2%; left: 1%; }
+.scene.dbl .plate.opp2 { top: 21%; left: 1%; right: auto; }
+.scene.dbl .plate.ally { bottom: 25%; right: 1%; left: auto; top: auto; }
+.scene.dbl .plate.me { bottom: 2%; right: 1%; }
+.plate.ally, .plate.opp2 { position: absolute; }
+.mon.ally, .mon.opp2 { position: absolute; }
+.scene.dbl .mon.opp { width: 24%; right: 2%; top: 14%; }
+.scene.dbl .mon.opp2 { width: 24%; right: 27%; top: 25%; }
+.scene.dbl .mon.me { width: 30%; left: 1%; bottom: 3%; }
+.scene.dbl .mon.ally { width: 27%; left: 29%; bottom: 14%; }
+.scene.dbl .mon.mega { transform-origin: bottom center; scale: 1.14; }
+.mon.ally { --sx: 1; --sy: -1; }
+.mon.opp2 { --sx: -1; --sy: 1; }
+.mon.ally svg { transform: scaleX(-1); }
+.mon.ally.mega svg { transform: none; }
+
 /* 덱 */
 .deck { display: flex; gap: 8px; align-items: center; padding: 8px; margin-bottom: 10px; background: var(--paper); border: var(--line); border-radius: 10px; box-shadow: var(--pop); }
 .deck.on { background: var(--yellow); }

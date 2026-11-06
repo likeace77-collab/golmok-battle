@@ -291,6 +291,8 @@ const battles = new Map();  // 대전 id → room
 const inBattle = new Map(); // 유저 키 → room
 const challenges = new Map(); // 신청자 키 → { to, size }
 const notices = new Map();    // 다음 접속 때 알려 줄 말
+const tagRooms = new Map();   // 태그 방 id → { id, host, level, slots }
+const spectating = new Map(); // 유저 키 → 관전 중인 room
 
 const send = (ws, msg) => { if (ws?.readyState === 1) ws.send(JSON.stringify(msg)); };
 const toast = (key, text) => send(online.get(key), { t: 'toast', text });
@@ -300,10 +302,28 @@ function broadcastLobby() {
     const u = db.users[k];
     return { key: k, name: u.name, avatar: u.avatar, wins: u.wins, losses: u.losses, busy: inBattle.has(k) };
   });
+  const tags = [...tagRooms.values()].map((r) => ({
+    id: r.id, host: r.host, level: r.level,
+    slots: r.slots.map((k) => (k ? { key: k, name: db.users[k].name, avatar: db.users[k].avatar } : null)),
+  }));
+  const live = [...battles.values()].filter((r) => !r.ended).map((r) => ({
+    id: r.id, tag: r.tag, practice: isPractice(r), watchers: r.spectators.size,
+    names: r.b.sides.map((x) => x.name),
+  }));
   for (const [k, ws] of online) {
     const incoming = [...challenges].filter(([, c]) => c.to === k).map(([from, c]) => ({ from, name: db.users[from].name, size: c.size }));
-    send(ws, { t: 'lobby', players, incoming, outgoing: challenges.get(k) || null });
+    send(ws, { t: 'lobby', players, incoming, outgoing: challenges.get(k) || null, tags, live });
   }
+}
+
+const tagOf = (key) => [...tagRooms.values()].find((r) => r.slots.includes(key));
+function removeFromTag(key) {
+  const r = tagOf(key);
+  if (!r) return;
+  r.slots[r.slots.indexOf(key)] = null;
+  const humans = r.slots.filter(Boolean);
+  if (!humans.length) tagRooms.delete(r.id);
+  else if (r.host === key) [r.host] = humans;
 }
 
 function clearChallenges(key) {
@@ -312,15 +332,21 @@ function clearChallenges(key) {
 }
 
 const BOT = 'bot';
+const isPractice = (room) => !room.tag && room.keys.includes(BOT);
 const BOT_LEVELS = ['쉬움', '보통', '어려움', '지옥'];
 
-function startBattle(keys, size, level = 1) {
-  const players = keys.map((k) => (k === BOT
-    ? { name: `골목대장(${BOT_LEVELS[level]})`, avatar: randomAvatar(), deck: `${BOT_LEVELS[level]} 덱`, team: E.botTeam(level, size, deckOf(db.users[keys[0]]).team.slice(0, size)) }
+function startBattle(keys, size, level = 1, tag = false) {
+  const foeDeck = (i) => {
+    const mine = tag ? (i < 2 ? 0 : 1) : i;
+    const human = keys.find((k, j) => k !== BOT && (tag ? (j < 2 ? 0 : 1) : j) !== mine) ?? keys.find((k) => k !== BOT);
+    return deckOf(db.users[human]).team.slice(0, size);
+  };
+  const players = keys.map((k, i) => (k === BOT
+    ? { name: `골목대장(${BOT_LEVELS[level]})`, avatar: randomAvatar(), deck: `${BOT_LEVELS[level]} 덱`, team: E.botTeam(level, size, foeDeck(i)) }
     : { name: db.users[k].name, avatar: db.users[k].avatar, deck: deckOf(db.users[k]).name, team: deckOf(db.users[k]).team.slice(0, size) }));
-  const room = { id: crypto.randomUUID(), keys, b: E.createBattle(players, undefined, { preview: true }), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: level };
+  const room = { id: crypto.randomUUID(), keys, b: E.createBattle(players, undefined, { preview: true }), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: level, tag, spectators: new Set() };
   battles.set(room.id, room);
-  keys.forEach((k) => { if (k !== BOT) { inBattle.set(k, room); clearChallenges(k); } });
+  keys.forEach((k) => { if (k !== BOT) { inBattle.set(k, room); clearChallenges(k); removeFromTag(k); stopWatching(k); } });
   armTimer(room);
   keys.forEach((k, s) => { if (k !== BOT) syncBattle(room, s); });
   pumpBot(room);
@@ -333,14 +359,22 @@ function syncBattle(room, s) {
   const k = room.keys[s];
   send(online.get(k), {
     t: 'battle', view: E.viewFor(room.b, s), remain: remaining(room),
-    oppOnline: room.keys[1 - s] === BOT || online.has(room.keys[1 - s]),
-    practice: room.keys.includes(BOT),
+    oppOnline: room.keys.every((x) => x === BOT || online.has(x)),
+    practice: isPractice(room), tag: room.tag,
   });
+}
+
+const watchView = (room) => ({ ...E.viewFor(room.b, 0), mustAct: false, canMega: false, spectator: true });
+function stopWatching(key) {
+  const room = spectating.get(key);
+  if (!room) return;
+  room.spectators.delete(key);
+  spectating.delete(key);
 }
 
 function armTimer(room) {
   clearTimeout(room.timer);
-  if (room.b.phase === 'over' || room.keys.includes(BOT)) { room.deadline = 0; return; }
+  if (room.b.phase === 'over' || isPractice(room)) { room.deadline = 0; return; }
   room.deadline = Date.now() + TURN_SECONDS * 1000;
   room.timer = setTimeout(() => onTimeout(room), TURN_SECONDS * 1000 + 300);
 }
@@ -349,8 +383,8 @@ function onTimeout(room) {
   if (room.ended) return;
   if (!room.keys.some((k) => online.has(k))) return dissolve(room); // 둘 다 나갔으면 무효
   // 시간 안에 못 고른 쪽은 자동으로 행동합니다.
-  for (const s of [0, 1]) {
-    if (room.b.phase !== 'over' && room.b.needs[s] && !room.b.pending[s]) {
+  for (const s of room.keys.keys()) {
+    if (room.keys[s] !== BOT && room.b.phase !== 'over' && room.b.needs[s] && !room.b.pending[s]) {
       toast(room.keys[s], '시간이 지나 자동으로 골랐습니다.');
       apply(room, s, E.botAction(room.b, s));
     }
@@ -362,6 +396,10 @@ function dissolve(room) {
   clearTimeout(room.timer); clearTimeout(room.idle);
   Object.values(room.leaveTimers).forEach(clearTimeout);
   room.keys.forEach((k) => inBattle.delete(k));
+  for (const k of room.spectators) {
+    spectating.delete(k);
+    if (room.b.phase !== 'over') send(online.get(k), { t: 'kicked', text: '대전이 끝났습니다.' });
+  }
   battles.delete(room.id);
   broadcastLobby();
 }
@@ -370,18 +408,31 @@ function dissolve(room) {
 function onLeaveTimeout(room, key) {
   if (room.ended || online.has(key)) return;
   const s = room.keys.indexOf(key);
-  if (!online.has(room.keys[1 - s])) return dissolve(room); // 둘 다 나갔으면 무효
+  if (!room.tag && !online.has(room.keys[1 - s])) return dissolve(room); // 둘 다 나갔으면 무효
+  if (room.tag) return seatToBot(room, key, '대전을 나가서 골목대장이 자리를 맡았습니다.');
   notices.set(key, '대전을 나가서 패배 처리되었습니다.');
   afterTurn(room, E.forfeit(room.b, s, true));
+}
+
+// 태그에서 나가면 그 자리는 봇이 이어서 싸웁니다.
+function seatToBot(room, key, text) {
+  const s = room.keys.indexOf(key);
+  room.keys[s] = BOT;
+  inBattle.delete(key);
+  if (online.has(key)) send(online.get(key), { t: 'kicked', text });
+  else notices.set(key, text);
+  if (room.keys.every((k) => k === BOT)) return dissolve(room);
+  room.keys.forEach((k) => { if (k !== BOT) toast(k, `${room.b.sides[s].name}님 자리를 골목대장이 맡습니다.`); });
+  pumpBot(room);
+  broadcastLobby();
 }
 
 function apply(room, s, action) {
   const r = E.choose(room.b, s, action);
   if (!r.ok) { toast(room.keys[s], '지금은 할 수 없는 행동입니다.'); return; }
   if (!r.events) {
-    const other = room.keys[1 - s];
     send(online.get(room.keys[s]), { t: 'chosen', view: E.viewFor(room.b, s) });
-    if (other !== BOT) send(online.get(other), { t: 'opp_ready' });
+    if (!room.tag && room.keys[1 - s] !== BOT) send(online.get(room.keys[1 - s]), { t: 'opp_ready' });
     pumpBot(room);
     return;
   }
@@ -389,13 +440,15 @@ function apply(room, s, action) {
 }
 
 function pumpBot(room) {
-  const s = room.keys.indexOf(BOT);
-  if (s < 0 || room.ended) return;
   const { b } = room;
-  if (b.phase !== 'over' && b.needs[s] && !b.pending[s]) {
-    // 교체 단계에서 사람도 골라야 하면 먼저 골라 두고, 봇만 고르면 되면 바로 처리
-    if (b.phase === 'choose' && !b.pending[1 - s]) return;
+  if (room.ended || b.phase === 'over') return;
+  // 기술 고르기는 사람이 다 고른 뒤에 움직입니다. 사람의 선택을 보지는 않습니다.
+  const humansReady = room.keys.every((k, i) => k === BOT || !b.needs[i] || b.pending[i]);
+  for (const s of room.keys.keys()) {
+    if (room.keys[s] !== BOT || !b.needs[s] || b.pending[s]) continue;
+    if (b.phase === 'choose' && !humansReady) continue;
     apply(room, s, E.botAction(b, s, room.botLevel));
+    return; // 나머지는 apply 뒤 다시 불립니다.
   }
 }
 
@@ -405,13 +458,14 @@ function afterTurn(room, events) {
     if (k === BOT) return;
     send(online.get(k), { t: 'turn', events, view: E.viewFor(room.b, s), remain: remaining(room) });
   });
+  for (const k of room.spectators) send(online.get(k), { t: 'turn', events, view: watchView(room), remain: remaining(room) });
   if (room.b.phase === 'over') return finish(room);
   pumpBot(room);
 }
 
 function finish(room) {
   const { winner } = room.b;
-  if (!room.keys.includes(BOT)) {
+  if (!room.tag && !room.keys.includes(BOT)) {
     const [a, b] = room.keys.map((k) => db.users[k]);
     const h = (u, o, f) => { (u.h2h[o.name] ||= { w: 0, l: 0, d: 0 })[f]++; };
     if (winner === null) { a.draws++; b.draws++; h(a, b, 'd'); h(b, a, 'd'); }
@@ -435,8 +489,54 @@ function onMessage(key, msg) {
     }
     case 'forfeit': {
       if (!room) return;
+      if (room.tag) return seatToBot(room, key, '대전에서 나왔습니다. 골목대장이 자리를 맡았습니다.');
       const events = E.forfeit(room.b, room.keys.indexOf(key));
       afterTurn(room, events);
+      break;
+    }
+    case 'spectate': {
+      const target = battles.get(String(msg.id ?? ''));
+      if (room || !target || target.ended) return toast(key, '지금은 관전할 수 없습니다.');
+      stopWatching(key);
+      target.spectators.add(key);
+      spectating.set(key, target);
+      send(online.get(key), { t: 'battle', view: watchView(target), remain: remaining(target), oppOnline: true, practice: isPractice(target), tag: target.tag, spectator: true });
+      broadcastLobby();
+      break;
+    }
+    case 'unspectate': stopWatching(key); broadcastLobby(); break;
+    case 'tag_create': {
+      if (room || tagOf(key)) return;
+      const id = crypto.randomUUID();
+      tagRooms.set(id, { id, host: key, level: 1, slots: [key, null, null, null] });
+      broadcastLobby();
+      break;
+    }
+    case 'tag_seat': {
+      const r = tagRooms.get(String(msg.id ?? ''));
+      if (room || !r || !Number.isInteger(msg.seat) || msg.seat < 0 || msg.seat > 3 || r.slots[msg.seat]) return;
+      removeFromTag(key);
+      if (!tagRooms.has(r.id)) tagRooms.set(r.id, r);
+      r.slots[msg.seat] = key;
+      if (!r.host || !r.slots.includes(r.host)) r.host = key;
+      broadcastLobby();
+      break;
+    }
+    case 'tag_leave': removeFromTag(key); broadcastLobby(); break;
+    case 'tag_level': {
+      const r = tagOf(key);
+      if (r?.host === key && [0, 1, 2, 3].includes(msg.level)) { r.level = msg.level; broadcastLobby(); }
+      break;
+    }
+    case 'tag_start': {
+      const r = tagOf(key);
+      if (r?.host !== key) return;
+      const humans = r.slots.filter(Boolean);
+      if (humans.some((k) => inBattle.has(k) || !online.has(k))) return toast(key, '참가자 중 대전 중인 사람이 있습니다.');
+      const short = humans.find((k) => deckOf(db.users[k]).team.length < 3);
+      if (short) return toast(key, `${db.users[short].name}님의 덱에 요괴가 3마리 있어야 합니다.`);
+      tagRooms.delete(r.id);
+      startBattle(r.slots.map((k) => k || BOT), 3, r.level, true);
       break;
     }
     case 'practice': {
@@ -502,13 +602,14 @@ server.on('upgrade', (req, socket, head) => {
       if (online.get(key) !== ws) return;
       online.delete(key);
       challenges.delete(key);
+      removeFromTag(key);
+      stopWatching(key);
       const room = inBattle.get(key);
       if (room) {
-        const s = room.keys.indexOf(key);
-        const other = room.keys[1 - s];
-        if (other === BOT) room.idle = setTimeout(() => { if (!online.has(key)) dissolve(room); }, 10 * 60000);
+        if (isPractice(room)) room.idle = setTimeout(() => { if (!online.has(key)) dissolve(room); }, 10 * 60000);
         else {
-          send(online.get(other), { t: 'opp_conn', online: false, grace: LEAVE_GRACE_SECONDS });
+          const name = db.users[key].name;
+          room.keys.forEach((k) => { if (k !== key && k !== BOT) send(online.get(k), { t: 'opp_conn', online: false, grace: LEAVE_GRACE_SECONDS, name, tag: room.tag }); });
           room.leaveTimers[key] = setTimeout(() => onLeaveTimeout(room, key), LEAVE_GRACE_SECONDS * 1000);
         }
       }
@@ -523,8 +624,7 @@ server.on('upgrade', (req, socket, head) => {
       clearTimeout(room.idle);
       clearTimeout(room.leaveTimers[key]);
       syncBattle(room, room.keys.indexOf(key));
-      const other = room.keys[1 - room.keys.indexOf(key)];
-      if (other !== BOT) send(online.get(other), { t: 'opp_conn', online: true });
+      room.keys.forEach((k) => { if (k !== key && k !== BOT) send(online.get(k), { t: 'opp_conn', online: true, name: db.users[key].name }); });
     }
     broadcastLobby();
   });

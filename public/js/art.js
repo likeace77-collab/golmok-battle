@@ -243,6 +243,7 @@ Object.assign(ART, {
 
 function monsterSVG(id, cls = '', mega = false) {
   if (mega) return `<svg class="${cls}" viewBox="-6 -6 212 212" aria-hidden="true">${MEGA_ART[id]}</svg>`;
+  if (NEW_ART[id]) return `<svg class="${cls}" viewBox="-4 -6 208 212" aria-hidden="true">${NEW_ART[id]}</svg>`;
   return `<svg class="${cls}" viewBox="0 0 120 120" aria-hidden="true">${ART[id] || ''}</svg>`;
 }
 

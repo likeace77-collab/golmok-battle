@@ -51,7 +51,7 @@ const freshVolatile = () => ({
 function createBattle(players, seed = (Math.random() * 2 ** 31) | 0, { preview = false } = {}) {
   const b = {
     seed, turn: 1, phase: preview ? 'preview' : 'choose', winner: null, weather: null, weatherTurns: 0,
-    pending: [null, null], needs: [true, true],
+    pending: players.map(() => null), needs: players.map(() => true),
     sides: players.map((p) => ({
       name: p.name, avatar: p.avatar, deck: p.deck, active: 0, hazard: false,
       mons: p.team.map(makeMon),
@@ -60,7 +60,21 @@ function createBattle(players, seed = (Math.random() * 2 ** 31) | 0, { preview =
   return b;
 }
 
+// 자리: 1대1은 0, 1번. 태그는 0·1번이 한 팀, 2·3번이 한 팀입니다.
+const seats = (b) => b.sides.map((_, i) => i);
+const isDoubles = (b) => b.sides.length === 4;
+const teamOf = (b, s) => (isDoubles(b) ? (s < 2 ? 0 : 1) : s);
+const foesOf = (b, s) => seats(b).filter((i) => teamOf(b, i) !== teamOf(b, s));
+const matesOf = (b, s) => seats(b).filter((i) => teamOf(b, i) === teamOf(b, s));
+const teamName = (b, t) => seats(b).filter((i) => teamOf(b, i) === t).map((i) => b.sides[i].name).join(', ');
+
 const activeOf = (b, s) => b.sides[s].mons[b.sides[s].active];
+// 노린 상대가 쓰러졌으면 남은 상대를 공격합니다.
+function targetOf(b, s, want) {
+  const foes = foesOf(b, s);
+  if (foes.includes(want) && activeOf(b, want).hp > 0) return want;
+  return foes.find((i) => activeOf(b, i).hp > 0) ?? foes[0];
+}
 const alive = (m) => m.hp > 0;
 const effOf = (moveType, types) =>
   types.reduce((x, t) => x * (CHART[moveType][t] ?? 1), 1);
@@ -103,26 +117,26 @@ function choose(b, s, action) {
   if (!legal.some((a) => a.type === action?.type && a.index === action?.index)) return { ok: false };
   if (b.pending[s]) return { ok: false };
   if (action.mega && (action.type !== 'move' || !canMega(b, s))) return { ok: false };
-  b.pending[s] = { type: action.type, index: action.index, mega: !!action.mega };
-  const ready = [0, 1].every((i) => !b.needs[i] || b.pending[i]);
+  b.pending[s] = { type: action.type, index: action.index, mega: !!action.mega, target: action.target };
+  const ready = seats(b).every((i) => !b.needs[i] || b.pending[i]);
   return ready ? { ok: true, events: resolve(b) } : { ok: true, events: null };
 }
 
 function resolve(b) {
   const ev = [];
   if (b.phase === 'preview') {
-    for (const s of [0, 1]) b.sides[s].active = b.pending[s].index;
-    for (const s of [0, 1]) {
+    for (const s of seats(b)) b.sides[s].active = b.pending[s].index;
+    for (const s of seats(b)) {
       const m = activeOf(b, s);
       ev.push({ t: 'switch', side: s, mon: publicMon(m), text: `${b.sides[s].name}: 가라, ${m.name}!` });
     }
   } else if (b.phase === 'switch') {
-    for (const s of [0, 1]) if (b.pending[s]) doSwitch(b, s, b.pending[s].index, ev);
+    for (const s of seats(b)) if (b.pending[s]) doSwitch(b, s, b.pending[s].index, ev);
   } else {
     ev.push({ t: 'turn', turn: b.turn });
     runTurn(b, ev);
   }
-  b.pending = [null, null];
+  b.pending = b.pending.map(() => null);
   updatePhase(b, ev);
   return ev;
 }
@@ -136,7 +150,7 @@ function speedOf(b, s) {
 const stageMul = (n) => (n >= 0 ? (2 + n) / 2 : 2 / (2 - n));
 
 function runTurn(b, ev) {
-  const acts = [0, 1].map((s) => ({ s, a: b.pending[s] }));
+  const acts = seats(b).filter((s) => b.pending[s]).map((s) => ({ s, a: b.pending[s] }));
   for (const { s, a } of acts) if (a.mega) doMega(b, s, ev);
   // 교체가 먼저
   for (const { s, a } of acts) if (a.type === 'switch') doSwitch(b, s, a.index, ev);
@@ -151,7 +165,7 @@ function runTurn(b, ev) {
   for (const { s, a } of movers) {
     if (b.phase === 'over') break;
     const mon = activeOf(b, s);
-    if (alive(mon)) useMove(b, s, a.index, ev);
+    if (alive(mon)) useMove(b, s, a.index, ev, a.target);
     if (checkOver(b, ev)) break;
   }
   if (b.phase !== 'over') endOfTurn(b, ev);
@@ -292,8 +306,8 @@ function damageOf(b, atk, def, mv, crit, roll) {
   return Math.max(1, Math.floor(dmg));
 }
 
-function useMove(b, s, index, ev) {
-  const o = 1 - s;
+function useMove(b, s, index, ev, want) {
+  const o = targetOf(b, s, want);
   const me = activeOf(b, s);
   const slot = index === -1 ? null : me.moves[index];
   const mv = slot ? MOVES[slot.id] : STRUGGLE;
@@ -302,7 +316,7 @@ function useMove(b, s, index, ev) {
   if (slot) slot.pp--;
 
   ev.push({
-    t: 'move', side: s, id: slot ? slot.id : 'struggle', move: mv.n, type: mv.type, cat: mv.cat,
+    t: 'move', side: s, target: o, id: slot ? slot.id : 'struggle', move: mv.n, type: mv.type, cat: mv.cat,
     text: `${josa(me.name, '은/는')} ${josa(mv.n, '을/를')} 썼다!`,
   });
 
@@ -356,8 +370,8 @@ function useMove(b, s, index, ev) {
     ev.push({ t: 'status', side: o, status: null, text: `${foe.name}의 얼음이 녹았다!` });
   }
   if (mv.clearHazard && b.sides[s].hazard) {
-    b.sides[s].hazard = false;
-    ev.push({ t: 'hazard', side: s, on: false, text: `${b.sides[s].name} 쪽 압정이 말끔히 치워졌다!` });
+    matesOf(b, s).forEach((i) => { b.sides[i].hazard = false; });
+    ev.push({ t: 'hazard', side: s, on: false, text: `${teamName(b, teamOf(b, s))} 쪽 압정이 말끔히 치워졌다!` });
   }
   if (mv.drain && alive(me)) {
     if (heal(b, s, me, total * mv.drain, ev)) msg(ev, `${josa(me.name, '은/는')} 양분을 빨아들였다!`);
@@ -389,10 +403,10 @@ function selfMove(b, s, me, mv, ev) {
     return;
   }
   if (mv.hazard) {
-    const other = b.sides[1 - s];
-    if (other.hazard) { msg(ev, '그러나 실패했다!'); return; }
-    other.hazard = true;
-    ev.push({ t: 'hazard', side: 1 - s, on: true, text: `${other.name} 쪽 바닥에 압정이 흩뿌려졌다!` });
+    const foes = foesOf(b, s);
+    if (b.sides[foes[0]].hazard) { msg(ev, '그러나 실패했다!'); return; }
+    foes.forEach((i) => { b.sides[i].hazard = true; });
+    ev.push({ t: 'hazard', side: foes[0], on: true, text: `${teamName(b, teamOf(b, foes[0]))} 쪽 바닥에 압정이 흩뿌려졌다!` });
     return;
   }
   if (mv.heal) {
@@ -425,6 +439,7 @@ function statusMove(b, s, me, o, foe, mv, ev) {
     const hair = mv.seed === 'any';
     if (foe.seeded || (!hair && foe.types.includes('grass'))) { msg(ev, '그러나 효과가 없었다.'); return; }
     foe.seeded = hair ? 'hair' : 'seed';
+    foe.seededBy = s;
     ev.push({ t: 'seed', side: o, kind: foe.seeded, text: hair ? `머리카락이 ${foe.name}에게 엉겨붙었다!` : `${foe.name}에게 씨앗을 심었다!` });
     return;
   }
@@ -432,12 +447,12 @@ function statusMove(b, s, me, o, foe, mv, ev) {
 }
 
 function endOfTurn(b, ev) {
-  for (const s of [0, 1]) {
+  for (const s of seats(b)) {
     const m = activeOf(b, s);
     m.protecting = false; m.flinched = false;
   }
   if (b.weather === 'dust') {
-    for (const s of [0, 1]) {
+    for (const s of seats(b)) {
       const m = activeOf(b, s);
       if (alive(m) && !m.types.some((t) => t === 'earth' || t === 'steel')) {
         msg(ev, `${josa(m.name, '은/는')} 황사 때문에 콜록거린다!`);
@@ -446,7 +461,7 @@ function endOfTurn(b, ev) {
       }
     }
   }
-  for (const s of [0, 1]) {
+  for (const s of seats(b)) {
     const m = activeOf(b, s);
     if (!alive(m)) continue;
     if (m.status === 'brn' || m.status === 'psn') {
@@ -455,10 +470,10 @@ function endOfTurn(b, ev) {
       faintCheck(b, s, m, ev);
     }
     if (alive(m) && m.seeded) {
-      const foe = activeOf(b, 1 - s);
+      const by = m.seededBy, foe = activeOf(b, by);
       msg(ev, `${m.seeded === 'hair' ? '머리카락' : '씨앗'}이 ${m.name}의 체력을 빨아들인다!`);
       const taken = hurt(b, s, m, m.maxHp / 8, ev);
-      if (alive(foe)) heal(b, 1 - s, foe, taken, ev);
+      if (alive(foe)) heal(b, by, foe, taken, ev);
       faintCheck(b, s, m, ev);
     }
   }
@@ -471,37 +486,48 @@ function endOfTurn(b, ev) {
 
 function checkOver(b, ev) {
   if (b.phase === 'over') return true;
-  const out = [0, 1].map((s) => b.sides[s].mons.every((m) => !alive(m)));
+  const out = [0, 1].map((t) => seats(b).filter((i) => teamOf(b, i) === t).every((i) => b.sides[i].mons.every((m) => !alive(m))));
   if (!out[0] && !out[1]) return false;
   b.phase = 'over';
   b.winner = out[0] && out[1] ? null : out[0] ? 1 : 0;
   ev.push({
     t: 'over', winner: b.winner,
-    text: b.winner === null ? '둘 다 쓰러졌다. 무승부!' : `${josa(b.sides[b.winner].name, '이/가')} 이겼다!`,
+    text: b.winner === null ? '모두 쓰러졌다. 무승부!' : `${josa(teamName(b, b.winner), '이/가')} 이겼다!`,
   });
   return true;
 }
 
 function updatePhase(b, ev) {
-  if (checkOver(b, ev)) { b.needs = [false, false]; return; }
-  const down = [0, 1].map((s) => !alive(activeOf(b, s)));
-  if (down[0] || down[1]) { b.phase = 'switch'; b.needs = down; }
-  else { b.phase = 'choose'; b.needs = [true, true]; }
+  if (checkOver(b, ev)) { b.needs = b.needs.map(() => false); return; }
+  const down = seats(b).map((s) => !alive(activeOf(b, s)) && b.sides[s].mons.some(alive));
+  if (down.some(Boolean)) { b.phase = 'switch'; b.needs = down; }
+  else { b.phase = 'choose'; b.needs = seats(b).map((s) => alive(activeOf(b, s))); }
 }
 
 function forfeit(b, s, left = false) {
-  b.phase = 'over'; b.winner = 1 - s; b.needs = [false, false]; b.pending = [null, null];
+  const lost = teamOf(b, s);
+  b.phase = 'over'; b.winner = 1 - lost; b.needs = b.needs.map(() => false); b.pending = b.pending.map(() => null);
   const how = left ? '게임을 나갔다' : '기권했다';
-  return [{ t: 'over', winner: b.winner, text: `${josa(b.sides[s].name, '이/가')} ${how}. ${josa(b.sides[1 - s].name, '이/가')} 이겼다!` }];
+  return [{ t: 'over', winner: b.winner, text: `${josa(b.sides[s].name, '이/가')} ${how}. ${josa(teamName(b, b.winner), '이/가')} 이겼다!` }];
 }
 
 // 플레이어별 화면 정보. 상대의 기술과 안 나온 요괴는 숨깁니다.
 function viewFor(b, s) {
-  const me = b.sides[s], opp = b.sides[1 - s];
+  const me = b.sides[s];
   const lock = b.pending[s] !== null;
   const preview = b.phase === 'preview';
+  const seatView = (i) => {
+    const o = b.sides[i];
+    return {
+      seat: i, name: o.name, avatar: o.avatar, deck: o.deck, hazard: o.hazard,
+      active: preview ? null : publicMon(activeOf(b, i)), // 고르기 전에는 선봉을 숨김
+      roster: o.mons.map((m) => ({ species: m.species, name: m.name, types: m.types, out: !alive(m), mega: m.mega })),
+    };
+  };
+  const opps = foesOf(b, s).map(seatView);
+  const ally = matesOf(b, s).filter((i) => i !== s).map(seatView)[0] ?? null;
   return {
-    you: s, turn: b.turn, phase: b.phase, winner: b.winner,
+    you: s, team: teamOf(b, s), doubles: isDoubles(b), turn: b.turn, phase: b.phase, winner: b.winner,
     weather: b.weather, weatherTurns: b.weatherTurns,
     mustAct: b.needs[s] && !lock,
     canMega: canMega(b, s) && !lock,
@@ -514,25 +540,21 @@ function viewFor(b, s) {
         moves: m.moves.map((x) => ({ id: x.id, pp: x.pp })),
       })),
     },
-    opp: {
-      name: opp.name, avatar: opp.avatar, deck: opp.deck, hazard: opp.hazard,
-      active: preview ? null : publicMon(activeOf(b, 1 - s)), // 고르기 전에는 선봉을 숨김
-      roster: opp.mons.map((m) => ({ species: m.species, name: m.name, types: m.types, out: !alive(m), mega: m.mega })),
-    },
+    ally, opps, opp: opps[0],
   };
 }
 
 // 보통: 예상 피해를 계산해 고르되, 약간의 변덕을 섞습니다.
-function normalAction(b, s) {
+function normalAction(b, s, o) {
   const acts = legalActions(b, s);
   if (!acts.length) return null;
   if (b.phase === 'preview') {
-    const score = (mon) => b.sides[1 - s].mons.reduce((sum, f) => sum
+    const score = (mon) => foesOf(b, s).flatMap((i) => b.sides[i].mons).reduce((sum, f) => sum
       + Math.max(...mon.types.map((t) => effOf(t, f.types)))
       - Math.max(...f.types.map((t) => effOf(t, mon.types))), rand(b));
     return acts.map((a) => ({ a, v: score(b.sides[s].mons[a.index]) })).sort((x, y) => y.v - x.v)[0].a;
   }
-  const foe = activeOf(b, 1 - s);
+  const foe = activeOf(b, o);
   const switches = acts.filter((a) => a.type === 'switch');
   const matchup = (mon) => {
     const off = Math.max(...mon.types.map((t) => effOf(t, foe.types)));
@@ -560,7 +582,7 @@ function normalAction(b, s) {
       if (mv.st && foe.status) v = 0;
       if (mv.st && mv.immune && effOf(mv.type, foe.types) === 0) v = 0;
       if (mv.seed && (foe.seeded || (mv.seed !== 'any' && foe.types.includes('grass')))) v = 0;
-      if (mv.hazard && b.sides[1 - s].hazard) v = 0;
+      if (mv.hazard && b.sides[o].hazard) v = 0;
       if (mv.weather && b.weather === mv.weather) v = 0;
     } else {
       const dmg = damageOf(b, me, foe, mv, false, .92) * (mv.hits ? mv.hits[0] : 1);
@@ -600,13 +622,13 @@ function threatOf(b, foe, mon, level) {
   return Math.max(...foe.types.map((type) => rawDamage(b, foe, mon, { type, cat, pow: 85, acc: 100 })));
 }
 
-function smartAction(b, s, level) {
+function smartAction(b, s, level, o) {
   const acts = legalActions(b, s);
-  const side = b.sides[s], foe = activeOf(b, 1 - s);
+  const side = b.sides[s], foe = activeOf(b, o);
   const switches = acts.filter((a) => a.type === 'switch').map((a) => {
     const mon = side.mons[a.index];
     const risk = threatOf(b, foe, mon, level) / mon.hp;
-    const reach = Math.max(0, ...mon.moves.map((x) => rawDamage(b, mon, foe, MOVES[x.id]))) / foe.hp;
+    const reach = Math.max(0, ...mon.moves.map((x) => rawDamage(b, mon, foe, MOVES[x.id]))) / Math.max(1, foe.hp);
     return { a, risk, v: reach - risk };
   }).sort((x, y) => y.v - x.v);
   if (b.phase === 'switch') return switches[0].a;
@@ -615,7 +637,7 @@ function smartAction(b, s, level) {
   const moves = acts.filter((a) => a.type === 'move');
   if (moves[0].index === -1) return moves[0];
   const threat = threatOf(b, foe, me, level);
-  const faster = speedOf(b, s) > speedOf(b, 1 - s);
+  const faster = speedOf(b, s) > speedOf(b, o);
   const finish = (a) => {
     if (!canMega(b, s)) return a;
     const go = b.turn >= 2 || threat >= me.hp * .5;
@@ -632,7 +654,7 @@ function smartAction(b, s, level) {
   }
 
   const foeStrong = foe.stats.atk >= foe.stats.spa;
-  const left = b.sides[1 - s].mons.filter(alive).length;
+  const left = b.sides[o].mons.filter(alive).length;
   const support = (mv) => {
     const acc = (mv.acc ?? 100) / 100;
     if (mv.protect) return (foe.seeded || foe.status === 'psn' || foe.status === 'brn') && me.protectStreak === 0 ? 30 : 0;
@@ -647,7 +669,7 @@ function smartAction(b, s, level) {
       return worth * acc;
     }
     if (mv.seed) return foe.seeded || (mv.seed !== 'any' && foe.types.includes('grass')) ? 0 : 30 * acc;
-    if (mv.hazard) return !b.sides[1 - s].hazard && left >= 3 ? 30 : 0;
+    if (mv.hazard) return !b.sides[o].hazard && left >= 3 ? 30 : 0;
     if (mv.weather) {
       if (b.weather === mv.weather) return 0;
       const fit = { rain: 'water', sun: 'fire' }[mv.weather];
@@ -667,9 +689,20 @@ function smartAction(b, s, level) {
   return finish(best.a);
 }
 
+// 태그에서 봇이 노릴 상대: 쉬움은 무작위, 나머지는 체력이 적게 남은 쪽
+function botTarget(b, s, level) {
+  const foes = foesOf(b, s).filter((i) => alive(activeOf(b, i)));
+  if (!foes.length) return foesOf(b, s)[0];
+  if (level === 0) return pickRandom(b, foes);
+  return foes.sort((x, y) => activeOf(b, x).hp / activeOf(b, x).maxHp - activeOf(b, y).hp / activeOf(b, y).maxHp)[0];
+}
+
 function botAction(b, s, level = 1) {
-  if (b.phase === 'preview' || level === 1) return normalAction(b, s);
-  return level === 0 ? easyAction(b, s) : smartAction(b, s, level);
+  const o = botTarget(b, s, level);
+  let a;
+  if (b.phase === 'preview' || level === 1) a = normalAction(b, s, o);
+  else a = level === 0 ? easyAction(b, s) : smartAction(b, s, level, o);
+  return a && a.type === 'move' && isDoubles(b) ? { ...a, target: o } : a;
 }
 
 const shuffled = (list) => list.map((x) => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map((p) => p[1]);
@@ -724,5 +757,5 @@ function botTeam(level, size, enemy = []) {
 }
 
 module.exports = {
-  createBattle, choose, legalActions, viewFor, botAction, botTeam, forfeit, calcStats, effOf, josa, activeOf, canMega,
+  createBattle, choose, legalActions, viewFor, botAction, botTeam, forfeit, teamOf, calcStats, effOf, josa, activeOf, canMega,
 };

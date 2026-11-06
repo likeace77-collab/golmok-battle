@@ -12,6 +12,7 @@ const TYPES = {
   poison: { n: '독',   c: '#9A4FB8' },
   steel:  { n: '쇠',   c: '#7C8798' },
   spirit: { n: '혼',   c: '#4B3F9E' },
+  fairy:  { n: '페어리', c: '#F27FA5' },
   none:   { n: '보통', c: '#B9AE9A' },
 };
 
@@ -24,9 +25,10 @@ const CHART = {
   ice:    { grass: 2, earth: 2, wind: 2, fire: .5, water: .5, ice: .5, steel: .5 },
   earth:  { fire: 2, elec: 2, poison: 2, steel: 2, grass: .5, wind: 0 },
   wind:   { grass: 2, spirit: 2, elec: .5, steel: .5, earth: .5 },
-  poison: { grass: 2, water: 2, poison: .5, earth: .5, spirit: .5, steel: 0 },
-  steel:  { ice: 2, spirit: 2, fire: .5, water: .5, elec: .5, steel: .5 },
-  spirit: { spirit: 2, poison: 2, steel: .5 },
+  poison: { grass: 2, water: 2, fairy: 2, poison: .5, earth: .5, spirit: .5, steel: 0 },
+  steel:  { ice: 2, spirit: 2, fairy: 2, fire: .5, water: .5, elec: .5, steel: .5 },
+  spirit: { spirit: 2, poison: 2, steel: .5, fairy: .5 },
+  fairy:  { spirit: 2, earth: 2, fire: .5, poison: .5, steel: .5 },
   none:   {},
 };
 
@@ -136,6 +138,15 @@ const MOVES = {
   wrestle: M('왼다리 걸기', 'spirit', 'p', 85, 100, 10, { foe: { def: -1 }, sc: 50, sig: true, d: '50% 확률로 상대 방어 하락' }),
   kick: M('깡통 차기', 'steel', 'p', 85, 100, 10, { fl: 30, sig: true, d: '30% 확률로 풀죽음' }),
   bagged: M('봉지 씌우기', 'wind', 'x', 0, 90, 10, { foe: { acc: -2 }, sig: true, d: '상대 명중률 2단계 하락' }),
+  // 페어리
+  pixiedust: M('반짝 가루', 'fairy', 's', 80, 100, 15, { d: '안정적인 페어리 공격' }),
+  charm:     M('매혹의 눈빛', 'fairy', 'x', 0, 100, 15, { foe: { atk: -2 }, d: '상대 공격 2단계 하락' }),
+  fairydance:M('요정의 춤', 'fairy', 'x', 0, null, 15, { self: { spa: 1, spe: 1 }, self_: true, d: '특공과 스피드 1단계 상승' }),
+  neonwink:  M('네온 윙크', 'fairy', 's', 85, 100, 10, { foe: { atk: -1 }, sc: 50, d: '50% 확률로 상대 공격 하락' }),
+  lipmark:   M('입술 도장', 'fairy', 's', 85, 100, 10, { foe: { spa: -1 }, sc: 50, d: '50% 확률로 상대 특공 하락' }),
+  canburst:  M('캔 연사', 'steel', 'p', 25, 100, 15, { hits: [2, 5], d: '2~5번 연속 공격' }),
+  bulletdash:M('총알 배달', 'wind', 'p', 65, 100, 15, { pri: 1, d: '선제 공격' }),
+  spincycle: M('탈수 회전', 'water', 's', 85, 100, 10, { foe: { spe: -1 }, d: '상대 스피드 1단계 하락' }),
   // 보통
   tackle:    M('몸통 박치기', 'none', 'p', 50, 100, 30, { d: '기본 공격' }),
   guard:     M('막기', 'none', 'x', 0, null, 10, { protect: true, pri: 3, self_: true, d: '이번 턴 공격을 막음 (연속 사용 시 실패하기 쉬움)' }),
@@ -245,6 +256,23 @@ const MONSTERS = {
   ppeondegi:X('뻔데기', ['grass', 'poison'], 70, 60, 110, 90, 110, 55,
     ['molt', 'sapdrain', 'sludge', 'seed', 'fog', 'leafcut', 'sunbathe', 'pollen', 'stench', 'guard'],
     '종이컵에 담겨 있어도 호불호는 담기지 않는다.'),
+  // 페어리
+  neonna:   X('네온나', ['fairy', 'elec'], 75, 55, 75, 115, 90, 100,
+    ['neonwink', 'pixiedust', 'charm', 'fairydance', 'static', 'highvolt', 'bolt', 'shock', 'charge', 'guard'],
+    '밤 골목 간판의 네온 요정. 성인 캐릭터다. 네온 날개를 펴고 무대에 서면 간판이 모두 켜진다.'),
+  yeonji:   X('연지', ['fairy', 'spirit'], 80, 60, 80, 105, 100, 85,
+    ['lipmark', 'pixiedust', 'charm', 'fairydance', 'wisp', 'scold', 'nightmare', 'stench', 'sunbathe', 'guard'],
+    '붉은 입술의 어른 요정. 오프숄더 한복 드레스 차림이고, 황금 립스틱으로 상대의 혼을 홀린다.'),
+  // 로봇
+  jabanbot: X('자판봇', ['steel', 'elec'], 95, 105, 100, 70, 75, 55,
+    ['canburst', 'ironhead', 'scrap', 'hammer', 'shortfist', 'highvolt', 'shock', 'armor', 'tacks', 'guard'],
+    '골목 자판기가 변신했다. 동전을 넣으면 음료 대신 캔을 발사한다. 거스름돈은 주지 않는다.'),
+  baedalbot:X('배달봇', ['steel', 'wind'], 75, 105, 75, 55, 70, 125,
+    ['bulletdash', 'ironhead', 'razorwind', 'windcut', 'scrap', 'hammer', 'breeze', 'armor', 'tackle', 'guard'],
+    '철가방을 등에 지고 바퀴로 달린다. 비가 와도 30분 안에 도착한다.'),
+  setakbot: X('세탁봇', ['steel', 'water'], 100, 65, 105, 100, 90, 45,
+    ['spincycle', 'bucket', 'hose', 'magnet', 'squirt', 'paddle', 'rainy', 'armor', 'tacks', 'guard'],
+    '가슴의 세탁 통으로 상대를 돌린다. 눈처럼 보이는 것은 세제 투입구다.'),
 };
 
 // 캐릭터별 전용기와 메가진화: [전용기, 메가 이름, 소개, [체력, 공격, 방어, 특공, 특방, 스피드 상승값]]
@@ -281,6 +309,14 @@ const SIGNATURE = {
   hotteok: ['honeybomb', '호떡 UFO', '뒤집개로 하늘을 난다. 꿀 광선을 맞으면 입천장이 벗겨진다.', [0, 35, 20, 25, 20, 0]],
   ppeondegi: ['molt', '직장인 나방', '허물을 벗고 드디어 날개를 얻었다. 그런데 정장을 입고 출근한다.', [10, 0, 0, 45, 0, 45]],
 };
+Object.assign(SIGNATURE, {
+  neonna: ['neonwink', '네온 디바', '날개가 세 겹으로 늘고 조명이 내려왔다. 왕관까지 불이 들어오면 공연이 시작된다.', [15, 0, 10, 40, 10, 25]],
+  yeonji: ['lipmark', '홍염 왕비', '금관을 쓰고 붉은 날개를 펼쳤다. 황금 립스틱은 왕의 지팡이가 되었다.', [10, 0, 20, 40, 30, 0]],
+  jabanbot: ['canburst', '초합금 자판왕', '어깨에 캔 발사기를 달고 금장을 둘렀다. 화면에 뜬 MAX는 가격이다.', [0, 40, 30, 0, 10, 20]],
+  baedalbot: ['bulletdash', '광속 철가방', '바퀴와 몸이 합체해 오토바이가 되었다. 철가방이 둘로 늘어 이제 한 번에 두 집.', [20, 40, 25, 0, 15, 0]],
+  setakbot: ['spincycle', '코인세탁 합체왕', '세탁기 세 대가 합체했다. 가운데 통이 뜨겁게 돌면 빨래방 영업 개시.', [10, 0, 20, 30, 10, 30]],
+});
+
 // 모든 요괴가 기술 10개가 되도록 채우는 추가 기술
 const EXTRA_MOVES = {
   bungbbang: ['rockthrow'], horong: ['nap'], usan: ['icestorm'], kongsiru: ['vinewhip'], ssaribi: ['tackle'],

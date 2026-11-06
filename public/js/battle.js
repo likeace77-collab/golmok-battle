@@ -2,6 +2,7 @@
 const Battle = (() => {
   let view = null, disp = null, note = '', menu = 'moves', practice = false;
   let queue = Promise.resolve(), playing = false, skip = null, armed = false;
+  let spectating = false, tag = false, moveDraft = null;
   let deadline = 0, tick = null, gen = 0;
   const SPEED = Number(new URLSearchParams(location.search).get('speed') ?? 1); // ?speed=0 이면 연출 생략
 
@@ -42,12 +43,21 @@ const Battle = (() => {
   </svg>`;
 
   const mine = () => disp.me.mons[disp.me.active];
-  const sideKey = (s) => (s === view.you ? 'me' : 'opp');
+  const keysNow = () => (view.doubles ? ['me', 'ally', 'opp', 'opp2'] : ['me', 'opp']);
+  const sideKey = (s) => {
+    if (s === view.you) return 'me';
+    if (view.ally?.seat === s) return 'ally';
+    return view.opps[0].seat === s ? 'opp' : 'opp2';
+  };
+  const seatOf = (key) => ({ ally: disp.ally, opp: disp.opps[0], opp2: disp.opps[1] }[key]);
+  const liveOpps = () => view.opps.filter((o) => o.active && o.active.hp > 0);
+  const oppNames = () => view.opps.map((o) => o.name).join(', ');
+  const myNames = () => [view.me.name, view.ally?.name].filter(Boolean).join(', ');
 
   function enter(m) {
-    practice = m.practice;
+    practice = m.practice; spectating = !!m.spectator; tag = !!m.tag;
     const fresh = !view || G.screen !== 'battle';
-    view = m.view; note = m.oppOnline ? '' : '상대가 나갔습니다. 곧 돌아오지 않으면 승리합니다.';
+    view = m.view; note = m.oppOnline ? '' : '나간 사람이 있습니다. 재접속을 기다립니다.';
     closeSheet();
     G.screen = 'battle';
     app.className = 'in-battle';
@@ -56,7 +66,7 @@ const Battle = (() => {
     queue = Promise.resolve(); playing = false; gen++; // 재접속하면 재생 중이던 연출은 버림
     scrollTo(0, 0);
     if (view.phase === 'preview') return renderPreview();
-    disp = clone(view);
+    disp = cloneView(view);
     if (fresh || !$('.scene')) renderFrame();
     if (fresh) say(`${view.opp.name}: ${view.opp.active.name}, 나가!`);
     syncAll();
@@ -65,23 +75,25 @@ const Battle = (() => {
   }
 
   const clone = (x) => JSON.parse(JSON.stringify(x));
+  const cloneView = (v) => { const d = clone(v); d.opp = d.opps[0]; return d; };
 
   const headHTML = () => `<div class="bhead">
-      <div class="ava">${avatarSVG(view.opp.avatar)}</div>
-      <div class="who">${esc(view.opp.name)}<div class="pips" id="pips"></div></div>
+      ${view.opps.map((o) => `<div class="ava">${avatarSVG(o.avatar)}</div>`).join('')}
+      <div class="who">${esc(oppNames())}<div class="pips" id="pips"></div></div>
       <div class="clock" id="clock"></div>
     </div>`;
 
   // 대전 전: 상대 덱을 보고 먼저 낼 요괴를 고릅니다.
   function renderPreview() {
     const waiting = !view.mustAct;
+    const rosterHTML = (o) => `<div class="grid pv">${o.roster.map((m) => `<div class="card" style="--tc:${G.data.TYPES[m.types[0]].c}">${monsterSVG(m.species)}<span>${m.name}</span><p>${m.types.map(typeChip).join('')}</p></div>`).join('')}</div>`;
     app.innerHTML = `${headHTML()}
+      ${view.opps.map((o) => `<section class="panel">
+        <h2>${view.doubles ? esc(o.name) : '상대'} 덱: ${esc(o.deck)}</h2>${rosterHTML(o)}
+      </section>`).join('')}
+      ${view.ally ? `<section class="panel"><h2>팀원 ${esc(view.ally.name)} 덱: ${esc(view.ally.deck)}</h2>${rosterHTML(view.ally)}</section>` : ''}
       <section class="panel">
-        <h2>상대 덱: ${esc(view.opp.deck)}</h2>
-        <div class="grid pv">${view.opp.roster.map((m) => `<div class="card" style="--tc:${G.data.TYPES[m.types[0]].c}">${monsterSVG(m.species)}<span>${m.name}</span><p>${m.types.map(typeChip).join('')}</p></div>`).join('')}</div>
-      </section>
-      <section class="panel">
-        <h2>${waiting ? '상대가 고르는 중입니다' : `먼저 내보낼 요괴를 고르세요`}</h2>
+        <h2>${spectating ? '선봉을 고르는 중입니다' : waiting ? '다른 사람이 고르는 중입니다' : '먼저 내보낼 요괴를 고르세요'}</h2>
         <p class="muted" style="margin-bottom:6px">내 덱: ${esc(view.me.deck)}</p>
         ${view.me.mons.map((m, i) => `<button class="sw pv-lead ${view.lead === i ? 'picked' : ''}" data-lead="${i}" ${waiting ? 'disabled' : ''}>
           ${monsterSVG(m.species)}
@@ -90,8 +102,8 @@ const Battle = (() => {
           ${view.lead === i ? '<em>선봉</em>' : ''}</button>`).join('')}
       </section>
       ${note ? `<p class="wait">${note}</p>` : ''}
-      <button class="btn paper wide" id="ff">기권</button>`;
-    drawPipsFrom(view.opp.roster);
+      ${spectating ? '<button class="btn paper wide" id="leave-spec">관전 나가기</button>' : `<button class="btn paper wide" id="ff">${tag ? '나가기' : '기권'}</button>`}`;
+    drawPipsFrom(view.opps.flatMap((o) => o.roster));
     app.querySelectorAll('[data-lead]').forEach((b) => {
       b.onclick = () => { wsSend({ t: 'action', action: { type: 'lead', index: +b.dataset.lead } }); app.querySelectorAll('[data-lead]').forEach((x) => { x.disabled = true; }); };
     });
@@ -100,22 +112,28 @@ const Battle = (() => {
 
   function bindForfeit() {
     const ff = app.querySelector('#ff');
-    ff.onclick = () => {
-      if (ff.dataset.sure) wsSend({ t: 'forfeit' });
-      else { ff.dataset.sure = 1; ff.textContent = '정말 기권'; ff.classList.add('red'); }
-    };
+    if (ff) {
+      ff.onclick = () => {
+        if (ff.dataset.sure) wsSend({ t: 'forfeit' });
+        else { ff.dataset.sure = 1; ff.textContent = tag ? '정말 나가기' : '정말 기권'; ff.classList.add('red'); }
+      };
+    }
+    app.querySelector('#leave-spec')?.addEventListener('click', () => { wsSend({ t: 'unspectate' }); exit(); });
+  }
+
+  function exit() {
+    view = null; gen++; playing = false; clearInterval(tick);
+    showLobby();
   }
 
   function renderFrame() {
     app.innerHTML = `${headHTML()}
       <section class="scene" id="scene">
         ${SCENE}
-        <div class="mon opp" id="m-opp"></div>
-        <div class="mon me" id="m-me"></div>
+        ${keysNow().map((k) => `<div class="mon ${k}" id="m-${k}"></div>`).join('')}
         <div class="fx"></div>
         <canvas class="fxc" id="fxc"></canvas>
-        <div class="plate opp" id="p-opp"></div>
-        <div class="plate me" id="p-me"></div>
+        ${keysNow().map((k) => `<div class="plate ${k}" id="p-${k}"></div>`).join('')}
         <div class="fieldbar" id="field"></div>
       </section>
       <div class="say" id="say" role="status"></div>
@@ -154,11 +172,12 @@ const Battle = (() => {
   function drawPlate(key, m) {
     const stages = Object.entries(m.stages || {}).filter(([, v]) => v);
     const lb = { atk: '공', def: '방', spa: '특공', spd: '특방', spe: '속', acc: '명' };
-    $(`#p-${key}`).innerHTML = `<div class="nm">${m.name}
+    const owner = view.doubles ? esc(key === 'me' ? view.me.name : seatOf(key).name) : '';
+    $(`#p-${key}`).innerHTML = `${owner ? `<div class="owner">${owner}</div>` : ''}<div class="nm">${m.name}
       ${m.status ? `<span class="badge">${STATUS[m.status]}</span>` : ''}
       ${m.seeded ? `<span class="badge">${m.seeded === 'hair' ? '머리카락' : '씨앗'}</span>` : ''}
       ${stages.map(([k, v]) => `<span class="badge">${lb[k]}${v > 0 ? '+' : ''}${v}</span>`).join('')}</div>
-      <div class="bar"><i></i></div>${key === 'me' ? '<div class="num"></div>' : ''}`;
+      <div class="bar"><i></i></div>${key === 'me' && !spectating ? '<div class="num"></div>' : ''}`;
     setBar(key, m);
   }
 
@@ -168,10 +187,17 @@ const Battle = (() => {
     box.innerHTML = monsterSVG(m.species, '', m.mega);
   }
 
-  const dispMon = (key) => (key === 'me' ? mine() : disp.opp.active);
+  const dispMon = (key) => (key === 'me' ? mine() : seatOf(key).active);
+  function putMon(key, mon) {
+    if (key === 'me') {
+      disp.me.active = disp.me.mons.findIndex((x) => x.species === mon.species);
+      Object.assign(mine(), mon);
+    } else seatOf(key).active = mon;
+  }
+  const rosterEntry = (key, species) => (key === 'me' ? null : seatOf(key).roster.find((x) => x.species === species));
 
   function drawPips() {
-    drawPipsFrom(disp.opp.roster);
+    drawPipsFrom(disp.opps.flatMap((o) => o.roster));
   }
 
   function drawPipsFrom(roster) {
@@ -180,16 +206,16 @@ const Battle = (() => {
 
   function drawWeather() {
     const s = $('#scene');
-    s.className = `scene${disp.weather ? ` w-${disp.weather}` : ''}${disp.me.hazard ? ' haz-me' : ''}${disp.opp.hazard ? ' haz-opp' : ''}`;
+    s.className = `scene${view.doubles ? ' dbl' : ''}${disp.weather ? ` w-${disp.weather}` : ''}${disp.me.hazard ? ' haz-me' : ''}${disp.opp.hazard ? ' haz-opp' : ''}`;
     const chips = [];
     if (disp.weather) chips.push(`<span class="f-${disp.weather}">${WEATHER[disp.weather]} ${disp.weatherTurns}턴</span>`);
-    if (disp.opp.hazard) chips.push('<span class="f-tack">상대 쪽 압정</span>');
-    if (disp.me.hazard) chips.push('<span class="f-tack">내 쪽 압정</span>');
+    if (disp.opp.hazard) chips.push(`<span class="f-tack">${spectating ? `${esc(oppNames())} 쪽` : '상대 쪽'} 압정</span>`);
+    if (disp.me.hazard) chips.push(`<span class="f-tack">${spectating ? `${esc(myNames())} 쪽` : '내 쪽'} 압정</span>`);
     $('#field').innerHTML = chips.join('');
   }
 
   function syncAll() {
-    for (const key of ['me', 'opp']) {
+    for (const key of keysNow()) {
       const m = dispMon(key);
       drawMon(key, m); drawPlate(key, m);
       if (m.hp <= 0) $(`#m-${key}`).classList.add('hide');
@@ -228,7 +254,7 @@ const Battle = (() => {
       case 'turn': break;
       case 'msg': await wait(850); break;
       case 'move':
-        await wait(Math.max(760, Fx.play(e.id, key)));
+        await wait(Math.max(760, Fx.play(e.id, key, sideKey(e.target))));
         break;
       case 'miss': await wait(800); break;
       case 'hp': {
@@ -248,21 +274,15 @@ const Battle = (() => {
         const box = $(`#m-${key}`);
         box.classList.remove('hit', 'lunge', 'enter');
         box.classList.add('faint');
-        if (key === 'opp') {
-          const r = disp.opp.roster.find((x) => x.species === disp.opp.active.species);
-          if (r) r.out = true;
-          drawPips();
-        }
+        const r = rosterEntry(key, dispMon(key).species);
+        if (r) { r.out = true; drawPips(); }
         await wait(1000);
         box.classList.remove('faint'); box.classList.add('hide');
         break;
       }
       case 'recall': $(`#m-${key}`).classList.add('hide'); await wait(600); break;
       case 'switch': {
-        if (key === 'me') {
-          disp.me.active = disp.me.mons.findIndex((x) => x.species === e.mon.species);
-          Object.assign(mine(), e.mon);
-        } else disp.opp.active = e.mon;
+        putMon(key, e.mon);
         drawMon(key, dispMon(key)); drawPlate(key, dispMon(key));
         anim(key, 'enter', 420);
         await wait(900); break;
@@ -270,13 +290,9 @@ const Battle = (() => {
       case 'mega': {
         Fx.megaStart(key);
         await wait(1100);
-        if (key === 'me') Object.assign(mine(), e.mon);
-        else {
-          disp.opp.active = e.mon;
-          const r = disp.opp.roster.find((x) => x.species === e.mon.species);
-          if (r) r.mega = true;
-          drawPips();
-        }
+        putMon(key, e.mon);
+        const r = rosterEntry(key, e.mon.species);
+        if (r) { r.mega = true; drawPips(); }
         drawMon(key, dispMon(key)); drawPlate(key, dispMon(key));
         Fx.megaEnd(key);
         await wait(900);
@@ -298,7 +314,7 @@ const Battle = (() => {
         disp.weather = e.weather; disp.weatherTurns = e.weather ? 5 : 0; drawWeather();
         await wait(1000); break;
       case 'hazard':
-        disp[key].hazard = e.on; drawWeather();
+        disp[key === 'me' || key === 'ally' ? 'me' : 'opp'].hazard = e.on; drawWeather();
         await wait(900); break;
       case 'over': await wait(1200); break;
       default:
@@ -311,14 +327,14 @@ const Battle = (() => {
       if (g !== gen) return;
       playing = true;
       if (!$('.scene')) { // 대전 전 화면에서 넘어옴
-        view = m.view; disp = clone(view); renderFrame(); syncAll();
+        view = m.view; disp = cloneView(view); renderFrame(); syncAll();
         document.querySelectorAll('.mon').forEach((n) => n.classList.add('hide'));
       }
       $('#panel').innerHTML = '';
       note = '';
       for (const e of m.events) { await step(e); if (g !== gen) return; }
       playing = false;
-      view = m.view; disp = clone(view);
+      view = m.view; disp = cloneView(view);
       syncAll();
       setClock(m.remain);
       menu = 'moves'; armed = false;
@@ -338,9 +354,10 @@ const Battle = (() => {
   }
   const act = (action) => { armed = false; wsSend({ t: 'action', action }); $('#panel').innerHTML = '<p class="wait">기다리는 중...</p>'; };
 
+  const effOn = (mv, mon) => mon.types.reduce((x, t) => x * (G.data.CHART[mv.type][t] ?? 1), 1);
   function effHint(mv) {
-    if (mv.cat === 'x') return '';
-    const eff = view.opp.active.types.reduce((x, t) => x * (G.data.CHART[mv.type][t] ?? 1), 1);
+    if (mv.cat === 'x' || view.doubles) return '';
+    const eff = effOn(mv, view.opp.active);
     if (eff === 0) return '효과 없음';
     if (eff !== 1) return `상대에게 ${eff}배`;
     return '';
@@ -350,12 +367,19 @@ const Battle = (() => {
     const panel = $('#panel');
     if (!panel || playing) return;
     if (view.phase === 'over') return showResult();
+    if (spectating) {
+      say(`${myNames()} 대 ${oppNames()}`);
+      panel.innerHTML = '<p class="wait">관전 중입니다.</p><button class="btn paper wide" id="leave-spec">관전 나가기</button>';
+      return bindForfeit();
+    }
     if (!view.mustAct) {
-      panel.innerHTML = `<p class="wait">${note || '상대의 선택을 기다리는 중입니다.'}</p>`;
+      const out = view.me.mons.every((m) => m.hp <= 0);
+      panel.innerHTML = `<p class="wait">${note || (out ? '내 요괴가 모두 쓰러졌습니다. 팀원을 응원하세요.' : '다른 사람의 선택을 기다리는 중입니다.')}</p>`;
       return;
     }
     if (view.phase === 'switch') { say('다음에 나갈 요괴를 고르세요.'); return renderSwitch(panel, false); }
     if (menu === 'switch') return renderSwitch(panel, true);
+    if (menu === 'target') return renderTarget(panel);
 
     const cur = view.me.mons[view.me.active];
     say(armed ? `메가진화! ${cur.name}의 기술을 고르세요.` : note || `${cur.name}, 뭘 할까?`);
@@ -375,12 +399,39 @@ const Battle = (() => {
       <div class="bar-actions">
         <button class="btn mega ${armed ? 'on' : ''}" id="to-mega" ${view.canMega ? '' : 'disabled'} aria-pressed="${armed}">${view.megaUsed ? '메가 사용함' : armed ? '메가 취소' : '메가진화'}</button>
         <button class="btn paper" id="to-sw" ${armed ? 'disabled' : ''}>교체</button>
-        <button class="btn paper" id="ff">기권</button>
+        <button class="btn paper" id="ff">${tag ? '나가기' : '기권'}</button>
       </div>`;
-    panel.querySelectorAll('[data-mv]').forEach((b) => { b.onclick = () => act({ type: 'move', index: +b.dataset.mv, mega: armed }); });
+    panel.querySelectorAll('[data-mv]').forEach((b) => {
+      b.onclick = () => {
+        const index = +b.dataset.mv;
+        const mv = index >= 0 ? G.data.MOVES[cur.moves[index].id] : null;
+        const live = liveOpps();
+        // 태그에서는 상대 둘 중 누구를 칠지 고릅니다.
+        if (view.doubles && live.length > 1 && !(mv && (mv.self_ || mv.protect))) {
+          moveDraft = { index, mega: armed, mv };
+          menu = 'target';
+          return renderPanel();
+        }
+        act({ type: 'move', index, mega: armed, target: live[0]?.seat });
+      };
+    });
     panel.querySelector('#to-mega').onclick = () => { armed = !armed; renderPanel(); };
     panel.querySelector('#to-sw').onclick = () => { menu = 'switch'; renderPanel(); };
     bindForfeit();
+  }
+
+  function renderTarget(panel) {
+    say(`${moveDraft.mv ? moveDraft.mv.n : '악쓰기'}, 누구에게 쓸까요?`);
+    panel.innerHTML = `${liveOpps().map((o) => {
+      const eff = moveDraft.mv && moveDraft.mv.cat !== 'x' ? effOn(moveDraft.mv, o.active) : 1;
+      return `<button class="sw tg" data-tg="${o.seat}">${monsterSVG(o.active.species, '', o.active.mega)}
+        <div class="inf">${o.active.name} ${o.active.types.map(typeChip).join('')}
+          <small>${esc(o.name)}${eff === 0 ? ', 효과 없음' : eff !== 1 ? `, 상성 ${eff}배` : ''}</small></div></button>`;
+    }).join('')}<button class="btn paper wide" id="tg-back">기술 고르기로 돌아가기</button>`;
+    panel.querySelectorAll('[data-tg]').forEach((b) => {
+      b.onclick = () => { menu = 'moves'; act({ type: 'move', index: moveDraft.index, mega: moveDraft.mega, target: +b.dataset.tg }); };
+    });
+    panel.querySelector('#tg-back').onclick = () => { menu = 'moves'; renderPanel(); };
   }
 
   function renderSwitch(panel, canBack) {
@@ -401,16 +452,17 @@ const Battle = (() => {
   function showResult() {
     clearInterval(tick);
     const c = $('#clock'); if (c) c.textContent = '';
-    const win = view.winner === view.you, draw = view.winner === null;
+    const win = view.winner === view.team, draw = view.winner === null;
+    const winners = win ? myNames() : oppNames();
     const div = document.createElement('div');
     div.className = 'result';
     div.innerHTML = `<div class="ava lg">${avatarSVG(win || draw ? view.me.avatar : view.opp.avatar)}</div>
-      <h1 class="title">${draw ? '무승부' : win ? '승리' : '패배'}</h1>
-      <p style="color:#fff">${esc(view.me.name)} 대 ${esc(view.opp.name)}, ${view.turn - 1}턴${practice ? ' (연습)' : ''}</p>
+      <h1 class="title ${spectating ? 'small' : ''}">${draw ? '무승부' : spectating ? `${esc(winners)} 승리` : win ? '승리' : '패배'}</h1>
+      <p style="color:#fff">${esc(myNames())} 대 ${esc(oppNames())}, ${view.turn - 1}턴${practice ? ' (연습)' : ''}${spectating ? ' (관전)' : ''}</p>
       <button class="btn" id="to-lobby">로비로 돌아가기</button>`;
     app.appendChild(div);
     div.querySelector('#to-lobby').onclick = () => { view = null; showLobby(); };
   }
 
-  return { enter, onTurn, onChosen, setNote, onNoBattle };
+  return { enter, onTurn, onChosen, setNote, onNoBattle, exit };
 })();

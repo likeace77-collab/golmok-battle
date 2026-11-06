@@ -48,12 +48,14 @@ test('2배 상성은 1배보다 약 2배 피해를 주고, 절반 상성은 약 
 });
 
 test('모든 요괴에게 그림이 있고 스킬이 겹치지 않는다', () => {
-  const art = require('fs').readFileSync(require('path').join(__dirname, '../public/js/art.js'), 'utf8');
+  const read = (f) => require('fs').readFileSync(require('path').join(__dirname, '../public/js', f), 'utf8');
+  const art = read('art.js'), mega = read('mega-art.js'), newArt = read('new-art.js');
   for (const [id, m] of Object.entries(MONSTERS)) {
-    assert.match(art, new RegExp(`\\b${id}: wrap`), id);
+    assert.match(art + newArt, new RegExp(`\\b${id}: (wrap|L)\\(`), id);
+    assert.match(mega + newArt, new RegExp(`\\b${id}: L\\(`), `메가 ${id}`);
     assert.equal(new Set(m.moves).size, m.moves.length, id);
   }
-  assert.equal(Object.keys(MONSTERS).length, 31);
+  assert.equal(Object.keys(MONSTERS).length, 36);
 });
 
 test('역류는 소나기에서 2배, 뻥 뚫기는 막기를 뚫고 압정을 치운다', () => {
@@ -138,7 +140,7 @@ test('모든 요괴에게 전용기가 있고 다른 요괴는 배울 수 없다
     owner[m.sig] = (owner[m.sig] || 0) + 1;
     assert.equal(Object.values(m.mega.boost).reduce((a, c) => a + c), 100, id);
   }
-  assert.equal(Object.keys(owner).length, 31);
+  assert.equal(Object.keys(owner).length, 36);
   for (const m of Object.values(MONSTERS)) for (const mv of m.moves) if (MOVES[mv].sig) assert.equal(mv, m.sig);
 });
 
@@ -196,6 +198,50 @@ test('난이도가 높을수록 이긴다', () => {
   assert.ok(r[0] > 70, `보통 대 쉬움 ${r[0]}`);
   assert.ok(r[1] > 55, `어려움 대 보통 ${r[1]}`);
   assert.ok(r[2] > 60, `지옥 대 어려움 ${r[2]}`);
+});
+
+test('태그: 네 자리 대전이 팀 단위로 끝나고 대상을 고를 수 있다', () => {
+  const t = () => E.botTeam(1, 3);
+  const players = [t(), t(), t(), t()].map((team, i) => ({ name: `선수${i}`, team }));
+  const b = E.createBattle(players, 77, { preview: true });
+  const v = E.viewFor(b, 1);
+  assert.equal(v.doubles, true);
+  assert.equal(v.ally.seat, 0);
+  assert.deepEqual(v.opps.map((o) => o.seat), [2, 3]);
+  assert.equal(v.opps[0].active, null);
+  [0, 1, 2, 3].forEach((s) => E.choose(b, s, { type: 'lead', index: 0 }));
+  assert.equal(b.phase, 'choose');
+
+  const mon = (id) => ({ species: id, moves: ['guard'] });
+  const c = E.createBattle([0, 1, 2, 3].map((i) => ({ name: `${i}`, team: [{ species: 'kkaebi', moves: ['club'] }, mon('maetdol')] })), 5);
+  E.choose(c, 0, { type: 'move', index: 0, target: 3 });
+  E.choose(c, 1, { type: 'switch', index: 1 });
+  E.choose(c, 2, { type: 'switch', index: 1 });
+  const { events } = E.choose(c, 3, { type: 'switch', index: 1 });
+  assert.equal(events.find((e) => e.t === 'move').target, 3);
+  c.sides[2].mons.forEach((m) => { m.hp = 0; });
+  assert.equal(E.choose(c, 0, { type: 'move', index: 0, target: 2 }).ok, true);
+
+  const d = E.createBattle([0, 1, 2, 3].map((i) => ({ name: `${i}`, team: [{ species: 'kettle', moves: ['tacks', 'squirt'] }, mon('daeya')] })), 8);
+  [0, 1, 2, 3].forEach((s) => E.choose(d, s, { type: 'move', index: 0 }));
+  assert.ok(d.sides[0].hazard && d.sides[1].hazard && d.sides[2].hazard && d.sides[3].hazard, '압정은 팀 양쪽에 깔린다');
+});
+
+test('태그: 봇 넷이서 200판 모두 끝나고 불법 행동이 없다', () => {
+  for (let g = 0; g < 200; g++) {
+    const lv = g % 4;
+    const players = [0, 1, 2, 3].map((i) => ({ name: `선수${i}`, team: E.botTeam(lv, 3) }));
+    const b = E.createBattle(players, 300 + g, { preview: true });
+    let guard = 0;
+    while (b.phase !== 'over') {
+      assert.ok(++guard < 4000, '태그 전투가 끝나지 않음');
+      for (const s of [0, 1, 2, 3]) {
+        if (b.phase === 'over' || !b.needs[s] || b.pending[s]) continue;
+        const r = E.choose(b, s, E.botAction(b, s, lv));
+        assert.ok(r.ok, `불법 행동 ${lv} ${b.phase}`);
+      }
+    }
+  }
 });
 
 test('선제 기술은 스피드가 느려도 먼저 나간다', () => {
