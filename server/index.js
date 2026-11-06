@@ -15,7 +15,6 @@ const LEAVE_GRACE_SECONDS = Number(process.env.LEAVE_GRACE_SECONDS) || 15; // �
 const PUBLIC = path.join(__dirname, '..', 'public');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const SESSION_DAYS = 30;
-const MAX_DECKS = 5;
 
 /* ---------- 저장소 ---------- */
 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -108,7 +107,7 @@ function validAvatar(a) {
 }
 
 function validDecks(list) {
-  if (!Array.isArray(list) || list.length < 1 || list.length > MAX_DECKS) return null;
+  if (!Array.isArray(list) || list.length < 1) return null;
   const out = [];
   for (const d of list) {
     const name = String(d?.name ?? '').trim();
@@ -200,7 +199,7 @@ function readBody(req) {
     let raw = '';
     req.on('data', (c) => {
       raw += c;
-      if (raw.length > 20000) { reject(new Error('too large')); req.destroy(); }
+      if (raw.length > 5000000) { reject(new Error('too large')); req.destroy(); }
     });
     req.on('end', () => {
       try { resolve(raw ? JSON.parse(raw) : {}); } catch (e) { reject(e); }
@@ -258,7 +257,7 @@ async function api(req, res, url) {
   if (route === 'PUT /api/decks') {
     const body = await readBody(req);
     const decks = validDecks(body.decks);
-    if (!decks) return json(res, 400, { error: '덱은 1~5개, 이름은 12자 이내, 요괴는 서로 다른 3~6마리, 기술은 1~4개여야 합니다.' });
+    if (!decks) return json(res, 400, { error: '덱은 1개 이상, 이름은 12자 이내, 요괴는 서로 다른 3~6마리, 기술은 1~4개여야 합니다.' });
     const active = Number.isInteger(body.active) && body.active >= 0 && body.active < decks.length ? body.active : 0;
     user.decks = decks; user.active = active; save();
     return json(res, 200, { user: publicUser(user) });

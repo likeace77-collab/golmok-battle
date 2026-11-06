@@ -225,7 +225,7 @@ function showDecks() {
   G.screen = 'decks';
   const decks = G.user.decks;
   app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>덱 관리</h1></div>
-    <p style="color:#fff;margin-bottom:12px">덱 ${decks.length}/5개. 덱을 눌러 이름과 요괴, 기술을 바꿉니다.</p>
+    <p style="color:#fff;margin-bottom:12px">덱 ${decks.length}개. 덱을 눌러 이름과 요괴, 기술을 바꿉니다.</p>
     ${decks.map((d, i) => `<div class="deck ${i === G.user.active ? 'on' : ''}">
       <button class="deck-main" data-open="${i}">
         <b>${esc(d.name)}</b>${i === G.user.active ? '<em>대전에 사용</em>' : ''}
@@ -235,7 +235,7 @@ function showDecks() {
         <button class="btn small mint" data-use="${i}" ${i === G.user.active ? 'disabled' : ''}>사용</button>
         <button class="btn small paper" data-del="${i}" ${decks.length > 1 ? '' : 'disabled'}>삭제</button>
       </div></div>`).join('')}
-    ${decks.length < 5 ? '<button class="slot empty" id="new-deck">새 덱 만들기</button>' : ''}`;
+    <button class="slot empty" id="new-deck">새 덱 만들기</button>`;
   app.querySelector('#back').onclick = showLobby;
   app.querySelectorAll('[data-open]').forEach((b) => { b.onclick = () => showTeam(+b.dataset.open); });
   app.querySelectorAll('[data-use]').forEach((b) => {

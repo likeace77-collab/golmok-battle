@@ -53,15 +53,15 @@ async function playStep(page) {
   await a.page.waitForSelector('#go-team');
   await a.page.click('#go-team');
   await a.page.waitForSelector('#new-deck');
-  // 덱 5개까지 만들고 이름 붙이기
-  for (let i = 0; i < 4; i++) {
+  // 덱을 5개 넘게 만들고 이름 붙이기
+  for (let i = 0; i < 6; i++) {
     await a.page.click('#new-deck');
     await a.page.fill('#deck-name', `<b>덱${i + 2}`);
     await a.page.click('#save');
     await a.page.waitForSelector('.deck:nth-of-type(' + (i + 2) + ')');
     await a.page.waitForFunction((n) => document.querySelectorAll('.deck').length === n, i + 2);
   }
-  if (await a.page.$('#new-deck')) throw new Error('덱이 5개를 넘을 수 있음');
+  if (await a.page.locator('.deck').count() !== 7 || !await a.page.$('#new-deck')) throw new Error('덱을 5개 넘게 못 만듦');
   // 두 번째 덱만 구성을 다르게
   await a.page.click('[data-open="1"]');
   await a.page.waitForSelector('[data-rm="5"]');
@@ -82,7 +82,7 @@ async function playStep(page) {
   const sizes = await a.page.$$eval('.deck .mini', (l) => l.map((x) => x.children.length));
   if (sizes[0] !== 6 || sizes[1] !== 5) throw new Error(`덱 구성이 섞임: ${sizes}`);
   await a.page.click('[data-del="4"]'); await a.page.click('[data-del="4"]');
-  await a.page.waitForFunction(() => document.querySelectorAll('.deck').length === 4);
+  await a.page.waitForFunction(() => document.querySelectorAll('.deck').length === 6);
   await a.page.click('#back');
   await a.page.waitForSelector('#go-team');
 
