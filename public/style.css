@@ -133,6 +133,14 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .megabox .stat b { font-family: var(--ui); font-weight: 400; color: var(--yellow); }
 .megabox .stat i { background: var(--yellow); }
 
+/* 플레이어 목록 */
+.panel.pl { padding: 10px 12px; }
+.panel.pl + .panel.pl { margin-top: 10px; }
+.dot { display: inline-block; width: 9px; height: 9px; margin-right: 5px; border-radius: 50%; background: #b3adbf; border: 1.5px solid var(--ink); vertical-align: 0; }
+.dot.on { background: var(--mint); }
+.note { display: flex; gap: 6px; margin-top: 8px; }
+.note input, .search { flex: 1; min-width: 0; width: 100%; padding: 8px 10px; font-family: var(--body); font-size: 16px; background: #fff; border: 2px solid var(--ink); border-radius: 6px; }
+
 /* 태그 */
 .tteams { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .tteams b { font-family: var(--ui); font-weight: 400; display: block; margin-bottom: 4px; }

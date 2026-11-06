@@ -231,7 +231,7 @@ async function api(req, res, url) {
     if (db.users[key]) return json(res, 409, { error: '이미 있는 아이디입니다.' });
     const salt = crypto.randomBytes(16).toString('hex');
     db.users[key] = {
-      name, salt, hash: hashPw(password, salt), avatar: randomAvatar(), decks: [{ name: '기본 덱', team: defaultTeam() }], active: 0,
+      name, salt, hash: hashPw(password, salt), avatar: randomAvatar(), decks: [{ name: '기본 덱', team: defaultTeam() }], active: 0, createdAt: Date.now(), lastSeen: Date.now(), notes: {},
       wins: 0, losses: 0, draws: 0, h2h: {},
     };
     createSession(res, req, key);
@@ -253,6 +253,26 @@ async function api(req, res, url) {
     if (!a) return json(res, 400, { error: '아바타 값이 올바르지 않습니다.' });
     user.avatar = a; save(); broadcastLobby();
     return json(res, 200, { user: publicUser(user) });
+  }
+  if (route === 'GET /api/players') {
+    const notes = user.notes || {};
+    const players = Object.entries(db.users).map(([k, u]) => ({
+      key: k, name: u.name, avatar: u.avatar, wins: u.wins, losses: u.losses, draws: u.draws,
+      online: online.has(k), busy: inBattle.has(k), createdAt: u.createdAt || null, lastSeen: online.has(k) ? Date.now() : u.lastSeen || null,
+      note: notes[k] || '', me: k === auth.key,
+    })).sort((a, b) => b.online - a.online || (b.lastSeen || 0) - (a.lastSeen || 0));
+    return json(res, 200, { players });
+  }
+  if (route === 'PUT /api/notes') {
+    const body = await readBody(req);
+    const key = String(body.key ?? '');
+    const text = String(body.text ?? '').trim();
+    if (!db.users[key]) return json(res, 404, { error: '없는 플레이어입니다.' });
+    if ([...text].length > 100) return json(res, 400, { error: '메모는 100자까지입니다.' });
+    user.notes ||= {};
+    if (text) user.notes[key] = text; else delete user.notes[key];
+    save();
+    return json(res, 200, { ok: true });
   }
   if (route === 'PUT /api/decks') {
     const body = await readBody(req);
@@ -591,6 +611,7 @@ server.on('upgrade', (req, socket, head) => {
   wss.handleUpgrade(req, socket, head, (ws) => {
     const key = auth.key;
     online.get(key)?.close(4000, 'replaced'); // 새 탭/기기로 접속하면 이전 연결은 닫음
+    db.users[key].lastSeen = Date.now(); save();
     online.set(key, ws);
     ws.alive = true;
     ws.on('pong', () => { ws.alive = true; });
@@ -601,6 +622,7 @@ server.on('upgrade', (req, socket, head) => {
     ws.on('close', () => {
       if (online.get(key) !== ws) return;
       online.delete(key);
+      db.users[key].lastSeen = Date.now(); save();
       challenges.delete(key);
       removeFromTag(key);
       stopWatching(key);

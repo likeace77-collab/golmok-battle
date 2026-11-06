@@ -165,7 +165,8 @@ function renderLobby() {
       <div class="nav">
         <button class="btn paper" id="go-team">덱 관리</button>
         <button class="btn paper" id="go-ava">아바타 꾸미기</button>
-        <button class="btn mint" id="go-dex" style="grid-column:1/-1">도감</button>
+        <button class="btn mint" id="go-dex">도감</button>
+        <button class="btn paper" id="go-players">플레이어 목록</button>
       </div>
     </section>
     <section class="panel">
@@ -209,6 +210,7 @@ function renderLobby() {
   app.querySelectorAll('[data-tlevel]').forEach((b) => { b.onclick = () => wsSend({ t: 'tag_level', level: +b.dataset.tlevel }); });
   app.querySelector('#go-ava').onclick = showAvatar;
   app.querySelector('#go-dex').onclick = showDex;
+  app.querySelector('#go-players').onclick = showPlayers;
   app.querySelector('#go-bot').onclick = () => wsSend({ t: 'practice', size: G.size, level: G.botLevel });
   app.querySelectorAll('[data-level]').forEach((b) => {
     b.onclick = () => {
@@ -415,6 +417,60 @@ function editMon(team, i, done) {
         const top = sheetRoot.querySelector('.sheet').scrollTop;
         render();
         sheetRoot.querySelector('.sheet').scrollTop = top;
+      };
+    });
+  };
+  render();
+}
+
+/* ---------- 플레이어 목록 ---------- */
+function ago(t) {
+  if (!t) return '기록 없음';
+  const m = Math.floor((Date.now() - t) / 60000);
+  if (m < 1) return '방금 전';
+  if (m < 60) return `${m}분 전`;
+  if (m < 1440) return `${Math.floor(m / 60)}시간 전`;
+  if (m < 43200) return `${Math.floor(m / 1440)}일 전`;
+  return new Date(t).toLocaleDateString('ko-KR');
+}
+
+async function showPlayers() {
+  G.screen = 'players';
+  app.className = '';
+  app.innerHTML = '<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>플레이어 목록</h1></div><p class="wait">불러오는 중...</p>';
+  app.querySelector('#back').onclick = showLobby;
+  let players;
+  try { ({ players } = await api('GET', '/api/players')); } catch (e) { toast(e.message); return; }
+  if (G.screen !== 'players') return;
+  const render = (q = '') => {
+    const list = players.filter((p) => !q || p.name.toLowerCase().includes(q) || p.note.toLowerCase().includes(q));
+    app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>플레이어 목록</h1></div>
+      <section class="panel" style="margin-bottom:14px">
+        <p class="muted" style="margin-bottom:8px">가입한 사람 ${players.length}명, 지금 접속 ${players.filter((p) => p.online).length}명. 메모는 나에게만 보입니다.</p>
+        <input id="pq" class="search" placeholder="이름이나 메모로 찾기" value="${esc(q)}" autocomplete="off">
+      </section>
+      ${list.map((p) => `<section class="panel pl">
+        <div class="player" style="border:0;padding:0">
+          <div class="ava">${avatarSVG(p.avatar)}</div>
+          <div class="nm">${esc(p.name)}${p.me ? ' (나)' : ''}
+            <small><i class="dot ${p.online ? 'on' : ''}"></i>${p.online ? (p.busy ? '대전 중' : '접속 중') : `마지막 접속 ${ago(p.lastSeen)}`}</small>
+            <small>${p.wins}승 ${p.losses}패${p.draws ? ` ${p.draws}무` : ''}${p.createdAt ? `, ${new Date(p.createdAt).toLocaleDateString('ko-KR')} 가입` : ''}</small>
+          </div>
+        </div>
+        ${p.me ? '' : `<div class="note"><input data-note="${esc(p.key)}" maxlength="100" placeholder="누군지 메모 (예: 회사 동기 민수)" value="${esc(p.note)}" autocomplete="off"><button class="btn small" data-save="${esc(p.key)}">저장</button></div>`}
+      </section>`).join('') || '<p class="wait">찾는 플레이어가 없습니다.</p>'}`;
+    app.querySelector('#back').onclick = showLobby;
+    const pq = app.querySelector('#pq');
+    pq.oninput = () => { const pos = pq.selectionStart; render(pq.value.trim().toLowerCase()); const n = app.querySelector('#pq'); n.focus(); n.setSelectionRange(pos, pos); };
+    app.querySelectorAll('[data-save]').forEach((b) => {
+      b.onclick = async () => {
+        const key = b.dataset.save;
+        const input = app.querySelector(`[data-note="${CSS.escape(key)}"]`);
+        try {
+          await api('PUT', '/api/notes', { key, text: input.value });
+          players.find((p) => p.key === key).note = input.value.trim();
+          toast('메모를 저장했습니다.');
+        } catch (e) { toast(e.message); }
       };
     });
   };

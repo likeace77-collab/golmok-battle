@@ -189,6 +189,27 @@ async function playStep(page) {
   console.log('탈주 패배 OK:', await a.page.textContent('.profile .muted'), '/', await b2.textContent('.profile .muted'));
   await a.page.waitForTimeout(300);
 
+  // 플레이어 목록과 메모
+  await a.page.click('#go-players');
+  await a.page.waitForSelector('[data-note]');
+  const nPlayers = await a.page.locator('.panel.pl').count();
+  if (nPlayers !== 2) throw new Error(`플레이어 수 ${nPlayers}`);
+  await a.page.click('[data-note]');
+  await a.page.keyboard.type('회사 동기 영희');
+  await a.page.click('[data-save]');
+  await a.page.waitForFunction(() => /메모를 저장/.test(document.getElementById('toast').textContent));
+  await a.page.click('#back'); await a.page.waitForSelector('#go-players');
+  await a.page.click('#go-players'); await a.page.waitForSelector('[data-note]');
+  if (await a.page.inputValue('[data-note]') !== '회사 동기 영희') throw new Error('메모가 저장 안 됨');
+  await a.page.fill('#pq', '동기');
+  if (await a.page.locator('.panel.pl').count() !== 1) throw new Error('메모 검색 안 됨');
+  await shot(a.page, 'players');
+  await b2.click('#go-players'); await b2.waitForSelector('[data-note]');
+  if (await b2.inputValue('[data-note]')) throw new Error('메모가 다른 사람에게 보임');
+  await b2.click('#back'); await a.page.click('#back');
+  await a.page.waitForSelector('#go-team');
+  console.log('플레이어 목록 OK');
+
   // 관전: 세 번째 사람이 대전을 끝까지 봄
   const c3rd = await browser.newContext({ ...phone });
   const w = await signup(c3rd, '구경꾼');
