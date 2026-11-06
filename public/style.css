@@ -123,6 +123,14 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .mu > span { flex: none; width: 76px; }
 .mu p { line-height: 1.9; }
 
+.sigtag { font-family: var(--ui); font-style: normal; font-size: 12px; line-height: 1; margin-left: 4px; padding: 2px 4px; color: var(--ink); background: var(--yellow); border: 2px solid var(--ink); border-radius: 4px; }
+.megabox { margin: 12px 0; padding: 10px; background: linear-gradient(120deg, #2340A8, #9A4FB8 60%, #E8402C); border: var(--line); border-radius: 12px; color: #fff; }
+.megabox h3 { font-family: var(--display); font-weight: 400; font-size: 24px; margin: 0 0 6px; }
+.megabox .detail-pic { width: 136px; height: 136px; background-color: #fff3cf; }
+.megabox .stat { color: #fff; grid-template-columns: 46px 74px 1fr; }
+.megabox .stat b { font-family: var(--ui); font-weight: 400; color: var(--yellow); }
+.megabox .stat i { background: var(--yellow); }
+
 /* 덱 */
 .deck { display: flex; gap: 8px; align-items: center; padding: 8px; margin-bottom: 10px; background: var(--paper); border: var(--line); border-radius: 10px; box-shadow: var(--pop); }
 .deck.on { background: var(--yellow); }
@@ -173,9 +181,9 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .scene.w-dust .fx { display: block; background-image: radial-gradient(#E8D7A8 1.4px, transparent 1.6px), radial-gradient(#C9A25A 2px, transparent 2.2px); background-size: 37px 29px, 61px 43px; animation: dust 1.4s linear infinite; }
 @keyframes dust { to { background-position: 74px 14px, 122px -21px; } }
 .fxc { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.field { position: absolute; top: 4%; right: 2%; max-width: 46%; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; pointer-events: none; }
-.field span { font-family: var(--ui); font-size: clamp(12px, 3.4vw, 15px); line-height: 1; padding: 4px 7px 3px; color: #fff; background: var(--ink); border: 2px solid #fff; border-radius: 6px; }
-.field .f-sun { background: #D9720F; } .field .f-rain { background: #2F5FB5; } .field .f-dust { background: #8F6A2A; } .field .f-tack { color: var(--ink); background: var(--yellow); border-color: var(--ink); }
+.fieldbar { position: absolute; top: 4%; right: 2%; max-width: 46%; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; pointer-events: none; }
+.fieldbar span { font-family: var(--ui); font-size: clamp(12px, 3.4vw, 15px); line-height: 1; padding: 4px 7px 3px; color: #fff; background: var(--ink); border: 2px solid #fff; border-radius: 6px; }
+.fieldbar .f-sun { background: #D9720F; } .fieldbar .f-rain { background: #2F5FB5; } .fieldbar .f-dust { background: #8F6A2A; } .fieldbar .f-tack { color: var(--ink); background: var(--yellow); border-color: var(--ink); }
 .scene.w-rain .fx { display: block; background: repeating-linear-gradient(105deg, transparent 0 9px, #bfe4ff90 9px 11px, transparent 11px 22px); background-size: 200% 200%; animation: rain .6s linear infinite; }
 @keyframes rain { to { background-position: -66px 132px; } }
 
@@ -184,6 +192,9 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .mon.opp { width: 32%; right: 7%; top: 13%; }
 .mon.me { width: 40%; left: 5%; bottom: 3%; }
 .mon.me svg { transform: scaleX(-1); }
+.mon.me.mega svg { transform: none; } /* 메가 그림의 글자가 뒤집히지 않게 */
+.mon.opp.mega { width: 37%; right: 5%; top: 8%; }
+.mon.me.mega { width: 46%; left: 3%; bottom: 2%; }
 .mon.hide { visibility: hidden; }
 .mon.enter { animation: enter .4s cubic-bezier(.2, 1.4, .4, 1); }
 @keyframes enter { from { transform: scale(.1); opacity: 0; } }
@@ -255,7 +266,10 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .mb small { display: block; font-size: 13px; }
 .mb .eff { font-family: var(--ui); }
 .bar-actions { display: flex; gap: 8px; margin-top: 8px; }
-.bar-actions .btn { flex: 1; }
+.bar-actions .btn { flex: 1; padding-left: 4px; padding-right: 4px; }
+.btn.mega { color: #fff; background: linear-gradient(100deg, #E8402C, #9A4FB8 55%, #2340A8); }
+.btn.mega.on { color: var(--ink); background: var(--yellow); }
+.btn.mega:disabled { color: #6c675c; background: #c9c3b5; }
 .sw { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; background: #fff; border: var(--line); border-radius: 8px; margin-bottom: 6px; text-align: left; }
 .sw:disabled { opacity: .45; }
 .sw svg { width: 46px; height: 46px; flex: none; }

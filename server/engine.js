@@ -36,7 +36,7 @@ function makeMon(spec) {
   const sp = MONSTERS[spec.species];
   const stats = calcStats(sp.base);
   return {
-    species: spec.species, name: sp.n, types: sp.types, stats,
+    species: spec.species, name: sp.n, types: sp.types, stats, mega: false,
     hp: stats.hp, maxHp: stats.hp,
     status: null, statusTurns: 0,
     moves: spec.moves.map((id) => ({ id, pp: MOVES[id].pp })),
@@ -81,12 +81,29 @@ function legalActions(b, s) {
   return [...(moves.length ? moves : [{ type: 'move', index: -1 }]), ...switches];
 }
 
+// 메가진화는 한 판에 한 번. 행동을 쓰지 않고 그 턴의 기술을 바로 이어서 씁니다.
+const canMega = (b, s) => b.phase === 'choose' && !b.sides[s].megaUsed && !activeOf(b, s).mega && alive(activeOf(b, s));
+
+function doMega(b, s, ev) {
+  const m = activeOf(b, s);
+  const sp = MONSTERS[m.species];
+  const base = Object.fromEntries(Object.entries(sp.base).map(([k, v]) => [k, v + sp.mega.boost[k]]));
+  const oldName = m.name, oldMax = m.maxHp;
+  m.stats = calcStats(base);
+  m.maxHp = m.stats.hp;
+  m.hp += m.maxHp - oldMax;
+  m.name = sp.mega.n; m.mega = true;
+  b.sides[s].megaUsed = true;
+  ev.push({ t: 'mega', side: s, mon: publicMon(m), text: `${josa(oldName, '이/가')} 메가진화했다! ${m.name}!` });
+}
+
 // 플레이어 선택을 받습니다. 양쪽이 다 정하면 턴을 처리하고 이벤트를 돌려줍니다.
 function choose(b, s, action) {
   const legal = legalActions(b, s);
   if (!legal.some((a) => a.type === action?.type && a.index === action?.index)) return { ok: false };
   if (b.pending[s]) return { ok: false };
-  b.pending[s] = { type: action.type, index: action.index };
+  if (action.mega && (action.type !== 'move' || !canMega(b, s))) return { ok: false };
+  b.pending[s] = { type: action.type, index: action.index, mega: !!action.mega };
   const ready = [0, 1].every((i) => !b.needs[i] || b.pending[i]);
   return ready ? { ok: true, events: resolve(b) } : { ok: true, events: null };
 }
@@ -120,6 +137,7 @@ const stageMul = (n) => (n >= 0 ? (2 + n) / 2 : 2 / (2 - n));
 
 function runTurn(b, ev) {
   const acts = [0, 1].map((s) => ({ s, a: b.pending[s] }));
+  for (const { s, a } of acts) if (a.mega) doMega(b, s, ev);
   // 교체가 먼저
   for (const { s, a } of acts) if (a.type === 'switch') doSwitch(b, s, a.index, ev);
 
@@ -172,7 +190,7 @@ function faintCheck(b, s, m, ev) {
 function publicMon(m) {
   return {
     species: m.species, name: m.name, types: m.types,
-    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded,
+    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega,
   };
 }
 
@@ -378,10 +396,11 @@ function selfMove(b, s, me, mv, ev) {
   }
   if (mv.heal) {
     const curable = mv.cure && me.status;
-    if (me.hp === me.maxHp && !curable) { msg(ev, '체력이 이미 가득하다!'); return; }
+    if (me.hp === me.maxHp && !curable && !mv.self) { msg(ev, '체력이 이미 가득하다!'); return; }
     if (me.hp < me.maxHp) heal(b, s, me, me.maxHp * mv.heal, ev);
     if (curable) { me.status = null; ev.push({ t: 'status', side: s, status: null, text: `${me.name}의 상태이상이 나았다!` }); }
     msg(ev, `${josa(me.name, '은/는')} 기운을 되찾았다!`);
+    if (mv.self) for (const [k, v] of Object.entries(mv.self)) changeStage(b, s, me, k, v, ev);
     return;
   }
   if (mv.nap) {
@@ -484,6 +503,8 @@ function viewFor(b, s) {
     you: s, turn: b.turn, phase: b.phase, winner: b.winner,
     weather: b.weather, weatherTurns: b.weatherTurns,
     mustAct: b.needs[s] && !lock,
+    canMega: canMega(b, s) && !lock,
+    megaUsed: !!me.megaUsed,
     lead: preview && lock ? b.pending[s].index : null,
     me: {
       name: me.name, avatar: me.avatar, deck: me.deck, active: me.active, hazard: me.hazard,
@@ -495,7 +516,7 @@ function viewFor(b, s) {
     opp: {
       name: opp.name, avatar: opp.avatar, deck: opp.deck, hazard: opp.hazard,
       active: preview ? null : publicMon(activeOf(b, 1 - s)), // 고르기 전에는 선봉을 숨김
-      roster: opp.mons.map((m) => ({ species: m.species, name: m.name, types: m.types, out: !alive(m) })),
+      roster: opp.mons.map((m) => ({ species: m.species, name: m.name, types: m.types, out: !alive(m), mega: m.mega })),
     },
   };
 }
@@ -547,9 +568,11 @@ function botAction(b, s) {
     }
     return { a, v };
   }).sort((x, y) => y.v - x.v);
-  return scored[0].a;
+  const pick = scored[0].a;
+  if (canMega(b, s) && (me.hp < me.maxHp * .8 || chance(b, 25))) return { ...pick, mega: true };
+  return pick;
 }
 
 module.exports = {
-  createBattle, choose, legalActions, viewFor, botAction, forfeit, calcStats, effOf, josa, activeOf,
+  createBattle, choose, legalActions, viewFor, botAction, forfeit, calcStats, effOf, josa, activeOf, canMega,
 };

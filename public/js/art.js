@@ -241,7 +241,8 @@ Object.assign(ART, {
   ${eyes(52,70,96,6)}${frown(61,104,4)}`),
 });
 
-function monsterSVG(id, cls = '') {
+function monsterSVG(id, cls = '', mega = false) {
+  if (mega) return `<svg class="${cls}" viewBox="-6 -6 212 212" aria-hidden="true">${MEGA_ART[id]}</svg>`;
   return `<svg class="${cls}" viewBox="0 0 120 120" aria-hidden="true">${ART[id] || ''}</svg>`;
 }
 

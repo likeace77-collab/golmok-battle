@@ -19,8 +19,10 @@ async function signup(ctx, name) {
   page.on('console', (m) => { if (m.type() === 'error' && !/fonts\.g|ERR_|Failed to load/.test(m.text())) errors.push(m.text()); });
   await page.goto(`${URL}/?speed=0.02`);
   await page.click('[data-m=signup]');
-  await page.fill('[name=name]', name);
-  await page.fill('[name=password]', 'secret123');
+  await page.click('[name=name]'); // 실제로 눌러서 입력되는지 확인
+  await page.keyboard.type(name);
+  await page.click('[name=password]');
+  await page.keyboard.type('secret123');
   await page.click('form .btn');
   await page.waitForSelector('#go-team');
   return { page, errors };
@@ -63,6 +65,9 @@ async function playStep(page) {
   // 두 번째 덱만 구성을 다르게
   await a.page.click('[data-open="1"]');
   await a.page.waitForSelector('[data-rm="5"]');
+  await a.page.click('#deck-name');
+  await a.page.keyboard.press('Control+A');
+  await a.page.keyboard.type('이름바꿈');
   await a.page.click('[data-rm="5"]');
   await a.page.click('[data-edit="0"]');
   await a.page.waitForSelector('.sheet');
@@ -73,6 +78,7 @@ async function playStep(page) {
   await a.page.click('[data-use="1"]');
   await a.page.waitForSelector('.deck.on [data-use="1"][disabled]');
   await shot(a.page, 'decks');
+  if (!/이름바꿈/.test(await a.page.textContent('.deck.on'))) throw new Error('덱 이름이 안 바뀜');
   const sizes = await a.page.$$eval('.deck .mini', (l) => l.map((x) => x.children.length));
   if (sizes[0] !== 6 || sizes[1] !== 5) throw new Error(`덱 구성이 섞임: ${sizes}`);
   await a.page.click('[data-del="4"]'); await a.page.click('[data-del="4"]');
@@ -98,6 +104,15 @@ async function playStep(page) {
   console.log('선봉:', leads);
   if (!/맷돌이/.test(leads[0]) && !/주전이/.test(leads[0])) throw new Error(`상대 선봉이 다름: ${leads}`);
   await shot(a.page, 'battle-start');
+  // 메가진화: 버튼 누르고 기술 고르면 같은 턴에 공격까지
+  await a.page.click('#to-mega');
+  await shot(a.page, 'mega-armed');
+  await a.page.evaluate(() => document.querySelector('.mb:not([disabled])').click());
+  await b.page.evaluate(() => document.querySelector('.mb:not([disabled])').click());
+  await a.page.waitForSelector('#m-me.mega', { timeout: 8000 });
+  await a.page.waitForSelector('#to-mega[disabled], .sw:not([disabled])', { timeout: 8000 });
+  await shot(a.page, 'mega-after');
+  console.log('메가 후:', await a.page.textContent('#p-me .nm'));
 
   // 몇 턴 진행 후 재접속 확인
   let midShot = false, reconnected = false, turns = 0;

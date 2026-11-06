@@ -1,7 +1,7 @@
 // 배틀 화면과 연출
 const Battle = (() => {
   let view = null, disp = null, note = '', menu = 'moves', practice = false;
-  let queue = Promise.resolve(), playing = false, skip = null;
+  let queue = Promise.resolve(), playing = false, skip = null, armed = false;
   let deadline = 0, tick = null, gen = 0;
   const SPEED = Number(new URLSearchParams(location.search).get('speed') ?? 1); // ?speed=0 이면 연출 생략
 
@@ -116,7 +116,7 @@ const Battle = (() => {
         <canvas class="fxc" id="fxc"></canvas>
         <div class="plate opp" id="p-opp"></div>
         <div class="plate me" id="p-me"></div>
-        <div class="field" id="field"></div>
+        <div class="fieldbar" id="field"></div>
       </section>
       <div class="say" id="say" role="status"></div>
       <div id="panel"></div>`;
@@ -164,8 +164,8 @@ const Battle = (() => {
 
   function drawMon(key, m) {
     const box = $(`#m-${key}`);
-    box.className = `mon ${key}`;
-    box.innerHTML = monsterSVG(m.species);
+    box.className = `mon ${key}${m.mega ? ' mega' : ''}`;
+    box.innerHTML = monsterSVG(m.species, '', m.mega);
   }
 
   const dispMon = (key) => (key === 'me' ? mine() : disp.opp.active);
@@ -175,7 +175,7 @@ const Battle = (() => {
   }
 
   function drawPipsFrom(roster) {
-    $('#pips').innerHTML = roster.map((m) => `<span class="${m.out ? 'out' : ''}">${monsterSVG(m.species)}</span>`).join('');
+    $('#pips').innerHTML = roster.map((m) => `<span class="${m.out ? 'out' : ''}">${monsterSVG(m.species, '', m.mega)}</span>`).join('');
   }
 
   function drawWeather() {
@@ -267,6 +267,21 @@ const Battle = (() => {
         anim(key, 'enter', 420);
         await wait(900); break;
       }
+      case 'mega': {
+        Fx.megaStart(key);
+        await wait(1100);
+        if (key === 'me') Object.assign(mine(), e.mon);
+        else {
+          disp.opp.active = e.mon;
+          const r = disp.opp.roster.find((x) => x.species === e.mon.species);
+          if (r) r.mega = true;
+          drawPips();
+        }
+        drawMon(key, dispMon(key)); drawPlate(key, dispMon(key));
+        Fx.megaEnd(key);
+        await wait(900);
+        break;
+      }
       case 'status':
         dispMon(key).status = e.status; drawPlate(key, dispMon(key));
         Fx.status(key, e.status);
@@ -306,7 +321,7 @@ const Battle = (() => {
       view = m.view; disp = clone(view);
       syncAll();
       setClock(m.remain);
-      menu = 'moves';
+      menu = 'moves'; armed = false;
       renderPanel();
     }).catch((err) => { console.error(err); playing = false; });
   }
@@ -321,7 +336,7 @@ const Battle = (() => {
     if (playing) return;
     if (view?.phase === 'preview') renderPreview(); else renderPanel();
   }
-  const act = (action) => { wsSend({ t: 'action', action }); $('#panel').innerHTML = '<p class="wait">기다리는 중...</p>'; };
+  const act = (action) => { armed = false; wsSend({ t: 'action', action }); $('#panel').innerHTML = '<p class="wait">기다리는 중...</p>'; };
 
   function effHint(mv) {
     if (mv.cat === 'x') return '';
@@ -343,7 +358,7 @@ const Battle = (() => {
     if (menu === 'switch') return renderSwitch(panel, true);
 
     const cur = view.me.mons[view.me.active];
-    say(note || `${cur.name}, 뭘 할까?`);
+    say(armed ? `메가진화! ${cur.name}의 기술을 고르세요.` : note || `${cur.name}, 뭘 할까?`);
     const noPP = cur.moves.every((x) => x.pp <= 0);
     panel.innerHTML = `<div class="moves">
       ${noPP ? `<button class="mb" data-mv="-1" style="--tc:${G.data.TYPES.none.c}"><b>악쓰기</b><small>기술을 다 써서 몸으로 부딪힌다</small></button>`
@@ -358,10 +373,12 @@ const Battle = (() => {
         }).join('')}
       </div>
       <div class="bar-actions">
-        <button class="btn paper" id="to-sw">교체</button>
+        <button class="btn mega ${armed ? 'on' : ''}" id="to-mega" ${view.canMega ? '' : 'disabled'} aria-pressed="${armed}">${view.megaUsed ? '메가 사용함' : armed ? '메가 취소' : '메가진화'}</button>
+        <button class="btn paper" id="to-sw" ${armed ? 'disabled' : ''}>교체</button>
         <button class="btn paper" id="ff">기권</button>
       </div>`;
-    panel.querySelectorAll('[data-mv]').forEach((b) => { b.onclick = () => act({ type: 'move', index: +b.dataset.mv }); });
+    panel.querySelectorAll('[data-mv]').forEach((b) => { b.onclick = () => act({ type: 'move', index: +b.dataset.mv, mega: armed }); });
+    panel.querySelector('#to-mega').onclick = () => { armed = !armed; renderPanel(); };
     panel.querySelector('#to-sw').onclick = () => { menu = 'switch'; renderPanel(); };
     bindForfeit();
   }
@@ -370,7 +387,7 @@ const Battle = (() => {
     panel.innerHTML = `${view.me.mons.map((m, i) => {
       const off = m.hp <= 0 || i === view.me.active;
       return `<button class="sw" data-sw="${i}" ${off ? 'disabled' : ''}>
-        ${monsterSVG(m.species)}
+        ${monsterSVG(m.species, '', m.mega)}
         <div class="inf">${m.name} ${m.types.map(typeChip).join('')}
           <div class="bar" style="max-width:190px"><i class="${m.hp / m.maxHp <= .2 ? 'low' : m.hp / m.maxHp <= .5 ? 'mid' : ''}" style="width:${(m.hp / m.maxHp) * 100}%"></i></div>
           <small>${m.hp <= 0 ? '쓰러짐' : `${m.hp} / ${m.maxHp}`}${m.status ? `, ${STATUS[m.status]}` : ''}${i === view.me.active && m.hp > 0 ? ', 싸우는 중' : ''}</small>

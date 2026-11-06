@@ -130,6 +130,37 @@ test('모든 스킬에 전용 연출이 있다', () => {
   }
 });
 
+test('모든 요괴에게 전용기가 있고 다른 요괴는 배울 수 없다', () => {
+  const owner = {};
+  for (const [id, m] of Object.entries(MONSTERS)) {
+    assert.ok(m.sig && MOVES[m.sig].sig, id);
+    assert.equal(m.moves[0], m.sig);
+    owner[m.sig] = (owner[m.sig] || 0) + 1;
+    assert.equal(Object.values(m.mega.boost).reduce((a, c) => a + c), 100, id);
+  }
+  assert.equal(Object.keys(owner).length, 31);
+  for (const m of Object.values(MONSTERS)) for (const mv of m.moves) if (MOVES[mv].sig) assert.equal(mv, m.sig);
+});
+
+test('메가진화: 행동을 쓰지 않고, 능력치가 오르며, 한 판에 한 번만 된다', () => {
+  const b = battle([{ species: 'kkaebi', moves: ['club', 'guard'] }, { species: 'horong', moves: ['ember'] }], custom('daeya', ['tackle']), 4);
+  const m = E.activeOf(b, 0), atk = m.stats.atk, maxHp = m.maxHp;
+  m.hp = maxHp - 10;
+  assert.equal(E.choose(b, 0, { type: 'switch', index: 1, mega: true }).ok, false);
+  E.choose(b, 0, { type: 'move', index: 0, mega: true });
+  const { events } = E.choose(b, 1, { type: 'move', index: 0 });
+  const iMega = events.findIndex((e) => e.t === 'mega'), iMove = events.findIndex((e) => e.t === 'move' && e.side === 0);
+  assert.ok(iMega >= 0 && iMove > iMega, '메가 뒤 같은 턴에 공격');
+  assert.equal(m.name, '도깨비대장');
+  assert.ok(m.stats.atk > atk);
+  assert.equal(E.viewFor(b, 0).canMega, false);
+  E.choose(b, 0, { type: 'switch', index: 1 });
+  E.choose(b, 1, { type: 'move', index: 0 });
+  assert.equal(E.choose(b, 0, { type: 'move', index: 0, mega: true }).ok, false);
+  assert.equal(E.canMega(b, 1), true);
+  assert.equal(E.viewFor(b, 0).me.mons[0].mega, true);
+});
+
 test('선제 기술은 스피드가 느려도 먼저 나간다', () => {
   const b = battle(custom('jangseung', ['ambush']), custom('bangpae', ['highvolt']));
   move(b, 0, 'ambush');

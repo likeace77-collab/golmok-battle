@@ -249,7 +249,7 @@ function showTeam(index, draft) {
   const render = () => {
     app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">취소</button><h1>덱 편집</h1></div>
       <section class="panel" style="margin-bottom:14px">
-        <label class="field" style="margin:0">덱 이름<input id="deck-name" maxlength="12" value="${esc(deck.name)}"></label>
+        <label class="field" style="margin:0">덱 이름<input id="deck-name" value="${esc(deck.name)}" autocomplete="off"></label>
       </section>
       ${team.map((m, i) => {
         const sp = G.data.MONSTERS[m.species];
@@ -269,6 +269,8 @@ function showTeam(index, draft) {
     app.querySelector('#deck-name').oninput = (e) => { deck.name = e.target.value; };
     app.querySelector('#back').onclick = showDecks;
     app.querySelector('#save').onclick = async () => {
+      deck.name = app.querySelector('#deck-name').value; // 한글 조합 중이어도 입력칸의 값을 그대로 씀
+      if ([...deck.name.trim()].length > 12) return toast('덱 이름은 12자까지입니다.');
       const decks = cloneDecks();
       decks[index] = deck;
       try { await saveDecks(decks, G.user.active); toast('덱을 저장했습니다.'); showDecks(); }
@@ -310,6 +312,8 @@ function pickMonster(team, done) {
   });
 }
 
+const sigTag = (id) => (G.data.MOVES[id].sig ? '<em class="sigtag">전용기</em>' : '');
+
 function moveLine(id) {
   const m = G.data.MOVES[id];
   const kind = { p: '물리', s: '특수', x: '변화' }[m.cat];
@@ -332,7 +336,7 @@ function editMon(team, i, done) {
       <p class="muted" style="margin-bottom:10px">${sp.flavor}</p>
       <h3 style="font-family:var(--ui);font-weight:400;margin-bottom:6px">기술 ${slot.moves.length}/4</h3>
       ${sp.moves.map((id) => `<button class="mv" data-mv="${id}" aria-pressed="${slot.moves.includes(id)}">
-        ${typeChip(G.data.MOVES[id].type)}<b>${G.data.MOVES[id].n}</b><small>${moveLine(id)}</small></button>`).join('')}`);
+        ${typeChip(G.data.MOVES[id].type)}<b>${G.data.MOVES[id].n}</b>${sigTag(id)}<small>${moveLine(id)}</small></button>`).join('')}`);
     bg.querySelector('[data-x]').onclick = () => { closeSheet(); done(); };
     bg.querySelectorAll('[data-mv]').forEach((b) => {
       b.onclick = () => {
@@ -399,10 +403,21 @@ function openDexEntry(id) {
       </div>
     </div>
     <p style="margin-bottom:12px">${sp.flavor}</p>
+    <section class="megabox">
+      <h3>메가진화: ${sp.mega.n}</h3>
+      <div class="row" style="align-items:flex-start">
+        <div class="detail-pic" style="--tc:${G.data.TYPES[sp.types[0]].c}">${monsterSVG(id, '', true)}</div>
+        <div style="flex:1;min-width:0">
+          ${Object.entries(sp.base).map(([k, v]) => { const up = sp.mega.boost[k], now = v + up; return `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${now}${up ? ` <b>+${up}</b>` : ''}</span><i style="width:${Math.min(100, now / 1.7)}%"></i></div>`; }).join('')}
+          <p style="text-align:right;line-height:1.3;font-size:14px">합계 ${total + 100}</p>
+        </div>
+      </div>
+      <p style="margin-top:8px;font-size:15px;line-height:1.4">${sp.mega.d}</p>
+    </section>
     <h3 class="dex-h">타입 상성</h3>
     ${matchups(id)}
     <h3 class="dex-h">배울 수 있는 스킬 ${sp.moves.length}개</h3>
-    ${sp.moves.map((m) => `<div class="mv">${typeChip(G.data.MOVES[m].type)}<b>${G.data.MOVES[m].n}</b><small>${moveLine(m)}</small></div>`).join('')}`);
+    ${sp.moves.map((m) => `<div class="mv">${typeChip(G.data.MOVES[m].type)}<b>${G.data.MOVES[m].n}</b>${sigTag(m)}<small>${moveLine(m)}</small></div>`).join('')}`);
   bg.querySelector('[data-x]').onclick = closeSheet;
 }
 
