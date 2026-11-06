@@ -87,7 +87,13 @@ const Battle = (() => {
   function renderPreview() {
     const waiting = !view.mustAct;
     const rosterHTML = (o) => `<div class="grid pv">${o.roster.map((m) => `<div class="card" style="--tc:${G.data.TYPES[m.types[0]].c}">${monsterSVG(m.species)}<span>${m.name}</span><p>${m.types.map(typeChip).join('')}</p></div>`).join('')}</div>`;
+    const vsCard = (x) => battleCard({ name: x.name, avatar: x.avatar, style: x.style });
     app.innerHTML = `${headHTML()}
+      <section class="vs ${view.doubles ? 'dbl' : ''}">
+        <div class="vs-side">${vsCard(view.me)}${view.ally ? vsCard(view.ally) : ''}</div>
+        <b class="vs-mark">VS</b>
+        <div class="vs-side">${view.opps.map(vsCard).join('')}</div>
+      </section>
       ${view.opps.map((o) => `<section class="panel">
         <h2>${view.doubles ? esc(o.name) : '상대'} 덱: ${esc(o.deck)}</h2>${rosterHTML(o)}
       </section>`).join('')}
@@ -456,7 +462,8 @@ const Battle = (() => {
     const winners = win ? myNames() : oppNames();
     const div = document.createElement('div');
     div.className = 'result';
-    div.innerHTML = `<div class="ava lg">${avatarSVG(win || draw ? view.me.avatar : view.opp.avatar)}</div>
+    const champ = win || draw ? view.me : view.opp;
+    div.innerHTML = `<div class="result-card">${battleCard({ name: champ.name, avatar: champ.avatar, style: champ.style }, 'big')}</div>
       <h1 class="title ${spectating ? 'small' : ''}">${draw ? '무승부' : spectating ? `${esc(winners)} 승리` : win ? '승리' : '패배'}</h1>
       <p style="color:#fff">${esc(myNames())} 대 ${esc(oppNames())}, ${view.turn - 1}턴${practice ? ' (연습)' : ''}${spectating ? ' (관전)' : ''}</p>
       <button class="btn" id="to-lobby">로비로 돌아가기</button>`;

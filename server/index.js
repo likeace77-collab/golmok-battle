@@ -92,9 +92,23 @@ const defaultTeam = () => ['yeontan', 'kettle', 'kongsiru', 'orak', 'maetdol', '
   return { species, moves };
 });
 
-const randomAvatar = () => Object.fromEntries(
-  Object.entries(Data.AVATAR_OPTIONS).map(([k, n]) => [k, crypto.randomInt(k === 'hat' ? 1 : n)])
+const NONE_FIRST = ['hat', 'glasses', 'face', 'brow'];
+const randomAvatar = (any = false) => Object.fromEntries(
+  Object.entries(Data.AVATAR_OPTIONS).map(([k, n]) => [k, !any && NONE_FIRST.includes(k) ? 0 : crypto.randomInt(n)])
 );
+const pick = (list) => list[crypto.randomInt(list.length)].id;
+const randomStyle = () => ({ title: pick(Data.COSMETICS.titles), card: pick(Data.COSMETICS.cards), pins: [pick(Data.COSMETICS.pins), pick(Data.COSMETICS.pins)] });
+const newStats = () => ({ games: 0, streak: 0, streakBest: 0, p0: 0, p1: 0, p2: 0, p3: 0, tagGames: 0, tagWins: 0, megas: 0 });
+const defaultStyle = () => ({ title: 'rookie', card: 'basic', pins: [] });
+const statOf = (u, k) => (k === 'wins' || k === 'losses' ? u[k] || 0 : u.stats?.[k] || 0);
+const isUnlocked = (u, item) => !item.cond || statOf(u, item.cond[0]) >= item.cond[1];
+function validStyle(u, s) {
+  if (!s || typeof s !== 'object') return null;
+  const find = (kind, id) => Data.COSMETICS[kind].find((x) => x.id === id && isUnlocked(u, x));
+  const pins = Array.isArray(s.pins) ? [...new Set(s.pins)] : [];
+  if (!find('titles', s.title) || !find('cards', s.card) || pins.length > 3 || !pins.every((p) => find('pins', p))) return null;
+  return { title: s.title, card: s.card, pins };
+}
 
 function validAvatar(a) {
   if (!a || typeof a !== 'object') return null;
@@ -123,6 +137,9 @@ const deckOf = (u) => u.decks[u.active];
 function migrate() {
   let changed = false;
   for (const u of Object.values(db.users)) {
+    for (const k of Object.keys(Data.AVATAR_OPTIONS)) if (!Number.isInteger(u.avatar[k])) { u.avatar[k] = 0; changed = true; }
+    if (!u.stats) { u.stats = newStats(); changed = true; }
+    if (!u.style) { u.style = defaultStyle(); changed = true; }
     if (u.decks) continue;
     u.decks = [{ name: '기본 덱', team: u.team || defaultTeam() }];
     u.active = 0;
@@ -148,7 +165,7 @@ function validTeam(t) {
 }
 
 const publicUser = (u) => ({
-  name: u.name, avatar: u.avatar, decks: u.decks, active: u.active,
+  name: u.name, avatar: u.avatar, decks: u.decks, active: u.active, stats: u.stats, style: u.style,
   wins: u.wins, losses: u.losses, draws: u.draws, h2h: u.h2h,
 });
 
@@ -210,8 +227,8 @@ function readBody(req) {
 async function api(req, res, url) {
   const route = `${req.method} ${url.pathname}`;
   if (route === 'GET /api/data') {
-    const { TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS } = Data;
-    return json(res, 200, { TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, inviteRequired: !!INVITE_CODE });
+    const { TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES } = Data;
+    return json(res, 200, { TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES, inviteRequired: !!INVITE_CODE });
   }
   if (route === 'POST /api/signup' || route === 'POST /api/login') {
     if (limited(req)) return json(res, 429, { error: '시도가 너무 많습니다. 1분 뒤에 다시 해 주세요.' });
@@ -231,7 +248,7 @@ async function api(req, res, url) {
     if (db.users[key]) return json(res, 409, { error: '이미 있는 아이디입니다.' });
     const salt = crypto.randomBytes(16).toString('hex');
     db.users[key] = {
-      name, salt, hash: hashPw(password, salt), avatar: randomAvatar(), decks: [{ name: '기본 덱', team: defaultTeam() }], active: 0, createdAt: Date.now(), lastSeen: Date.now(), notes: {},
+      name, salt, hash: hashPw(password, salt), avatar: randomAvatar(), decks: [{ name: '기본 덱', team: defaultTeam() }], active: 0, createdAt: Date.now(), lastSeen: Date.now(), notes: {}, stats: newStats(), style: defaultStyle(),
       wins: 0, losses: 0, draws: 0, h2h: {},
     };
     createSession(res, req, key);
@@ -257,7 +274,7 @@ async function api(req, res, url) {
   if (route === 'GET /api/players') {
     const notes = user.notes || {};
     const players = Object.entries(db.users).map(([k, u]) => ({
-      key: k, name: u.name, avatar: u.avatar, wins: u.wins, losses: u.losses, draws: u.draws,
+      key: k, name: u.name, avatar: u.avatar, style: u.style, wins: u.wins, losses: u.losses, draws: u.draws,
       online: online.has(k), busy: inBattle.has(k), createdAt: u.createdAt || null, lastSeen: online.has(k) ? Date.now() : u.lastSeen || null,
       note: notes[k] || '', me: k === auth.key,
     })).sort((a, b) => b.online - a.online || (b.lastSeen || 0) - (a.lastSeen || 0));
@@ -273,6 +290,12 @@ async function api(req, res, url) {
     if (text) user.notes[key] = text; else delete user.notes[key];
     save();
     return json(res, 200, { ok: true });
+  }
+  if (route === 'PUT /api/style') {
+    const st = validStyle(user, await readBody(req));
+    if (!st) return json(res, 400, { error: '아직 얻지 못한 칭호, 카드, 핀이 있습니다. 핀은 3개까지입니다.' });
+    user.style = st; save(); broadcastLobby();
+    return json(res, 200, { user: publicUser(user) });
   }
   if (route === 'PUT /api/decks') {
     const body = await readBody(req);
@@ -320,7 +343,7 @@ const toast = (key, text) => send(online.get(key), { t: 'toast', text });
 function broadcastLobby() {
   const players = [...online.keys()].map((k) => {
     const u = db.users[k];
-    return { key: k, name: u.name, avatar: u.avatar, wins: u.wins, losses: u.losses, busy: inBattle.has(k) };
+    return { key: k, name: u.name, avatar: u.avatar, style: u.style, wins: u.wins, losses: u.losses, busy: inBattle.has(k) };
   });
   const tags = [...tagRooms.values()].map((r) => ({
     id: r.id, host: r.host, level: r.level,
@@ -362,8 +385,8 @@ function startBattle(keys, size, level = 1, tag = false) {
     return deckOf(db.users[human]).team.slice(0, size);
   };
   const players = keys.map((k, i) => (k === BOT
-    ? { name: `골목대장(${BOT_LEVELS[level]})`, avatar: randomAvatar(), deck: `${BOT_LEVELS[level]} 덱`, team: E.botTeam(level, size, foeDeck(i)) }
-    : { name: db.users[k].name, avatar: db.users[k].avatar, deck: deckOf(db.users[k]).name, team: deckOf(db.users[k]).team.slice(0, size) }));
+    ? { name: `골목대장(${BOT_LEVELS[level]})`, avatar: randomAvatar(true), style: randomStyle(), deck: `${BOT_LEVELS[level]} 덱`, team: E.botTeam(level, size, foeDeck(i)) }
+    : { name: db.users[k].name, avatar: db.users[k].avatar, style: db.users[k].style, deck: deckOf(db.users[k]).name, team: deckOf(db.users[k]).team.slice(0, size) }));
   const room = { id: crypto.randomUUID(), keys, b: E.createBattle(players, undefined, { preview: true }), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: level, tag, spectators: new Set() };
   battles.set(room.id, room);
   keys.forEach((k) => { if (k !== BOT) { inBattle.set(k, room); clearChallenges(k); removeFromTag(k); stopWatching(k); } });
@@ -485,17 +508,29 @@ function afterTurn(room, events) {
 
 function finish(room) {
   const { winner } = room.b;
-  if (!room.tag && !room.keys.includes(BOT)) {
+  const pvp = !room.tag && !room.keys.includes(BOT);
+  const humans = room.keys.map((k, s) => [k, s]).filter(([k]) => k !== BOT);
+  for (const [k, s] of humans) {
+    const st = db.users[k].stats;
+    if (room.b.sides[s].megaUsed) st.megas++;
+    const won = winner !== null && E.teamOf(room.b, s) === winner;
+    if (room.tag) { st.tagGames++; if (won) st.tagWins++; }
+    else if (!pvp && won) st[`p${room.botLevel}`]++;
+  }
+  if (pvp) {
     const [a, b] = room.keys.map((k) => db.users[k]);
     const h = (u, o, f) => { (u.h2h[o.name] ||= { w: 0, l: 0, d: 0 })[f]++; };
+    a.stats.games++; b.stats.games++;
     if (winner === null) { a.draws++; b.draws++; h(a, b, 'd'); h(b, a, 'd'); }
     else {
       const [w, l] = winner === 0 ? [a, b] : [b, a];
       w.wins++; l.losses++; h(w, l, 'w'); h(l, w, 'l');
+      w.stats.streak++; w.stats.streakBest = Math.max(w.stats.streakBest, w.stats.streak);
+      l.stats.streak = 0;
     }
-    save();
-    room.keys.forEach((k) => send(online.get(k), { t: 'me', user: publicUser(db.users[k]) }));
   }
+  save();
+  humans.forEach(([k]) => send(online.get(k), { t: 'me', user: publicUser(db.users[k]) }));
   dissolve(room);
 }
 

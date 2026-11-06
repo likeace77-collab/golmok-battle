@@ -53,7 +53,7 @@ function createBattle(players, seed = (Math.random() * 2 ** 31) | 0, { preview =
     seed, turn: 1, phase: preview ? 'preview' : 'choose', winner: null, weather: null, weatherTurns: 0,
     pending: players.map(() => null), needs: players.map(() => true),
     sides: players.map((p) => ({
-      name: p.name, avatar: p.avatar, deck: p.deck, active: 0, hazard: false,
+      name: p.name, avatar: p.avatar, style: p.style, deck: p.deck, active: 0, hazard: false,
       mons: p.team.map(makeMon),
     })),
   };
@@ -519,7 +519,7 @@ function viewFor(b, s) {
   const seatView = (i) => {
     const o = b.sides[i];
     return {
-      seat: i, name: o.name, avatar: o.avatar, deck: o.deck, hazard: o.hazard,
+      seat: i, name: o.name, avatar: o.avatar, style: o.style, deck: o.deck, hazard: o.hazard,
       active: preview ? null : publicMon(activeOf(b, i)), // 고르기 전에는 선봉을 숨김
       roster: o.mons.map((m) => ({ species: m.species, name: m.name, types: m.types, out: !alive(m), mega: m.mega })),
     };
@@ -534,7 +534,7 @@ function viewFor(b, s) {
     megaUsed: !!me.megaUsed,
     lead: preview && lock ? b.pending[s].index : null,
     me: {
-      name: me.name, avatar: me.avatar, deck: me.deck, active: me.active, hazard: me.hazard,
+      name: me.name, avatar: me.avatar, style: me.style, deck: me.deck, active: me.active, hazard: me.hazard,
       mons: me.mons.map((m) => ({
         ...publicMon(m), stats: m.stats,
         moves: m.moves.map((x) => ({ id: x.id, pp: x.pp })),

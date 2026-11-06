@@ -1,0 +1,224 @@
+// 아바타(세로 100x125), 핀 그림, 전투카드
+const rng = (n, f) => Array.from({ length: n }, (_, i) => f(i)).join('');
+
+const SKIN = ['#FFE0BD', '#F7CFA6', '#E8B98A', '#C98F5E', '#8D5A3B', '#5E3A26', '#BFE4FF', '#A8E0A0', '#D9C6F2', '#B8BCC6'];
+const HAIR_C = ['#1a1433', '#4A2C1A', '#8B5A2B', '#D9A441', '#E8402C', '#2F7DE1', '#3FA34D', '#E6E0D5',
+  '#F27FA5', '#9A4FB8', '#B8C2CC', '#F28A1E', '#6CE0C0', '#2a3a8a', '#7a1f2a', '#FFE45C'];
+const CLOTH_C = ['#E8402C', '#2F7DE1', '#3FA34D', '#F2B705', '#9A4FB8', '#FFFFFF', '#2B2B38', '#F27FA5',
+  '#3CC9A7', '#F28A1E', '#7C8798', '#8B5A2B', '#1F2A6C', '#C21F4A', '#BFE4FF', '#D7F2B4'];
+const BG_C = ['#2340A8', '#E8402C', '#F2B705', '#3CC9A7', '#9A4FB8', '#F27FA5'];
+const BG_SWATCH = [...BG_C, '#5B9BF0', '#F27FA5', '#FFD23F', '#E8402C', '#14102b', '#F7A24B', '#2a1450', '#FFB3CC'];
+
+const AVATAR_LABELS = {
+  skin: '피부', hair: '머리 모양', hairColor: '머리 색', brow: '눈썹', eyes: '눈', mouth: '입', face: '얼굴 장식',
+  glasses: '안경', hat: '모자', outfit: '옷', outfitColor: '옷 색', bg: '배경',
+};
+const AVATAR_SWATCH = { skin: SKIN, hairColor: HAIR_C, outfitColor: CLOTH_C, bg: BG_SWATCH };
+
+function avatarBg(i) {
+  const base = (c) => `<rect width="100" height="125" fill="${c}"/>`;
+  if (i < 6) return base(BG_C[i]);
+  return [
+    base('#2F7DE1') + rng(9, (j) => `<path d="M${j * 26 - 70} 125L${j * 26} 0h12L${j * 26 - 58} 125z" fill="#5B9BF0"/>`),
+    base('#F27FA5') + rng(30, (j) => `<circle cx="${(j % 5) * 22 + ((Math.floor(j / 5) % 2) * 11) + 4}" cy="${Math.floor(j / 5) * 22 + 6}" r="4" fill="#fff" opacity=".7"/>`),
+    base('#FFD23F') + rng(12, (j) => { const a = (j / 12) * 6.283, b = a + .26; return `<path d="M50 52L${50 + Math.cos(a) * 140} ${52 + Math.sin(a) * 140}L${50 + Math.cos(b) * 140} ${52 + Math.sin(b) * 140}z" fill="#F2B705"/>`; }),
+    base('#fff') + rng(40, (j) => (((j % 8) + Math.floor(j / 8)) % 2 ? '' : `<rect x="${(j % 8) * 12.5}" y="${Math.floor(j / 8) * 25}" width="12.5" height="25" fill="#E8402C"/>`)),
+    base('#14102b') + rng(16, (j) => `<circle cx="${(j * 37) % 100}" cy="${(j * 53) % 120}" r="${j % 3 ? .9 : 1.6}" fill="#fff"/>`) + '<circle cx="80" cy="18" r="10" fill="#FFE45C"/><circle cx="85" cy="15" r="9" fill="#14102b"/>',
+    base('#F27A4B') + '<rect y="30" width="100" height="40" fill="#F7A24B"/><circle cx="70" cy="40" r="14" fill="#FFD23F"/><path d="M0 125V70l12-6 12 6V56h20v10l14-8 14 8V60h28v65z" fill="#3B2A78"/>' + rng(6, (j) => `<rect x="${6 + j * 16}" y="${80 + (j % 3) * 10}" width="5" height="5" fill="#FFD23F"/>`),
+    base('#2a1450') + '<circle cx="50" cy="66" r="28" fill="#FF6FB5"/><circle cx="50" cy="66" r="28" fill="#FFD23F" opacity=".55"/>' + rng(4, (j) => `<rect x="20" y="${70 + j * 6}" width="60" height="2.5" fill="#2a1450"/>`) + '<rect y="86" width="100" height="39" fill="#1a0a3a"/>' + rng(7, (j) => `<path d="M50 86L${j * 25 - 25} 125" stroke="#ff4fc0" stroke-width="1"/>`) + rng(4, (j) => `<path d="M0 ${90 + j * 9}h100" stroke="#ff4fc0" stroke-width="1"/>`),
+    base('#FFB3CC') + rng(12, (j) => { const x = (j % 4) * 28 + ((Math.floor(j / 4) % 2) * 14) + 6, y = Math.floor(j / 4) * 42 + 14; return `<path d="M${x} ${y + 5}c-7-5-4-11 0-7 4-4 7 2 0 7z" fill="#F27FA5"/>`; }),
+  ][i - 6] || base(BG_C[0]);
+}
+
+function avatarSVG(a, cls = '') {
+  const v = (k) => a[k] || 0;
+  const skin = SKIN[v('skin')], hc = HAIR_C[v('hairColor')], cc = CLOTH_C[v('outfitColor')];
+  const hair = v('hair');
+  const back = {
+    2: `<path d="M25 46q-4 52 8 58h34q12-6 8-58z" fill="${hc}"/>`,
+    3: `<path d="M26 48q-2 22 6 28h36q8-6 6-28z" fill="${hc}"/>`,
+    4: `<path d="M72 40q18 6 12 34-8-8-12-10z" fill="${hc}"/>`,
+    6: `<circle cx="50" cy="16" r="10" fill="${hc}"/>`,
+    10: `<circle cx="29" cy="22" r="9" fill="${hc}"/><circle cx="71" cy="22" r="9" fill="${hc}"/>`,
+    11: `<path d="M26 42q-16 10-14 44 10-2 15-14 4-14 4-26zM74 42q16 10 14 44-10-2-15-14-4-14-4-26z" fill="${hc}"/>`,
+    12: `<circle cx="50" cy="38" r="33" fill="${hc}"/>`,
+    13: `<path d="M25 46q-6 52 6 62h20q-6-30-4-62z" fill="${hc}"/>`,
+    15: `<path d="M66 26q26 8 20 50-8-4-12-16-4-12-12-30z" fill="${hc}"/>`,
+    16: `<path d="M23 44q-4 28 4 36h46q8-8 4-36z" fill="${hc}"/>`,
+    17: rng(10, (j) => { const t = (j / 9) * 3.14; return `<circle cx="${50 - Math.cos(t) * 27}" cy="${48 + Math.sin(t) * 8 - Math.sin(t / 2) * 26}" r="9" fill="${hc}"/>`; }),
+  }[hair] || '';
+  const top = [
+    '',
+    `<path d="M28 44q-2-26 22-26t22 26q-8-10-22-10T28 44z" fill="${hc}"/>`,
+    `<path d="M27 46q-3-30 23-30t23 30q-6-14-14-16-16 8-26 4-4 4-6 12z" fill="${hc}"/>`,
+    `<path d="M27 48q-3-32 23-32t23 32q-4-12-10-14H37q-6 2-10 14z" fill="${hc}"/>`,
+    `<path d="M28 44q-2-26 22-26t22 26q-10-14-30-8-8 2-14 8z" fill="${hc}"/>`,
+    `<path d="M26 42q-6-8 2-14-2-10 10-10 4-8 14-4 12-4 16 6 10 4 6 14 4 6 2 10-4-8-10-12-16 6-32 2-6 2-8 8z" fill="${hc}"/>`,
+    `<path d="M28 44q-2-24 22-24t22 24q-6-12-22-12T28 44z" fill="${hc}"/>`,
+    `<path d="M50 18l-8 14-4-8-2 10-8-2 8 10q4-8 14-8t14 8l8-10-8 2-2-10-4 8z" fill="${hc}"/>`,
+    `<path d="M29 40q6-14 21-14t21 14q-4-4-21-4t-21 4z" fill="${hc}" opacity=".55" stroke="none"/>`,
+    `<path d="M44 24L47 2l3 10 3-10 3 22q-6 4-12 0z" fill="${hc}"/><path d="M30 38q2-12 14-14M70 38q-2-12-14-14" fill="none" stroke="${hc}" stroke-width="3" opacity=".6"/>`,
+    `<path d="M28 44q-2-26 22-26t22 26q-8-10-22-10T28 44z" fill="${hc}"/>`,
+    `<path d="M27 46q-3-30 23-30t23 30l-4-10-6 6-4-10-5 8-4-9-4 9-5-8-4 10-6-6z" fill="${hc}"/>`,
+    `<path d="M27 40q0-26 23-26t23 26q-10-8-23-8t-23 8z" fill="${hc}"/>` + rng(7, (j) => `<circle cx="${32 + j * 6}" cy="${22 - Math.sin((j / 6) * 3.14) * 6}" r="5" fill="${hc}"/>`),
+    `<path d="M27 46q-2-30 25-30 22 0 22 28-10-14-20-16-14 4-27 18z" fill="${hc}"/>`,
+    `<path d="M30 34q2-16 22-16 18 0 20 14-4-2-42 2z" fill="${hc}"/><path d="M27 42v-6M73 42v-6" stroke="${hc}" stroke-width="4" opacity=".45"/>`,
+    `<path d="M28 42q0-26 22-26t22 26q-8-12-22-12t-22 12z" fill="${hc}"/><path d="M68 26l6 2" stroke="${K}" stroke-width="3"/>`,
+    `<path d="M27 46q-3-30 23-30t23 30q-2-6-6-10H33q-4 4-6 10z" fill="${hc}"/>`,
+    rng(8, (j) => `<circle cx="${29 + j * 6}" cy="${30 - Math.sin((j / 7) * 3.14) * 12}" r="7" fill="${hc}"/>`),
+    `<path d="M28 40q2-22 24-22 20 0 20 20-6-10-22-10-14 2-22 12z" fill="${hc}"/><path d="M40 24q10-4 20 0" fill="none" stroke="#fff" stroke-width="2" opacity=".6"/>`,
+    `<path d="M26 44l2-14-8-4 10-4-2-10 10 4 4-10 6 8 6-10 4 10 8-6-2 10 10 0-6 8 6 8-8 0q-2-8-22-8t-20 14z" fill="${hc}"/>`,
+  ][hair] || '';
+  const brow = ['',
+    `<path d="M36 42q5-3 10 0M54 42q5-3 10 0" fill="none" stroke="${K}" stroke-width="2"/>`,
+    `<path d="M35 42h11M54 42h11" stroke="${hc}" stroke-width="4.5" stroke-linecap="round"/><path d="M35 42h11M54 42h11" stroke="${K}" stroke-width="1" opacity=".5"/>`,
+    `<path d="M35 40l11 4M65 40l-11 4" stroke="${K}" stroke-width="3" stroke-linecap="round"/>`,
+    `<path d="M36 43l10-3M64 43l-10-3" stroke="${K}" stroke-width="2.5" stroke-linecap="round"/>`,
+    `<path d="M35 42q15-6 30 0" fill="none" stroke="${K}" stroke-width="4" stroke-linecap="round"/>`,
+  ][v('brow')] || '';
+  const star = (x, y, r, c) => `<path d="M${Array.from({ length: 10 }, (_, i) => { const t = -Math.PI / 2 + (i * Math.PI) / 5, q = i % 2 ? r * .45 : r; return `${(x + Math.cos(t) * q).toFixed(1)} ${(y + Math.sin(t) * q).toFixed(1)}`; }).join('L')}z" fill="${c}" stroke="${K}" stroke-width="1"/>`;
+  const heart = (x, y, c) => `<path d="M${x} ${y + 4}c-8-5-5-11 0-7 5-4 8 2 0 7z" fill="${c}" stroke="${K}" stroke-width="1"/>`;
+  const ey = [
+    `<circle cx="41" cy="49" r="3.5" fill="${K}"/><circle cx="59" cy="49" r="3.5" fill="${K}"/>`,
+    `<path d="M36 49q5-5 10 0M54 49q5-5 10 0" fill="none" stroke="${K}" stroke-width="2.5"/>`,
+    `<circle cx="41" cy="49" r="5.5" fill="#fff" stroke="${K}" stroke-width="2"/><circle cx="59" cy="49" r="5.5" fill="#fff" stroke="${K}" stroke-width="2"/><circle cx="42" cy="50" r="2.5" fill="${K}"/><circle cx="60" cy="50" r="2.5" fill="${K}"/>`,
+    `<path d="M35 45l11 3M65 45l-11 3" stroke="${K}" stroke-width="2.5"/><circle cx="41" cy="51" r="3" fill="${K}"/><circle cx="59" cy="51" r="3" fill="${K}"/>`,
+    `<path d="M36 49h10M54 49h10" stroke="${K}" stroke-width="3"/>`,
+    [41, 59].map((x) => `<ellipse cx="${x}" cy="49" rx="4.5" ry="6" fill="${K}"/><circle cx="${x - 1.5}" cy="47" r="1.8" fill="#fff"/><circle cx="${x + 1.5}" cy="51.5" r=".9" fill="#fff"/>`).join(''),
+    heart(41, 46, '#E8402C') + heart(59, 46, '#E8402C'),
+    `<path d="M36 49q5 3 10 0M54 49q5 3 10 0" fill="none" stroke="${K}" stroke-width="2.5"/><path d="M36 48h10M54 48h10" stroke="${K}" stroke-width="1.5" opacity=".6"/>`,
+    `<path d="M36 50l5-4 5 4" fill="none" stroke="${K}" stroke-width="2.5"/><circle cx="59" cy="49" r="3.5" fill="${K}"/>`,
+    star(41, 49, 6, '#FFE45C') + star(59, 49, 6, '#FFE45C'),
+    `<path d="M37 45l8 8M45 45l-8 8M55 45l8 8M63 45l-8 8" stroke="${K}" stroke-width="2.5"/>`,
+    `<circle cx="41" cy="49" r="5" fill="#6CF2C2" stroke="${K}" stroke-width="1.5"/><circle cx="59" cy="49" r="5" fill="#6CF2C2" stroke="${K}" stroke-width="1.5"/><circle cx="40" cy="47.5" r="1.5" fill="#fff"/><circle cx="58" cy="47.5" r="1.5" fill="#fff"/>`,
+  ][v('eyes')] || '';
+  const mo = [
+    `<path d="M44 60q6 5 12 0" fill="none" stroke="${K}" stroke-width="2.5"/>`,
+    `<path d="M43 59h14q-1 8-7 8t-7-8z" fill="#fff" stroke="${K}" stroke-width="2"/>`,
+    `<path d="M45 61h10" stroke="${K}" stroke-width="2.5"/>`,
+    `<circle cx="50" cy="62" r="3.5" fill="${K}"/>`,
+    `<path d="M44 62q6-5 12 0" fill="none" stroke="${K}" stroke-width="2.5"/>`,
+    `<path d="M44 59q6 5 12 0" fill="none" stroke="${K}" stroke-width="2.5"/><path d="M48 61q2 6 5 0" fill="#F27FA5" stroke="${K}" stroke-width="1.5"/>`,
+    `<path d="M42 58h16q-2 8-8 8t-8-8z" fill="#fff" stroke="${K}" stroke-width="2"/><path d="M44 58l2 4 2-4M52 58l2 4 2-4" fill="#fff" stroke="${K}" stroke-width="1"/>`,
+    `<path d="M44 60q3 3 6 0 3 3 6 0" fill="none" stroke="${K}" stroke-width="2.2"/>`,
+    `<path d="M45 61q8 1 11-4" fill="none" stroke="${K}" stroke-width="2.5" stroke-linecap="round"/>`,
+    `<path d="M40 58q5-5 10-1 5-4 10 1-5 4-10 0-5 4-10 0z" fill="${hc}" stroke="${K}" stroke-width="1.5"/><path d="M47 63h6" stroke="${K}" stroke-width="2"/>`,
+  ][v('mouth')] || '';
+  const face = ['',
+    rng(6, (j) => `<circle cx="${j < 3 ? 33 + j * 3 : 61 + (j - 3) * 3}" cy="${56 + (j % 2) * 2}" r="1" fill="#8B5A2B"/>`),
+    `<ellipse cx="35" cy="57" rx="5" ry="3" fill="#F27FA5" opacity=".6"/><ellipse cx="65" cy="57" rx="5" ry="3" fill="#F27FA5" opacity=".6"/>`,
+    `<path d="M36 40l10 18" stroke="#B84A3A" stroke-width="2"/><path d="M38 47l4-2M41 52l4-2" stroke="#B84A3A" stroke-width="1.5"/>`,
+    `<g transform="rotate(-20 65 57)"><rect x="59" y="54" width="12" height="6" rx="2" fill="#F4ECD8" stroke="${K}" stroke-width="1.2"/><path d="M63 57h4M65 55v4" stroke="#E8402C" stroke-width="1"/></g>`,
+    star(64, 57, 3.5, '#9A4FB8'),
+    `<path d="M33 54l8 3M33 58l8 3M67 54l-8 3M67 58l-8 3" stroke="#E8402C" stroke-width="2"/>`,
+  ][v('face')] || '';
+  const glasses = ['',
+    `<g fill="none" stroke="${K}" stroke-width="2"><circle cx="41" cy="49" r="7"/><circle cx="59" cy="49" r="7"/><path d="M48 49h4M34 48l-7-2M66 48l7-2"/></g>`,
+    `<g fill="#BFE4FF55" stroke="${K}" stroke-width="2"><rect x="33" y="43" width="15" height="11" rx="2"/><rect x="52" y="43" width="15" height="11" rx="2"/><path d="M48 48h4M33 47l-6-1M67 47l6-1" fill="none"/></g>`,
+    `<g stroke="${K}" stroke-width="2"><path d="M32 44h15q0 11-8 11t-7-11zM53 44h15q1 11-7 11t-8-11z" fill="${K}"/><path d="M47 46h6M32 45l-5-1M68 45l5-1" fill="none"/></g><path d="M35 46l4 4M56 46l4 4" stroke="#fff" stroke-width="1.5" opacity=".7"/>`,
+    `<path d="M28 44h44l-3 10H31z" fill="#37e0ff" stroke="${K}" stroke-width="2" opacity=".9"/><path d="M32 47h36" stroke="#fff" stroke-width="1.5" opacity=".8"/>`,
+    `<circle cx="59" cy="49" r="7" fill="#BFE4FF44" stroke="#E7B23A" stroke-width="2"/><path d="M65 53q6 14 2 26" fill="none" stroke="#E7B23A" stroke-width="1.2"/>`,
+    `<path d="M27 40l46 8" stroke="${K}" stroke-width="1.5"/><ellipse cx="41" cy="49" rx="7" ry="6" fill="${K}"/>`,
+    star(41, 49, 9, '#F27FA5') + star(59, 49, 9, '#F27FA5') + `<path d="M48 49h4" stroke="${K}" stroke-width="2"/>`,
+  ][v('glasses')] || '';
+  const hat = [
+    '',
+    `<path d="M27 34q2-20 23-20t23 20z" fill="${cc}"/><path d="M27 34h46l14 5H27z" fill="${K}"/>`,
+    `<path d="M27 36q0-24 23-24t23 24z" fill="${cc}"/><path d="M25 32h50v8H25z" fill="#fff"/><circle cx="50" cy="11" r="5" fill="#fff"/>`,
+    `<path d="M28 34q22-8 44 0v6q-22-8-44 0z" fill="#E8402C"/><path d="M72 36l12-4-3 8 3 7-12-6z" fill="#E8402C"/>`,
+    `<path d="M22 36q8-22 28-22t28 22q-28-8-56 0z" fill="#E7C98A"/><path d="M12 38q38-12 76 0-38-6-76 0z" fill="#E7C98A"/>`,
+    `<path d="M34 40l-4-14 12 8 8-16 8 16 12-8-4 14z" fill="#F2B705"/>`,
+    `<path d="M26 36q0-26 24-26t24 26z" fill="${cc}"/><path d="M25 32h50v7H25z" fill="${cc}" stroke-width="2"/><path d="M30 32v7M36 32v7M42 32v7M48 32v7M54 32v7M60 32v7M66 32v7" stroke-width="1"/><circle cx="50" cy="9" r="5" fill="#fff"/>`,
+    `<path d="M27 32q23-6 46 0v6q-23-6-46 0z" fill="#E8402C"/><path d="M73 34l14 6-12 2 10 8-14-6z" fill="#E8402C"/><circle cx="50" cy="32" r="3" fill="#fff"/>`,
+    `<ellipse cx="50" cy="32" rx="38" ry="6" fill="#8B5A2B"/><path d="M34 32q0-20 16-20t16 20q-16 4-32 0z" fill="#8B5A2B"/><path d="M34 26q16 4 32 0" fill="none" stroke="#E8402C" stroke-width="3"/>`,
+    `<ellipse cx="50" cy="32" rx="32" ry="6" fill="#3B2F8C"/><path d="M34 32L58 2l8 30z" fill="#3B2F8C"/><path d="M38 28q14 4 26 0" fill="none" stroke="#F2B705" stroke-width="3"/>`,
+    `<path d="M27 34q0-22 23-22t23 22z" fill="#8a8f98"/><path d="M27 34h46" stroke-width="3"/><path d="M28 26q-12-6-12-20 8 6 16 12zM72 26q12-6 12-20-8 6-16 12z" fill="#F4ECD8"/>`,
+    `<ellipse cx="50" cy="10" rx="17" ry="4.5" fill="none" stroke="#FFE45C" stroke-width="3.5"/><ellipse cx="50" cy="10" rx="17" ry="4.5" fill="none" stroke="${K}" stroke-width="1" opacity=".5"/>`,
+    `<path d="M29 30l3-20 13 12zM71 30l-3-20-13 12z" fill="${hc}"/><path d="M32 24l1-9 6 6zM68 24l-1-9-6 6z" fill="#F27FA5" stroke-width="1"/>`,
+    `<path d="M24 46q0-34 26-34t26 34" fill="none" stroke-width="5"/><path d="M24 46q0-34 26-34t26 34" fill="none" stroke="${cc}" stroke-width="2.5"/><rect x="18" y="42" width="10" height="16" rx="4" fill="${cc}"/><rect x="72" y="42" width="10" height="16" rx="4" fill="${cc}"/>`,
+  ][v('hat')] || '';
+  const T = (fill) => `<path d="M6 125Q8 86 34 79h32q26 7 28 46z" fill="${fill}"/>`;
+  const clothes = [
+    T(cc) + `<path d="M40 79q10 8 20 0" fill="none"/>`,
+    T(cc) + `<path d="M34 79q16 16 32 0v6q-16 14-32 0z" fill="#00000030"/><path d="M46 88v10M54 88v10" stroke-width="1.5"/><path d="M36 106h28v12H36z" fill="#00000022"/>`,
+    T('#2B2B38') + `<path d="M40 79l10 14 10-14 4 2-14 24-14-24z" fill="#fff"/><path d="M48 90h4l2 16-4 4-4-4z" fill="${cc}"/>`,
+    T(cc) + `<path d="M18 92l-6 33M82 92l6 33" stroke="#fff" stroke-width="4"/><path d="M50 82v43" stroke-width="2"/><path d="M42 79l8 6 8-6" fill="#fff"/>`,
+    T('#fff') + `<path d="M30 125V96h8v8h24v-8h8v29z" fill="${cc}"/><path d="M34 96l2-16M66 96l-2-16" stroke="${cc}" stroke-width="4"/>`,
+    T('#2a2a33') + `<path d="M40 79h20l-4 46h-12z" fill="${cc}"/><path d="M40 79l-6 22 6 2-4 22M60 79l6 22-6 2 4 22" fill="#2a2a33" stroke-width="2"/><circle cx="72" cy="100" r="2" fill="#c7cdd6"/>`,
+    T(cc) + `<path d="M36 79l18 22-4 4-18-22z" fill="#fff"/><path d="M50 100q-10 4-12 18M50 100q8 6 6 20" fill="none" stroke="#E8402C" stroke-width="3"/>`,
+    T('#8a8f98') + `<path d="M6 104q16-26 30-25l-2 16q-18 2-28 9zM94 104q-16-26-30-25l2 16q18 2 28 9z" fill="${cc}"/><path d="M36 96h28M36 108h28M50 84v41" stroke-width="2"/><circle cx="50" cy="96" r="4" fill="#FFD23F"/>`,
+    T('#fff') + `<path d="M40 79q10 12 20 0l2 6q-12 12-24 0z" fill="${cc}"/>` + rng(6, (j) => `<circle cx="${44 + (j % 2) * 12}" cy="${96 + Math.floor(j / 2) * 9}" r="1.8" fill="${K}"/>`),
+    T(cc) + rng(10, (j) => `<circle cx="${14 + (j * 23) % 74}" cy="${92 + (j * 13) % 30}" r="3.5" fill="${j % 2 ? '#fff' : '#FFD23F'}" stroke-width="1"/>`) + `<path d="M40 79l10 10 10-10" fill="#fff"/>`,
+    T(skin) + `<path d="M30 125q-2-30 6-44h4q10 10 20 0h4q8 14 6 44z" fill="${cc}"/>`,
+    T('#3B2F8C') + `<path d="M34 79q16 12 32 0l4 6q-20 16-40 0z" fill="${cc}"/>` + rng(5, (j) => `<path d="M${20 + j * 14} ${100 + (j % 2) * 12}l1.5 3 3 .5-2.2 2 .6 3-2.9-1.5-2.9 1.5.6-3-2.2-2 3-.5z" fill="#FFE45C" stroke="none"/>`),
+    T(cc) + rng(4, (j) => `<path d="M${8 + j * 1.5} ${92 + j * 9}h${84 - j * 3}" stroke="#fff" stroke-width="3.5"/>`) + `<path d="M40 79q10 8 20 0" fill="none"/>`,
+    T(cc) + `<path d="M40 79l10 10 10-10" fill="#fff"/><text x="50" y="117" font-size="22" font-weight="900" text-anchor="middle" fill="#fff" stroke="${K}" stroke-width="1">7</text>`,
+  ][v('outfit')] || T(cc);
+  return `<svg class="${cls}" viewBox="0 0 100 125" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    ${avatarBg(v('bg'))}
+    <g stroke="${K}" stroke-width="2.5" stroke-linejoin="round">
+      ${back}${clothes}
+      <path d="M42 64h16v14q-8 6-16 0z" fill="${skin}"/>
+      <ellipse cx="50" cy="46" rx="23" ry="26" fill="${skin}"/>
+      <ellipse cx="26" cy="50" rx="3.5" ry="5" fill="${skin}"/><ellipse cx="74" cy="50" rx="3.5" ry="5" fill="${skin}"/>
+      ${top}
+    </g>
+    ${face}${brow}${ey}${mo}${glasses}
+    <g stroke="${K}" stroke-width="2.5" stroke-linejoin="round">${hat}</g>
+  </svg>`;
+}
+
+/* ---------- 핀 (24x24) ---------- */
+const PIN_ART = {
+  star: '<path d="M12 2l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17l-5.9 3 1.2-6.5L2.5 8.9 9.1 8z" fill="#FFD23F"/>',
+  heart: '<path d="M12 21C3 15 2 9 6 6c3-2 5 0 6 2 1-2 3-4 6-2 4 3 3 9-6 15z" fill="#F27FA5"/>',
+  sprout: '<path d="M12 22V12" stroke-width="2.5"/><path d="M12 13C6 13 4 9 4 5c5 0 8 3 8 8zM12 11c0-5 3-8 8-8 0 5-3 8-8 8z" fill="#3FA34D"/>',
+  bolt: '<path d="M14 2L5 13h6l-2 9 10-12h-6z" fill="#FFE45C"/>',
+  fire: '<path d="M12 2c5 6 7 9 5 14-1 4-9 5-11 1-2-4 1-6 2-9 1 3 2 4 3 4-1-4 0-7 1-10z" fill="#F2622E"/><path d="M12 12c2 2 3 4 2 6-1 1-3 1-4 0-1-2 1-4 2-6z" fill="#FFD23F" stroke-width="1"/>',
+  coal: '<rect x="4" y="6" width="16" height="14" rx="2" fill="#3b3640"/><ellipse cx="12" cy="6" rx="8" ry="2.5" fill="#57505c"/><circle cx="9" cy="6" r="1.2" fill="#F28A1E" stroke="none"/><circle cx="15" cy="6" r="1.2" fill="#F28A1E" stroke="none"/><circle cx="12" cy="5.5" r="1.2" fill="#F28A1E" stroke="none"/>',
+  tack: '<path d="M11 13l1 9 1-9z" fill="#C7CDD6"/><ellipse cx="12" cy="10" rx="8" ry="4" fill="#F2B705"/><ellipse cx="12" cy="8" rx="4" ry="2" fill="#FFE45C" stroke-width="1"/>',
+  coin: '<circle cx="12" cy="12" r="9" fill="#FFD23F"/><circle cx="12" cy="12" r="6" fill="none" stroke-width="1.2"/><text x="12" y="15.5" font-size="8" text-anchor="middle" font-weight="900" fill="#1a1433" stroke="none">100</text>',
+  trophy: '<path d="M7 3h10v6a5 5 0 0 1-10 0z" fill="#FFD23F"/><path d="M7 5H3q0 5 4 5M17 5h4q0 5-4 5" fill="none"/><path d="M10 14h4v4h3v3H7v-3h3z" fill="#E7B23A"/>',
+  crown: '<path d="M3 19l-1-12 6 5 4-8 4 8 6-5-1 12z" fill="#FFD23F"/><circle cx="12" cy="15" r="1.8" fill="#E8402C" stroke-width="1"/>',
+  skull: '<path d="M12 3c-5 0-8 3-8 8 0 3 2 4 3 5v4h10v-4c1-1 3-2 3-5 0-5-3-8-8-8z" fill="#F4ECD8"/><circle cx="9" cy="11" r="2.2" fill="#1a1433"/><circle cx="15" cy="11" r="2.2" fill="#1a1433"/><path d="M10 17v3M14 17v3" stroke-width="1.2"/>',
+  horn: '<path d="M4 20C2 12 4 6 8 3c0 6 1 10 4 13zM20 20c2-8 0-14-4-17 0 6-1 10-4 13z" fill="#E8402C"/>',
+  gem: '<path d="M6 4h12l4 6-10 12L2 10z" fill="#6CF2C2"/><path d="M2 10h20M8 4l4 18 4-18" fill="none" stroke-width="1"/>',
+  rainbow: '<path d="M6 4h12l4 6-10 12L2 10z" fill="#F27FA5"/><path d="M6 4l6 6 6-6" fill="#FFD23F" stroke-width="1"/><path d="M2 10h20l-10 12z" fill="#9A4FB8" stroke-width="1"/>',
+  hands: '<path d="M2 12l5-5 5 3 5-3 5 5-8 8z" fill="#FFE0BD"/><path d="M7 7l5 5M12 10l5 5M9 15l3 3" fill="none" stroke-width="1.2"/>',
+  duo: '<path d="M8 3l2 4 4 .5-3 3 1 4-4-2-4 2 1-4-3-3 4-.5z" fill="#FFD23F"/><path d="M16 9l2 4 4 .5-3 3 1 4-4-2-4 2 1-4-3-3 4-.5z" fill="#37e0ff"/>',
+  shield: '<path d="M12 2l9 3v6c0 6-4 9-9 11-5-2-9-5-9-11V5z" fill="#2F7DE1"/><path d="M12 6v12M7 10h10" stroke="#fff" stroke-width="2"/>',
+  leek: '<path d="M10 22V10h4v12z" fill="#F4F2E6"/><path d="M10 10L6 2l4 3 2-4 2 4 4-3-4 8z" fill="#3FA34D"/>',
+  plunger: '<path d="M11 2h2v12h-2z" fill="#C9924F"/><path d="M4 20q0-7 8-7t8 7z" fill="#D52C2C"/>',
+  medal: '<path d="M7 2h4l2 7H9zM13 2h4l-2 7h-4z" fill="#2F7DE1"/><circle cx="12" cy="15" r="6" fill="#C7CDD6"/><text x="12" y="18" font-size="7" text-anchor="middle" font-weight="900" fill="#1a1433" stroke="none">2</text>',
+};
+const pinSVG = (id) => `<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#1a1433" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">${PIN_ART[id] || ''}</g></svg>`;
+
+/* ---------- 전투카드 ---------- */
+function cosmetic(kind, id) {
+  const list = G.data.COSMETICS[kind];
+  return list.find((x) => x.id === id) || list[0];
+}
+
+function battleCard(p, size = '') {
+  const st = p.style || {};
+  const card = cosmetic('cards', st.card), title = cosmetic('titles', st.title);
+  const pins = (st.pins || []).filter((id) => PIN_ART[id]);
+  return `<div class="bcard bc-${card.id} ${card.dark ? 'dark' : ''} ${size}">
+    <div class="bc-ava">${avatarSVG(p.avatar)}</div>
+    <div class="bc-body">
+      <span class="bc-title">${esc(title.n)}</span>
+      <div class="bc-name">${esc(p.name)}</div>
+      ${pins.length ? `<div class="bc-pins">${pins.map(pinSVG).join('')}</div>` : ''}
+      ${p.record ? `<div class="bc-rec">${p.record}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+const recordText = (u) => `${u.wins ?? 0}승 ${u.losses ?? 0}패${u.draws ? ` ${u.draws}무` : ''}`;
+
+// 해금 확인: 서버와 같은 규칙
+function statOf(u, k) {
+  if (k === 'wins' || k === 'losses') return u[k] || 0;
+  return (u.stats || {})[k] || 0;
+}
+const unlocked = (u, item) => !item.cond || statOf(u, item.cond[0]) >= item.cond[1];

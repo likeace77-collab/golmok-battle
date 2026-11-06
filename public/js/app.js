@@ -155,16 +155,13 @@ function renderLobby() {
       <div class="row"><button class="btn mint" data-acc="${esc(c.from)}">받기</button><button class="btn paper" data-dec="${esc(c.from)}">거절</button></div></div>`).join('')}
     <section class="panel">
       <div class="profile">
-        <div class="ava lg">${avatarSVG(u.avatar)}</div>
-        <div>
-          <h1>${esc(u.name)}</h1>
-          <p class="muted">${u.wins}승 ${u.losses}패${u.draws ? ` ${u.draws}무` : ''}</p>
-          ${rival ? `<p class="muted">${rival}</p>` : ''}
-        </div>
+        ${battleCard({ name: u.name, avatar: u.avatar, style: u.style }, 'big')}
+        <p class="muted" style="margin-top:8px">${recordText(u)}${u.stats?.streak > 1 ? `, ${u.stats.streak}연승 중` : ''}</p>
+        ${rival ? `<p class="muted">${rival}</p>` : ''}
       </div>
       <div class="nav">
         <button class="btn paper" id="go-team">덱 관리</button>
-        <button class="btn paper" id="go-ava">아바타 꾸미기</button>
+        <button class="btn paper" id="go-ava">꾸미기</button>
         <button class="btn mint" id="go-dex">도감</button>
         <button class="btn paper" id="go-players">플레이어 목록</button>
       </div>
@@ -186,7 +183,7 @@ function renderLobby() {
       ${others.length ? others.map((p) => {
         const out = L.outgoing?.to === p.key;
         return `<div class="player"><div class="ava">${avatarSVG(p.avatar)}</div>
-          <div class="nm">${esc(p.name)}<small>${p.busy ? '대전 중' : `${p.wins}승 ${p.losses}패`}</small></div>
+          <div class="nm">${p.style ? `<span class="ptitle">${esc(cosmetic('titles', p.style.title).n)}</span>` : ''}${esc(p.name)}<small>${p.busy ? '대전 중' : `${p.wins}승 ${p.losses}패`}</small></div>
           ${out ? '<button class="btn small paper" data-cancel>신청 취소</button>'
             : `<button class="btn small" data-ch="${esc(p.key)}" ${p.busy ? 'disabled' : ''}>대전 신청</button>`}
         </div>`;
@@ -234,33 +231,70 @@ function renderLobby() {
   app.querySelectorAll('[data-dec]').forEach((b) => { b.onclick = () => wsSend({ t: 'decline', from: b.dataset.dec }); });
 }
 
-/* ---------- 아바타 ---------- */
+/* ---------- 꾸미기 ---------- */
+function condText(item) {
+  if (!item.cond) return '처음부터 사용 가능';
+  const [k, n] = item.cond;
+  return `${G.data.STAT_NAMES[k]} ${n}${k === 'streakBest' ? '연승' : '회'} (${Math.min(statOf(G.user, k), n)}/${n})`;
+}
+
 function showAvatar() {
   G.screen = 'avatar';
   const draft = { ...G.user.avatar };
-  const swatch = { skin: SKIN, hairColor: HAIR_C, outfitColor: CLOTH_C, bg: BG_C };
+  const style = { ...G.user.style, pins: [...(G.user.style.pins || [])] };
+  let tab = 'avatar', cat = 'hair';
+  const cats = Object.keys(G.data.AVATAR_OPTIONS);
   const render = () => {
-    app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>아바타 꾸미기</h1></div>
-      <div class="ava-hero">${avatarSVG(draft)}</div>
-      <section class="panel">
-        ${Object.entries(G.data.AVATAR_OPTIONS).map(([k, n]) => `<div class="opt"><span>${AVATAR_LABELS[k]}</span><div class="chips">
-          ${Array.from({ length: n }, (_, i) => `<button data-k="${k}" data-v="${i}" aria-pressed="${draft[k] === i}" aria-label="${AVATAR_LABELS[k]} ${i + 1}"
-            ${swatch[k] ? `style="background:${swatch[k][i]}"` : ''}>${swatch[k] ? '' : k === 'hat' && i === 0 ? '없음' : i + 1}</button>`).join('')}
-        </div></div>`).join('')}
-        <div class="row" style="margin-top:12px">
-          <button class="btn paper" id="rand">무작위</button>
-          <button class="btn" id="save" style="flex:1">저장하기</button>
-        </div>
-      </section>`;
+    const me = { name: G.user.name, avatar: draft, style, record: recordText(G.user) };
+    let body = '';
+    if (tab === 'avatar') {
+      const n = G.data.AVATAR_OPTIONS[cat], sw = AVATAR_SWATCH[cat];
+      body = `<div class="chips cats">${cats.map((k) => `<button data-cat="${k}" aria-pressed="${k === cat}">${AVATAR_LABELS[k]}</button>`).join('')}</div>
+        <div class="avgrid ${sw ? 'swatch' : ''}">${Array.from({ length: n }, (_, i) => `<button data-k="${cat}" data-v="${i}" aria-pressed="${draft[cat] === i}" aria-label="${AVATAR_LABELS[cat]} ${i + 1}"
+          ${sw ? `style="background:${sw[i]}"` : ''}>${sw ? '' : avatarSVG({ ...draft, [cat]: i })}</button>`).join('')}</div>
+        <button class="btn paper small" id="rand" style="margin-top:10px">무작위로 섞기</button>`;
+    } else {
+      const kind = { title: 'titles', card: 'cards', pin: 'pins' }[tab];
+      body = G.data.COSMETICS[kind].map((item) => {
+        const open = unlocked(G.user, item);
+        const on = tab === 'pin' ? style.pins.includes(item.id) : style[tab] === item.id;
+        const look = tab === 'card' ? `<span class="cswatch bc-${item.id}"></span>` : tab === 'pin' ? `<span class="cpin">${pinSVG(item.id)}</span>` : '';
+        return `<button class="citem ${on ? 'on' : ''}" data-pick="${item.id}" ${open ? '' : 'disabled'}>
+          ${look}<span class="cinfo"><b>${open ? '' : '🔒 '}${esc(item.n)}</b><small>${condText(item)}</small></span>${on ? '<em>장착</em>' : ''}</button>`;
+      }).join('');
+      if (tab === 'pin') body = `<p class="muted" style="margin-bottom:8px">핀은 3개까지 달 수 있습니다. (${style.pins.length}/3)</p>${body}`;
+    }
+    app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>꾸미기</h1></div>
+      <div class="preview-card">${battleCard(me, 'big')}</div>
+      <div class="tabs styletabs">${[['avatar', '아바타'], ['title', '칭호'], ['card', '전투카드'], ['pin', '핀']].map(([k, n]) => `<button data-tab="${k}" aria-selected="${tab === k}">${n}</button>`).join('')}</div>
+      <section class="panel">${body}</section>
+      <button class="btn wide" id="save" style="margin-top:14px">저장하기</button>`;
     app.querySelector('#back').onclick = showLobby;
+    app.querySelectorAll('[data-tab]').forEach((b) => { b.onclick = () => { tab = b.dataset.tab; render(); }; });
+    app.querySelectorAll('[data-cat]').forEach((b) => { b.onclick = () => { cat = b.dataset.cat; render(); }; });
     app.querySelectorAll('[data-k]').forEach((b) => { b.onclick = () => { draft[b.dataset.k] = +b.dataset.v; const y = scrollY; render(); scrollTo(0, y); }; });
-    app.querySelector('#rand').onclick = () => {
+    app.querySelector('#rand')?.addEventListener('click', () => {
       for (const [k, n] of Object.entries(G.data.AVATAR_OPTIONS)) draft[k] = Math.floor(Math.random() * n);
       render();
-    };
+    });
+    app.querySelectorAll('[data-pick]').forEach((b) => {
+      b.onclick = () => {
+        const id = b.dataset.pick;
+        if (tab === 'pin') {
+          const at = style.pins.indexOf(id);
+          if (at >= 0) style.pins.splice(at, 1);
+          else if (style.pins.length >= 3) return toast('핀은 3개까지입니다. 하나를 먼저 빼세요.');
+          else style.pins.push(id);
+        } else style[tab] = id;
+        const y = scrollY; render(); scrollTo(0, y);
+      };
+    });
     app.querySelector('#save').onclick = async () => {
-      try { G.user = (await api('PUT', '/api/avatar', draft)).user; toast('아바타를 저장했습니다.'); showLobby(); }
-      catch (e) { toast(e.message); }
+      try {
+        await api('PUT', '/api/avatar', draft);
+        G.user = (await api('PUT', '/api/style', style)).user;
+        toast('저장했습니다.'); showLobby();
+      } catch (e) { toast(e.message); }
     };
   };
   render();
@@ -450,13 +484,8 @@ async function showPlayers() {
         <input id="pq" class="search" placeholder="이름이나 메모로 찾기" value="${esc(q)}" autocomplete="off">
       </section>
       ${list.map((p) => `<section class="panel pl">
-        <div class="player" style="border:0;padding:0">
-          <div class="ava">${avatarSVG(p.avatar)}</div>
-          <div class="nm">${esc(p.name)}${p.me ? ' (나)' : ''}
-            <small><i class="dot ${p.online ? 'on' : ''}"></i>${p.online ? (p.busy ? '대전 중' : '접속 중') : `마지막 접속 ${ago(p.lastSeen)}`}</small>
-            <small>${p.wins}승 ${p.losses}패${p.draws ? ` ${p.draws}무` : ''}${p.createdAt ? `, ${new Date(p.createdAt).toLocaleDateString('ko-KR')} 가입` : ''}</small>
-          </div>
-        </div>
+        ${battleCard({ name: p.name + (p.me ? ' (나)' : ''), avatar: p.avatar, style: p.style })}
+        <p class="pmeta"><i class="dot ${p.online ? 'on' : ''}"></i>${p.online ? (p.busy ? '대전 중' : '접속 중') : `마지막 접속 ${ago(p.lastSeen)}`}, ${recordText(p)}${p.createdAt ? `, ${new Date(p.createdAt).toLocaleDateString('ko-KR')} 가입` : ''}</p>
         ${p.me ? '' : `<div class="note"><input data-note="${esc(p.key)}" maxlength="100" placeholder="누군지 메모 (예: 회사 동기 민수)" value="${esc(p.note)}" autocomplete="off"><button class="btn small" data-save="${esc(p.key)}">저장</button></div>`}
       </section>`).join('') || '<p class="wait">찾는 플레이어가 없습니다.</p>'}`;
     app.querySelector('#back').onclick = showLobby;

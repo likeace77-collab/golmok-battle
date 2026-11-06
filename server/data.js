@@ -337,7 +337,44 @@ for (const [id, [sig, n, d, boost]] of Object.entries(SIGNATURE)) {
 }
 
 const AVATAR_OPTIONS = {
-  skin: 6, hair: 9, hairColor: 8, eyes: 5, mouth: 5, outfit: 5, outfitColor: 8, hat: 6, bg: 6,
+  skin: 10, hair: 20, hairColor: 16, brow: 6, eyes: 12, mouth: 10, face: 7,
+  glasses: 8, hat: 14, outfit: 14, outfitColor: 16, bg: 14,
 };
 
-module.exports = { TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS };
+// 칭호, 전투카드, 핀. cond: [기록 이름, 필요한 수]. 없으면 처음부터 열림.
+// 기록: wins, losses, games(1대1 판수), streakBest(최고 연승), p0~p3(연습전 난이도별 승리), tagGames, tagWins, megas
+const C = (id, n, cond, extra = {}) => ({ id, n, cond, ...extra });
+const COSMETICS = {
+  titles: [
+    C('rookie', '골목 새내기', null), C('kid', '동네 꼬마', null), C('wanderer', '떠돌이 요괴꾼', null),
+    C('first', '첫 승리의 맛', ['wins', 1]), C('boss', '골목 짱', ['wins', 10]), C('tyrant', '동네 패왕', ['wins', 30]),
+    C('legend', '전설의 골목대장', ['wins', 100]), C('comeback', '칠전팔기', ['losses', 7]), C('regular', '골목 단골손님', ['games', 20]),
+    C('hot', '불붙은 손', ['streakBest', 3]), C('unstoppable', '무적 행진', ['streakBest', 7]),
+    C('easy', '쉬움 정복자', ['p0', 1]), C('normal', '보통 사냥꾼', ['p1', 3]), C('hard', '어려움 파괴자', ['p2', 5]),
+    C('hell', '지옥에서 돌아온 자', ['p3', 1]), C('hellking', '지옥의 군주', ['p3', 10]),
+    C('mega1', '메가 입문자', ['megas', 1]), C('mega2', '메가진화 장인', ['megas', 25]),
+    C('partner', '든든한 파트너', ['tagGames', 1]), C('combo', '환상의 콤비', ['tagWins', 5]),
+  ],
+  cards: [
+    C('basic', '기본 딱지', null), C('blue', '망점 블루', null, { dark: true }), C('red', '집중선 레드', null, { dark: true }),
+    C('neon', '네온 골목', ['wins', 5], { dark: true }), C('star', '별밤', ['games', 20], { dark: true }),
+    C('sakura', '벚꽃', ['tagWins', 3]), C('sewer', '하수구', ['losses', 10], { dark: true }),
+    C('hell', '지옥불', ['p3', 1], { dark: true }), C('aurora', '메가 오로라', ['megas', 10], { dark: true }),
+    C('rainbow', '무지개', ['streakBest', 5]), C('gold', '황금', ['wins', 30]), C('diamond', '블랙 다이아', ['wins', 100], { dark: true }),
+  ],
+  pins: [
+    C('star', '별', null), C('heart', '하트', null), C('sprout', '새싹', null),
+    C('coal', '연탄', ['wins', 1]), C('bolt', '번개', ['games', 5]), C('coin', '백 원', ['games', 10]),
+    C('tack', '압정', ['losses', 3]), C('plunger', '뚫어뻥', ['losses', 10]), C('fire', '불꽃', ['streakBest', 3]),
+    C('trophy', '트로피', ['wins', 10]), C('crown', '왕관', ['wins', 30]), C('leek', '대파', ['p0', 1]),
+    C('medal', '은메달', ['p1', 3]), C('shield', '방패', ['p2', 5]), C('skull', '해골', ['p3', 1]), C('horn', '악마 뿔', ['p3', 5]),
+    C('gem', '메가 결정', ['megas', 1]), C('rainbow', '무지개 결정', ['megas', 25]), C('hands', '악수', ['tagGames', 1]), C('duo', '콤비 별', ['tagWins', 5]),
+  ],
+};
+const STAT_NAMES = {
+  wins: '1대1 승리', losses: '1대1 패배', games: '1대1 대전', streakBest: '최고 연승',
+  p0: '골목대장(쉬움) 승리', p1: '골목대장(보통) 승리', p2: '골목대장(어려움) 승리', p3: '골목대장(지옥) 승리',
+  tagGames: '태그 대전', tagWins: '태그 승리', megas: '메가진화 사용',
+};
+
+module.exports = { TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES };

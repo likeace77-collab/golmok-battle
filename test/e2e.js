@@ -47,11 +47,24 @@ async function playStep(page) {
 
   // 아바타, 팀 저장
   await a.page.click('#go-ava');
-  await a.page.click('[data-k=hair][data-v="5"]');
-  await a.page.click('[data-k=hat][data-v="2"]');
+  await a.page.click('[data-k=hair][data-v="19"]');
+  await a.page.click('[data-cat=hat]');
+  await a.page.click('[data-k=hat][data-v="12"]');
+  await a.page.click('[data-cat=glasses]');
+  await a.page.click('[data-k=glasses][data-v="3"]');
+  await a.page.click('[data-tab=title]');
+  if (!await a.page.$('[data-pick=legend][disabled]')) throw new Error('잠긴 칭호를 고를 수 있음');
+  await a.page.click('[data-pick=kid]');
+  await a.page.click('[data-tab=card]');
+  await a.page.click('[data-pick=red]');
+  await a.page.click('[data-tab=pin]');
+  await a.page.click('[data-pick=star]'); await a.page.click('[data-pick=heart]');
   await shot(a.page, 'avatar');
   await a.page.click('#save');
   await a.page.waitForSelector('#go-team');
+  if (!/동네 꼬마/.test(await a.page.textContent('.profile .bc-title'))) throw new Error('칭호 저장 안 됨');
+  if (await a.page.locator('.profile .bc-pins svg').count() !== 2) throw new Error('핀 저장 안 됨');
+  await shot(a.page, 'lobby-card');
   await a.page.click('#go-team');
   await a.page.waitForSelector('#new-deck');
   // 덱을 5개 넘게 만들고 이름 붙이기
@@ -138,6 +151,8 @@ async function playStep(page) {
   await a.page.click('#to-lobby');
   await a.page.waitForSelector('#go-team');
   const rec = await a.page.textContent('.profile .muted');
+  const stats = await a.page.evaluate(() => G.user.stats);
+  if (stats.games !== 1 || stats.megas < 1) throw new Error(`기록 안 됨 ${JSON.stringify(stats)}`);
   console.log('전적 표시:', rec);
   if (!/1승|1패|1무/.test(rec)) throw new Error('전적이 반영되지 않음');
 
