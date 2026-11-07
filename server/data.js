@@ -508,5 +508,8 @@ for (const id of ['lumina', 'silvia']) MONSTERS[id].img = true;
 // 맞을 때마다 옷이 바뀌는 그림 수 (img/mon/<id>-s1 ~ sN.webp)
 MONSTERS.lumina.stages = 4;
 MONSTERS.silvia.stages = 4;
+// 특성 '의상 각성': 옷이 한 단계 바뀔 때마다 공격·특공·스피드 4%씩 상승, 체력 20 회복
+const STRIP = { boost: .04, heal: 20 };
+for (const id of ['lumina', 'silvia']) MONSTERS[id].trait = { n: '의상 각성', d: `공격에 맞아 옷이 바뀔 때마다 공격, 특공, 스피드가 ${STRIP.boost * 100}%씩 오르고(최대 ${MONSTERS[id].stages}단계) 체력을 ${STRIP.heal} 회복한다.` };
 
-module.exports = { TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES };
+module.exports = { STRIP, TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES };

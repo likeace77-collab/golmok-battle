@@ -199,6 +199,7 @@ const Battle = (() => {
     $(`#p-${key}`).innerHTML = `${owner ? `<div class="owner">${owner}</div>` : ''}<div class="nm">${m.name}
       ${m.status ? `<span class="badge">${STATUS[m.status]}</span>` : ''}
       ${m.seeded ? `<span class="badge">${m.seeded === 'hair' ? '머리카락' : '씨앗'}</span>` : ''}
+      ${m.strip ? `<span class="badge strip">각성${m.strip}</span>` : ''}
       ${stages.map(([k, v]) => `<span class="badge">${lb[k]}${v > 0 ? '+' : ''}${v}</span>`).join('')}</div>
       <div class="bar"><i></i></div><div class="num"></div>`;
     setBar(key, m);
@@ -290,6 +291,8 @@ const Battle = (() => {
         if (e.hits !== undefined && e.hits !== m.hits) { // 맞은 횟수가 바뀌면 그림을 다시 그림 (옷 바뀌는 요괴)
           const before = monsterSVG(m.species, '', m.mega, m.hits);
           m.hits = e.hits;
+          const sp = G.data.MONSTERS[m.species];
+          if (sp.stages) { m.strip = Math.min(m.hits, sp.stages); drawPlate(key, m); }
           const after = monsterSVG(m.species, '', m.mega, m.hits);
           if (after !== before) setTimeout(() => { const box = $(`#m-${key}`); if (box) { box.innerHTML = after; box.classList.add('swapfx'); setTimeout(() => box.classList.remove('swapfx'), 500); } }, 180);
         }

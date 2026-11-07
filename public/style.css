@@ -657,3 +657,8 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 /* 맞아서 그림이 바뀔 때 번쩍 */
 .mon.swapfx svg { animation: swapFx .5s ease-out; }
 @keyframes swapFx { 0% { filter: brightness(3) saturate(0); transform: scale(1.06); } 100% { filter: none; transform: none; } }
+
+/* 특성 */
+.trait { margin: -4px 0 12px; padding: 7px 10px; font-size: 14px; background: #fff0f6; border: 2px solid var(--ink); border-radius: 8px; }
+.trait b { display: inline-block; margin-right: 4px; padding: 1px 6px; color: #fff; background: #E0457B; border-radius: 5px; font-family: var(--ui); font-weight: 400; }
+.badge.strip { background: #E0457B; color: #fff; }

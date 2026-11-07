@@ -1,5 +1,5 @@
 // 배틀 엔진. 서버에서만 돌고, 모든 판정은 여기서 결정됩니다.
-const { CHART, MOVES, STRUGGLE, MONSTERS } = require('./data');
+const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP } = require('./data');
 
 const LEVEL = 50;
 const STATUS_NAME = { brn: '화상', psn: '독', par: '마비', slp: '수면', frz: '얼음' };
@@ -167,7 +167,7 @@ function resolve(b) {
 
 function speedOf(b, s) {
   const m = activeOf(b, s);
-  let v = m.stats.spe * stageMul(m.stages.spe);
+  let v = m.stats.spe * stageMul(m.stages.spe) * stripMul(m);
   if (m.status === 'par') v *= .5;
   return v;
 }
@@ -220,11 +220,21 @@ function hpEvent(b, s, m, ev, extra = {}) {
   ev.push({ t: 'hp', side: s, hp: m.hp, maxHp: m.maxHp, ...extra });
 }
 
+// 의상 각성 단계 (옷이 바뀌는 요괴만). 단계마다 공격·특공·스피드 배율이 조금씩 오릅니다.
+const stripOf = (m) => Math.min(m.hits || 0, MONSTERS[m.species]?.stages || 0);
+const stripMul = (m) => 1 + stripOf(m) * STRIP.boost;
+
 function hurt(b, s, m, amount, ev, extra) {
   const dmg = Math.min(m.hp, Math.max(1, Math.floor(amount)));
   m.hp -= dmg;
+  const before = stripOf(m);
   if (extra?.moveType) m.hits = (m.hits || 0) + 1; // 공격에 맞은 횟수 (옷이 바뀌는 요괴용)
   hpEvent(b, s, m, ev, { dmg, ...extra, ...(extra?.moveType ? { hits: m.hits } : {}) });
+  // 특성 의상 각성: 옷이 바뀌면 조금 강해지고 체력 회복
+  if (stripOf(m) > before && m.hp > 0) {
+    ev.push({ t: 'msg', text: `${m.name}의 옷이 바뀌었다! 의상 각성 ${stripOf(m)}단계, 힘이 솟는다!` });
+    heal(b, s, m, STRIP.heal, ev);
+  }
   if (b.training && m.species === 'dummy') {
     const d = b.dummy;
     d.total += dmg; d.turn += dmg; d.hits++;
@@ -257,7 +267,7 @@ function faintCheck(b, s, m, ev) {
 function publicMon(m) {
   return {
     species: m.species, name: m.name, types: m.types,
-    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega, hits: m.hits || 0,
+    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega, hits: m.hits || 0, strip: stripOf(m),
   };
 }
 
@@ -346,7 +356,7 @@ function damageOf(b, atk, def, mv, crit, roll) {
   let as = phys ? atk.stages.atk : atk.stages.spa;
   let ds = phys ? def.stages.def : def.stages.spd;
   if (crit) { as = Math.max(as, 0); ds = Math.min(ds, 0); } // 급소는 불리한 변화 무시
-  a *= stageMul(as); d *= stageMul(ds);
+  a *= stageMul(as) * stripMul(atk); d *= stageMul(ds);
   let dmg = (((2 * LEVEL) / 5 + 2) * mv.pow * a) / d / 50 + 2;
   if (b.weather === 'sun') dmg *= mv.type === 'fire' ? 1.5 : mv.type === 'water' ? .5 : 1;
   if (b.weather === 'rain') dmg *= mv.type === 'water' ? 1.5 : mv.type === 'fire' ? .5 : 1;

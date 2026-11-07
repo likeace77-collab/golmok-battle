@@ -458,6 +458,7 @@ function editMon(team, i, done) {
         </div>
       </div>
       <p class="muted" style="margin-bottom:10px">${sp.flavor}</p>
+      ${sp.trait ? `<p class="trait"><b>특성 ${sp.trait.n}</b> ${sp.trait.d}</p>` : ''}
       <h3 style="font-family:var(--ui);font-weight:400;margin-bottom:6px">기술 ${slot.moves.length}/4</h3>
       ${sp.moves.map((id) => `<button class="mv" data-mv="${id}" aria-pressed="${slot.moves.includes(id)}">
         ${typeChip(G.data.MOVES[id].type)}<b>${G.data.MOVES[id].n}</b>${sigTag(id)}<small>${moveLine(id)}</small></button>`).join('')}`);
@@ -576,6 +577,7 @@ function openDexEntry(id) {
       </div>
     </div>
     <p style="margin-bottom:12px">${sp.flavor}</p>
+    ${sp.trait ? `<p class="trait"><b>특성 ${sp.trait.n}</b> ${sp.trait.d}</p>` : ''}
     <section class="megabox">
       <h3>메가진화: ${sp.mega.n}</h3>
       <div class="row" style="align-items:flex-start">
