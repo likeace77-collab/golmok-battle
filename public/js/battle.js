@@ -183,7 +183,7 @@ const Battle = (() => {
       ${m.status ? `<span class="badge">${STATUS[m.status]}</span>` : ''}
       ${m.seeded ? `<span class="badge">${m.seeded === 'hair' ? '머리카락' : '씨앗'}</span>` : ''}
       ${stages.map(([k, v]) => `<span class="badge">${lb[k]}${v > 0 ? '+' : ''}${v}</span>`).join('')}</div>
-      <div class="bar"><i></i></div>${key === 'me' && !spectating ? '<div class="num"></div>' : ''}`;
+      <div class="bar"><i></i></div><div class="num"></div>`;
     setBar(key, m);
   }
 
@@ -409,6 +409,7 @@ const Battle = (() => {
     const cur = view.me.mons[view.me.active];
     say(armed ? `메가진화! ${cur.name}의 기술을 고르세요.` : note || `${cur.name}, 뭘 할까?`);
     const noPP = cur.moves.every((x) => x.pp <= 0);
+    const zName = G.data.MOVES[G.data.MONSTERS[cur.species]?.z]?.n || '';
     panel.innerHTML = `<div class="moves">
       ${noPP ? `<button class="mb" data-mv="-1" style="--tc:${G.data.TYPES.none.c}"><b>악쓰기</b><small>기술을 다 써서 몸으로 부딪힌다</small></button>`
         : cur.moves.map((x, i) => {
@@ -423,7 +424,7 @@ const Battle = (() => {
       </div>
       <div class="bar-actions">
         <button class="btn mega ${armed ? 'on' : ''}" id="to-mega" ${view.canMega ? '' : 'disabled'} aria-pressed="${armed}">${view.megaUsed ? '메가 사용함' : armed ? '메가 취소' : '메가진화'}</button>
-        <button class="btn zbtn" id="to-z" ${view.canZ && zLockTurn !== view.turn ? '' : 'disabled'}>${view.zUsed ? 'Z 사용함' : zLockTurn === view.turn ? '다음 턴에' : 'Z기술'}</button>
+        <button class="btn zbtn" id="to-z" ${view.canZ && zLockTurn !== view.turn ? '' : 'disabled'}>${view.zUsed ? 'Z 사용함' : zLockTurn === view.turn ? '다음 턴에' : 'Z기술'}${zName ? `<small class="zname">${esc(zName)}</small>` : ''}</button>
         <button class="btn paper" id="to-sw" ${armed ? 'disabled' : ''}>교체</button>
         <button class="btn paper" id="ff">${tag ? '나가기' : '기권'}</button>
       </div>`;

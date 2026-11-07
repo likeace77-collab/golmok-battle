@@ -138,6 +138,7 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 
 /* Z기술 */
 .btn.zbtn { color: #fff; background: linear-gradient(100deg, #1a1433, #4B3F9E 50%, #FFD23F); text-shadow: 1px 1px 0 var(--ink); }
+.btn.zbtn .zname { display: block; font-size: 11px; font-weight: normal; line-height: 1.1; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .btn.zbtn:disabled { color: #6c675c; background: #c9c3b5; text-shadow: none; }
 .bar-actions { flex-wrap: wrap; }
 .bar-actions .btn { flex: 1 1 22%; min-width: 0; font-size: 16px; }
