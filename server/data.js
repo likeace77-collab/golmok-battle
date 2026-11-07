@@ -422,8 +422,7 @@ const COSMETICS = {
     C('dummy3', '훈련장 단골', ['dummyDmg', 50000], { tier: 2 }), C('dummy4', '더미 파괴자', ['dummyDmg', 200000], { tier: 3 }),
     C('dummy5', '훈련장의 악몽', ['dummyDmg', 500000], { tier: 4, glow: '#FF8A00' }), C('dummy6', '백만 데미지', ['dummyDmg', 1000000], { tier: 5, glow: '#FF3B5C' }),
     C('onehit1', '한 방 있는 녀석', ['dummyBest', 300], { tier: 2 }), C('onehit2', '원펀맨', ['dummyBest', 600], { tier: 4, glow: '#FFE45C' }),
-    C('onehit3', '더미 일격 분쇄', ['dummyBest', 900], { tier: 5, glow: '#37E0FF' }),
-    C('critgod', '급소의 신', ['dummyBest', 1300], { tier: 5, glow: '#FF5CA8' }),
+    C('onehit3', '더미 일격 분쇄', ['dummyBest', 1000], { tier: 5, glow: '#37E0FF' }),
   ],
   cards: [
     C('basic', '기본 딱지', null), C('blue', '망점 블루', null, { dark: true }), C('red', '집중선 레드', null, { dark: true }),

@@ -223,12 +223,10 @@ function hpEvent(b, s, m, ev, extra = {}) {
 function hurt(b, s, m, amount, ev, extra) {
   const dmg = Math.min(m.hp, Math.max(1, Math.floor(amount)));
   m.hp -= dmg;
-  // 더미는 체력보다 센 피해도 그대로 셉니다 (넘친 피해 포함)
-  const raw = b.training && m.species === 'dummy' ? Math.max(1, Math.floor(amount)) : dmg;
-  hpEvent(b, s, m, ev, { dmg: raw, ...extra });
+  hpEvent(b, s, m, ev, { dmg, ...extra });
   if (b.training && m.species === 'dummy') {
     const d = b.dummy;
-    d.total += raw; d.turn += raw; d.hits++;
+    d.total += dmg; d.turn += dmg; d.hits++;
     if (m.hp === 0) { // 부서지면 새 더미
       d.breaks++;
       Object.assign(m, makeDummy());
