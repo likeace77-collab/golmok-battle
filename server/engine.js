@@ -1,5 +1,5 @@
 // 배틀 엔진. 서버에서만 돌고, 모든 판정은 여기서 결정됩니다.
-const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP, BANNED } = require('./data');
+const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP, BANNED, TIERS } = require('./data');
 
 const LEVEL = 50;
 const STATUS_NAME = { brn: '화상', psn: '독', par: '마비', slp: '수면', frz: '얼음' };
@@ -124,7 +124,7 @@ function doMega(b, s, ev) {
   const base = Object.fromEntries(Object.entries(sp.base).map(([k, v]) => [k, v + sp.mega.boost[k]]));
   const oldName = m.name, oldMax = m.maxHp;
   m.stats = calcStats(base);
-  m.maxHp = m.stats.hp;
+  m.maxHp = m.stats.hp + tierHp(m);
   m.hp += m.maxHp - oldMax;
   m.name = sp.mega.n; m.mega = true;
   b.sides[s].megaUsed = true;
@@ -223,6 +223,11 @@ function hpEvent(b, s, m, ev, extra = {}) {
 // 의상 각성 단계 (옷이 바뀌는 요괴만). 단계마다 공격·특공·스피드 배율이 조금씩 오릅니다.
 const stripOf = (m) => Math.min(m.hits || 0, MONSTERS[m.species]?.stages || 0);
 const stripMul = (m) => 1 + stripOf(m) * STRIP.boost;
+// 강화 단계 (단조): 공격·방어 배율과 늘어난 체력
+const tierOf = (m) => (MONSTERS[m.species]?.tiers ? m.tier || 0 : 0);
+const tierAtk = (m) => (MONSTERS[m.species]?.tiers ? TIERS.atk[tierOf(m)] : 1);
+const tierDef = (m) => (MONSTERS[m.species]?.tiers ? TIERS.def[tierOf(m)] : 1);
+const tierHp = (m) => Math.round(m.stats.hp * TIERS.hp) * tierOf(m);
 
 function hurt(b, s, m, amount, ev, extra) {
   const dmg = Math.min(m.hp, Math.max(1, Math.floor(amount)));
@@ -267,7 +272,7 @@ function faintCheck(b, s, m, ev) {
 function publicMon(m) {
   return {
     species: m.species, name: m.name, types: m.types,
-    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega, hits: m.hits || 0, strip: stripOf(m),
+    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega, hits: m.hits || 0, strip: stripOf(m), tier: tierOf(m),
   };
 }
 
@@ -356,7 +361,7 @@ function damageOf(b, atk, def, mv, crit, roll) {
   let as = phys ? atk.stages.atk : atk.stages.spa;
   let ds = phys ? def.stages.def : def.stages.spd;
   if (crit) { as = Math.max(as, 0); ds = Math.min(ds, 0); } // 급소는 불리한 변화 무시
-  a *= stageMul(as) * stripMul(atk); d *= stageMul(ds);
+  a *= stageMul(as) * stripMul(atk) * (phys ? tierAtk(atk) : 1); d *= stageMul(ds) * tierDef(def);
   let dmg = (((2 * LEVEL) / 5 + 2) * mv.pow * a) / d / 50 + 2;
   if (b.weather === 'sun') dmg *= mv.type === 'fire' ? 1.5 : mv.type === 'water' ? .5 : 1;
   if (b.weather === 'rain') dmg *= mv.type === 'water' ? 1.5 : mv.type === 'fire' ? .5 : 1;
@@ -376,6 +381,7 @@ function useMove(b, s, index, ev, want, z = false) {
   const zid = z ? MONSTERS[me.species].z : null;
   let mv = z ? MOVES[zid] : slot ? MOVES[slot.id] : STRUGGLE;
 
+  if (mv.tierPow) mv = { ...mv, pow: mv.pow + tierOf(me) * mv.tierPow }; // 강화 단계만큼 위력 증가
   if (!canAct(b, s, me, mv, ev)) { me.protectStreak = 0; return; }
   if (slot) slot.pp--;
   if (z) {
@@ -467,6 +473,15 @@ function useMove(b, s, index, ev, want, z = false) {
 }
 
 function selfMove(b, s, me, mv, ev) {
+  if (mv.forge) {
+    const max = MONSTERS[me.species]?.tiers || 0, t = tierOf(me);
+    if (t >= max) { msg(ev, max ? `${josa(me.name, '은/는')} 이미 ${TIERS.names[t]} 단계다! 더는 강화할 수 없다.` : '그러나 아무 일도 일어나지 않았다!'); return; }
+    const add = Math.round(me.stats.hp * TIERS.hp);
+    me.tier = t + 1; me.maxHp += add; me.hp += add;
+    ev.push({ t: 'forge', side: s, tier: me.tier, mon: publicMon(me), text: `강화 성공! ${TIERS.names[t]} → ${TIERS.names[me.tier]}! 체력과 공격, 방어가 올랐다!` });
+    hpEvent(b, s, me, ev, { quiet: true });
+    return;
+  }
   if (mv.weather) {
     if (b.weather === mv.weather) { msg(ev, '그러나 실패했다!'); return; }
     b.weather = mv.weather; b.weatherTurns = 5;
@@ -778,6 +793,11 @@ function botAction(b, s, level = 1) {
   let a;
   if (b.phase === 'preview' || level === 1) a = normalAction(b, s, o);
   else a = level === 0 ? easyAction(b, s) : smartAction(b, s, level, o);
+  // 강화 용사: 체력이 넉넉하면 강화부터
+  if (a && a.type === 'move' && level >= 1 && b.phase === 'choose') {
+    const me = activeOf(b, s), fi = me.moves.findIndex((x) => MOVES[x.id].forge && x.pp > 0);
+    if (fi >= 0 && tierOf(me) < (MONSTERS[me.species].tiers || 0) && me.hp > me.maxHp * .5 && chance(b, level >= 2 ? 65 : 45)) return { type: 'move', index: fi, ...(isDoubles(b) ? { target: o } : {}) };
+  }
   if (a && a.type === 'move' && level >= 1 && canZ(b, s)) {
     // Z기술: 쓰러뜨릴 수 있거나, 판이 무르익었을 때 씁니다.
     const me = activeOf(b, s), foe = activeOf(b, o);

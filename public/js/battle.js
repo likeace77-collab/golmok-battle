@@ -200,6 +200,7 @@ const Battle = (() => {
       ${m.status ? `<span class="badge">${STATUS[m.status]}</span>` : ''}
       ${m.seeded ? `<span class="badge">${m.seeded === 'hair' ? '머리카락' : '씨앗'}</span>` : ''}
       ${m.strip ? `<span class="badge strip">각성${m.strip}</span>` : ''}
+      ${G.data.MONSTERS[m.species]?.tiers ? `<span class="badge tier tb${m.tier || 0}">${G.data.TIERS?.[m.tier || 0] || ''}</span>` : ''}
       ${stages.map(([k, v]) => `<span class="badge">${lb[k]}${v > 0 ? '+' : ''}${v}</span>`).join('')}</div>
       <div class="bar"><i></i></div><div class="num"></div>`;
     setBar(key, m);
@@ -234,14 +235,14 @@ const Battle = (() => {
     $('#scene')?.appendChild(tag);
     setTimeout(() => tag.remove(), 1500);
     await wait(560);
-    if (box) { box.innerHTML = monsterSVG(m.species, '', m.mega, m.hits); box.className = `mon ${key}${m.mega ? ' mega' : ''}${auraClass(m)} swapfx`; setTimeout(() => box.classList.remove('swapfx'), 500); }
+    if (box) { box.innerHTML = monsterSVG(m.species, '', m.mega, m.hits, m.tier); box.className = `mon ${key}${m.mega ? ' mega' : ''}${auraClass(m)} swapfx`; setTimeout(() => box.classList.remove('swapfx'), 500); }
     await wait(Math.max(0, ms - 560));
   }
 
   function drawMon(key, m) {
     const box = $(`#m-${key}`);
     box.className = `mon ${key}${m.mega ? ' mega' : ''}${auraClass(m)}`;
-    box.innerHTML = monsterSVG(m.species, '', m.mega, m.hits);
+    box.innerHTML = monsterSVG(m.species, '', m.mega, m.hits, m.tier);
   }
 
   const dispMon = (key) => (key === 'me' ? mine() : seatOf(key).active);
@@ -398,6 +399,22 @@ const Battle = (() => {
         if (e.turn) { say(`이번 턴 피해 ${fmt(e.turn)}!${e.turn >= e.best ? ' 최고 기록!' : ''}`); await wait(700); }
         break;
       }
+      case 'forge': {
+        const m = dispMon(key);
+        Object.assign(m, e.mon);
+        const box = $(`#m-${key}`);
+        const ms = Fx.forge(key, e.tier);
+        await wait(520);
+        if (box) { box.innerHTML = monsterSVG(m.species, '', m.mega, m.hits, m.tier); box.classList.add('swapfx', 'forged'); setTimeout(() => box.classList.remove('swapfx', 'forged'), 700); }
+        drawPlate(key, m);
+        const tag = document.createElement('div');
+        tag.className = `forge-tag ft${e.tier} ${key}`;
+        tag.innerHTML = `<small>강화 성공!</small><b>+${e.tier} ${G.data.TIERS?.[e.tier] || ''}</b>`;
+        $('#scene')?.appendChild(tag);
+        setTimeout(() => tag.remove(), 1500);
+        await wait(Math.max(700, ms - 520));
+        break;
+      }
       case 'over': await wait(1200); break;
       default:
     }
@@ -429,7 +446,7 @@ const Battle = (() => {
   // 루미나·실비아 전용 Z 연출 (약 3.6초): 등장 → 기 모으기 → 발사
   const ROMAN = ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
   // 얼굴만 잘라 보이는 컷: eyes는 눈매 클로즈업, head는 머리와 어깨
-  const crop = (m, cls, box) => monsterSVG(m.species, cls, m.mega, m.hits).replace('viewBox="0 0 200 200"', `viewBox="${box}" preserveAspectRatio="xMidYMid slice"`);
+  const crop = (m, cls, box) => monsterSVG(m.species, cls, m.mega, m.hits, m.tier).replace('viewBox="0 0 200 200"', `viewBox="${box}" preserveAspectRatio="xMidYMid slice"`);
   const bust = (m) => crop(m, 'zx-bust', '70 0 70 70');
   const eyes = (m) => crop(m, 'zx-bust', '75 17 60 24');
   const magicCircle = (c1, c2) => `<svg class="zx-mc" viewBox="-100 -100 200 200" aria-hidden="true">
@@ -455,7 +472,7 @@ const Battle = (() => {
     cut.innerHTML = `<div class="zx-bg"></div>
       <div class="zx-ring">${lum ? magicCircle('#37E0FF', '#FF7FD0') : magicCircle('#6CF2C2', '#ffffff')}</div>
       <div class="zx-vortex"></div><div class="zx-lines"></div>
-      <div class="zx-art">${monsterSVG(sp, '', e.mon.mega, e.mon.hits)}</div>
+      <div class="zx-art">${monsterSVG(sp, '', e.mon.mega, e.mon.hits, e.mon.tier)}</div>
       <div class="zx-eye">${eyes(e.mon)}<i class="zx-glint"></i></div>
       ${duo ? '<canvas class="zx-tr"></canvas><div class="zx-bond">유대 MAX</div>' : ''}
       <div class="zx-title"><small>Z기술 · ${esc(e.player)} × ${esc(e.mon.name)}</small><b>${esc(e.move)}</b></div>
@@ -489,7 +506,7 @@ const Battle = (() => {
         <div class="zc-pair">
           ${duo ? '<canvas class="zc-tr"></canvas>' : ''}
           <div class="zc-bond"><i></i><i></i><i></i><b>유대 MAX</b></div>
-          <div class="zc-mon">${monsterSVG(e.mon.species, '', e.mon.mega, e.mon.hits)}</div>
+          <div class="zc-mon">${monsterSVG(e.mon.species, '', e.mon.mega, e.mon.hits, e.mon.tier)}</div>
         </div>
         <div class="zc-text"><span class="zc-kick">Z기술 · ${esc(e.player)} × ${esc(e.mon.name)}</span><b class="zc-name">${esc(e.move)}</b></div>
       </div>
@@ -606,7 +623,7 @@ const Battle = (() => {
     say(`${moveDraft.mv ? moveDraft.mv.n : '악쓰기'}, 누구에게 쓸까요?`);
     panel.innerHTML = `${liveOpps().map((o) => {
       const eff = moveDraft.mv && moveDraft.mv.cat !== 'x' ? effOn(moveDraft.mv, o.active) : 1;
-      return `<button class="sw tg" data-tg="${o.seat}">${monsterSVG(o.active.species, '', o.active.mega, o.active.hits)}
+      return `<button class="sw tg" data-tg="${o.seat}">${monsterSVG(o.active.species, '', o.active.mega, o.active.hits, o.active.tier)}
         <div class="inf">${o.active.name} ${o.active.types.map(typeChip).join('')}
           <small>${esc(o.name)}${eff === 0 ? ', 효과 없음' : eff !== 1 ? `, 상성 ${eff}배` : ''}</small></div></button>`;
     }).join('')}<button class="btn paper wide" id="tg-back">기술 고르기로 돌아가기</button>`;
@@ -620,7 +637,7 @@ const Battle = (() => {
     if (training) {
       say('어떤 요괴로 바꿀까요?');
       panel.innerHTML = `<div class="swgrid">${view.me.mons.map((m, i) => `<button data-sw="${i}" ${i === view.me.active ? 'disabled' : ''} aria-label="${m.name}">
-        ${monsterSVG(m.species, '', m.mega, m.hits)}<span>${m.name}</span></button>`).join('')}</div>
+        ${monsterSVG(m.species, '', m.mega, m.hits, m.tier)}<span>${m.name}</span></button>`).join('')}</div>
         <button class="btn paper wide" id="sw-back">기술 고르기로 돌아가기</button>`;
       panel.querySelectorAll('[data-sw]').forEach((b) => { b.onclick = () => { menu = 'moves'; act({ type: 'switch', index: +b.dataset.sw }); }; });
       panel.querySelector('#sw-back').onclick = () => { menu = 'moves'; renderPanel(); };
@@ -629,7 +646,7 @@ const Battle = (() => {
     panel.innerHTML = `${view.me.mons.map((m, i) => {
       const off = m.hp <= 0 || i === view.me.active;
       return `<button class="sw" data-sw="${i}" ${off ? 'disabled' : ''}>
-        ${monsterSVG(m.species, '', m.mega, m.hits)}
+        ${monsterSVG(m.species, '', m.mega, m.hits, m.tier)}
         <div class="inf">${m.name} ${m.types.map(typeChip).join('')}
           <div class="bar" style="max-width:190px"><i class="${m.hp / m.maxHp <= .2 ? 'low' : m.hp / m.maxHp <= .5 ? 'mid' : ''}" style="width:${(m.hp / m.maxHp) * 100}%"></i></div>
           <small>${m.hp <= 0 ? '쓰러짐' : `${m.hp} / ${m.maxHp}`}${m.status ? `, ${STATUS[m.status]}` : ''}${i === view.me.active && m.hp > 0 ? ', 싸우는 중' : ''}</small>

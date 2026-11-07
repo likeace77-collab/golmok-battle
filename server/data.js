@@ -144,6 +144,11 @@ const MOVES = {
   fairydance:M('요정의 춤', 'fairy', 'x', 0, null, 15, { self: { spa: 1, spe: 1 }, self_: true, d: '특공과 스피드 1단계 상승' }),
   neonwink:  M('네온 윙크', 'fairy', 's', 85, 100, 10, { foe: { atk: -1 }, sc: 50, d: '50% 확률로 상대 공격 하락' }),
   lipmark:   M('입술 도장', 'fairy', 's', 85, 100, 10, { foe: { spa: -1 }, sc: 50, d: '50% 확률로 상대 특공 하락' }),
+  // 단조 (강화 용사)
+  forge:     M('강화', 'steel', 'x', 0, null, 10, { forge: true, self_: true, d: '100% 확률로 다음 단계로 강화. 체력이 약간, 공격과 방어가 크게 오름 (나무→돌→철→금→다이아몬드→네더라이트)' }),
+  tierslash: M('강화 베기', 'steel', 'p', 50, 100, 15, { tierPow: 18, d: '강화 단계마다 위력 18 증가 (최대 140)' }),
+  shieldbash: M('방패 밀치기', 'steel', 'p', 60, 100, 15, { fl: 30, d: '30% 확률로 풀죽음' }),
+  lionroar:  M('사자후', 'none', 'x', 0, 100, 10, { foe: { atk: -1, def: -1 }, d: '방패의 사자가 포효한다. 상대 공격과 방어 하락' }),
   // 루미나 (견습 마법사)
   crystalbolt: M('크리스탈 마탄', 'fairy', 's', 90, 100, 10, { st: { s: 'par', ch: 20 }, d: '지팡이의 수정이 빛을 쏜다. 20% 확률로 마비' }),
   focusmana: M('마력 집중', 'fairy', 'x', 0, null, 10, { self: { spa: 2 }, self_: true, d: '특공 2단계 상승' }),
@@ -280,6 +285,10 @@ const MONSTERS = {
   silvia:   X('실비아', ['fairy', 'wind'], 75, 110, 70, 55, 80, 120,
     ['winksnipe', 'arrowrain', 'razorwind', 'windcut', 'snarearrow', 'throwknife', 'hawkeye', 'pixiedust', 'charm', 'guard'],
     '은발을 땋아 올린 성인 숲의 궁수. 윙크 한 번에 화살이 날아가고, 화살이 떨어지면 허벅지 단검을 뽑는다.'),
+  // 강화 용사
+  danjo:    X('단조', ['steel'], 85, 80, 85, 40, 70, 60,
+    ['forge', 'tierslash', 'shieldbash', 'lionroar', 'ironhead', 'hammer', 'armor', 'rockthrow', 'tackle', 'guard'],
+    '나무 검 한 자루로 시작한 용사. 대장간 망치 소리가 들리면 갑옷이 한 단계 올라간다. 목표는 풀강.'),
   // 로봇
   jabanbot: X('자판봇', ['steel', 'elec'], 95, 105, 100, 70, 75, 55,
     ['canburst', 'ironhead', 'scrap', 'hammer', 'shortfist', 'highvolt', 'shock', 'armor', 'tacks', 'guard'],
@@ -331,6 +340,7 @@ Object.assign(SIGNATURE, {
   yeonji: ['lipmark', '홍염 왕비', '금관을 쓰고 붉은 날개를 펼쳤다. 황금 립스틱은 왕의 지팡이가 되었다.', [10, 0, 20, 40, 30, 0]],
   lumina: ['crystalbolt', '대마도사 루미나', '수정이 벼락을 두르고 손끝에 마법진이 떠오른다. 보석 장식이 전부 마력으로 빛난다.', [10, 0, 10, 45, 15, 20]],
   silvia: ['winksnipe', '폭풍 사수 실비아', '활과 화살에 푸른 바람이 감긴다. 룬 문양이 새겨진 경장 갑옷으로 더 가볍고 빨라졌다.', [10, 40, 10, 0, 10, 30]],
+  danjo: ['forge', '프리즘 용사 단조', '모든 재료를 녹여 하나로 만든 무지개 갑옷. 검은 일곱 빛깔로 빛나고 방패의 사자가 금빛으로 깨어났다.', [15, 40, 30, 0, 15, 0]],
   jabanbot: ['canburst', '초합금 자판왕', '어깨에 캔 발사기를 달고 금장을 둘렀다. 화면에 뜬 MAX는 가격이다.', [0, 40, 30, 0, 10, 20]],
   baedalbot: ['bulletdash', '광속 철가방', '바퀴와 몸이 합체해 오토바이가 되었다. 철가방이 둘로 늘어 이제 한 번에 두 집.', [20, 40, 25, 0, 15, 0]],
   setakbot: ['spincycle', '코인세탁 합체왕', '세탁기 세 대가 합체했다. 가운데 통이 뜨겁게 돌면 빨래방 영업 개시.', [10, 0, 20, 30, 10, 30]],
@@ -383,6 +393,7 @@ const ZMOVES = {
   yeonji: ['홍염 입맞춤', 'fairy', 175, '상대 특공 하락', { foe: { spa: -1 } }],
   lumina: ['아르카나 썬더', 'elec', 185, '하늘에 거대한 마법진이 열리고 벼락이 쏟아진다. 30% 확률로 마비', { st: { s: 'par', ch: 30 } }],
   silvia: ['템페스트 애로우', 'wind', 180, '폭풍을 두른 화살 한 발이 모든 것을 꿰뚫는다. 급소에 잘 맞음', { crit: true }],
+  danjo: ['풀강 일격', 'steel', 170, '강화 단계마다 위력 6 증가. 풀강(네더라이트)이면 위력 200', { tierPow: 6 }],
   jabanbot: ['캔 일제사격', 'steel', 180, '자판기 재고가 바닥날 때까지 쏜다'],
   baedalbot: ['광속 배달 완료', 'wind', 175, '도착 예정 시간 0초'],
   setakbot: ['초강력 탈수', 'water', 180, '상대 스피드 2단계 하락', { foe: { spe: -2 } }],
@@ -512,6 +523,12 @@ for (const id of ['lumina', 'silvia']) MONSTERS[id].img = true;
 // 맞을 때마다 옷이 바뀌는 그림 수 (img/mon/<id>-s1 ~ sN.webp)
 MONSTERS.lumina.stages = 4;
 MONSTERS.silvia.stages = 4;
+for (const id of ['lumina', 'silvia']) MONSTERS[id].censor = true; // 19세 이하 모자이크
+// 강화 단계 (단조): 그림 img/mon/danjo-t1~t5, 단계마다 체력 +8%, 공격·방어 배율
+MONSTERS.danjo.img = true;
+const TIERS = { names: ['나무', '돌', '철', '금', '다이아몬드', '네더라이트'], atk: [.6, .8, 1, 1.25, 1.55, 1.9], def: [.6, .8, 1, 1.25, 1.55, 1.9], hp: .08 };
+MONSTERS.danjo.tiers = TIERS.names.length - 1;
+MONSTERS.danjo.trait = { n: '강화 용사', d: `강화를 쓰면 ${TIERS.names.join(' → ')} 순서로 100% 강화된다. 나무일 때는 약하지만 단계마다 체력이 ${TIERS.hp * 100}% 늘고 공격·방어가 크게 올라 네더라이트에서는 약 ${TIERS.atk[5]}배가 된다. 교체해도 단계는 유지된다.` };
 // 특성 '의상 각성': 옷이 한 단계 바뀔 때마다 공격·특공·스피드 4%씩 상승, 체력 20 회복
 const STRIP = { boost: .04, heal: 20 };
 for (const id of ['lumina', 'silvia']) MONSTERS[id].trait = { n: '의상 각성', d: `공격에 맞아 옷이 바뀔 때마다 공격, 특공, 스피드가 ${STRIP.boost * 100}%씩 오르고(최대 ${MONSTERS[id].stages}단계) 체력을 ${STRIP.heal} 회복한다.` };
@@ -520,4 +537,4 @@ for (const id of ['lumina', 'silvia']) MONSTERS[id].trait = { n: '의상 각성'
 const BANNED = ['lumina', 'silvia'];
 const DEV_ACCOUNTS = ['PEGADORA'];
 
-module.exports = { BANNED, DEV_ACCOUNTS, STRIP, TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES };
+module.exports = { TIERS, BANNED, DEV_ACCOUNTS, STRIP, TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES };

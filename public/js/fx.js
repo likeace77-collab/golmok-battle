@@ -489,6 +489,10 @@ const Fx = (() => {
     charm(A, T, k, t) { act(k, 'sway', 620); spray('pheart', A, T, { n: 8, gap: 60, dur: 420, arc: 26, size: 10, spread: 22 }); tint(t, 'hex', 360, 620); return 1050; },
     fairydance(A, T, k) { act(k, 'spin', 760); orbit('sparkle', A, { n: 10, r: 62, dur: 820, size: 9, turns: 2, rising: 28 }); rise('pheart', A, { n: 6, dur: 560, size: 7 }); return 1040; },
     neonwink(A, T, k, t) { act(k, 'cast', 480); ['#ff4fa8', '#37e0ff'].forEach((c, i) => beam(A, T, { delay: i * 120, color: c, core: '#fff', w: 8, dur: 480 })); burst('pheart', T, { delay: 420, n: 10, dist: 66 }); flash('#ff4fa8', 240, 420, .35); tint(t, 'zap', 360, 430); return 1000; },
+    forge(A, T, k) { act(k, 'charge', 700); for (let i = 0; i < 3; i++) { burst('spark', A, { delay: i * 140, n: 9, dist: 50, size: 6, dur: 240 }); ring(A, { delay: i * 140, color: '#FFD23F', r0: 14, r1: 54, dur: 220, w: 4 }); } return 760; },
+    tierslash(A, T, k, t) { act(k, 'lunge', 420); slash(T, { delay: 200, angle: -.9, len: 150, color: '#fff', w: 9 }); slash(T, { delay: 290, angle: .5, len: 120, color: '#FFD23F', w: 6 }); burst('spark', T, { delay: 260, n: 12, dist: 60, size: 7 }); shake(6, 260, 240); return 820; },
+    shieldbash(A, T, k, t) { act(k, 'dash', 420); ring(T, { delay: 240, color: '#C7CDD6', r0: 20, r1: 90, dur: 300, w: 9 }); burst('spark', T, { delay: 260, n: 10, dist: 54, size: 8 }); shake(8, 260, 250); return 760; },
+    lionroar(A, T, k, t) { act(k, 'cast', 600); for (let i = 0; i < 4; i++) ring(A, { delay: i * 110, color: i % 2 ? '#FFD23F' : '#fff', r0: 30, r1: 170, dur: 420, w: 6 }); windLines(A, T, { delay: 200, n: 10, gap: 24, spread: 50 }); tint(t, 'hex', 400, 400); shake(6, 400, 200); return 1000; },
     crystalbolt(A, T, k, t) { act(k, 'cast', 480); beam(A, T, { color: '#7fe0ff', core: '#fff', w: 9, dur: 420 }); bolt(A, T, { delay: 120, dur: 260, w: 2.4, wob: 10 }); burst('sparkle', T, { delay: 380, n: 12, dist: 60 }); flash('#9ad8ff', 200, 380, .3); tint(t, 'zap', 340, 400); return 980; },
     focusmana(A, T, k) { act(k, 'charge', 900); ring(A, { color: '#9ad8ff', r1: 92, dur: 520 }); ring(A, { color: '#ff7fd0', r1: 70, delay: 260, dur: 480 }); rise('sparkle', A, { n: 10, dur: 520, size: 8, delay: 200 }); return 1100; },
     potion(A, T, k) { act(k, 'charge', 760); rise('bubble', A, { n: 10, gap: 40, dur: 520, size: 7 }); rise('heart', A, { delay: 360, n: 7, dur: 560, size: 7 }); return 1100; },
@@ -729,6 +733,23 @@ const Fx = (() => {
     shake(6 + stage * 3, 420, 620);
     return 1250;
   }
+  // 강화 성공: 망치질 불꽃 → 재료 색 빛기둥 → 폭발
+  const TIER_C = ['#C98F5E', '#BDB8A8', '#8a8f98', '#FFD23F', '#9FF3FF', '#9A4FB8'];
+  function forge(key, tier = 1) {
+    if (REDUCED) return 700;
+    measure();
+    const at = spot(key), c = TIER_C[tier] || '#fff', big = .8 + tier * .12;
+    darken(1100, .35 + tier * .05);
+    for (let i = 0; i < 3; i++) { burst('spark', { x: at.x + rnd(-20, 20) * u, y: at.y - at.r * .2 }, { delay: i * 150, n: 10, dist: 60, size: 7, dur: 260 }); ring(at, { delay: i * 150, color: '#FFD23F', r0: 20, r1: 60, dur: 220, w: 4 }); }
+    shake(4, 150, 0); shake(4, 150, 150); shake(5, 150, 300);
+    beam({ x: at.x, y: -20 }, { x: at.x, y: at.foot || at.y + at.r }, { delay: 460, color: c, core: '#fff', w: 60 * big, dur: 520 });
+    ['#fff', c, '#FFD23F'].forEach((cc, i) => ring(at, { delay: 520 + i * 80, color: cc, r1: 150 * big, dur: 520, w: 10 - i * 2 }));
+    burst(tier >= 4 ? 'shard' : 'sparkle', at, { delay: 520, n: 18 + tier * 5, dist: 140 * big, size: 11, dur: 620 });
+    rise('spark', at, { delay: 600, n: 10 + tier * 2, dur: 600, size: 7, spread: 50, height: 120 });
+    flash(tier === 5 ? '#d9b3ff' : '#fff', 220, 520, .6 + tier * .05);
+    shake(6 + tier * 2, 360, 540);
+    return 1250;
+  }
   // 등장할 때
   function entrance(key, species) {
     if (REDUCED) return;
@@ -748,5 +769,5 @@ const Fx = (() => {
   }
   function weather(w) { if (REDUCED || !w) return 700; measure(); return weatherFx(w); }
 
-  return { attach, play, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, awaken, entrance, ids: () => Object.keys(MOVE_FX) };
+  return { attach, play, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, awaken, entrance, forge, ids: () => Object.keys(MOVE_FX) };
 })();
