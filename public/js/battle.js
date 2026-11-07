@@ -326,7 +326,7 @@ const Battle = (() => {
         if (e.hits !== undefined && e.hits !== m.hits) { // 맞은 횟수가 바뀌면 각성 단계 확인 (옷 바뀌는 요괴)
           const sp = G.data.MONSTERS[m.species], was = m.strip || 0;
           m.hits = e.hits;
-          if (sp.stages) { m.strip = Math.min(m.hits, sp.stages); awoke = m.strip > was && m.hp > 0; }
+          if (sp?.stages) { m.strip = Math.min(m.hits, sp.stages); awoke = m.strip > was && m.hp > 0; }
         }
         if (e.quiet) break;
         if (e.dmg !== undefined) {
