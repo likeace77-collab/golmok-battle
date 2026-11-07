@@ -170,7 +170,7 @@ async function playStep(page) {
   await b.page.waitForSelector('#go-team');
   await a.page.click('#go-dex');
   await a.page.waitForSelector('[data-dex]');
-  const cnt = await a.page.locator('[data-dex]').count();
+  const cnt = await a.page.locator('[data-dex], [data-soon]').count(); // 곧 공개 카드 포함
   if (cnt !== 39) throw new Error(`도감 수 ${cnt}`);
   await shot(a.page, 'dex');
   await a.page.click('[data-dex=meokarak]');
