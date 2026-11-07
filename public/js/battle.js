@@ -205,9 +205,25 @@ const Battle = (() => {
     setBar(key, m);
   }
 
+  // 루미나·실비아: 각성 단계 오라
+  const AWAKEN = { lumina: true, silvia: true };
+  const auraClass = (m) => (AWAKEN[m.species] && m.strip ? ` aura-${m.species} aw${m.strip}` : '');
+  async function awakenShow(key, m) {
+    const box = $(`#m-${key}`);
+    const ms = Fx.awaken(key, m.species, m.strip);
+    const tag = document.createElement('div');
+    tag.className = `awaken-tag at-${m.species} ${key}`;
+    tag.innerHTML = `<small>의상 각성</small><b>${m.strip}<em>단계</em></b>`;
+    $('#scene')?.appendChild(tag);
+    setTimeout(() => tag.remove(), 1500);
+    await wait(560);
+    if (box) { box.innerHTML = monsterSVG(m.species, '', m.mega, m.hits); box.className = `mon ${key}${m.mega ? ' mega' : ''}${auraClass(m)} swapfx`; setTimeout(() => box.classList.remove('swapfx'), 500); }
+    await wait(Math.max(0, ms - 560));
+  }
+
   function drawMon(key, m) {
     const box = $(`#m-${key}`);
-    box.className = `mon ${key}${m.mega ? ' mega' : ''}`;
+    box.className = `mon ${key}${m.mega ? ' mega' : ''}${auraClass(m)}`;
     box.innerHTML = monsterSVG(m.species, '', m.mega, m.hits);
   }
 
@@ -288,13 +304,11 @@ const Battle = (() => {
         const m = dispMon(key);
         m.hp = e.hp; m.maxHp = e.maxHp;
         setBar(key, m);
-        if (e.hits !== undefined && e.hits !== m.hits) { // 맞은 횟수가 바뀌면 그림을 다시 그림 (옷 바뀌는 요괴)
-          const before = monsterSVG(m.species, '', m.mega, m.hits);
+        let awoke = false;
+        if (e.hits !== undefined && e.hits !== m.hits) { // 맞은 횟수가 바뀌면 각성 단계 확인 (옷 바뀌는 요괴)
+          const sp = G.data.MONSTERS[m.species], was = m.strip || 0;
           m.hits = e.hits;
-          const sp = G.data.MONSTERS[m.species];
-          if (sp.stages) { m.strip = Math.min(m.hits, sp.stages); drawPlate(key, m); }
-          const after = monsterSVG(m.species, '', m.mega, m.hits);
-          if (after !== before) setTimeout(() => { const box = $(`#m-${key}`); if (box) { box.innerHTML = after; box.classList.add('swapfx'); setTimeout(() => box.classList.remove('swapfx'), 500); } }, 180);
+          if (sp.stages) { m.strip = Math.min(m.hits, sp.stages); awoke = m.strip > was && m.hp > 0; }
         }
         if (e.quiet) break;
         if (e.dmg !== undefined) {
@@ -305,6 +319,7 @@ const Battle = (() => {
             pop(key, e.crit ? `급소! ${e.dmg}` : e.eff > 1 ? `${e.dmg}!` : String(e.dmg), e.crit || e.eff > 1);
           } else pop(key, String(e.dmg));
         } else if (e.healed) { pop(key, '회복'); Fx.heal(key); }
+        if (awoke) { await wait(380); drawPlate(key, m); await awakenShow(key, m); break; }
         await wait(620); break;
       }
       case 'faint': {
@@ -323,6 +338,7 @@ const Battle = (() => {
         putMon(key, e.mon);
         drawMon(key, dispMon(key)); drawPlate(key, dispMon(key));
         anim(key, 'enter', 420);
+        if (AWAKEN[e.mon.species]) Fx.entrance(key, e.mon.species);
         await wait(900); break;
       }
       case 'mega': {
@@ -399,10 +415,11 @@ const Battle = (() => {
     const av = avatarOf(key);
     const duo = has3D() && av;
     const cut = document.createElement('div');
-    cut.className = `zcut ${mine ? 'mine' : 'theirs'} ${duo ? 'duo' : ''} zt-${e.type}`;
+    const sp = AWAKEN[e.mon.species] ? e.mon.species : '';
+    cut.className = `zcut ${mine ? 'mine' : 'theirs'} ${duo ? 'duo' : ''} zt-${e.type}${sp ? ` zsp zsp-${sp}` : ''}`;
     cut.style.setProperty('--zc', color);
     cut.style.setProperty('--zs', `${SPEED}`);
-    cut.innerHTML = `<div class="zc-lines"></div>
+    cut.innerHTML = `${sp ? `<div class="zc-sp"><i></i><i></i><i></i></div>` : ''}<div class="zc-lines"></div>
       <div class="zc-band">
         <div class="zc-pair">
           ${duo ? '<canvas class="zc-tr"></canvas>' : ''}

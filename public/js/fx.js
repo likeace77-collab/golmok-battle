@@ -651,7 +651,75 @@ const Fx = (() => {
     burst('sparkle', at, { n: 26, dist: 170, size: 13, dur: 640 });
     shake(11, 420);
   }
+
+  /* ---------- 루미나·실비아 전용 연출 ---------- */
+  // 바닥에 눕힌 마법진 (돌면서 커짐)
+  function runeCircle(at, { color = '#37E0FF', glow = '#fff', r = 90, dur = 1000, delay = 0, spin = 2, star = 6 } = {}) {
+    add(dur, (p) => {
+      const k = out(Math.min(1, p * 2.2)), R = r * u * k, a = p * spin * 3.14;
+      ctx.save(); ctx.translate(at.x, at.foot); ctx.scale(1, .34); ctx.rotate(a);
+      ctx.globalAlpha = fade(p, .3);
+      ctx.shadowColor = color; ctx.shadowBlur = 18 * u;
+      ctx.strokeStyle = color; ctx.lineWidth = 4 * u;
+      ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.stroke();
+      ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.arc(0, 0, R * .82, 0, 7); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, R * .36, 0, 7); ctx.stroke();
+      ctx.strokeStyle = glow; ctx.lineWidth = 2.4 * u; ctx.beginPath();
+      for (let i = 0; i <= star; i++) { const t = (i * 2 * 6.283) / star; const x = Math.cos(t) * R * .82, y = Math.sin(t) * R * .82; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      ctx.stroke();
+      for (let i = 0; i < 24; i++) { const t = (i / 24) * 6.283; ctx.fillStyle = i % 3 ? color : glow; ctx.fillRect(Math.cos(t) * R * .91 - 2 * u, Math.sin(t) * R * .91 - 2 * u, 4 * u, 4 * u); }
+      ctx.restore();
+    }, delay);
+  }
+  function darken(dur, alpha = .55, delay = 0, color = '#05060c') { add(dur, (p) => { ctx.globalAlpha = alpha * Math.sin(Math.min(1, p) * 3.14); ctx.fillStyle = color; ctx.fillRect(0, 0, W, H); }, delay); }
+
+  // 옷이 바뀔 때: 각성 연출 (단계가 높을수록 더 크게)
+  function awaken(key, species, stage = 1) {
+    if (REDUCED) return 600;
+    measure();
+    const at = spot(key), big = .8 + stage * .15;
+    if (species === 'lumina') {
+      darken(1300, .5 + stage * .06);
+      runeCircle(at, { color: '#37E0FF', glow: '#FF7FD0', r: 95 * big, dur: 1300, spin: 2.4 });
+      runeCircle(at, { color: '#FF7FD0', glow: '#fff', r: 60 * big, dur: 1200, delay: 120, spin: -3, star: 5 });
+      act(key, 'charge', 1000);
+      for (let i = 0; i < 2 + stage; i++) bolt({ x: at.x + rnd(-70, 70) * u, y: -10 }, { x: at.x + rnd(-14, 14) * u, y: at.y - at.r * .6 }, { delay: 280 + i * 120, dur: 260, w: 7, wob: 26, color: i % 2 ? '#FFE45C' : '#9ad8ff', flick: 2 });
+      orbit('shard', at, { delay: 200, n: 8 + stage * 3, r: 70 * big, dur: 1000, size: 9, turns: 2, squash: .55 });
+      ['#fff', '#37E0FF', '#FF7FD0'].forEach((c, i) => ring(at, { delay: 620 + i * 90, color: c, r1: 150 * big, dur: 560, w: 10 - i * 2 }));
+      burst('sparkle', at, { delay: 620, n: 22 + stage * 4, dist: 140 * big, size: 11, dur: 640 });
+      flash('#E8F8FF', 260, 600, .7);
+    } else {
+      darken(1300, .45 + stage * .06, 0, '#04140c');
+      runeCircle(at, { color: '#6CF2C2', glow: '#fff', r: 90 * big, dur: 1300, spin: 3, star: 8 });
+      tornado(at, { dur: 1100, color: '#B8FFD9' });
+      windLines({ x: -20, y: at.y - 30 * u }, { x: W + 20, y: at.y + 20 * u }, { delay: 150, n: 10 + stage * 3, gap: 30, spread: 90 });
+      orbit('leaf', at, { delay: 100, n: 10 + stage * 3, r: 80 * big, dur: 1100, size: 10, turns: 2.6, rising: 40, squash: .6 });
+      for (let i = 0; i < 2 + stage; i++) slash(at, { delay: 500 + i * 70, angle: rnd(-1.4, 1.4), len: 130 * big, color: i % 2 ? '#6CF2C2' : '#fff', w: 6 });
+      ['#fff', '#6CF2C2', '#3FA34D'].forEach((c, i) => ring(at, { delay: 620 + i * 90, color: c, r1: 150 * big, dur: 560, w: 10 - i * 2 }));
+      burst('crescent', at, { delay: 620, n: 12 + stage * 2, dist: 150 * big, size: 13, dur: 600 });
+      flash('#E6FFF4', 240, 600, .6);
+    }
+    shake(6 + stage * 3, 420, 620);
+    return 1250;
+  }
+  // 등장할 때
+  function entrance(key, species) {
+    if (REDUCED) return;
+    measure();
+    const at = spot(key);
+    if (species === 'lumina') {
+      runeCircle(at, { color: '#37E0FF', glow: '#FF7FD0', r: 80, dur: 1100, spin: 2 });
+      rise('sparkle', at, { delay: 200, n: 12, gap: 40, dur: 700, size: 9, spread: 60, height: 120 });
+      bolt({ x: at.x, y: -10 }, { x: at.x, y: at.foot }, { delay: 120, dur: 240, w: 6, wob: 20, color: '#9ad8ff' });
+      flash('#E8F8FF', 180, 150, .45);
+    } else {
+      runeCircle(at, { color: '#6CF2C2', glow: '#fff', r: 80, dur: 1100, spin: 3, star: 8 });
+      fall('leaf', at, { n: 14, gap: 40, dur: 700, size: 10, spread: 90, height: 160 });
+      ring(at, { delay: 160, color: '#B8FFD9', r1: 120, dur: 520, w: 6, squash: .4 });
+      windLines({ x: at.x - 160 * u, y: at.y }, { x: at.x + 160 * u, y: at.y }, { delay: 100, n: 8, gap: 26, spread: 50 });
+    }
+  }
   function weather(w) { if (REDUCED || !w) return 700; measure(); return weatherFx(w); }
 
-  return { attach, play, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, ids: () => Object.keys(MOVE_FX) };
+  return { attach, play, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, awaken, entrance, ids: () => Object.keys(MOVE_FX) };
 })();
