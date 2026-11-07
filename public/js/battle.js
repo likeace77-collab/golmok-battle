@@ -208,8 +208,25 @@ const Battle = (() => {
   // 루미나·실비아: 각성 단계 오라
   const AWAKEN = { lumina: true, silvia: true };
   const auraClass = (m) => (AWAKEN[m.species] && m.strip ? ` aura-${m.species} aw${m.strip}` : '');
+  async function awakenCut(key, m) {
+    const sp = G.data.MONSTERS[m.species];
+    const cut = document.createElement('div');
+    cut.className = `awx awx-${m.species} ${key === 'me' || key === 'ally' ? 'mine' : 'theirs'} aw${m.strip}`;
+    cut.style.setProperty('--zs', `${SPEED}`);
+    cut.innerHTML = `<div class="awx-band"><div class="awx-shards"></div>
+        <div class="awx-face">${bust(m)}</div>
+        <div class="awx-txt"><small>${esc(m.name)} · 의상 각성</small><b>AWAKEN <em>${ROMAN[m.strip] || m.strip}</em></b>
+          <p>공격·특공·스피드 +${Math.round(m.strip * (G.data.MONSTERS[m.species].stages ? 4 : 0))}% · 체력 +20</p></div>
+        <div class="awx-meter">${Array.from({ length: sp.stages || 4 }, (_, i) => `<i class="${i < m.strip ? 'on' : ''}${i === m.strip - 1 ? ' now' : ''}"></i>`).join('')}</div>
+      </div><div class="awx-flash"></div>`;
+    document.body.appendChild(cut);
+    await wait(1150);
+    cut.classList.add('out');
+    setTimeout(() => cut.remove(), 300 * SPEED);
+  }
   async function awakenShow(key, m) {
     const box = $(`#m-${key}`);
+    await awakenCut(key, m);
     const ms = Fx.awaken(key, m.species, m.strip);
     const tag = document.createElement('div');
     tag.className = `awaken-tag at-${m.species} ${key}`;
@@ -409,7 +426,55 @@ const Battle = (() => {
 
   // Z기술 컷인: 화면을 덮는 컷인 뒤에 타입별 필살 연출
   // Z기술: 트레이너와 요괴가 같은 안무를 추며 유대를 보여 주는 컷인, 이어서 필살 연출
+  // 루미나·실비아 전용 Z 연출 (약 3.6초): 등장 → 기 모으기 → 발사
+  const ROMAN = ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
+  // 얼굴만 잘라 보이는 컷: eyes는 눈매 클로즈업, head는 머리와 어깨
+  const crop = (m, cls, box) => monsterSVG(m.species, cls, m.mega, m.hits).replace('viewBox="0 0 200 200"', `viewBox="${box}" preserveAspectRatio="xMidYMid slice"`);
+  const bust = (m) => crop(m, 'zx-bust', '70 0 70 70');
+  const eyes = (m) => crop(m, 'zx-bust', '75 17 60 24');
+  const magicCircle = (c1, c2) => `<svg class="zx-mc" viewBox="-100 -100 200 200" aria-hidden="true">
+    <g fill="none" stroke="${c1}" stroke-width="1.6">
+      <circle r="96"/><circle r="88" stroke-dasharray="2 4"/><circle r="62" stroke="${c2}"/><circle r="40"/>
+      <polygon points="${Array.from({ length: 6 }, (_, i) => { const a = (i / 6) * 6.283 - 1.571; return `${(Math.cos(a) * 88).toFixed(1)},${(Math.sin(a) * 88).toFixed(1)}`; }).join(' ')}" stroke="${c2}"/>
+      <polygon points="${Array.from({ length: 6 }, (_, i) => { const a = (i / 6) * 6.283 - 1.047; return `${(Math.cos(a) * 88).toFixed(1)},${(Math.sin(a) * 88).toFixed(1)}`; }).join(' ')}" stroke="${c2}"/>
+      ${Array.from({ length: 24 }, (_, i) => { const a = (i / 24) * 6.283; return `<path d="M${(Math.cos(a) * 66).toFixed(1)} ${(Math.sin(a) * 66).toFixed(1)}L${(Math.cos(a) * 84).toFixed(1)} ${(Math.sin(a) * 84).toFixed(1)}"/>`; }).join('')}
+      ${Array.from({ length: 12 }, (_, i) => { const a = (i / 12) * 6.283; return `<circle cx="${(Math.cos(a) * 75).toFixed(1)}" cy="${(Math.sin(a) * 75).toFixed(1)}" r="3.2" fill="${i % 2 ? c1 : c2}"/>`; }).join('')}
+    </g></svg>`;
+  async function zSpecial(e, key) {
+    const mine = key === 'me' || key === 'ally';
+    const sp = e.mon.species, av = avatarOf(key), duo = has3D() && av;
+    const lum = sp === 'lumina';
+    const cut = document.createElement('div');
+    cut.className = `zx zx-${sp} ${mine ? 'mine' : 'theirs'}`;
+    cut.style.setProperty('--zs', `${SPEED}`);
+    const bolts = lum ? Array.from({ length: 7 }, (_, i) => {
+      let x = 8 + i * 14 + (i % 2 ? 4 : -3), d = `M${x} -2`;
+      for (let y = 0; y < 100; y += 12) { x += (Math.random() - .5) * 9; d += ` L${x.toFixed(1)} ${y + 12}`; }
+      return `<path d="${d}" style="--d:${(i * 0.06).toFixed(2)}"/>`;
+    }).join('') : '';
+    cut.innerHTML = `<div class="zx-bg"></div>
+      <div class="zx-ring">${lum ? magicCircle('#37E0FF', '#FF7FD0') : magicCircle('#6CF2C2', '#ffffff')}</div>
+      <div class="zx-vortex"></div><div class="zx-lines"></div>
+      <div class="zx-art">${monsterSVG(sp, '', e.mon.mega, e.mon.hits)}</div>
+      <div class="zx-eye">${eyes(e.mon)}<i class="zx-glint"></i></div>
+      ${duo ? '<canvas class="zx-tr"></canvas><div class="zx-bond">유대 MAX</div>' : ''}
+      <div class="zx-title"><small>Z기술 · ${esc(e.player)} × ${esc(e.mon.name)}</small><b>${esc(e.move)}</b></div>
+      <div class="zx-fin">${lum ? `<svg class="zx-bolts" viewBox="0 0 100 100" preserveAspectRatio="none">${bolts}</svg>` : '<div class="zx-arrow"><i></i></div><div class="zx-trail"></div>'}</div>
+      <div class="zx-shock"></div><div class="zx-flash"></div>`;
+    document.body.appendChild(cut);
+    let tr = null;
+    if (duo) { tr = Avatar3D.mount(cut.querySelector('.zx-tr'), av, { facing: mine ? .55 : -.55 }); tr.play('z', { type: e.type, dur: 3.2 * SPEED, hold: true }); }
+    setTimeout(() => cut.classList.add('shake'), 2350 * SPEED);
+    await wait(3600);
+    cut.classList.add('out');
+    await wait(260);
+    tr?.destroy(); cut.remove();
+    trainer(key)?.play('thrust', { dur: 2 });
+    await wait(Fx.zmove(e.type, key, sideKey(e.target), sp));
+  }
+
   async function zCinematic(e, key) {
+    if (AWAKEN[e.mon.species]) return zSpecial(e, key);
     const color = G.data.TYPES[e.type].c;
     const mine = key === 'me' || key === 'ally';
     const av = avatarOf(key);

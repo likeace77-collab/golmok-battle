@@ -619,11 +619,38 @@ const Fx = (() => {
     fairy(A, T) { for (let i = 0; i < 3; i++) ring(T, { delay: 880 + i * 120, color: ['#F27FA5', '#fff', '#37e0ff'][i], r0: 220, r1: 10, dur: 400, w: 10 }); burst('pheart', T, { delay: 1300, n: 30, dist: 200, size: 13 }); burst('sparkle', T, { delay: 1300, n: 30, dist: 230, size: 12 }); return 1300; },
     none(A, T) { act(A.key, 'dash', 700); return 1100; },
   };
-  function zmove(type, key, target) {
+  // 루미나·실비아 Z 마무리: 필드에 직접 떨어지는 전용 피니시
+  function zFinish(species, A, T) {
+    if (species === 'lumina') {
+      darken(1500, .6);
+      runeCircle(T, { color: '#37E0FF', glow: '#FF7FD0', r: 120, dur: 1400, spin: 3, star: 6 });
+      runeCircle({ x: T.x, y: T.y - 150 * u, r: T.r }, { color: '#FF7FD0', glow: '#fff', r: 90, dur: 1300, spin: -2.4, squash: .35 });
+      for (let i = 0; i < 9; i++) bolt({ x: T.x + rnd(-110, 110) * u, y: -20 }, { x: T.x + rnd(-30, 30) * u, y: T.y + rnd(-20, 30) * u }, { delay: 300 + i * 85, dur: 260, w: 9, wob: 30, color: i % 3 ? '#FFE45C' : '#9ad8ff', flick: 3 });
+      ['#fff', '#37E0FF', '#FF7FD0', '#FFE45C'].forEach((c, i) => ring(T, { delay: 1050 + i * 80, color: c, r1: 230, dur: 600, w: 12 - i * 2 }));
+      burst('shard', T, { delay: 1050, n: 34, dist: 220, size: 13, dur: 700 });
+      flash('#E8F8FF', 320, 1040, .9);
+      shake(22, 700, 1040);
+      return 1900;
+    }
+    darken(1400, .55, 0, '#04140c');
+    tornado(A, { dur: 900, color: '#B8FFD9' });
+    for (let i = 0; i < 3; i++) beam(A, T, { delay: 420 + i * 60, color: i ? '#6CF2C2' : '#fff', core: '#fff', w: 30 - i * 8, dur: 360 });
+    windLines(A, T, { delay: 380, n: 18, gap: 16, spread: 70, dur: 260 });
+    spray('crescent', A, T, { delay: 420, n: 14, gap: 20, dur: 240, size: 18, spread: 40, aim: true });
+    for (let i = 0; i < 4; i++) slash(T, { delay: 640 + i * 60, angle: rnd(-1.2, 1.2), len: 180, color: i % 2 ? '#6CF2C2' : '#fff', w: 9 });
+    ['#fff', '#6CF2C2', '#3FA34D'].forEach((c, i) => ring(T, { delay: 680 + i * 80, color: c, r1: 230, dur: 560, w: 12 - i * 3 }));
+    burst('leaf', T, { delay: 680, n: 30, dist: 210, size: 12, dur: 700 });
+    flash('#E6FFF4', 280, 660, .85);
+    shake(20, 650, 660);
+    return 1550;
+  }
+
+  function zmove(type, key, target, species) {
     if (REDUCED) return 900;
     measure();
     const foe = target || (key === 'me' ? 'opp' : 'me');
     const A = { ...spot(key), key }, T = { ...spot(foe), key: foe };
+    if (species === 'lumina' || species === 'silvia') return zFinish(species, A, T) + 200;
     const color = { fire: '#F2622E', water: '#2F7DE1', grass: '#3FA34D', elec: '#FFE45C', ice: '#7fe0f0', earth: '#C98F5E', wind: '#CFEDE1', poison: '#B86BE0', steel: '#D7DDE5', spirit: '#7A6BE0', fairy: '#F27FA5' }[type] || '#fff';
     zAura(A, color);
     beam(A, T, { delay: 760, color, core: '#fff', w: 36, dur: 520 });

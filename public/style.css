@@ -758,3 +758,94 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .zsp-lumina .zc-band { --zc: #37E0FF; border-color: #9ad8ff; box-shadow: 0 0 30px #37E0FF, inset 0 0 40px #FF7FD066; }
 .zsp-silvia .zc-band { --zc: #6CF2C2; border-color: #B8FFD9; box-shadow: 0 0 30px #6CF2C2, inset 0 0 40px #ffffff44; }
 .zsp .zc-name { text-shadow: 0 0 14px var(--zc), 3px 3px 0 var(--ink); }
+
+/* ===== 루미나·실비아 전용 Z 연출 (약 3.6초) ===== */
+.zx { --c1: #37E0FF; --c2: #FF7FD0; --t: calc(3.6s * var(--zs, 1)); position: fixed; inset: 0; z-index: 36; overflow: hidden; pointer-events: none; animation: zIn .2s ease-out; }
+.zx-silvia { --c1: #6CF2C2; --c2: #ffffff; }
+.zx.out { animation: zOut .26s ease-in forwards; }
+.zx.shake { animation: zxShake .4s linear 3; }
+@keyframes zxShake { 25% { transform: translate(6px, -4px); } 50% { transform: translate(-5px, 5px); } 75% { transform: translate(4px, 3px); } }
+.zx-bg { position: absolute; inset: 0; background: radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--c1) 35%, #0b0820), #05040b 70%); }
+.zx-silvia .zx-bg { background: radial-gradient(circle at 50% 55%, #0f4a35, #020a06 70%); }
+.zx-ring { position: absolute; left: 50%; top: 50%; width: min(150vw, 150vh); aspect-ratio: 1; transform: translate(-50%, -50%) scale(.2); opacity: 0; animation: zxRing var(--t) cubic-bezier(.2, .8, .3, 1) forwards; }
+.zx-mc { width: 100%; height: 100%; filter: drop-shadow(0 0 10px var(--c1)) drop-shadow(0 0 24px var(--c2)); animation: zxSpin 5s linear infinite; }
+@keyframes zxRing { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2) rotateX(60deg); } 18% { opacity: .9; transform: translate(-50%, -50%) scale(.9) rotateX(55deg); } 55% { opacity: 1; transform: translate(-50%, -50%) scale(1.05) rotateX(0deg); } 66% { opacity: 1; transform: translate(-50%, -50%) scale(1.25); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); } }
+@keyframes zxSpin { to { transform: rotate(360deg); } }
+.zx-vortex { position: absolute; left: 50%; top: 50%; width: 220vmax; aspect-ratio: 1; transform: translate(-50%, -50%); background: repeating-conic-gradient(from 0deg, transparent 0 7deg, color-mix(in srgb, var(--c1) 35%, transparent) 7deg 9deg, transparent 9deg 16deg); opacity: 0; animation: zxVort var(--t) linear forwards; }
+@keyframes zxVort { 0%, 20% { opacity: 0; transform: translate(-50%, -50%) rotate(0); } 35% { opacity: .9; } 62% { opacity: 1; transform: translate(-50%, -50%) rotate(420deg); } 75%, 100% { opacity: 0; transform: translate(-50%, -50%) rotate(560deg); } }
+.zx-lines { position: absolute; inset: -40%; background: repeating-conic-gradient(from 3deg, transparent 0 3deg, #ffffff30 3deg 3.6deg, transparent 3.6deg 8deg); opacity: 0; animation: zxLines var(--t) linear forwards; }
+@keyframes zxLines { 0%, 60% { opacity: 0; } 63% { opacity: 1; transform: scale(1.4); } 80% { opacity: .6; transform: scale(1); } 100% { opacity: 0; } }
+/* 캐릭터 전신: 아래에서 솟아오름 → 정지 → 앞으로 돌진 */
+.zx-art { position: absolute; left: 50%; bottom: -4%; width: min(92vw, 70vh); aspect-ratio: 1; transform: translateX(-50%); filter: drop-shadow(0 0 14px var(--c1)) drop-shadow(0 0 4px #fff); animation: zxArt var(--t) cubic-bezier(.2, .9, .25, 1) forwards; }
+.zx-art svg { width: 100%; height: 100%; display: block; }
+.theirs .zx-art svg { transform: scaleX(-1); }
+@keyframes zxArt { 0% { opacity: 0; transform: translate(-50%, 40%) scale(.8); filter: brightness(4) drop-shadow(0 0 20px var(--c1)); } 10% { opacity: 1; transform: translate(-50%, 0) scale(1); filter: brightness(1) drop-shadow(0 0 14px var(--c1)); } 52% { transform: translate(-50%, -2%) scale(1.04); } 60% { transform: translate(-50%, -2%) scale(1.06); filter: brightness(1.6) drop-shadow(0 0 30px var(--c1)) drop-shadow(0 0 10px #fff); } 66% { transform: translate(-50%, 4%) scale(1.35); opacity: 1; } 76% { transform: translate(-50%, 8%) scale(1.8); opacity: 0; } 100% { opacity: 0; } }
+/* 눈빛 클로즈업 컷 */
+.zx-eye { position: absolute; left: 0; right: 0; top: 30%; height: 22%; overflow: hidden; background: #000; border-block: 3px solid var(--c1); box-shadow: 0 0 30px var(--c1); opacity: 0; animation: zxEye var(--t) ease-out forwards; }
+.zx-eye .zx-bust { position: absolute; inset: 0; width: 100%; height: 100%; }
+.theirs .zx-eye .zx-bust { transform: scaleX(-1); }
+@keyframes zxEye { 0%, 30% { opacity: 0; clip-path: inset(50% 0 50% 0); } 33% { opacity: 1; clip-path: inset(0 0 0 0); } 46% { opacity: 1; clip-path: inset(0 0 0 0); } 49%, 100% { opacity: 0; clip-path: inset(50% 0 50% 0); } }
+.zx-glint { position: absolute; left: 58%; top: 46%; width: 46px; height: 46px; transform: translate(-50%, -50%) scale(0); background: radial-gradient(circle, #fff 0 18%, transparent 20%), linear-gradient(0deg, transparent 47%, #fff 48% 52%, transparent 53%), linear-gradient(90deg, transparent 47%, #fff 48% 52%, transparent 53%); filter: drop-shadow(0 0 8px var(--c1)); animation: zxGlint var(--t) ease-out forwards; }
+@keyframes zxGlint { 0%, 37% { transform: translate(-50%, -50%) scale(0) rotate(0); } 40% { transform: translate(-50%, -50%) scale(1.6) rotate(45deg); } 45%, 100% { transform: translate(-50%, -50%) scale(0) rotate(90deg); } }
+/* 트레이너와 유대 */
+.zx-tr { position: absolute; left: 2%; bottom: 2%; width: min(28vw, 170px); aspect-ratio: 4 / 5; opacity: 0; animation: zxTr var(--t) ease-out forwards; }
+.theirs .zx-tr { left: auto; right: 2%; }
+.zx-bond { position: absolute; left: 4%; bottom: calc(2% + min(35vw, 212px)); padding: 3px 10px; font: 400 15px/1 var(--ui); color: #fff; background: linear-gradient(90deg, var(--c2), var(--c1)); border: 2px solid var(--ink); border-radius: 999px; box-shadow: 0 0 14px var(--c1); opacity: 0; animation: zxTr var(--t) ease-out forwards; }
+.theirs .zx-bond { left: auto; right: 4%; }
+@keyframes zxTr { 0%, 12% { opacity: 0; transform: translateY(20px); } 18%, 58% { opacity: 1; transform: none; } 66%, 100% { opacity: 0; } }
+/* 기술 이름 */
+.zx-title { position: absolute; left: 0; right: 0; top: 9%; text-align: center; opacity: 0; animation: zxTitle var(--t) cubic-bezier(.2, 1.5, .4, 1) forwards; }
+.zx-title small { display: inline-block; padding: 3px 12px; font: 400 clamp(13px, 3.6vw, 18px)/1.2 var(--ui); color: var(--ink); background: var(--yellow); border: 2px solid var(--ink); border-radius: 6px; }
+.zx-title b { display: block; margin-top: 8px; font: 400 clamp(40px, 13vw, 92px)/1 var(--display); color: #fff; -webkit-text-stroke: 3px var(--ink); text-shadow: 0 0 18px var(--c1), 0 0 44px var(--c1), 5px 5px 0 var(--ink); letter-spacing: .02em; }
+@keyframes zxTitle { 0%, 48% { opacity: 0; transform: scale(2.4); letter-spacing: .4em; } 54% { opacity: 1; transform: scale(1); letter-spacing: .02em; } 58% { transform: scale(1.06); } 62%, 88% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(.9); } }
+/* 마무리: 루미나 벼락 기둥 / 실비아 거대 화살 */
+.zx-fin { position: absolute; inset: 0; }
+.zx-bolts { position: absolute; inset: 0; width: 100%; height: 100%; }
+.zx-bolts path { fill: none; stroke: #FFF7C2; stroke-width: 1.4; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 6px #37E0FF) drop-shadow(0 0 14px #FF7FD0); stroke-dasharray: 220; stroke-dashoffset: 220; opacity: 0; animation: zxBolt var(--t) linear forwards; animation-delay: calc(var(--d) * 1s * var(--zs, 1)); }
+.zx-bolts path { stroke-width: 6; }
+@keyframes zxBolt { 0%, 63% { stroke-dashoffset: 220; opacity: 0; } 65% { opacity: 1; } 69% { stroke-dashoffset: 0; opacity: 1; } 73% { opacity: .3; } 75% { opacity: 1; } 84%, 100% { stroke-dashoffset: 0; opacity: 0; } }
+.zx-arrow { position: absolute; top: 50%; left: 0; width: 70vw; height: 30px; transform: translate(-80vw, -50%); opacity: 0; animation: zxArrow var(--t) cubic-bezier(.6, 0, .2, 1) forwards; }
+.zx-arrow i { position: absolute; inset: 0; background: linear-gradient(90deg, transparent, #6CF2C2 30%, #fff 80%); clip-path: polygon(0 40%, 86% 40%, 86% 0, 100% 50%, 86% 100%, 86% 60%, 0 60%); filter: drop-shadow(0 0 10px #6CF2C2) drop-shadow(0 0 20px #fff); }
+.theirs .zx-arrow { transform: translate(110vw, -50%) scaleX(-1); animation-name: zxArrowR; }
+@keyframes zxArrow { 0%, 62% { opacity: 0; transform: translate(-80vw, -50%); } 63% { opacity: 1; } 72% { opacity: 1; transform: translate(110vw, -50%); } 100% { opacity: 0; transform: translate(110vw, -50%); } }
+@keyframes zxArrowR { 0%, 62% { opacity: 0; transform: translate(110vw, -50%) scaleX(-1); } 63% { opacity: 1; } 72% { opacity: 1; transform: translate(-80vw, -50%) scaleX(-1); } 100% { opacity: 0; transform: translate(-80vw, -50%) scaleX(-1); } }
+.zx-trail { position: absolute; left: 0; right: 0; top: 50%; height: 14vh; transform: translateY(-50%) scaleX(0); transform-origin: left; background: linear-gradient(transparent, #6CF2C288 30%, #fff 50%, #6CF2C288 70%, transparent); filter: blur(2px); animation: zxTrail var(--t) ease-out forwards; }
+.theirs .zx-trail { transform-origin: right; }
+@keyframes zxTrail { 0%, 63% { transform: translateY(-50%) scaleX(0); opacity: 1; } 72% { transform: translateY(-50%) scaleX(1); opacity: 1; } 90%, 100% { transform: translateY(-50%) scaleX(1) scaleY(.1); opacity: 0; } }
+.zx-shock { position: absolute; left: 50%; top: 50%; width: 30vmin; aspect-ratio: 1; border-radius: 50%; border: 8px solid #fff; box-shadow: 0 0 30px var(--c1), inset 0 0 30px var(--c1); transform: translate(-50%, -50%) scale(0); opacity: 0; animation: zxShock var(--t) ease-out forwards; }
+@keyframes zxShock { 0%, 68% { transform: translate(-50%, -50%) scale(0); opacity: 0; } 70% { opacity: 1; } 86% { transform: translate(-50%, -50%) scale(5); opacity: 0; } 100% { opacity: 0; } }
+.zx-flash { position: absolute; inset: 0; background: #fff; opacity: 0; animation: zxFlash var(--t) linear forwards; }
+@keyframes zxFlash { 0% { opacity: .9; } 5% { opacity: 0; } 38% { opacity: 0; } 40% { opacity: .7; } 43% { opacity: 0; } 64% { opacity: 0; } 67% { opacity: 1; } 76% { opacity: 0; } 100% { opacity: 0; } }
+
+/* ===== 의상 각성 컷인 (약 1.2초) ===== */
+.awx { --c1: #37E0FF; --c2: #FF7FD0; --t: calc(1.15s * var(--zs, 1)); position: fixed; inset: 0; z-index: 34; pointer-events: none; overflow: hidden; }
+.awx-silvia { --c1: #6CF2C2; --c2: #fff; }
+.awx.out { animation: zOut .26s ease-in forwards; }
+.awx-band { position: absolute; left: -10%; right: -10%; top: 50%; height: 34vh; min-height: 200px; transform: translateY(-50%) rotate(-7deg) scaleY(0); background: linear-gradient(90deg, #05040bee, color-mix(in srgb, var(--c1) 30%, #05040b) 50%, #05040bee); border-block: 4px solid var(--c1); box-shadow: 0 0 40px var(--c1), 0 0 80px color-mix(in srgb, var(--c2) 50%, transparent); overflow: hidden; animation: awxBand var(--t) cubic-bezier(.2, 1.3, .4, 1) forwards; }
+.theirs .awx-band { transform: translateY(-50%) rotate(7deg) scaleY(0); animation-name: awxBandR; }
+@keyframes awxBand { 0% { transform: translateY(-50%) rotate(-7deg) scaleY(0); } 14%, 86% { transform: translateY(-50%) rotate(-7deg) scaleY(1); } 100% { transform: translateY(-50%) rotate(-7deg) scaleY(0); } }
+@keyframes awxBandR { 0% { transform: translateY(-50%) rotate(7deg) scaleY(0); } 14%, 86% { transform: translateY(-50%) rotate(7deg) scaleY(1); } 100% { transform: translateY(-50%) rotate(7deg) scaleY(0); } }
+.awx-shards { position: absolute; inset: -20% -10%; background: repeating-linear-gradient(100deg, transparent 0 22px, #ffffff1c 22px 24px, transparent 24px 60px, color-mix(in srgb, var(--c1) 40%, transparent) 60px 62px); animation: awxSlide calc(var(--t) * .9) linear forwards; }
+@keyframes awxSlide { from { transform: translateX(-120px); } to { transform: translateX(120px); } }
+.awx-face { position: absolute; left: 6%; top: 50%; width: min(36vw, 250px); aspect-ratio: 1; transform: translateY(-50%); animation: awxFace var(--t) cubic-bezier(.2, 1.2, .3, 1) forwards; filter: drop-shadow(0 0 12px var(--c1)); }
+.awx-face svg { width: 100%; height: 100%; }
+.theirs .awx-face { left: auto; right: 8%; }
+.theirs .awx-face svg { transform: scaleX(-1); }
+@keyframes awxFace { 0% { transform: translate(-60%, -50%); opacity: 0; } 18% { transform: translate(0, -50%); opacity: 1; } 80% { transform: translate(6%, -50%); opacity: 1; } 100% { transform: translate(20%, -50%); opacity: 0; } }
+.awx-txt { position: absolute; left: 43%; right: 3%; top: 50%; transform: translateY(-50%); color: #fff; white-space: nowrap; animation: awxTxt var(--t) cubic-bezier(.2, 1.5, .4, 1) forwards; }
+.theirs .awx-txt { left: 5%; right: 45%; }
+.awx-txt small { display: block; font: 400 clamp(12px, 3.4vw, 17px)/1.2 var(--ui); letter-spacing: .15em; color: var(--c1); text-shadow: 0 0 6px var(--c1); }
+.awx-txt b { display: block; font: 400 clamp(24px, 7.6vw, 60px)/1 var(--display); -webkit-text-stroke: 2px var(--ink); text-shadow: 0 0 14px var(--c1), 0 0 34px var(--c2), 4px 4px 0 var(--ink); }
+.awx-txt b em { font-style: normal; color: var(--yellow); }
+.awx-txt p { margin-top: 6px; font: 400 clamp(11px, 3vw, 15px)/1.2 var(--ui); color: #fff; background: #0009; display: inline-block; padding: 2px 8px; border-radius: 5px; border: 1px solid var(--c1); }
+@keyframes awxTxt { 0%, 10% { opacity: 0; transform: translateY(-50%) scale(1.8); } 22% { opacity: 1; transform: translateY(-50%) scale(1); } 82% { opacity: 1; } 100% { opacity: 0; transform: translateY(-50%) translateX(30px); } }
+.awx-meter { position: absolute; right: 6%; bottom: 10%; display: flex; gap: 6px; }
+.theirs .awx-meter { right: auto; left: 14%; }
+.awx-meter i { width: 26px; height: 10px; transform: skewX(-20deg); background: #ffffff22; border: 1px solid #fff6; }
+.awx-meter i.on { background: var(--c1); box-shadow: 0 0 8px var(--c1); }
+.awx-meter i.now { animation: awxNow .25s steps(2) 4; }
+@keyframes awxNow { 50% { background: #fff; } }
+.awx-flash { position: absolute; inset: 0; background: #fff; animation: awxFlash var(--t) linear forwards; }
+@keyframes awxFlash { 0% { opacity: .85; } 12% { opacity: 0; } 100% { opacity: 0; } }
+.awx.aw4 .awx-band { height: 40vh; border-width: 6px; }
+@media (prefers-reduced-motion: reduce) { .zx *, .awx * { animation-duration: .01s !important; } }
