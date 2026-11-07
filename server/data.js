@@ -34,6 +34,10 @@ const CHART = {
 
 // cat: p 물리 / s 특수 / x 변화
 // st: 상태이상 {s, ch} / fl: 풀죽음 확률 / self·foe: 능력치 변화 / sc: foe 능력치 변화 확률
+// 게임 버전: ROSTER=new 이면 네온나·연지 대신 루미나·실비아(사진 그림)가 나옵니다.
+const NEW_ROSTER = process.env.ROSTER === 'new';
+const ROSTER = NEW_ROSTER ? 'new' : 'classic';
+
 const M = (n, type, cat, pow, acc, pp, extra = {}) => ({ n, type, cat, pow, acc, pp, pri: 0, ...extra });
 
 const MOVES = {
@@ -268,12 +272,21 @@ const MONSTERS = {
     ['molt', 'sapdrain', 'sludge', 'seed', 'fog', 'leafcut', 'sunbathe', 'pollen', 'stench', 'guard'],
     '종이컵에 담겨 있어도 호불호는 담기지 않는다.'),
   // 페어리
+  ...(NEW_ROSTER ? {
   neonna:   X('루미나', ['fairy', 'elec'], 75, 45, 70, 125, 95, 100,
     ['crystalbolt', 'pixiedust', 'sparkcircle', 'highvolt', 'bolt', 'shock', 'focusmana', 'potion', 'charm', 'guard'],
     '수정 지팡이를 든 성인 견습 마법사. 포니테일을 흔들며 웃지만, 지팡이 끝 수정에는 벼락이 잠들어 있다. 허리춤 물약은 맛이 없다.'),
   yeonji:   X('실비아', ['fairy', 'wind'], 75, 110, 70, 55, 80, 120,
     ['winksnipe', 'arrowrain', 'razorwind', 'windcut', 'snarearrow', 'throwknife', 'hawkeye', 'pixiedust', 'charm', 'guard'],
     '은발을 땋아 올린 성인 숲의 궁수. 윙크 한 번에 화살이 날아가고, 화살이 떨어지면 허벅지 단검을 뽑는다.'),
+  } : {
+  neonna:   X('네온나', ['fairy', 'elec'], 75, 55, 75, 115, 90, 100,
+    ['neonwink', 'pixiedust', 'charm', 'fairydance', 'static', 'highvolt', 'bolt', 'shock', 'charge', 'guard'],
+    '밤 골목 간판의 네온 요정. 성인 캐릭터다. 네온 날개를 펴고 무대에 서면 간판이 모두 켜진다.'),
+  yeonji:   X('연지', ['fairy', 'spirit'], 80, 60, 80, 105, 100, 85,
+    ['lipmark', 'pixiedust', 'charm', 'fairydance', 'wisp', 'scold', 'nightmare', 'stench', 'sunbathe', 'guard'],
+    '붉은 입술의 어른 요정. 오프숄더 한복 드레스 차림이고, 황금 립스틱으로 상대의 혼을 홀린다.'),
+  }),
   // 로봇
   jabanbot: X('자판봇', ['steel', 'elec'], 95, 105, 100, 70, 75, 55,
     ['canburst', 'ironhead', 'scrap', 'hammer', 'shortfist', 'highvolt', 'shock', 'armor', 'tacks', 'guard'],
@@ -321,8 +334,13 @@ const SIGNATURE = {
   ppeondegi: ['molt', '직장인 나방', '허물을 벗고 드디어 날개를 얻었다. 그런데 정장을 입고 출근한다.', [10, 0, 0, 45, 0, 45]],
 };
 Object.assign(SIGNATURE, {
+  ...(NEW_ROSTER ? {
   neonna: ['crystalbolt', '대마도사 루미나', '수정이 벼락을 두르고 손끝에 마법진이 떠오른다. 보석 장식이 전부 마력으로 빛난다.', [10, 0, 10, 45, 15, 20]],
   yeonji: ['winksnipe', '폭풍 사수 실비아', '활과 화살에 푸른 바람이 감긴다. 룬 문양이 새겨진 경장 갑옷으로 더 가볍고 빨라졌다.', [10, 40, 10, 0, 10, 30]],
+  } : {
+  neonna: ['neonwink', '네온 디바', '날개가 세 겹으로 늘고 조명이 내려왔다. 왕관까지 불이 들어오면 공연이 시작된다.', [15, 0, 10, 40, 10, 25]],
+  yeonji: ['lipmark', '홍염 왕비', '금관을 쓰고 붉은 날개를 펼쳤다. 황금 립스틱은 왕의 지팡이가 되었다.', [10, 0, 20, 40, 30, 0]],
+  }),
   jabanbot: ['canburst', '초합금 자판왕', '어깨에 캔 발사기를 달고 금장을 둘렀다. 화면에 뜬 MAX는 가격이다.', [0, 40, 30, 0, 10, 20]],
   baedalbot: ['bulletdash', '광속 철가방', '바퀴와 몸이 합체해 오토바이가 되었다. 철가방이 둘로 늘어 이제 한 번에 두 집.', [20, 40, 25, 0, 15, 0]],
   setakbot: ['spincycle', '코인세탁 합체왕', '세탁기 세 대가 합체했다. 가운데 통이 뜨겁게 돌면 빨래방 영업 개시.', [10, 0, 20, 30, 10, 30]],
@@ -371,8 +389,13 @@ const ZMOVES = {
   eomuk: ['포장마차 무한 리필', 'water', 170, '준 피해의 절반을 회복', { drain: .5 }],
   hotteok: ['꿀 운석 낙하', 'fire', 180, '하늘에서 호떡이 떨어진다'],
   ppeondegi: ['나방 대변신', 'grass', 170, '사용 후 자신의 특공과 스피드 상승', { self: { spa: 1, spe: 1 }, selfAfter: true }],
+  ...(NEW_ROSTER ? {
   neonna: ['아르카나 썬더', 'elec', 185, '하늘에 거대한 마법진이 열리고 벼락이 쏟아진다. 30% 확률로 마비', { st: { s: 'par', ch: 30 } }],
   yeonji: ['템페스트 애로우', 'wind', 180, '폭풍을 두른 화살 한 발이 모든 것을 꿰뚫는다. 급소에 잘 맞음', { crit: true }],
+  } : {
+  neonna: ['네온 피날레', 'fairy', 180, '골목의 모든 간판이 켜진다'],
+  yeonji: ['홍염 입맞춤', 'fairy', 175, '상대 특공 하락', { foe: { spa: -1 } }],
+  }),
   jabanbot: ['캔 일제사격', 'steel', 180, '자판기 재고가 바닥날 때까지 쏜다'],
   baedalbot: ['광속 배달 완료', 'wind', 175, '도착 예정 시간 0초'],
   setakbot: ['초강력 탈수', 'water', 180, '상대 스피드 2단계 하락', { foe: { spe: -2 } }],
@@ -493,4 +516,6 @@ const STAT_NAMES = {
   zmoves: 'Z기술 사용', botWins: '골목대장 승리(난이도 무관)', draws: '1대1 무승부',
 };
 
-module.exports = { TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES };
+if (NEW_ROSTER) for (const id of ['neonna', 'yeonji']) MONSTERS[id].img = true;
+
+module.exports = { ROSTER, TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES };

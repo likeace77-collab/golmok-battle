@@ -26,6 +26,8 @@ const db = fs.existsSync(DB_FILE)
 const GIST_ID = process.env.GIST_ID || '';
 const GIST_TOKEN = process.env.GIST_TOKEN || '';
 const GIST_API = process.env.GIST_API || 'https://api.github.com';
+// 버전마다 같은 Gist 안의 다른 파일에 저장합니다 (예: db-lumina.json).
+const GIST_FILE = process.env.GIST_FILE || 'db.json';
 const gistHeaders = {
   Authorization: `Bearer ${GIST_TOKEN}`, Accept: 'application/vnd.github+json',
   'Content-Type': 'application/json', 'User-Agent': 'golmok-battle',
@@ -34,7 +36,7 @@ const gistHeaders = {
 async function loadGist() {
   const r = await fetch(`${GIST_API}/gists/${GIST_ID}`, { headers: gistHeaders });
   if (!r.ok) throw new Error(`Gist 읽기 실패: ${r.status}`);
-  const file = (await r.json()).files?.['db.json'];
+  const file = (await r.json()).files?.[GIST_FILE];
   if (!file) return; // 처음 실행
   const text = file.truncated ? await (await fetch(file.raw_url, { headers: gistHeaders })).text() : file.content;
   Object.assign(db, JSON.parse(text));
@@ -47,7 +49,7 @@ async function pushGist() {
   try {
     const r = await fetch(`${GIST_API}/gists/${GIST_ID}`, {
       method: 'PATCH', headers: gistHeaders,
-      body: JSON.stringify({ files: { 'db.json': { content: JSON.stringify(db) } } }),
+      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(db) } } }),
     });
     if (!r.ok) throw new Error(String(r.status));
   } catch (e) {
@@ -237,8 +239,8 @@ function readBody(req) {
 async function api(req, res, url) {
   const route = `${req.method} ${url.pathname}`;
   if (route === 'GET /api/data') {
-    const { TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES } = Data;
-    return json(res, 200, { TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES, inviteRequired: !!INVITE_CODE });
+    const { ROSTER, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES } = Data;
+    return json(res, 200, { ROSTER, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES, inviteRequired: !!INVITE_CODE });
   }
   if (route === 'POST /api/signup' || route === 'POST /api/login') {
     if (limited(req)) return json(res, 429, { error: '시도가 너무 많습니다. 1분 뒤에 다시 해 주세요.' });
