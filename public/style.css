@@ -58,7 +58,9 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .err { color: #b3180a; font-size: 15px; min-height: 22px; }
 
 /* 로비 */
-.profile { display: flex; gap: 14px; align-items: center; }
+.profile { display: block; }
+.profile .bcard { width: 100%; }
+.profile .muted { margin-top: 8px; }
 .ava { width: 64px; aspect-ratio: 4 / 5; flex: none; border: var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
 .ava svg { width: 100%; height: 100%; }
 .ava.lg { width: 92px; }
@@ -140,13 +142,17 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .bc-ava svg { width: 100%; height: 100%; display: block; }
 .bc-body { position: relative; z-index: 1; flex: 1; min-width: 0; }
 .bc-title { display: inline-block; max-width: 100%; padding: 2px 7px 1px; font-family: var(--ui); font-size: 13px; line-height: 1.2; color: var(--yellow); background: var(--ink); border-radius: 5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.bc-name { margin: 3px 0 2px; font-family: var(--display); font-size: 21px; line-height: 1.1; overflow-wrap: anywhere; }
+.bc-name { margin: 3px 0 2px; font-family: var(--display); font-size: 21px; line-height: 1.1; word-break: keep-all; overflow-wrap: anywhere; }
 .bc-pins { display: flex; gap: 4px; }
 .bc-pins svg { width: 24px; height: 24px; display: block; filter: drop-shadow(1px 1px 0 #1a143388); }
 .bc-rec { font-size: 13px; opacity: .85; }
 .bcard.big { padding: 12px; }
 .bcard.big .bc-ava { width: 92px; }
-.bcard.big .bc-name { font-size: 30px; }
+.bcard.big .bc-name { font-size: clamp(24px, 7.5vw, 32px); word-break: keep-all; }
+.bcard.big .bc-name.long { font-size: clamp(18px, 5.6vw, 26px); }
+.bc-name.long { font-size: 17px; }
+.bcard.big .bc-title { white-space: normal; font-size: 14px; }
+.bcard.big .bc-pins { flex-wrap: wrap; }
 .bcard.big .bc-pins svg { width: 32px; height: 32px; }
 .bcard.dark { color: #fff; }
 .bcard.dark .bc-title { color: var(--ink); background: var(--yellow); }

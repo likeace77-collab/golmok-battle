@@ -156,7 +156,7 @@ function renderLobby() {
     <section class="panel">
       <div class="profile">
         ${battleCard({ name: u.name, avatar: u.avatar, style: u.style }, 'big')}
-        <p class="muted" style="margin-top:8px">${recordText(u)}${u.stats?.streak > 1 ? `, ${u.stats.streak}연승 중` : ''}</p>
+        <p class="muted">${recordText(u)}${u.stats?.streak > 1 ? `, ${u.stats.streak}연승 중` : ''}</p>
         ${rival ? `<p class="muted">${rival}</p>` : ''}
       </div>
       <div class="nav">

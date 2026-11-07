@@ -189,6 +189,23 @@ const PIN_ART = {
   shield: '<path d="M12 2l9 3v6c0 6-4 9-9 11-5-2-9-5-9-11V5z" fill="#2F7DE1"/><path d="M12 6v12M7 10h10" stroke="#fff" stroke-width="2"/>',
   leek: '<path d="M10 22V10h4v12z" fill="#F4F2E6"/><path d="M10 10L6 2l4 3 2-4 2 4 4-3-4 8z" fill="#3FA34D"/>',
   plunger: '<path d="M11 2h2v12h-2z" fill="#C9924F"/><path d="M4 20q0-7 8-7t8 7z" fill="#D52C2C"/>',
+  thumbsup: '<path d="M3 11h4v10H3z" fill="#2F7DE1"/><path d="M7 11l4-7c2 0 3 1.500 2.500 3.500L13 10h6c1.500 0 2.500 1.500 2 3l-2 6.500c-.300 1-1.300 1.500-2.300 1.500H7z" fill="#FFE0BD"/><path d="M14 14h4M14 17h3.500" stroke-width="1.100"/>',
+  thumbsdown: '<g transform="rotate(180 12 12)"><path d="M3 11h4v10H3z" fill="#E8402C"/><path d="M7 11l4-7c2 0 3 1.500 2.500 3.500L13 10h6c1.500 0 2.500 1.500 2 3l-2 6.500c-.300 1-1.300 1.500-2.300 1.500H7z" fill="#FFE0BD"/><path d="M14 14h4M14 17h3.500" stroke-width="1.100"/></g>',
+  golddown: '<circle cx="12" cy="12" r="11" fill="#1a1433"/><g transform="rotate(180 12 12) translate(2.500 2.500) scale(.8)"><path d="M3 11h4v10H3z" fill="#E8402C"/><path d="M7 11l4-7c2 0 3 1.500 2.500 3.500L13 10h6c1.500 0 2.500 1.500 2 3l-2 6.500c-.300 1-1.300 1.500-2.300 1.500H7z" fill="#FFD23F"/></g><path d="M4 5l1 2M20 5l-1 2M3 13h2M19 13h2" stroke="#FFD23F" stroke-width="1.400"/>',
+  shades: '<path d="M2 9h20" stroke-width="2"/><path d="M3 9h8q0 7-4.500 7T3 9zM13 9h8q0 7-4.500 7T13 9z" fill="#1a1433"/><path d="M5 11l2 2M15 11l2 2" stroke="#fff" stroke-width="1.200"/>',
+  swords: '<path d="M4 3l12 12M20 3L8 15" stroke="#C7CDD6" stroke-width="3"/><path d="M4 3l12 12M20 3L8 15" stroke-width=".8"/><path d="M14 17l3-3M10 17l-3-3" stroke="#E7B23A" stroke-width="2.500"/><path d="M17 17l3 3M7 17l-3 3" stroke="#8B5A2B" stroke-width="2.500"/>',
+  wings: '<path d="M12 12C9 6 4 4 1 5c1 4 3 6 5 7-2 0-3 1-4 2 3 2 7 2 10-2zM12 12c3-6 8-8 11-7-1 4-3 6-5 7 2 0 3 1 4 2-3 2-7 2-10-2z" fill="#fff"/><circle cx="12" cy="13" r="2.200" fill="#FFD23F"/>',
+  diamond: '<path d="M7 3h10l5 6-10 13L2 9z" fill="#BFE4FF"/><path d="M2 9h20M7 3l5 6 5-6M8 9l4 13 4-13" fill="none" stroke-width="1"/><path d="M9 5l2 2" stroke="#fff" stroke-width="1.500"/>',
+  boltcrown: '<path d="M3 20l-1-13 6 5 4-9 4 9 6-5-1 13z" fill="#9A4FB8"/><path d="M13 9l-3 5h3l-2 5 5-6h-3l2-4z" fill="#FFE45C" stroke-width="1"/>',
+  flameskull: '<path d="M6 10C5 6 7 2 9 1c0 3 1 4 3 5 0-3 2-5 4-5 1 3 3 6 2 9z" fill="#F2622E"/><path d="M12 7c-4.500 0-7 2.500-7 6.500 0 2.500 1.500 3.500 2.500 4.500v3h9v-3c1-1 2.500-2 2.500-4.500C19 9.500 16.500 7 12 7z" fill="#F4ECD8"/><circle cx="9.300" cy="13.500" r="2" fill="#F2622E"/><circle cx="14.700" cy="13.500" r="2" fill="#F2622E"/><path d="M10.500 18.500v2M13.500 18.500v2" stroke-width="1.100"/>',
+  target: '<circle cx="11" cy="13" r="9" fill="#fff"/><circle cx="11" cy="13" r="6" fill="#E8402C"/><circle cx="11" cy="13" r="2.500" fill="#fff"/><path d="M11 13L22 2" stroke-width="2"/><path d="M19 2h3v3" fill="none" stroke="#E8402C" stroke-width="2"/>',
+  meteor: '<path d="M2 22l9-9M5 22l7-7M2 19l7-7" stroke="#F28A1E" stroke-width="2"/><path d="M16 2l1.800 3.800 4.200.6-3 2.900.7 4.100-3.700-2-3.700 2 .7-4.100-3-2.900 4.200-.6z" fill="#FFD23F"/>',
+  eye: '<path d="M1 12q11-11 22 0-11 11-22 0z" fill="#fff"/><circle cx="12" cy="12" r="5" fill="#9A4FB8"/><circle cx="12" cy="12" r="2" fill="#1a1433"/><circle cx="10.500" cy="10.500" r="1" fill="#fff" stroke="none"/><path d="M12 1v3M12 20v3M3 4l2 2M21 4l-2 2" stroke="#FFD23F" stroke-width="1.500"/>',
+  lol: '<path d="M3 4h18v12h-9l-5 5v-5H3z" fill="#fff"/><text x="12" y="13.500" font-size="8.500" text-anchor="middle" font-weight="900" fill="#1a1433" stroke="none">ㅋㅋ</text>',
+  zzz: '<text x="3" y="20" font-size="12" font-weight="900" fill="#BFE4FF" stroke="#1a1433" stroke-width="1">Z</text><text x="11" y="13" font-size="9" font-weight="900" fill="#BFE4FF" stroke="#1a1433" stroke-width="1">Z</text><text x="17" y="7" font-size="7" font-weight="900" fill="#BFE4FF" stroke="#1a1433" stroke-width=".8">z</text>',
+  sweat: '<path d="M12 2c5 7 7 10 7 13a7 7 0 0 1-14 0c0-3 2-6 7-13z" fill="#7fc8e8"/><path d="M9 14q0 3 3 4" fill="none" stroke="#fff" stroke-width="1.500"/>',
+  poop: '<path d="M4 20q-3-4 2-6-2-4 3-5 0-5 4-6-1 3 2 5 4 1 3 5 5 2 2 7z" fill="#8B5A2B"/><circle cx="10" cy="15" r="1.600" fill="#fff"/><circle cx="15" cy="15" r="1.600" fill="#fff"/><circle cx="10" cy="15.300" r=".7" fill="#1a1433" stroke="none"/><circle cx="15" cy="15.300" r=".7" fill="#1a1433" stroke="none"/><path d="M10 18q2.500 1.500 5 0" fill="none" stroke-width="1"/>',
+  kingbad: '<path d="M2 3h20v13h-8l-4 5v-5H2z" fill="#E8402C"/><text x="12" y="12.800" font-size="6.300" text-anchor="middle" font-weight="900" fill="#fff" stroke="none">킹받네</text>',
   medal: '<path d="M7 2h4l2 7H9zM13 2h4l-2 7h-4z" fill="#2F7DE1"/><circle cx="12" cy="15" r="6" fill="#C7CDD6"/><text x="12" y="18" font-size="7" text-anchor="middle" font-weight="900" fill="#1a1433" stroke="none">2</text>',
 };
 const pinSVG = (id) => `<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#1a1433" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">${PIN_ART[id] || ''}</g></svg>`;
@@ -207,7 +224,7 @@ function battleCard(p, size = '') {
     <div class="bc-ava">${avatarSVG(p.avatar)}</div>
     <div class="bc-body">
       <span class="bc-title">${esc(title.n)}</span>
-      <div class="bc-name">${esc(p.name)}</div>
+      <div class="bc-name ${[...p.name].length > 6 ? 'long' : ''}">${esc(p.name)}</div>
       ${pins.length ? `<div class="bc-pins">${pins.map(pinSVG).join('')}</div>` : ''}
       ${p.record ? `<div class="bc-rec">${p.record}</div>` : ''}
     </div>

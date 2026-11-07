@@ -369,6 +369,13 @@ const COSMETICS = {
     C('trophy', '트로피', ['wins', 10]), C('crown', '왕관', ['wins', 30]), C('leek', '대파', ['p0', 1]),
     C('medal', '은메달', ['p1', 3]), C('shield', '방패', ['p2', 5]), C('skull', '해골', ['p3', 1]), C('horn', '악마 뿔', ['p3', 5]),
     C('gem', '메가 결정', ['megas', 1]), C('rainbow', '무지개 결정', ['megas', 25]), C('hands', '악수', ['tagGames', 1]), C('duo', '콤비 별', ['tagWins', 5]),
+    // 간지
+    C('thumbsup', '따봉', ['wins', 3]), C('shades', '선글라스', ['games', 15]), C('swords', '쌍검', ['wins', 20]),
+    C('wings', '천사 날개', ['wins', 50]), C('diamond', '다이아몬드', ['wins', 75]), C('boltcrown', '번개 왕관', ['streakBest', 10]),
+    C('flameskull', '불타는 해골', ['p3', 3]), C('target', '백발백중', ['p2', 10]), C('meteor', '별똥별', ['tagWins', 10]), C('eye', '제3의 눈', ['megas', 50]),
+    // 역따봉과 병맛
+    C('lol', 'ㅋㅋ', null), C('zzz', '쿨쿨', null), C('sweat', '식은땀', null),
+    C('thumbsdown', '역따봉', ['losses', 1]), C('poop', '똥', ['losses', 5]), C('kingbad', '킹받네', ['losses', 15]), C('golddown', '황금 역따봉', ['losses', 30]),
   ],
 };
 const STAT_NAMES = {
