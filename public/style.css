@@ -340,6 +340,21 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .bc-cosmic .bc-name { color: #fff; text-shadow: 0 0 8px #ff4fc0, 0 0 14px #37e0ff; }
 @media (prefers-reduced-motion: reduce) { .bcard, .bcard::before, .bcard::after { animation: none !important; } }
 
+/* 훈련장 카드 */
+.bc-dojo { background-color: #d9c48a; background-image: linear-gradient(90deg, #b9a46a 2px, transparent 2px), linear-gradient(#b9a46a 2px, transparent 2px); background-size: 48px 100%, 100% 24px; box-shadow: inset 0 0 0 5px #3f6b3a, 3px 3px 0 var(--ink); }
+.bc-sandbag { background: radial-gradient(circle at 85% 50%, #D9B66A 0 30px, #a8843e 31px 34px, transparent 35px), repeating-linear-gradient(45deg, #3b2413 0 6px, #4a2f1a 6px 12px); }
+.bc-dmgmeter { background: #0e0a1c; }
+.bc-dmgmeter::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, #0000 0 6px, #0e0a1c 6px 9px), linear-gradient(90deg, #37FF8B, #FFE45C 50%, #FF3B5C) 0 100% / 100% 16% no-repeat; animation: bcMeter 1.6s ease-in-out infinite alternate; }
+@keyframes bcMeter { from { clip-path: inset(84% 70% 0 0); } to { clip-path: inset(84% 0 0 0); } }
+.bc-dmgmeter .bc-name { color: #8bffb8; text-shadow: 0 0 6px #37FF8B; }
+.bc-shatter { background: #1a1433; }
+.bc-shatter::before { content: ''; position: absolute; inset: 0; background: conic-gradient(from 10deg at 80% 50%, #fff3 0 8deg, #0000 8deg 40deg, #fff2 40deg 46deg, #0000 46deg 95deg, #fff3 95deg 100deg, #0000 100deg 160deg, #fff2 160deg 168deg, #0000 168deg 230deg, #fff3 230deg 236deg, #0000 236deg 300deg, #fff2 300deg 306deg, #0000 306deg); animation: bcShake .5s steps(2) infinite; }
+@keyframes bcShake { 50% { transform: translate(1px, -1px); } }
+.bc-millon { background: radial-gradient(circle at 82% 50%, #fff 0 6%, #FFE45C 12%, #ff6a00 26%, #8f0f0f 45%, #1a0505 70%); }
+.bc-millon::before { content: ''; position: absolute; right: -40%; top: -100%; width: 140%; aspect-ratio: 1; background: repeating-conic-gradient(#ffe45c66 0 6deg, #0000 6deg 18deg); animation: bcSpin 5s linear infinite; }
+.bc-millon::after { content: '1,000,000'; position: absolute; right: 6px; bottom: 4px; font: 900 14px/1 var(--ui); color: #FFE45C; -webkit-text-stroke: 1px var(--ink); }
+.bc-millon .bc-name { color: #fff; text-shadow: 2px 2px 0 var(--ink), 0 0 10px #ff6a00; }
+
 .preview-card { margin-bottom: 12px; }
 .styletabs button { white-space: nowrap; padding: 8px 2px; font-size: 16px; }
 .styletabs { background: var(--paper); border: var(--line); border-radius: 10px; padding: 4px 4px 0; margin-bottom: 12px; }
@@ -616,3 +631,24 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .ctitle { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; flex: none; max-width: 58%; padding: 4px 2px; }
 .ctitle small { font-size: 11px; color: #5f5870; }
 @media (prefers-reduced-motion: reduce) { .tt, .tt *, .tt::before, .tt::after { animation: none !important; } }
+
+/* 훈련장 */
+.bhead.train { flex-wrap: wrap; }
+.bhead.train .who { font-size: 18px; }
+.bhead.train .who small { display: block; font-family: var(--body); font-size: 12px; opacity: .8; }
+.dmeter { display: flex; gap: 6px; }
+.dmeter span { min-width: 64px; padding: 3px 7px; text-align: right; background: var(--ink); border: 2px solid #fff3; border-radius: 7px; line-height: 1.1; }
+.dmeter small { display: block; font-size: 10px; color: #c9c2dd; }
+.dmeter b { font-size: 17px; color: var(--yellow); font-variant-numeric: tabular-nums; }
+.dmeter.record #dm-best { color: #FF5C8A; animation: dmPop .6s ease-out; display: inline-block; }
+@keyframes dmPop { 40% { transform: scale(1.35); } }
+.moves.ten { grid-template-columns: 1fr 1fr; gap: 6px; }
+.moves.ten .mb { min-height: 66px; padding: 5px 8px; }
+.moves.ten .mb b { font-size: 15px; }
+.moves.ten .mb small.eff { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.swgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+.swgrid button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px 5px; background: #fff; border: 2px solid var(--ink); border-radius: 8px; }
+.swgrid button:disabled { opacity: .45; }
+.swgrid svg { width: 100%; max-width: 60px; aspect-ratio: 1; }
+.swgrid span { font-size: 11px; line-height: 1.15; word-break: keep-all; text-align: center; }
+.train-card { background: linear-gradient(135deg, #fff4d8, #ffe2b8); }

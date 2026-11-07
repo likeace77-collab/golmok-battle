@@ -48,6 +48,26 @@ const freshVolatile = () => ({
   seeded: false, flinched: false, protecting: false, protectStreak: 0,
 });
 
+// 훈련장 더미: 타입 없음, 체력 1000. 공격하지 않고, 부서지면 바로 새 더미가 나옵니다.
+const DUMMY_HP = 1000;
+function makeDummy() {
+  return {
+    species: 'dummy', name: '훈련용 더미', types: [], mega: false,
+    stats: { hp: DUMMY_HP, atk: 1, def: 100, spa: 1, spd: 100, spe: 1 },
+    hp: DUMMY_HP, maxHp: DUMMY_HP, status: null, statusTurns: 0, moves: [], ...freshVolatile(),
+  };
+}
+// 훈련장: 모든 요괴가 기술 10개를 다 가진 채로 나옵니다.
+function createTraining(player, seed) {
+  const team = Object.entries(MONSTERS).map(([species, m]) => ({ species, moves: m.moves }));
+  const b = createBattle([{ ...player, team }, { name: '훈련장', avatar: null, style: null, deck: '더미', team: [] }], seed);
+  b.training = true;
+  b.sides[1].mons = [makeDummy()];
+  b.dummy = { total: 0, best: 0, turn: 0, hits: 0, breaks: 0 };
+  b.needs = [true, false];
+  return b;
+}
+
 function createBattle(players, seed = (Math.random() * 2 ** 31) | 0, { preview = false } = {}) {
   const b = {
     seed, turn: 1, phase: preview ? 'preview' : 'choose', winner: null, weather: null, weatherTurns: 0,
@@ -154,6 +174,7 @@ function speedOf(b, s) {
 const stageMul = (n) => (n >= 0 ? (2 + n) / 2 : 2 / (2 - n));
 
 function runTurn(b, ev) {
+  if (b.training) b.dummy.turn = 0;
   const acts = seats(b).filter((s) => b.pending[s]).map((s) => ({ s, a: b.pending[s] }));
   for (const { s, a } of acts) if (a.mega) doMega(b, s, ev);
   // 교체가 먼저
@@ -173,7 +194,24 @@ function runTurn(b, ev) {
     if (checkOver(b, ev)) break;
   }
   if (b.phase !== 'over') endOfTurn(b, ev);
+  if (b.training) trainingReset(b, ev);
   b.turn++;
+}
+
+// 훈련장에서는 턴이 끝날 때마다 내 요괴가 다 회복되고 PP, 메가진화, Z기술도 다시 쓸 수 있습니다.
+function trainingReset(b, ev) {
+  const d = b.dummy;
+  if (d.turn > d.best) d.best = d.turn;
+  ev.push({ t: 'dummy', turn: d.turn, total: d.total, best: d.best });
+  const side = b.sides[0];
+  side.megaUsed = false; side.zUsed = false;
+  side.mons.forEach((m, i) => {
+    for (const x of m.moves) x.pp = MOVES[x.id].pp;
+    if (m.hp < m.maxHp || m.status) {
+      m.hp = m.maxHp; m.status = null; m.statusTurns = 0; m.faintedShown = false;
+      if (i === side.active) hpEvent(b, 0, m, ev, { healed: 1, quiet: true });
+    }
+  });
 }
 
 function msg(ev, text) { ev.push({ t: 'msg', text }); }
@@ -186,6 +224,16 @@ function hurt(b, s, m, amount, ev, extra) {
   const dmg = Math.min(m.hp, Math.max(1, Math.floor(amount)));
   m.hp -= dmg;
   hpEvent(b, s, m, ev, { dmg, ...extra });
+  if (b.training && m.species === 'dummy') {
+    const d = b.dummy;
+    d.total += dmg; d.turn += dmg; d.hits++;
+    if (m.hp === 0) { // 부서지면 새 더미
+      d.breaks++;
+      Object.assign(m, makeDummy());
+      ev.push({ t: 'msg', text: '더미가 부서졌다! 새 더미가 나왔다.' });
+      hpEvent(b, s, m, ev, { healed: DUMMY_HP });
+    }
+  }
   return dmg;
 }
 function heal(b, s, m, amount, ev) {
@@ -498,6 +546,7 @@ function endOfTurn(b, ev) {
 
 function checkOver(b, ev) {
   if (b.phase === 'over') return true;
+  if (b.training) return false;
   const out = [0, 1].map((t) => seats(b).filter((i) => teamOf(b, i) === t).every((i) => b.sides[i].mons.every((m) => !alive(m))));
   if (!out[0] && !out[1]) return false;
   b.phase = 'over';
@@ -510,6 +559,7 @@ function checkOver(b, ev) {
 }
 
 function updatePhase(b, ev) {
+  if (b.training) { b.phase = 'choose'; b.needs = [true, false]; return; }
   if (checkOver(b, ev)) { b.needs = b.needs.map(() => false); return; }
   const down = seats(b).map((s) => !alive(activeOf(b, s)) && b.sides[s].mons.some(alive));
   if (down.some(Boolean)) { b.phase = 'switch'; b.needs = down; }
@@ -547,6 +597,7 @@ function viewFor(b, s) {
     zUsed: !!me.zUsed,
     megaUsed: !!me.megaUsed,
     lead: preview && lock ? b.pending[s].index : null,
+    training: b.training ? { ...b.dummy } : null,
     me: {
       name: me.name, avatar: me.avatar, style: me.style, deck: me.deck, active: me.active, hazard: me.hazard,
       mons: me.mons.map((m) => ({
@@ -777,5 +828,5 @@ function botTeam(level, size, enemy = []) {
 }
 
 module.exports = {
-  createBattle, choose, legalActions, viewFor, botAction, botTeam, forfeit, teamOf, canZ, calcStats, effOf, josa, activeOf, canMega,
+  createBattle, createTraining, DUMMY_HP, choose, legalActions, viewFor, botAction, botTeam, forfeit, teamOf, canZ, calcStats, effOf, josa, activeOf, canMega,
 };

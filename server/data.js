@@ -417,6 +417,12 @@ const COSMETICS = {
     C('lossicon', '패배의 아이콘', ['losses', 50], { tier: 4, glow: '#7FC8E8' }),
     C('god', '골목대전의 신', ['wins', 200], { tier: 5, glow: '#FFF27A' }), C('demonslayer', '마왕 퇴치자', ['p3', 30], { tier: 5, glow: '#B44BFF' }),
     C('invincible', '천하무적', ['streakBest', 20], { tier: 5, glow: '#37E0FF' }), C('bondmax', '유대의 극치', ['zmoves', 100], { tier: 5, glow: '#FF5CA8' }),
+    // 훈련장 (더미 누적 피해, 한 턴 최고 피해)
+    C('dummy1', '허수아비 두들기기', ['dummyDmg', 1000], { tier: 0 }), C('dummy2', '샌드백 킬러', ['dummyDmg', 10000], { tier: 1 }),
+    C('dummy3', '훈련장 단골', ['dummyDmg', 50000], { tier: 2 }), C('dummy4', '더미 파괴자', ['dummyDmg', 200000], { tier: 3 }),
+    C('dummy5', '훈련장의 악몽', ['dummyDmg', 500000], { tier: 4, glow: '#FF8A00' }), C('dummy6', '백만 데미지', ['dummyDmg', 1000000], { tier: 5, glow: '#FF3B5C' }),
+    C('onehit1', '한 방 있는 녀석', ['dummyBest', 300], { tier: 2 }), C('onehit2', '원펀맨', ['dummyBest', 600], { tier: 4, glow: '#FFE45C' }),
+    C('onehit3', '더미 일격 분쇄', ['dummyBest', 1000], { tier: 5, glow: '#37E0FF' }),
   ],
   cards: [
     C('basic', '기본 딱지', null), C('blue', '망점 블루', null, { dark: true }), C('red', '집중선 레드', null, { dark: true }),
@@ -434,6 +440,10 @@ const COSMETICS = {
     C('flame', '불꽃 오라', ['p2', 10], { dark: true }), C('crt', '고장난 TV', ['losses', 25], { dark: true }), C('holo', '홀로그램', ['zmoves', 30]),
     C('retro', '레트로 오락실', ['games', 40], { dark: true }), C('galaxy', '은하수', ['wins', 40], { dark: true }), C('royal', '로열 퍼플', ['wins', 60], { dark: true }),
     C('zpower', 'Z 파워', ['zmoves', 50], { dark: true }), C('cosmic', '우주 왕좌', ['wins', 150], { dark: true }),
+    // 훈련장
+    C('dojo', '훈련장 다다미', ['dummyDmg', 5000]), C('sandbag', '샌드백', ['dummyDmg', 30000], { dark: true }),
+    C('dmgmeter', '데미지 미터', ['dummyDmg', 150000], { dark: true }), C('shatter', '산산조각', ['dummyBest', 500], { dark: true }),
+    C('millon', '백만 폭발', ['dummyDmg', 1000000], { dark: true }),
   ],
   pins: [
     C('star', '별', null), C('heart', '하트', null), C('sprout', '새싹', null),
@@ -459,12 +469,16 @@ const COSMETICS = {
     C('zgold', '황금 Z', ['zmoves', 40]), C('robot', '로봇', ['botWins', 30]), C('devil', '꼬마 악마', ['p3', 15]), C('halo', '천사 링', ['tagWins', 20]),
     C('cry', '눈물 콧물', ['losses', 20]), C('angry', '빡침', ['losses', 40]), C('cool', '쿨가이', ['wins', 40]), C('lovey', '하트 뿅뿅', ['tagGames', 2]),
     C('king', '체스 킹', ['wins', 90]),
+    // 훈련장
+    C('dummy', '훈련용 더미', ['dummyDmg', 1000]), C('glove', '권투 글러브', ['dummyDmg', 20000]), C('dumbbell', '아령', ['dummyDmg', 80000]),
+    C('crack', '금 간 더미', ['dummyBest', 400]), C('dmg999', '9999', ['dummyDmg', 300000]), C('goldglove', '황금 글러브', ['dummyDmg', 1000000]),
   ],
 };
 const STAT_NAMES = {
   wins: '1대1 승리', losses: '1대1 패배', games: '1대1 대전', streakBest: '최고 연승',
   p0: '골목대장(쉬움) 승리', p1: '골목대장(보통) 승리', p2: '골목대장(어려움) 승리', p3: '골목대장(지옥) 승리',
   tagGames: '태그 대전', tagWins: '태그 승리', megas: '메가진화 사용',
+  dummyDmg: '훈련장 누적 피해', dummyBest: '훈련장 한 턴 최고 피해',
   zmoves: 'Z기술 사용', botWins: '골목대장 승리(난이도 무관)', draws: '1대1 무승부',
 };
 

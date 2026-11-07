@@ -241,6 +241,18 @@ Object.assign(ART, {
   ${eyes(52,70,96,6)}${frown(61,104,4)}`),
 });
 
+// 훈련장 더미: 나무 기둥에 꽂힌 짚 자루, 가슴에 과녁
+ART.dummy = wrap(`
+  <path d="M56 70h8v44h-8z" fill="#8B5A2B"/><path d="M40 114h40" stroke-width="5"/>
+  <path d="M30 52h60" stroke-width="7" stroke="#8B5A2B"/><path d="M30 52h60" stroke-width="2" fill="none"/>
+  <path d="M38 46q-4 30 8 40h28q12-10 8-40-22-8-44 0z" fill="#D9B66A"/>
+  <path d="M42 60l6 3M78 60l-6 3M44 74l6-2M76 74l-6-2" fill="none" stroke="#a8843e" stroke-width="2"/>
+  <circle cx="60" cy="66" r="12" fill="#fff"/><circle cx="60" cy="66" r="8" fill="#E8402C"/><circle cx="60" cy="66" r="3.500" fill="#fff"/>
+  <circle cx="60" cy="28" r="18" fill="#D9B66A"/>
+  <path d="M51 22l6 6M57 22l-6 6M63 22l6 6M69 22l-6 6" fill="none" stroke-width="2.500"/>
+  <path d="M52 37q8-4 16 0" fill="none" stroke-width="2.500"/><path d="M56 35v4M60 34v4M64 35v4" stroke-width="1.500"/>
+  <path d="M43 18q-6-8 0-12M77 18q6-8 0-12" fill="none" stroke="#a8843e" stroke-width="2.500"/>`);
+
 function monsterSVG(id, cls = '', mega = false) {
   if (mega) return `<svg class="${cls}" viewBox="-6 -6 212 212" aria-hidden="true">${MEGA_ART[id]}</svg>`;
   if (NEW_ART[id]) return `<svg class="${cls}" viewBox="-4 -6 208 212" aria-hidden="true">${NEW_ART[id]}</svg>`;

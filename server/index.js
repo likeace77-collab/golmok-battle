@@ -98,7 +98,7 @@ const randomAvatar = (any = false) => Object.fromEntries(
 );
 const pick = (list) => list[crypto.randomInt(list.length)].id;
 const randomStyle = () => ({ title: pick(Data.COSMETICS.titles), card: pick(Data.COSMETICS.cards), pins: [pick(Data.COSMETICS.pins), pick(Data.COSMETICS.pins)] });
-const newStats = () => ({ games: 0, streak: 0, streakBest: 0, p0: 0, p1: 0, p2: 0, p3: 0, tagGames: 0, tagWins: 0, megas: 0, zmoves: 0, botWins: 0 });
+const newStats = () => ({ games: 0, streak: 0, streakBest: 0, p0: 0, p1: 0, p2: 0, p3: 0, tagGames: 0, tagWins: 0, megas: 0, zmoves: 0, botWins: 0, dummyDmg: 0, dummyBest: 0 });
 const defaultStyle = () => ({ title: 'rookie', card: 'basic', pins: [] });
 const statOf = (u, k) => (k === 'wins' || k === 'losses' || k === 'draws' ? u[k] || 0 : u.stats?.[k] || 0);
 const isUnlocked = (u, item) => !item.cond || statOf(u, item.cond[0]) >= item.cond[1];
@@ -351,7 +351,7 @@ function broadcastLobby() {
     slots: r.slots.map((k) => (k ? { key: k, name: db.users[k].name, avatar: db.users[k].avatar } : null)),
   }));
   const live = [...battles.values()].filter((r) => !r.ended).map((r) => ({
-    id: r.id, tag: r.tag, practice: isPractice(r), watchers: r.spectators.size,
+    id: r.id, tag: r.tag, practice: isPractice(r), training: !!r.training, watchers: r.spectators.size,
     names: r.b.sides.map((x) => x.name),
   }));
   for (const [k, ws] of online) {
@@ -379,6 +379,31 @@ const BOT = 'bot';
 const isPractice = (room) => !room.tag && room.keys.includes(BOT);
 const BOT_LEVELS = ['쉬움', '보통', '어려움', '지옥'];
 
+// 훈련장: 더미와 1대1. 시간 제한, 승패, 기록 없음. 더미에게 준 피해만 쌓입니다.
+function startTraining(key) {
+  const u = db.users[key];
+  const room = { id: crypto.randomUUID(), keys: [key, BOT], b: E.createTraining({ name: u.name, avatar: u.avatar, style: u.style, deck: '모든 요괴' }), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: 0, tag: false, training: true, counted: 0, spectators: new Set() };
+  battles.set(room.id, room);
+  inBattle.set(key, room); clearChallenges(key); removeFromTag(key); stopWatching(key);
+  syncBattle(room, 0);
+  broadcastLobby();
+}
+
+// 더미 피해를 계정 기록에 더하고, 새로 열린 꾸미기를 알려 줍니다.
+function countTraining(room) {
+  const key = room.keys[0], u = db.users[key], d = room.b.dummy;
+  const before = unlockedIds(u);
+  u.stats.dummyDmg += d.total - room.counted;
+  room.counted = d.total;
+  u.stats.dummyBest = Math.max(u.stats.dummyBest, d.best);
+  const fresh = unlockedIds(u).filter((x) => !before.includes(x));
+  save();
+  send(online.get(key), { t: 'me', user: publicUser(u) });
+  if (fresh.length) toast(key, `새로 열림: ${fresh.map((x) => x.split(':')[1]).join(', ')}`);
+}
+const KIND_NAME = { titles: '칭호', cards: '전투카드', pins: '핀' };
+const unlockedIds = (u) => Object.entries(Data.COSMETICS).flatMap(([kind, list]) => list.filter((x) => x.cond && isUnlocked(u, x)).map((x) => `${kind}:${KIND_NAME[kind]} ${x.n}`));
+
 function startBattle(keys, size, level = 1, tag = false) {
   const foeDeck = (i) => {
     const mine = tag ? (i < 2 ? 0 : 1) : i;
@@ -404,7 +429,7 @@ function syncBattle(room, s) {
   send(online.get(k), {
     t: 'battle', view: E.viewFor(room.b, s), remain: remaining(room),
     oppOnline: room.keys.every((x) => x === BOT || online.has(x)),
-    practice: isPractice(room), tag: room.tag,
+    practice: isPractice(room), tag: room.tag, training: !!room.training,
   });
 }
 
@@ -498,6 +523,7 @@ function pumpBot(room) {
 
 function afterTurn(room, events) {
   armTimer(room);
+  if (room.training) countTraining(room);
   room.keys.forEach((k, s) => {
     if (k === BOT) return;
     send(online.get(k), { t: 'turn', events, view: E.viewFor(room.b, s), remain: remaining(room) });
@@ -546,6 +572,7 @@ function onMessage(key, msg) {
     }
     case 'forfeit': {
       if (!room) return;
+      if (room.training) { dissolve(room); send(online.get(key), { t: 'kicked', text: '훈련장에서 나왔습니다.' }); break; }
       if (room.tag) return seatToBot(room, key, '대전에서 나왔습니다. 골목대장이 자리를 맡았습니다.');
       const events = E.forfeit(room.b, room.keys.indexOf(key));
       afterTurn(room, events);
@@ -594,6 +621,11 @@ function onMessage(key, msg) {
       if (short) return toast(key, `${db.users[short].name}님의 덱에 요괴가 3마리 있어야 합니다.`);
       tagRooms.delete(r.id);
       startBattle(r.slots.map((k) => k || BOT), 3, r.level, true);
+      break;
+    }
+    case 'training': {
+      if (room) return;
+      startTraining(key);
       break;
     }
     case 'practice': {

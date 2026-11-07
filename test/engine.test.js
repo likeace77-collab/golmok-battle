@@ -381,3 +381,25 @@ test('봇끼리 3000판: 항상 끝나고 예외가 없으며, 체력이 범위�
   assert.ok(rate[0][1] < 72, `밸런스 이상: ${rate[0]}`);
   assert.ok(rate[rate.length - 1][1] > 28, `밸런스 이상: ${rate[rate.length - 1]}`);
 });
+
+test('훈련장: 모든 요괴와 기술 10개, 더미는 1000 체력에 안 끝남', () => {
+  const b = E.createTraining({ name: '철수', avatar: {}, style: {}, deck: '모든 요괴' }, 7);
+  const v = E.viewFor(b, 0);
+  assert.strictEqual(v.me.mons.length, Object.keys(MONSTERS).length);
+  assert.ok(v.me.mons.every((m) => m.moves.length === 10));
+  assert.strictEqual(v.opp.active.maxHp, 1000);
+  assert.deepStrictEqual(v.opp.active.types, []);
+  let total = 0;
+  for (let t = 0; t < 300; t++) {
+    const legal = E.legalActions(b, 0);
+    const a = legal[t % legal.length];
+    const cv = E.viewFor(b, 0);
+    const r = E.choose(b, 0, { ...a, z: t % 7 === 0 && a.type === 'move', mega: cv.canMega && t % 5 === 0 && a.type === 'move' });
+    assert.ok(r.ok, `훈련장 행동 실패 ${t}`);
+    for (const e of r.events) if (e.t === 'hp' && e.side === 1 && e.dmg) total += e.dmg;
+    assert.strictEqual(b.phase, 'choose');
+  }
+  assert.strictEqual(b.dummy.total, total);
+  assert.ok(b.dummy.breaks > 0, '더미가 한 번도 안 부서짐');
+  assert.ok(E.viewFor(b, 0).canZ && E.viewFor(b, 0).canMega, '턴마다 Z, 메가 다시 가능해야 함');
+});

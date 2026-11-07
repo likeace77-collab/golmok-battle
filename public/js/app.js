@@ -104,7 +104,7 @@ function liveHTML(L) {
   const list = (L.live || []);
   return `<section class="panel"><h2>진행 중인 대전</h2>
     ${list.length ? list.map((r) => `<div class="player"><div class="nm">${r.names.map(esc).join(r.tag ? ', ' : ' 대 ')}
-      <small>${r.tag ? '태그 2대2' : r.practice ? '연습전' : '1대1'}${r.watchers ? `, ${r.watchers}명 관전 중` : ''}</small></div>
+      <small>${r.tag ? '태그 2대2' : r.training ? '훈련장' : r.practice ? '연습전' : '1대1'}${r.watchers ? `, ${r.watchers}명 관전 중` : ''}</small></div>
       <button class="btn small" data-watch="${esc(r.id)}" ${r.names.includes(G.user.name) ? 'disabled' : ''}>관전</button></div>`).join('')
       : '<p class="muted">지금 진행 중인 대전이 없습니다.</p>'}</section>`;
 }
@@ -197,6 +197,12 @@ function renderLobby() {
       <p class="muted" style="margin:6px 0 10px">${BOT_LEVELS[G.botLevel][1]}</p>
       <button class="btn wide mint" id="go-bot">골목대장(${BOT_LEVELS[G.botLevel][0]})과 ${G.size}대${G.size}</button>
     </section>
+    <section class="panel train-card">
+      <h2>훈련장</h2>
+      <p class="muted" style="margin-bottom:10px">체력 1000, 타입 없는 더미를 마음껏 때려 보세요. 모든 요괴로 바꿀 수 있고 기술 10개를 전부 쓸 수 있습니다. 준 피해가 쌓이면 훈련장 칭호, 전투카드, 핀이 열립니다.</p>
+      <p class="muted" style="margin-bottom:10px">누적 피해 <b>${(u.stats?.dummyDmg || 0).toLocaleString('ko-KR')}</b>, 한 턴 최고 <b>${(u.stats?.dummyBest || 0).toLocaleString('ko-KR')}</b></p>
+      <button class="btn wide" id="go-train">훈련장 들어가기</button>
+    </section>
     <p style="text-align:center;margin-top:16px"><button class="btn small paper" id="logout">로그아웃</button></p>`;
   app.querySelector('#go-team').onclick = showDecks;
   app.querySelectorAll('[data-watch]').forEach((b) => { b.onclick = () => wsSend({ t: 'spectate', id: b.dataset.watch }); });
@@ -209,6 +215,7 @@ function renderLobby() {
   app.querySelector('#go-dex').onclick = showDex;
   app.querySelector('#go-players').onclick = showPlayers;
   app.querySelector('#go-bot').onclick = () => wsSend({ t: 'practice', size: G.size, level: G.botLevel });
+  app.querySelector('#go-train').onclick = () => wsSend({ t: 'training' });
   app.querySelectorAll('[data-level]').forEach((b) => {
     b.onclick = () => {
       G.botLevel = +b.dataset.level;
@@ -235,7 +242,8 @@ function renderLobby() {
 function condText(item) {
   if (!item.cond) return '처음부터 사용 가능';
   const [k, n] = item.cond;
-  return `${G.data.STAT_NAMES[k]} ${n}${k === 'streakBest' ? '연승' : '회'} (${Math.min(statOf(G.user, k), n)}/${n})`;
+  const dmg = k.startsWith('dummy'), f = (x) => x.toLocaleString('ko-KR');
+  return `${G.data.STAT_NAMES[k]} ${f(n)}${k === 'streakBest' ? '연승' : dmg ? '' : '회'} (${f(Math.min(statOf(G.user, k), n))}/${f(n)})`;
 }
 
 function showAvatar() {
