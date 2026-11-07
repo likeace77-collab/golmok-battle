@@ -6,14 +6,32 @@ const HAIR_C = ['#1a1433', '#4A2C1A', '#8B5A2B', '#D9A441', '#E8402C', '#2F7DE1'
   '#F27FA5', '#9A4FB8', '#B8C2CC', '#F28A1E', '#6CE0C0', '#2a3a8a', '#7a1f2a', '#FFE45C'];
 const CLOTH_C = ['#E8402C', '#2F7DE1', '#3FA34D', '#F2B705', '#9A4FB8', '#FFFFFF', '#2B2B38', '#F27FA5',
   '#3CC9A7', '#F28A1E', '#7C8798', '#8B5A2B', '#1F2A6C', '#C21F4A', '#BFE4FF', '#D7F2B4'];
+// 3D 아바타 바지와 신발 색
+const PANTS_C = ['#2a3a6a', '#1a1433', '#4a4a55', '#8B5A2B', '#E8402C', '#2F7DE1', '#3FA34D', '#F4ECD8', '#9A4FB8', '#F2B705', '#7C8798', '#F27FA5'];
+const SHOE_C = ['#F4F2E6', '#1a1433', '#E8402C', '#2F7DE1', '#F2B705', '#3FA34D', '#8B5A2B', '#9A4FB8', '#F27FA5', '#7C8798', '#3CC9A7', '#E7B23A'];
+
 const BG_C = ['#2340A8', '#E8402C', '#F2B705', '#3CC9A7', '#9A4FB8', '#F27FA5'];
 const BG_SWATCH = [...BG_C, '#5B9BF0', '#F27FA5', '#FFD23F', '#E8402C', '#14102b', '#F7A24B', '#2a1450', '#FFB3CC'];
 
 const AVATAR_LABELS = {
+  body: '체형', pose: '자세', aura: '오라', back: '등', hand: '손에 든 것', gloves: '장갑', neck: '목', pantsColor: '바지 색', shoes: '신발', shoeColor: '신발 색',
   skin: '피부', hair: '머리 모양', hairColor: '머리 색', brow: '눈썹', eyes: '눈', mouth: '입', face: '얼굴 장식',
   glasses: '안경', hat: '모자', outfit: '옷', outfitColor: '옷 색', bg: '배경',
 };
-const AVATAR_SWATCH = { skin: SKIN, hairColor: HAIR_C, outfitColor: CLOTH_C, bg: BG_SWATCH };
+const AVATAR_SWATCH = { skin: SKIN, hairColor: HAIR_C, outfitColor: CLOTH_C, bg: BG_SWATCH, pantsColor: PANTS_C, shoeColor: SHOE_C };
+const AVATAR_ORDER = ['body', 'pose', 'skin', 'hair', 'hairColor', 'brow', 'eyes', 'mouth', 'face', 'glasses', 'hat', 'outfit', 'outfitColor', 'pantsColor', 'shoes', 'shoeColor', 'gloves', 'neck', 'back', 'hand', 'aura', 'bg'];
+const AVATAR_NAMES = {
+  body: ['보통', '날씬', '듬직', '꼬마'], pose: ['차렷', '허리에 손', '팔짱', '브이', '손 흔들기', '근육'],
+  shoes: ['운동화', '부츠', '슬리퍼', '구두', '하이탑', '장화', '롤러', '쪼리'], gloves: ['없음', '흰 장갑', '권투', '가죽', '고무장갑', '메카'],
+  neck: ['없음', '목도리', '금목걸이', '나비넥타이', '두건', '메달'], back: ['없음', '망토', '천사 날개', '악마 날개', '책가방', '제트팩', '등검', '나비 날개', '기타', '깃발'],
+  hand: ['없음', '검', '지팡이', '깃발', '마이크', '아이스크림', '국자', '뚫어뻥', '빗자루', '연탄집게'], aura: ['없음', '불꽃', '번개', '반짝', '얼음', '하트', '어둠', '무지개'],
+};
+
+// 3D가 되면 3D로, 안 되면 2D로 그립니다. 배경은 2D 그림을 깝니다.
+function avatarSVG(a, cls = '') {
+  if (typeof Avatar3D === 'undefined' || !Avatar3D) return avatarSVG2D(a, cls);
+  return `<svg class="${cls}" viewBox="0 0 100 125" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${avatarBg(a.bg || 0)}<image href="${Avatar3D.snapshot(a)}" width="100" height="125"/></svg>`;
+}
 
 function avatarBg(i) {
   const base = (c) => `<rect width="100" height="125" fill="${c}"/>`;
@@ -30,7 +48,7 @@ function avatarBg(i) {
   ][i - 6] || base(BG_C[0]);
 }
 
-function avatarSVG(a, cls = '') {
+function avatarSVG2D(a, cls = '') {
   const v = (k) => a[k] || 0;
   const skin = SKIN[v('skin')], hc = HAIR_C[v('hairColor')], cc = CLOTH_C[v('outfitColor')];
   const hair = v('hair');

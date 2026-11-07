@@ -243,15 +243,16 @@ function showAvatar() {
   const draft = { ...G.user.avatar };
   const style = { ...G.user.style, pins: [...(G.user.style.pins || [])] };
   let tab = 'avatar', cat = 'hair';
-  const cats = Object.keys(G.data.AVATAR_OPTIONS);
+  const cats = AVATAR_ORDER.filter((k) => G.data.AVATAR_OPTIONS[k]);
+  let live = null;
   const render = () => {
     const me = { name: G.user.name, avatar: draft, style, record: recordText(G.user) };
     let body = '';
     if (tab === 'avatar') {
       const n = G.data.AVATAR_OPTIONS[cat], sw = AVATAR_SWATCH[cat];
       body = `<div class="chips cats">${cats.map((k) => `<button data-cat="${k}" aria-pressed="${k === cat}">${AVATAR_LABELS[k]}</button>`).join('')}</div>
-        <div class="avgrid ${sw ? 'swatch' : ''}">${Array.from({ length: n }, (_, i) => `<button data-k="${cat}" data-v="${i}" aria-pressed="${draft[cat] === i}" aria-label="${AVATAR_LABELS[cat]} ${i + 1}"
-          ${sw ? `style="background:${sw[i]}"` : ''}>${sw ? '' : avatarSVG({ ...draft, [cat]: i })}</button>`).join('')}</div>
+        <div class="avgrid ${sw ? 'swatch' : ''}">${Array.from({ length: n }, (_, i) => `<button data-k="${cat}" data-v="${i}" aria-pressed="${(draft[cat] || 0) === i}" aria-label="${AVATAR_LABELS[cat]} ${AVATAR_NAMES[cat]?.[i] || i + 1}"
+          ${sw ? `style="background:${sw[i]}"` : ''}>${sw ? '' : avatarSVG({ ...draft, [cat]: i })}${AVATAR_NAMES[cat] ? `<span class="avname">${AVATAR_NAMES[cat][i]}</span>` : ''}</button>`).join('')}</div>
         <button class="btn paper small" id="rand" style="margin-top:10px">무작위로 섞기</button>`;
     } else {
       const kind = { title: 'titles', card: 'cards', pin: 'pins' }[tab];
@@ -265,11 +266,21 @@ function showAvatar() {
       if (tab === 'pin') body = `<p class="muted" style="margin-bottom:8px">핀은 3개까지 달 수 있습니다. (${style.pins.length}/3)</p>${body}`;
     }
     app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>꾸미기</h1></div>
+      ${typeof Avatar3D !== 'undefined' && Avatar3D ? `<div class="stage3d"><canvas id="av3d" aria-label="3D 아바타 미리보기. 옆으로 밀면 돌아갑니다"></canvas>
+        <div class="stage3d-btns">${[['cheer', '환호'], ['command', '지시'], ['mega', '기합'], ['z', 'Z 안무']].map(([k, n]) => `<button class="btn small paper" data-act="${k}">${n}</button>`).join('')}</div></div>` : ''}
       <div class="preview-card">${battleCard(me, 'big')}</div>
       <div class="tabs styletabs">${[['avatar', '아바타'], ['title', '칭호'], ['card', '전투카드'], ['pin', '핀']].map(([k, n]) => `<button data-tab="${k}" aria-selected="${tab === k}">${n}</button>`).join('')}</div>
       <section class="panel">${body}</section>
       <button class="btn wide" id="save" style="margin-top:14px">저장하기</button>`;
-    app.querySelector('#back').onclick = showLobby;
+    app.querySelector('#back').onclick = () => { live?.destroy(); showLobby(); };
+    const cv = app.querySelector('#av3d');
+    if (cv) {
+      const rot = live ? live.rot : 0;
+      live?.destroy();
+      live = Avatar3D.mount(cv, draft, { drag: true, facing: .3 + rot });
+      live.rot = rot;
+      app.querySelectorAll('[data-act]').forEach((b) => { b.onclick = () => live.play(b.dataset.act, { type: ['fire', 'water', 'elec', 'fairy', 'earth', 'spirit'][Math.floor(Math.random() * 6)] }); });
+    }
     app.querySelectorAll('[data-tab]').forEach((b) => { b.onclick = () => { tab = b.dataset.tab; render(); }; });
     app.querySelectorAll('[data-cat]').forEach((b) => { b.onclick = () => { cat = b.dataset.cat; render(); }; });
     app.querySelectorAll('[data-k]').forEach((b) => { b.onclick = () => { draft[b.dataset.k] = +b.dataset.v; const y = scrollY; render(); scrollTo(0, y); }; });

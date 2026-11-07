@@ -3,6 +3,10 @@ const Battle = (() => {
   let view = null, disp = null, note = '', menu = 'moves', practice = false;
   let queue = Promise.resolve(), playing = false, skip = null, armed = false;
   let spectating = false, tag = false, moveDraft = null, zLockTurn = -1;
+  let trainers = {};
+  const has3D = () => typeof Avatar3D !== 'undefined' && !!Avatar3D;
+  const avatarOf = (key) => (key === 'me' ? view.me : key === 'ally' ? view.ally : key === 'opp' ? view.opps[0] : view.opps[1])?.avatar;
+  const trainer = (key) => trainers[key];
   let deadline = 0, tick = null, gen = 0;
   const SPEED = Number(new URLSearchParams(location.search).get('speed') ?? 1); // ?speed=0 이면 연출 생략
 
@@ -128,14 +132,20 @@ const Battle = (() => {
   }
 
   function exit() {
+    Object.values(trainers).forEach((t) => t.destroy());
+    trainers = {};
     view = null; gen++; playing = false; clearInterval(tick);
     showLobby();
   }
 
   function renderFrame() {
+    Object.values(trainers).forEach((t) => t.destroy());
+    trainers = {};
+    const showTr = has3D() && !view.doubles;
     app.innerHTML = `${headHTML()}
-      <section class="scene" id="scene">
+      <section class="scene ${showTr ? 'has-tr' : ''}" id="scene">
         ${SCENE}
+        ${showTr ? '<canvas class="trainer t-opp" id="tr-opp"></canvas><canvas class="trainer t-me" id="tr-me"></canvas>' : ''}
         ${keysNow().map((k) => `<div class="mon ${k}" id="m-${k}"></div>`).join('')}
         <div class="fx"></div>
         <canvas class="fxc" id="fxc"></canvas>
@@ -146,6 +156,10 @@ const Battle = (() => {
       <div id="panel"></div>`;
     $('#say').onclick = () => skip?.();
     Fx.attach($('#scene'), $('#fxc'));
+    if (showTr) {
+      trainers.me = Avatar3D.mount($('#tr-me'), view.me.avatar, { facing: .75 });
+      trainers.opp = Avatar3D.mount($('#tr-opp'), view.opps[0].avatar, { facing: -.6 });
+    }
   }
 
   function say(text) { const s = $('#say'); if (s) s.textContent = text; }
@@ -212,7 +226,7 @@ const Battle = (() => {
 
   function drawWeather() {
     const s = $('#scene');
-    s.className = `scene${view.doubles ? ' dbl' : ''}${disp.weather ? ` w-${disp.weather}` : ''}${disp.me.hazard ? ' haz-me' : ''}${disp.opp.hazard ? ' haz-opp' : ''}`;
+    s.className = `scene${s.classList.contains('has-tr') ? ' has-tr' : ''}${view.doubles ? ' dbl' : ''}${disp.weather ? ` w-${disp.weather}` : ''}${disp.me.hazard ? ' haz-me' : ''}${disp.opp.hazard ? ' haz-opp' : ''}`;
     const chips = [];
     if (disp.weather) chips.push(`<span class="f-${disp.weather}">${WEATHER[disp.weather]} ${disp.weatherTurns}턴</span>`);
     if (disp.opp.hazard) chips.push(`<span class="f-tack">${spectating ? `${esc(oppNames())} 쪽` : '상대 쪽'} 압정</span>`);
@@ -261,6 +275,7 @@ const Battle = (() => {
       case 'msg': await wait(850); break;
       case 'move':
         if (e.z) { await zCinematic(e, key); break; }
+        trainer(key)?.play('command');
         await wait(Math.max(760, Fx.play(e.id, key, sideKey(e.target))));
         break;
       case 'miss': await wait(800); break;
@@ -270,6 +285,7 @@ const Battle = (() => {
         setBar(key, m);
         if (e.dmg !== undefined) {
           if (e.moveType) {
+            trainer(key)?.play('flinch');
             anim(key, 'hit', 800);
             burst(key, G.data.TYPES[e.moveType].c);
             pop(key, e.crit ? `급소! ${e.dmg}` : e.eff > 1 ? `${e.dmg}!` : String(e.dmg), e.crit || e.eff > 1);
@@ -281,6 +297,7 @@ const Battle = (() => {
         const box = $(`#m-${key}`);
         box.classList.remove('hit', 'lunge', 'enter');
         box.classList.add('faint');
+        trainer(key)?.play('sad');
         const r = rosterEntry(key, dispMon(key).species);
         if (r) { r.out = true; drawPips(); }
         await wait(1000);
@@ -295,6 +312,7 @@ const Battle = (() => {
         await wait(900); break;
       }
       case 'mega': {
+        trainer(key)?.play('mega', { dur: 2 });
         Fx.megaStart(key);
         await wait(1100);
         putMon(key, e.mon);
@@ -350,20 +368,38 @@ const Battle = (() => {
   }
 
   // Z기술 컷인: 화면을 덮는 컷인 뒤에 타입별 필살 연출
+  // Z기술: 트레이너와 요괴가 같은 안무를 추며 유대를 보여 주는 컷인, 이어서 필살 연출
   async function zCinematic(e, key) {
     const color = G.data.TYPES[e.type].c;
+    const mine = key === 'me' || key === 'ally';
+    const av = avatarOf(key);
+    const duo = has3D() && av;
     const cut = document.createElement('div');
-    cut.className = `zcut ${key === 'me' || key === 'ally' ? 'mine' : 'theirs'}`;
+    cut.className = `zcut ${mine ? 'mine' : 'theirs'} ${duo ? 'duo' : ''} zt-${e.type}`;
     cut.style.setProperty('--zc', color);
+    cut.style.setProperty('--zs', `${SPEED}`);
     cut.innerHTML = `<div class="zc-lines"></div>
-      <div class="zc-band"><div class="zc-mon">${monsterSVG(e.mon.species, '', e.mon.mega)}</div>
-        <div class="zc-text"><span class="zc-kick">Z기술 · ${esc(e.player)} × ${esc(e.mon.name)}</span><b class="zc-name">${esc(e.move)}</b></div></div>
+      <div class="zc-band">
+        <div class="zc-pair">
+          ${duo ? '<canvas class="zc-tr"></canvas>' : ''}
+          <div class="zc-bond"><i></i><i></i><i></i><b>유대 MAX</b></div>
+          <div class="zc-mon">${monsterSVG(e.mon.species, '', e.mon.mega)}</div>
+        </div>
+        <div class="zc-text"><span class="zc-kick">Z기술 · ${esc(e.player)} × ${esc(e.mon.name)}</span><b class="zc-name">${esc(e.move)}</b></div>
+      </div>
       <div class="zc-flash"></div>`;
     document.body.appendChild(cut);
-    await wait(1900);
+    let tr = null;
+    if (duo) {
+      tr = Avatar3D.mount(cut.querySelector('.zc-tr'), av, { facing: mine ? .55 : -.55 });
+      tr.play('z', { type: e.type, dur: 2.6 * SPEED, hold: true });
+    }
+    await wait(2700);
     cut.classList.add('out');
     await wait(260);
+    tr?.destroy();
     cut.remove();
+    trainer(key)?.play('thrust', { dur: 2 });
     await wait(Fx.zmove(e.type, key, sideKey(e.target)));
   }
 
@@ -497,6 +533,7 @@ const Battle = (() => {
     const div = document.createElement('div');
     div.className = 'result';
     const champ = win || draw ? view.me : view.opp;
+    if (!draw) { trainer('me')?.play(win ? 'cheer' : 'sad', { hold: true, dur: 1.6 }); trainer('opp')?.play(win ? 'sad' : 'cheer', { hold: true, dur: 1.6 }); }
     div.innerHTML = `<div class="result-card">${battleCard({ name: champ.name, avatar: champ.avatar, style: champ.style }, 'big')}</div>
       <h1 class="title ${spectating ? 'small' : ''}">${draw ? '무승부' : spectating ? `${esc(winners)} 승리` : win ? '승리' : '패배'}</h1>
       <p style="color:#fff">${esc(myNames())} 대 ${esc(oppNames())}, ${view.turn - 1}턴${practice ? ' (연습)' : ''}${spectating ? ' (관전)' : ''}</p>

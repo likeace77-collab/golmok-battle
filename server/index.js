@@ -92,7 +92,7 @@ const defaultTeam = () => ['yeontan', 'kettle', 'kongsiru', 'orak', 'maetdol', '
   return { species, moves };
 });
 
-const NONE_FIRST = ['hat', 'glasses', 'face', 'brow'];
+const NONE_FIRST = ['hat', 'glasses', 'face', 'brow', 'gloves', 'neck', 'back', 'hand', 'aura', 'pose', 'body'];
 const randomAvatar = (any = false) => Object.fromEntries(
   Object.entries(Data.AVATAR_OPTIONS).map(([k, n]) => [k, !any && NONE_FIRST.includes(k) ? 0 : crypto.randomInt(n)])
 );

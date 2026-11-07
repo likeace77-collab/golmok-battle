@@ -385,6 +385,7 @@ for (const [id, [sig, n, d, boost]] of Object.entries(SIGNATURE)) {
 const AVATAR_OPTIONS = {
   skin: 10, hair: 20, hairColor: 16, brow: 6, eyes: 12, mouth: 10, face: 7,
   glasses: 8, hat: 14, outfit: 14, outfitColor: 16, bg: 14,
+  body: 4, pose: 6, pantsColor: 12, shoes: 8, shoeColor: 12, gloves: 6, neck: 6, back: 10, hand: 10, aura: 8,
 };
 
 // 칭호, 전투카드, 핀. cond: [기록 이름, 필요한 수]. 없으면 처음부터 열림.
