@@ -658,6 +658,43 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 @keyframes bcGlitchName { 0%, 90%, 100% { transform: none; text-shadow: -2px 0 #FF4FD8, 2px 0 #37E0FF, 0 0 10px #37E0FF; } 91% { transform: translate(2px, -1px) skewX(-8deg); text-shadow: -4px 0 #FF4FD8, 4px 0 #37E0FF; } 94% { transform: translate(-2px, 1px); text-shadow: 3px 0 #FF4FD8, -3px 0 #37E0FF; } }
 .bc-devcore .bc-ava { box-shadow: 0 0 10px #37E0FF; }
 .bc-devcore .bc-rec { color: #9fdcff; font-family: ui-monospace, Menlo, monospace; }
+
+/* 7 Day 1: 검은 바탕에 황금 일출 광선 + 회전 금빛 테두리 + 왕관 + 흐르는 황금 글씨 + FOUNDER */
+.tt-7 { --g: #FFD23F; gap: 5px; align-items: center; padding: 3px 10px 2px; color: #fff; background: radial-gradient(circle at 50% 120%, #5a3a00, #0a0703 70%); border-radius: 7px;
+  box-shadow: 0 0 10px #FFD23Faa, 0 0 22px #ff9a3c66; animation: ttFloat 2.6s ease-in-out infinite, d1Glow 2s ease-in-out infinite; }
+@keyframes d1Glow { 50% { box-shadow: 0 0 16px #FFE27A, 0 0 34px #ff9a3caa; } }
+.tt-7::before { content: ''; position: absolute; inset: 0; z-index: 0; border-radius: 7px; padding: 2px; pointer-events: none;
+  background: conic-gradient(from var(--ta, 0deg), #fff7c2, #FFD23F, #b8860b, #fff, #FFD23F, #ff9a3c, #fff7c2);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: ttSpin 2.4s linear infinite; }
+.tt-7::after { content: ''; position: absolute; z-index: 3; top: -20%; bottom: -20%; left: -60%; width: 40%; pointer-events: none; background: linear-gradient(100deg, transparent, #fffbe0 50%, transparent); transform: skewX(-20deg); animation: ttShine 2.2s ease-in-out infinite; }
+.tt-7 s { inset: 2px; border-radius: 5px; background: repeating-conic-gradient(from var(--ta, 0deg) at 50% 130%, #FFD23F22 0 6deg, transparent 6deg 14deg), radial-gradient(circle, #FFE27A 0 1.2px, transparent 1.7px) 0 0 / 12px 10px; animation: ttSpin 9s linear infinite, ttRise 1.6s linear infinite; }
+.tt-7 .tt-crown { position: relative; z-index: 2; font: 400 1em/1 serif; color: #FFD23F; text-shadow: 0 0 6px #FFD23F, 0 0 12px #ff9a3c; animation: d1Crown 1.6s ease-in-out infinite; }
+@keyframes d1Crown { 50% { transform: translateY(-2px) rotate(-8deg); } }
+.tt-7 i { overflow: visible; font-weight: 900; letter-spacing: .08em; background: linear-gradient(90deg, #b8860b, #fff7c2, #FFD23F, #fff, #ff9a3c, #b8860b) 0 0 / 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: ttFlow 2.6s linear infinite; filter: drop-shadow(0 0 4px #FFD23F88); }
+.tt-7 u { position: relative; z-index: 2; text-decoration: none; font: 700 .55em/1 ui-monospace, Menlo, monospace; letter-spacing: .18em; color: #0a0703; background: linear-gradient(90deg, #FFD23F, #fff7c2, #FFD23F); padding: 2px 4px 1px; border-radius: 3px; }
+
+/* 우편함 */
+.mailbtn { position: relative; }
+.mailbadge { position: absolute; top: -8px; right: -8px; min-width: 24px; height: 24px; padding: 0 6px; display: grid; place-items: center; font: 400 14px/1 var(--ui); font-style: normal; color: #fff; background: #E8402C; border: 2px solid var(--ink); border-radius: 999px; animation: soonPulse 1.2s ease-in-out infinite; }
+.panel.mail { padding: 0; overflow: hidden; }
+.panel.mail.unread { border-color: #E8402C; box-shadow: 3px 3px 0 #E8402C; }
+.mail-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; }
+.mail-head b { display: block; font-size: 17px; }
+.mail-head small { display: block; font-size: 13px; color: #5f5870; }
+.mail-head > div { flex: 1; min-width: 0; }
+.mail-ico { font-size: 26px; }
+.mail-new { font-style: normal; font: 400 13px/1 var(--ui); padding: 4px 8px; color: var(--ink); background: var(--yellow); border: 2px solid var(--ink); border-radius: 6px; }
+.mail-body { padding: 0 14px 10px; line-height: 1.5; }
+.mail-reward { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 14px 12px; padding: 12px; background: #1a1433; border-radius: 10px; }
+.mr { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.mr small { color: #c9c2dd; font-size: 12px; }
+.panel.mail .btn.wide { margin: 0 14px 14px; width: calc(100% - 28px); }
+.gift-pop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: radial-gradient(circle, #2a1d00cc, #000d 70%); animation: zIn .25s ease-out; }
+.gift-pop::before { content: ''; position: absolute; left: 50%; top: 50%; width: 180vmax; aspect-ratio: 1; transform: translate(-50%, -50%); background: repeating-conic-gradient(#FFD23F33 0 8deg, transparent 8deg 20deg); animation: zxSpin 12s linear infinite; }
+.gift-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px; text-align: center; animation: awTag 0s; }
+.gift-kick { font: 400 clamp(44px, 14vw, 80px)/1 var(--display); color: #fff; -webkit-text-stroke: 3px var(--ink); text-shadow: 0 0 20px #FFD23F, 4px 4px 0 var(--ink); animation: d1Pop .7s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes d1Pop { from { transform: scale(2.4); opacity: 0; } }
+.gift-item .tt { font-size: 26px; }
 /* 칭호 고르기 화면 */
 .ctitle { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; flex: none; max-width: 58%; padding: 4px 2px; }
 .ctitle small { font-size: 11px; color: #5f5870; }

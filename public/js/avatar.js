@@ -275,9 +275,10 @@ function cosmetic(kind, id) {
 }
 
 // 칭호 등급별 효과: 0 일반, 1 반짝, 2 별가루, 3 황금, 4 네온, 5 전설
-const TITLE_TIERS = ['일반', '반짝', '별가루', '황금', '네온', '전설', '개발자'];
+const TITLE_TIERS = ['일반', '반짝', '별가루', '황금', '네온', '전설', '개발자', 'Day 1'];
 function titleTag(id, cls = '') {
   const t = cosmetic('titles', id), tier = t.tier || 0;
+  if (tier === 7) return `<span class="tt tt-7 ${cls}"><s aria-hidden="true"></s><b class="tt-crown" aria-hidden="true">♛</b><i data-t="${esc(t.n)}">${esc(t.n)}</i><u aria-hidden="true">FOUNDER</u></span>`;
   if (tier === 6) return `<span class="tt tt-6 ${cls}"><s aria-hidden="true"></s><b class="tt-code" aria-hidden="true">&lt;/&gt;</b><i data-t="${esc(t.n)}">${esc(t.n)}</i></span>`;
   return `<span class="tt tt-${tier} ${cls}"${t.glow ? ` style="--g:${t.glow}"` : ''}>${tier >= 2 ? '<s aria-hidden="true"></s>' : ''}<i>${esc(t.n)}</i></span>`;
 }
@@ -304,4 +305,4 @@ function statOf(u, k) {
   if (k === 'wins' || k === 'losses' || k === 'draws') return u[k] || 0;
   return (u.stats || {})[k] || 0;
 }
-const unlocked = (u, item) => !item.cond || !!u.dev || (item.cond[0] !== 'dev' && statOf(u, item.cond[0]) >= item.cond[1]);
+const unlocked = (u, item) => !item.cond || !!u.dev || (item.cond[0] === 'gift' ? (u.owned || []).includes(item.cond[1]) : item.cond[0] !== 'dev' && statOf(u, item.cond[0]) >= item.cond[1]);

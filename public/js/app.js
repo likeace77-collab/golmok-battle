@@ -95,6 +95,59 @@ function showAgeGate() {
   app.querySelector('#out').onclick = async () => { await api('POST', '/api/logout').catch(() => {}); G.user = null; showAuth(); };
 }
 
+// 우편함: 운영팀 우편과 보상
+async function showMail() {
+  G.screen = 'mail';
+  app.innerHTML = '<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>우편함</h1></div><p class="wait">불러오는 중...</p>';
+  app.querySelector('#back').onclick = showLobby;
+  let mail = [];
+  try { mail = (await api('GET', '/api/mail')).mail; } catch (e) { toast(e.message); return; }
+  const kindName = { titles: '칭호', cards: '전투카드', pins: '핀' };
+  const preview = (r) => (r.kind === 'titles' ? titleTag(r.id) : r.kind === 'pins' ? `<span class="cpin">${pinSVG(r.id)}</span>` : `<span class="cswatch bc-${r.id}"></span>`);
+  const render = (open = null) => {
+    if (G.screen !== 'mail') return;
+    app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>우편함</h1></div>
+      ${mail.length ? mail.map((m) => `<section class="panel mail ${m.read ? '' : 'unread'} ${open === m.id ? 'open' : ''}" data-mail="${m.id}">
+        <div class="mail-head"><span class="mail-ico">${m.claimed ? '✉' : '🎁'}</span>
+          <div><b>${esc(m.title)}</b><small>${esc(m.from)} · ${new Date(m.at).toLocaleDateString('ko-KR')}</small></div>
+          ${!m.claimed ? '<em class="mail-new">보상</em>' : !m.read ? '<em class="mail-new">새 우편</em>' : ''}</div>
+        ${open === m.id ? `<p class="mail-body">${esc(m.body)}</p>
+          ${m.reward.length ? `<div class="mail-reward">${m.reward.map((r) => `<div class="mr">${preview(r)}<small>${kindName[r.kind]} · ${esc(r.n)}</small></div>`).join('')}</div>` : ''}
+          ${m.reward.length ? `<button class="btn wide ${m.claimed ? 'paper' : ''}" data-claim="${m.id}" ${m.claimed ? 'disabled' : ''}>${m.claimed ? '받음' : '받기'}</button>` : ''}` : ''}
+      </section>`).join('') : '<section class="panel"><p class="muted">우편이 없습니다.</p></section>'}`;
+    app.querySelector('#back').onclick = showLobby;
+    app.querySelectorAll('[data-mail]').forEach((el) => {
+      el.querySelector('.mail-head').onclick = async () => {
+        const id = el.dataset.mail;
+        render(open === id ? null : id);
+        const m = mail.find((x) => x.id === id);
+        if (!m.read) { try { const r = await api('POST', '/api/mail/read', { id }); mail = r.mail; G.user = r.user; render(id); } catch { /* 다음에 다시 */ } }
+      };
+    });
+    app.querySelectorAll('[data-claim]').forEach((b) => {
+      b.onclick = async () => {
+        try {
+          const r = await api('POST', '/api/mail/claim', { id: b.dataset.claim });
+          mail = r.mail; G.user = r.user;
+          render(b.dataset.claim);
+          if (r.got.length) showGift(r.got);
+        } catch (e) { toast(e.message); }
+      };
+    });
+  };
+  render();
+}
+
+// 보상 받는 연출
+function showGift(items) {
+  const el = document.createElement('div');
+  el.className = 'gift-pop';
+  el.innerHTML = `<div class="gift-card"><p class="gift-kick">획득!</p>${items.map((r) => `<div class="gift-item">${r.kind === 'titles' ? titleTag(r.id) : r.n}</div>`).join('')}
+    <p class="muted" style="color:#fff">꾸미기에서 장착할 수 있어요.</p><button class="btn" id="gift-ok">확인</button></div>`;
+  document.body.appendChild(el);
+  el.querySelector('#gift-ok').onclick = () => el.remove();
+}
+
 function showSettings() {
   G.screen = 'settings';
   const u = G.user, age = new Date().getFullYear() - u.birthYear;
@@ -220,6 +273,7 @@ function renderLobby() {
         <button class="btn paper" id="go-ava">꾸미기</button>
         <button class="btn mint" id="go-dex">도감</button>
         <button class="btn paper" id="go-players">플레이어 목록</button>
+        <button class="btn paper mailbtn" id="go-mail">우편함${u.mailNew ? `<em class="mailbadge">${u.mailNew}</em>` : ''}</button>
         <button class="btn paper" id="go-settings">설정</button>
       </div>
     </section>
@@ -272,6 +326,7 @@ function renderLobby() {
   app.querySelector('#go-dex').onclick = showDex;
   app.querySelector('#go-players').onclick = showPlayers;
   app.querySelector('#go-settings').onclick = showSettings;
+  app.querySelector('#go-mail').onclick = showMail;
   app.querySelector('#go-bot').onclick = () => wsSend({ t: 'practice', size: G.size, level: G.botLevel });
   app.querySelector('#go-train').onclick = () => wsSend({ t: 'training' });
   app.querySelectorAll('[data-level]').forEach((b) => {
@@ -300,6 +355,7 @@ function renderLobby() {
 function condText(item) {
   if (!item.cond) return '처음부터 사용 가능';
   if (item.cond[0] === 'dev') return '개발자 계정 전용';
+  if (item.cond[0] === 'gift') return '우편 보상으로 받은 아이템';
   const [k, n] = item.cond;
   const dmg = k.startsWith('dummy'), f = (x) => x.toLocaleString('ko-KR');
   return `${G.data.STAT_NAMES[k]} ${f(n)}${k === 'streakBest' ? '연승' : dmg ? '' : '회'} (${f(Math.min(statOf(G.user, k), n))}/${f(n)})`;
@@ -323,7 +379,7 @@ function showAvatar() {
         <button class="btn paper small" id="rand" style="margin-top:10px">무작위로 섞기</button>`;
     } else {
       const kind = { title: 'titles', card: 'cards', pin: 'pins' }[tab];
-      const devOnly = (x) => x.cond?.[0] === 'dev' && !G.user.dev; // 개발자 전용은 다른 계정에 안 보임
+      const devOnly = (x) => (x.cond?.[0] === 'dev' && !G.user.dev) || (x.cond?.[0] === 'gift' && !unlocked(G.user, x)); // 개발자 전용, 못 받은 우편 보상은 안 보임
       const list = (kind === 'titles' ? [...G.data.COSMETICS.titles].sort((x, y) => (x.tier || 0) - (y.tier || 0)) : G.data.COSMETICS[kind]).filter((x) => !devOnly(x));
       body = list.map((item) => {
         const open = unlocked(G.user, item);

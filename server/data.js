@@ -457,6 +457,8 @@ const COSMETICS = {
     C('onehit3', '더미 일격 분쇄', ['dummyBest', 1000], { tier: 5, glow: '#37E0FF' }),
     // 개발자 계정 전용
     C('developer', '개발자', ['dev', 1], { tier: 6 }),
+    // 우편 보상 전용
+    C('day1', 'Day 1', ['gift', 'titles:day1'], { tier: 7 }),
   ],
   cards: [
     C('basic', '기본 딱지', null), C('blue', '망점 블루', null, { dark: true }), C('red', '집중선 레드', null, { dark: true }),
@@ -514,7 +516,7 @@ const STAT_NAMES = {
   wins: '1대1 승리', losses: '1대1 패배', games: '1대1 대전', streakBest: '최고 연승',
   p0: '골목대장(쉬움) 승리', p1: '골목대장(보통) 승리', p2: '골목대장(어려움) 승리', p3: '골목대장(지옥) 승리',
   tagGames: '태그 대전', tagWins: '태그 승리', megas: '메가진화 사용',
-  dev: '개발자 계정', dummyDmg: '훈련장 누적 피해', dummyBest: '훈련장 한 턴 최고 피해',
+  dev: '개발자 계정', gift: '우편 보상', dummyDmg: '훈련장 누적 피해', dummyBest: '훈련장 한 턴 최고 피해',
   zmoves: 'Z기술 사용', botWins: '골목대장 승리(난이도 무관)', draws: '1대1 무승부',
 };
 

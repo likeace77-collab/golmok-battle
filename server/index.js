@@ -103,8 +103,18 @@ const randomStyle = () => ({ title: pick(Data.COSMETICS.titles), card: pick(Data
 const newStats = () => ({ games: 0, streak: 0, streakBest: 0, p0: 0, p1: 0, p2: 0, p3: 0, tagGames: 0, tagWins: 0, megas: 0, zmoves: 0, botWins: 0, dummyDmg: 0, dummyBest: 0 });
 const defaultStyle = () => ({ title: 'rookie', card: 'basic', pins: [] });
 const statOf = (u, k) => (k === 'wins' || k === 'losses' || k === 'draws' ? u[k] || 0 : u.stats?.[k] || 0);
-// 개발자 계정은 모든 꾸미기를 씁니다. 'dev' 조건은 개발자 계정 전용.
-const isUnlocked = (u, item) => !item.cond || isDev(u) || (item.cond[0] !== 'dev' && statOf(u, item.cond[0]) >= item.cond[1]);
+// 개발자 계정은 모든 꾸미기를 씁니다. 'dev' 조건은 개발자 계정 전용, 'gift'는 우편 보상으로 받은 것만.
+const owns = (u, ref) => (u.owned || []).includes(ref);
+const isUnlocked = (u, item) => !item.cond || isDev(u) || (item.cond[0] === 'gift' ? owns(u, item.cond[1]) : item.cond[0] !== 'dev' && statOf(u, item.cond[0]) >= item.cond[1]);
+
+/* ---------- 우편함 ---------- */
+// reward: ['titles:day1', 'cards:gold', ...] 꾸미기 아이템
+function sendMail(u, { from, title, body, reward = [] }) {
+  (u.mail ||= []).unshift({ id: crypto.randomBytes(6).toString('hex'), from, title, body, reward, at: Date.now(), read: false, claimed: !reward.length });
+  if (u.mail.length > 50) u.mail.length = 50;
+}
+const rewardItem = (ref) => { const [kind, id] = ref.split(':'); const it = Data.COSMETICS[kind]?.find((x) => x.id === id); return it ? { kind, id, n: it.n } : null; };
+const mailView = (u) => (u.mail || []).map((m) => ({ ...m, reward: m.reward.map(rewardItem).filter(Boolean) }));
 function validStyle(u, s) {
   if (!s || typeof s !== 'object') return null;
   const find = (kind, id) => Data.COSMETICS[kind].find((x) => x.id === id && isUnlocked(u, x));
@@ -161,14 +171,19 @@ function migrate() {
   }
   // 운영 보상: 버그로 기록이 날아간 계정에 한 번만 지급 (grants에 남겨 다시 주지 않음)
   const GRANTS = [
-    { id: 'suho-dummy1000', user: 'suho', why: '훈련장 1000딜 기록이 업데이트 중 사라짐', apply: (u) => { u.stats.dummyBest = Math.max(u.stats.dummyBest || 0, 1000); u.stats.dummyDmg = Math.max(u.stats.dummyDmg || 0, 1000); } },
+    { id: 'suho-dummy1000', user: 'suho', why: '훈련장 1000딜 기록이 업데이트 중 사라짐', notice: '버그로 사라졌던 훈련장 기록(한 턴 1000)을 복구했습니다. 칭호 "더미 일격 분쇄"가 열렸어요!', apply: (u) => { u.stats.dummyBest = Math.max(u.stats.dummyBest || 0, 1000); u.stats.dummyDmg = Math.max(u.stats.dummyDmg || 0, 1000); } },
+    // 게임 첫날부터 함께한 계정: Day 1 칭호를 우편으로
+    ...['suho', '티키티키펑크', 'PEGADORA'].map((name) => ({
+      id: 'day1-title', user: name, why: '첫날부터 함께한 플레이어', notice: '우편함에 특별한 선물이 도착했습니다!',
+      apply: (u) => sendMail(u, { from: '골목대전 운영팀', title: '첫날부터 함께해 줘서 고마워요', body: '골목대전이 처음 문을 연 날부터 함께한 플레이어에게만 드리는 전용 칭호입니다. 앞으로도 골목을 지켜 주세요!', reward: ['titles:day1'] }),
+    })),
   ];
   for (const g of GRANTS) {
     const u = db.users[keyOf(g.user)];
     if (!u || (u.grants || []).includes(g.id)) continue;
     g.apply(u);
     (u.grants ||= []).push(g.id);
-    notices.set(keyOf(g.user), '버그로 사라졌던 훈련장 기록(한 턴 1000)을 복구했습니다. 칭호 "더미 일격 분쇄"가 열렸어요!');
+    if (g.notice) notices.set(keyOf(g.user), g.notice);
     console.log(`보상 지급: ${g.id} (${g.why})`);
     changed = true;
   }
@@ -207,7 +222,7 @@ const isAdult = (u) => ageOf(u) !== null && ageOf(u) > 19;
 const uncensored = (u) => isAdult(u) && !u.settings?.mosaic;
 
 const publicUser = (u) => ({
-  dev: isDev(u), birthYear: u.birthYear || null, needAge: !u.birthYear, adult: isAdult(u), uncensored: uncensored(u), settings: { mosaic: !!u.settings?.mosaic },
+  dev: isDev(u), owned: u.owned || [], mailNew: (u.mail || []).filter((m) => !m.read || !m.claimed).length, birthYear: u.birthYear || null, needAge: !u.birthYear, adult: isAdult(u), uncensored: uncensored(u), settings: { mosaic: !!u.settings?.mosaic },
   name: u.name, avatar: u.avatar, decks: u.decks, active: u.active, stats: u.stats, style: u.style,
   wins: u.wins, losses: u.losses, draws: u.draws, h2h: u.h2h,
 });
@@ -314,6 +329,24 @@ async function api(req, res, url) {
   }
   // 나이를 아직 안 정한 계정은 나이 설정과 로그아웃 말고는 아무것도 못 합니다.
   if (!user.birthYear && route !== 'POST /api/logout') return json(res, 403, { error: '먼저 나이를 설정해 주세요.', needAge: true });
+  if (route === 'GET /api/mail') {
+    return json(res, 200, { mail: mailView(user) });
+  }
+  if (route === 'POST /api/mail/read' || route === 'POST /api/mail/claim') {
+    const id = String((await readBody(req)).id ?? '');
+    const m = (user.mail || []).find((x) => x.id === id);
+    if (!m) return json(res, 404, { error: '없는 우편입니다.' });
+    m.read = true;
+    let got = [];
+    if (route === 'POST /api/mail/claim' && !m.claimed) {
+      user.owned ||= [];
+      for (const ref of m.reward) if (!user.owned.includes(ref)) user.owned.push(ref);
+      m.claimed = true;
+      got = m.reward.map(rewardItem).filter(Boolean);
+    }
+    save();
+    return json(res, 200, { mail: mailView(user), user: publicUser(user), got });
+  }
   if (route === 'PUT /api/settings') {
     const b = await readBody(req);
     user.settings = { ...(user.settings || {}), mosaic: !!b.mosaic };
