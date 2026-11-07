@@ -141,6 +141,15 @@ function migrate() {
     if (!u.stats) { u.stats = newStats(); changed = true; }
     for (const [k, v0] of Object.entries(newStats())) if (!Number.isInteger(u.stats[k])) { u.stats[k] = v0; changed = true; }
     if (!u.style) { u.style = defaultStyle(); changed = true; }
+    // 요괴 기술이 바뀌었을 때: 더는 못 배우는 기술은 빼고, 비면 앞에서부터 채웁니다.
+    for (const d of u.decks || []) for (const m of d.team || []) {
+      const sp = Data.MONSTERS[m.species];
+      if (!sp) continue;
+      const ok = m.moves.filter((id) => sp.moves.includes(id));
+      if (ok.length === m.moves.length) continue;
+      for (const id of sp.moves) if (ok.length < 4 && !ok.includes(id)) ok.push(id);
+      m.moves = ok; changed = true;
+    }
     if (u.decks) continue;
     u.decks = [{ name: '기본 덱', team: u.team || defaultTeam() }];
     u.active = 0;
@@ -200,7 +209,7 @@ function limited(req) {
 }
 
 /* ---------- HTTP ---------- */
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.png': 'image/png' };
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',

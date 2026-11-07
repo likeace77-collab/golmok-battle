@@ -253,7 +253,10 @@ ART.dummy = wrap(`
   <path d="M52 37q8-4 16 0" fill="none" stroke-width="2.500"/><path d="M56 35v4M60 34v4M64 35v4" stroke-width="1.500"/>
   <path d="M43 18q-6-8 0-12M77 18q6-8 0-12" fill="none" stroke="#a8843e" stroke-width="2.500"/>`);
 
+// 사진 그림을 쓰는 요괴 (투명 배경 512 크기)
+const IMG_ART = { neonna: true, yeonji: true };
 function monsterSVG(id, cls = '', mega = false) {
+  if (IMG_ART[id]) return `<svg class="${cls}" viewBox="0 0 200 200" aria-hidden="true"><image href="img/mon/${id}${mega ? '-mega' : ''}.webp" width="200" height="200"/></svg>`;
   if (mega) return `<svg class="${cls}" viewBox="-6 -6 212 212" aria-hidden="true">${MEGA_ART[id]}</svg>`;
   if (NEW_ART[id]) return `<svg class="${cls}" viewBox="-4 -6 208 212" aria-hidden="true">${NEW_ART[id]}</svg>`;
   return `<svg class="${cls}" viewBox="0 0 120 120" aria-hidden="true">${ART[id] || ''}</svg>`;
