@@ -512,4 +512,8 @@ MONSTERS.silvia.stages = 4;
 const STRIP = { boost: .04, heal: 20 };
 for (const id of ['lumina', 'silvia']) MONSTERS[id].trait = { n: '의상 각성', d: `공격에 맞아 옷이 바뀔 때마다 공격, 특공, 스피드가 ${STRIP.boost * 100}%씩 오르고(최대 ${MONSTERS[id].stages}단계) 체력을 ${STRIP.heal} 회복한다.` };
 
-module.exports = { STRIP, TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES };
+// 잠시 밴: 테스트 중인 요괴는 개발자 계정만 씁니다.
+const BANNED = ['lumina', 'silvia'];
+const DEV_ACCOUNTS = ['PEGADORA'];
+
+module.exports = { BANNED, DEV_ACCOUNTS, STRIP, TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES };

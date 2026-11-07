@@ -161,6 +161,12 @@ function migrate() {
   if (changed) save();
 }
 
+// 개발자 계정과 밴
+const isDev = (u) => Data.DEV_ACCOUNTS.includes(u?.name);
+const bannedFor = (u) => (isDev(u) ? [] : Data.BANNED);
+const bannedIn = (u, team) => team.filter((m) => bannedFor(u).includes(m.species)).map((m) => Data.MONSTERS[m.species].n);
+const BAN_TEXT = (names) => `${names.join(', ')}${names.length > 1 ? '는' : '는'} 지금 테스트 중이라 쓸 수 없습니다. 덱에서 빼 주세요.`;
+
 function validTeam(t) {
   if (!Array.isArray(t) || t.length < 3 || t.length > 6) return null;
   const seen = new Set(), out = [];
@@ -177,7 +183,7 @@ function validTeam(t) {
 }
 
 const publicUser = (u) => ({
-  name: u.name, avatar: u.avatar, decks: u.decks, active: u.active, stats: u.stats, style: u.style,
+  dev: isDev(u), name: u.name, avatar: u.avatar, decks: u.decks, active: u.active, stats: u.stats, style: u.style,
   wins: u.wins, losses: u.losses, draws: u.draws, h2h: u.h2h,
 });
 
@@ -239,8 +245,8 @@ function readBody(req) {
 async function api(req, res, url) {
   const route = `${req.method} ${url.pathname}`;
   if (route === 'GET /api/data') {
-    const { TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES } = Data;
-    return json(res, 200, { TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES, inviteRequired: !!INVITE_CODE });
+    const { BANNED, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES } = Data;
+    return json(res, 200, { BANNED, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES, inviteRequired: !!INVITE_CODE });
   }
   if (route === 'POST /api/signup' || route === 'POST /api/login') {
     if (limited(req)) return json(res, 429, { error: '시도가 너무 많습니다. 1분 뒤에 다시 해 주세요.' });
@@ -313,6 +319,13 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const decks = validDecks(body.decks);
     if (!decks) return json(res, 400, { error: '덱은 1개 이상, 이름은 12자 이내, 요괴는 서로 다른 3~6마리, 기술은 1~4개여야 합니다.' });
+    const banned = bannedIn(user, decks.flatMap((d) => d.team)).filter((n, i, a) => a.indexOf(n) === i);
+    if (banned.length) {
+      // 예전에 넣어 둔 덱은 그대로 둘 수 있게, 새로 넣은 경우만 막습니다.
+      const had = new Set(bannedIn(user, (user.decks || []).flatMap((d) => d.team)));
+      const added = banned.filter((n) => !had.has(n));
+      if (added.length) return json(res, 400, { error: BAN_TEXT(added) });
+    }
     const active = Number.isInteger(body.active) && body.active >= 0 && body.active < decks.length ? body.active : 0;
     user.decks = decks; user.active = active; save();
     return json(res, 200, { user: publicUser(user) });
@@ -393,7 +406,7 @@ const BOT_LEVELS = ['쉬움', '보통', '어려움', '지옥'];
 // 훈련장: 더미와 1대1. 시간 제한, 승패, 기록 없음. 더미에게 준 피해만 쌓입니다.
 function startTraining(key) {
   const u = db.users[key];
-  const room = { id: crypto.randomUUID(), keys: [key, BOT], b: E.createTraining({ name: u.name, avatar: u.avatar, style: u.style, deck: '모든 요괴' }), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: 0, tag: false, training: true, counted: 0, spectators: new Set() };
+  const room = { id: crypto.randomUUID(), keys: [key, BOT], b: E.createTraining({ name: u.name, avatar: u.avatar, style: u.style, deck: '모든 요괴' }, undefined, bannedFor(u)), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: 0, tag: false, training: true, counted: 0, spectators: new Set() };
   battles.set(room.id, room);
   inBattle.set(key, room); clearChallenges(key); removeFromTag(key); stopWatching(key);
   syncBattle(room, 0);
@@ -630,6 +643,8 @@ function onMessage(key, msg) {
       if (humans.some((k) => inBattle.has(k) || !online.has(k))) return toast(key, '참가자 중 대전 중인 사람이 있습니다.');
       const short = humans.find((k) => deckOf(db.users[k]).team.length < 3);
       if (short) return toast(key, `${db.users[short].name}님의 덱에 요괴가 3마리 있어야 합니다.`);
+      const bk = humans.find((k) => bannedIn(db.users[k], deckOf(db.users[k]).team.slice(0, 3)).length);
+      if (bk) return toast(key, `${db.users[bk].name}님의 덱에 테스트 중인 요괴가 있습니다.`);
       tagRooms.delete(r.id);
       startBattle(r.slots.map((k) => k || BOT), 3, r.level, true);
       break;
@@ -643,6 +658,7 @@ function onMessage(key, msg) {
       if (room) return;
       const size = msg.size === 6 ? 6 : 3;
       if (deckOf(db.users[key]).team.length < size) return toast(key, `선택한 덱에 요괴가 ${size}마리 있어야 합니다.`);
+      { const bn = bannedIn(db.users[key], deckOf(db.users[key]).team.slice(0, size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
       startBattle([key, BOT], size, [0, 1, 2, 3].includes(msg.level) ? msg.level : 1);
       break;
     }
@@ -652,6 +668,7 @@ function onMessage(key, msg) {
       if (room || to === key || !online.has(to)) return toast(key, '지금은 신청할 수 없습니다.');
       if (inBattle.has(to)) return toast(key, '상대가 대전 중입니다.');
       if (deckOf(db.users[key]).team.length < size) return toast(key, `선택한 덱에 요괴가 ${size}마리 있어야 합니다.`);
+      { const bn = bannedIn(db.users[key], deckOf(db.users[key]).team.slice(0, size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
       challenges.set(key, { to, size });
       broadcastLobby();
       break;
@@ -672,6 +689,8 @@ function onMessage(key, msg) {
       if (!c || c.to !== key || room || !online.has(from) || inBattle.has(from)) return toast(key, '이미 끝난 신청입니다.');
       if (deckOf(db.users[key]).team.length < c.size) return toast(key, `선택한 덱에 요괴가 ${c.size}마리 있어야 합니다.`);
       if (deckOf(db.users[from]).team.length < c.size) return toast(key, '상대의 덱 인원이 모자랍니다.');
+      { const bn = bannedIn(db.users[key], deckOf(db.users[key]).team.slice(0, c.size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
+      if (bannedIn(db.users[from], deckOf(db.users[from]).team.slice(0, c.size)).length) return toast(key, '상대 덱에 테스트 중인 요괴가 있어 시작할 수 없습니다.');
       startBattle([from, key], c.size);
       break;
     }

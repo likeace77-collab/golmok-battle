@@ -418,11 +418,14 @@ function openSheet(html) {
 }
 function closeSheet() { sheetRoot.innerHTML = ''; }
 
+// 밴된 요괴: 개발자 계정은 쓸 수 있음
+const isBanned = (id) => (G.data.BANNED || []).includes(id) && !G.user?.dev;
+
 function pickMonster(team, done) {
   const used = new Set(team.map((m) => m.species));
   const bg = openSheet(`<div class="row"><h2>요괴 고르기</h2><button class="btn small paper" data-x>닫기</button></div>
-    <div class="grid">${Object.entries(G.data.MONSTERS).map(([id, m]) => `<button class="card" data-id="${id}" ${used.has(id) ? 'disabled' : ''}
-      style="--tc:${G.data.TYPES[m.types[0]].c}">${monsterSVG(id)}<span>${m.n}</span></button>`).join('')}</div>`);
+    <div class="grid">${Object.entries(G.data.MONSTERS).map(([id, m]) => { const ban = isBanned(id); return `<button class="card ${ban ? 'banned' : ''}" data-id="${id}" ${used.has(id) || ban ? 'disabled' : ''}
+      style="--tc:${G.data.TYPES[m.types[0]].c}">${monsterSVG(id)}<span>${m.n}</span>${ban ? '<em class="bantag">테스트 중</em>' : ''}</button>`; }).join('')}</div>`);
   bg.querySelector('[data-x]').onclick = closeSheet;
   bg.querySelectorAll('[data-id]').forEach((b) => {
     b.onclick = () => {
@@ -542,7 +545,7 @@ function showDex() {
           <button data-t="all" aria-pressed="${G.dexType === 'all'}">전체</button>
           ${types.map((t) => `<button data-t="${t}" aria-pressed="${G.dexType === t}" style="background:${G.data.TYPES[t].c};color:${['elec', 'ice', 'wind'].includes(t) ? 'var(--ink)' : '#fff'}">${G.data.TYPES[t].n}</button>`).join('')}
         </div>
-        <div class="grid">${list.map((id) => `<button class="card" data-dex="${id}" style="--tc:${G.data.TYPES[G.data.MONSTERS[id].types[0]].c}">${monsterSVG(id)}<span>${ids.indexOf(id) + 1}. ${G.data.MONSTERS[id].n}</span></button>`).join('')}</div>
+        <div class="grid">${list.map((id) => `<button class="card" data-dex="${id}" style="--tc:${G.data.TYPES[G.data.MONSTERS[id].types[0]].c}">${monsterSVG(id)}<span>${ids.indexOf(id) + 1}. ${G.data.MONSTERS[id].n}</span>${(G.data.BANNED || []).includes(id) ? `<em class="bantag">${G.user?.dev ? '개발자 전용' : '테스트 중'}</em>` : ''}</button>`).join('')}</div>
       </section>`;
     app.querySelector('#back').onclick = showLobby;
     app.querySelectorAll('[data-t]').forEach((b) => { b.onclick = () => { G.dexType = b.dataset.t; render(); }; });

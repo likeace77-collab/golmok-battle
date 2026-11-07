@@ -1,5 +1,5 @@
 // 배틀 엔진. 서버에서만 돌고, 모든 판정은 여기서 결정됩니다.
-const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP } = require('./data');
+const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP, BANNED } = require('./data');
 
 const LEVEL = 50;
 const STATUS_NAME = { brn: '화상', psn: '독', par: '마비', slp: '수면', frz: '얼음' };
@@ -58,8 +58,8 @@ function makeDummy() {
   };
 }
 // 훈련장: 모든 요괴가 기술 10개를 다 가진 채로 나옵니다.
-function createTraining(player, seed) {
-  const team = Object.entries(MONSTERS).map(([species, m]) => ({ species, moves: m.moves }));
+function createTraining(player, seed, exclude = []) {
+  const team = Object.entries(MONSTERS).filter(([species]) => !exclude.includes(species)).map(([species, m]) => ({ species, moves: m.moves }));
   const b = createBattle([{ ...player, team }, { name: '훈련장', avatar: null, style: null, deck: '더미', team: [] }], seed);
   b.training = true;
   b.sides[1].mons = [makeDummy()];
@@ -812,7 +812,7 @@ function smartMoves(species, enemyTypes) {
 }
 
 function botTeam(level, size, enemy = []) {
-  const ids = Object.keys(MONSTERS);
+  const ids = Object.keys(MONSTERS).filter((id) => !BANNED.includes(id)); // 밴된 요괴는 봇이 안 씀
   const enemyTypes = enemy.map((m) => MONSTERS[m.species].types);
   if (level === 0) {
     return shuffled(ids).slice(0, size).map((species) => ({ species, moves: shuffled(MONSTERS[species].moves).slice(0, 4) }));
