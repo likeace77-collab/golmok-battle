@@ -159,6 +159,19 @@ function migrate() {
     delete u.team;
     changed = true;
   }
+  // 운영 보상: 버그로 기록이 날아간 계정에 한 번만 지급 (grants에 남겨 다시 주지 않음)
+  const GRANTS = [
+    { id: 'suho-dummy1000', user: 'suho', why: '훈련장 1000딜 기록이 업데이트 중 사라짐', apply: (u) => { u.stats.dummyBest = Math.max(u.stats.dummyBest || 0, 1000); u.stats.dummyDmg = Math.max(u.stats.dummyDmg || 0, 1000); } },
+  ];
+  for (const g of GRANTS) {
+    const u = db.users[keyOf(g.user)];
+    if (!u || (u.grants || []).includes(g.id)) continue;
+    g.apply(u);
+    (u.grants ||= []).push(g.id);
+    notices.set(keyOf(g.user), '버그로 사라졌던 훈련장 기록(한 턴 1000)을 복구했습니다. 칭호 "더미 일격 분쇄"가 열렸어요!');
+    console.log(`보상 지급: ${g.id} (${g.why})`);
+    changed = true;
+  }
   if (changed) save();
 }
 
