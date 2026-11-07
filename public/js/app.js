@@ -183,7 +183,7 @@ function renderLobby() {
       ${others.length ? others.map((p) => {
         const out = L.outgoing?.to === p.key;
         return `<div class="player"><div class="ava">${avatarSVG(p.avatar)}</div>
-          <div class="nm">${p.style ? `<span class="ptitle">${esc(cosmetic('titles', p.style.title).n)}</span>` : ''}${esc(p.name)}<small>${p.busy ? '대전 중' : `${p.wins}승 ${p.losses}패`}</small></div>
+          <div class="nm">${p.style ? `<span class="ptitle">${titleTag(p.style.title)}</span>` : ''}${esc(p.name)}<small>${p.busy ? '대전 중' : `${p.wins}승 ${p.losses}패`}</small></div>
           ${out ? '<button class="btn small paper" data-cancel>신청 취소</button>'
             : `<button class="btn small" data-ch="${esc(p.key)}" ${p.busy ? 'disabled' : ''}>대전 신청</button>`}
         </div>`;
@@ -259,9 +259,9 @@ function showAvatar() {
       body = G.data.COSMETICS[kind].map((item) => {
         const open = unlocked(G.user, item);
         const on = tab === 'pin' ? style.pins.includes(item.id) : style[tab] === item.id;
-        const look = tab === 'card' ? `<span class="cswatch bc-${item.id}"></span>` : tab === 'pin' ? `<span class="cpin">${pinSVG(item.id)}</span>` : '';
+        const look = tab === 'title' ? `<span class="ctitle">${titleTag(item.id)}<small>${TITLE_TIERS[item.tier || 0]}</small></span>` : tab === 'card' ? `<span class="cswatch bc-${item.id}"></span>` : tab === 'pin' ? `<span class="cpin">${pinSVG(item.id)}</span>` : '';
         return `<button class="citem ${on ? 'on' : ''}" data-pick="${item.id}" ${open ? '' : 'disabled'}>
-          ${look}<span class="cinfo"><b>${open ? '' : '🔒 '}${esc(item.n)}</b><small>${condText(item)}</small></span>${on ? '<em>장착</em>' : ''}</button>`;
+          ${look}<span class="cinfo"><b>${open ? '' : '🔒 '}${tab === 'title' ? '' : esc(item.n)}</b><small>${condText(item)}</small></span>${on ? '<em>장착</em>' : ''}</button>`;
       }).join('');
       if (tab === 'pin') body = `<p class="muted" style="margin-bottom:8px">핀은 3개까지 달 수 있습니다. (${style.pins.length}/3)</p>${body}`;
     }

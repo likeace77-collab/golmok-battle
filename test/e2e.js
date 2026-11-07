@@ -54,6 +54,7 @@ async function playStep(page) {
   await a.page.click('[data-k=glasses][data-v="3"]');
   await a.page.click('[data-tab=title]');
   if (!await a.page.$('[data-pick=legend][disabled]')) throw new Error('잠긴 칭호를 고를 수 있음');
+  await shot(a.page, 'titles');
   await a.page.click('[data-pick=kid]');
   await a.page.click('[data-tab=card]');
   await a.page.click('[data-pick=red]');

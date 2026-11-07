@@ -234,6 +234,13 @@ function cosmetic(kind, id) {
   return list.find((x) => x.id === id) || list[0];
 }
 
+// 칭호 등급별 효과: 0 일반, 1 반짝, 2 별가루, 3 황금, 4 네온, 5 전설
+const TITLE_TIERS = ['일반', '반짝', '별가루', '황금', '네온', '전설'];
+function titleTag(id, cls = '') {
+  const t = cosmetic('titles', id), tier = t.tier || 0;
+  return `<span class="tt tt-${tier} ${cls}"${t.glow ? ` style="--g:${t.glow}"` : ''}>${tier >= 2 ? '<s aria-hidden="true"></s>' : ''}<i>${esc(t.n)}</i></span>`;
+}
+
 function battleCard(p, size = '') {
   const st = p.style || {};
   const card = cosmetic('cards', st.card), title = cosmetic('titles', st.title);
@@ -241,7 +248,7 @@ function battleCard(p, size = '') {
   return `<div class="bcard bc-${card.id} ${card.dark ? 'dark' : ''} ${size}">
     <div class="bc-ava">${avatarSVG(p.avatar)}</div>
     <div class="bc-body">
-      <span class="bc-title">${esc(title.n)}</span>
+      ${titleTag(title.id, 'bc-title')}
       <div class="bc-name ${[...p.name].length > 6 ? 'long' : ''}">${esc(p.name)}</div>
       ${pins.length ? `<div class="bc-pins">${pins.map(pinSVG).join('')}</div>` : ''}
       ${p.record ? `<div class="bc-rec">${p.record}</div>` : ''}

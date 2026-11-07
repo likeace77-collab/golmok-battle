@@ -391,16 +391,17 @@ const AVATAR_OPTIONS = {
 // 칭호, 전투카드, 핀. cond: [기록 이름, 필요한 수]. 없으면 처음부터 열림.
 // 기록: wins, losses, games(1대1 판수), streakBest(최고 연승), p0~p3(연습전 난이도별 승리), tagGames, tagWins, megas
 const C = (id, n, cond, extra = {}) => ({ id, n, cond, ...extra });
+// 칭호 등급(tier): 0 일반, 1 반짝, 2 별가루, 3 황금, 4 네온, 5 전설. glow는 네온·전설 색
 const COSMETICS = {
   titles: [
-    C('rookie', '골목 새내기', null), C('kid', '동네 꼬마', null), C('wanderer', '떠돌이 요괴꾼', null),
-    C('first', '첫 승리의 맛', ['wins', 1]), C('boss', '골목 짱', ['wins', 10]), C('tyrant', '동네 패왕', ['wins', 30]),
-    C('legend', '전설의 골목대장', ['wins', 100]), C('comeback', '칠전팔기', ['losses', 7]), C('regular', '골목 단골손님', ['games', 20]),
-    C('hot', '불붙은 손', ['streakBest', 3]), C('unstoppable', '무적 행진', ['streakBest', 7]),
-    C('easy', '쉬움 정복자', ['p0', 1]), C('normal', '보통 사냥꾼', ['p1', 3]), C('hard', '어려움 파괴자', ['p2', 5]),
-    C('hell', '지옥에서 돌아온 자', ['p3', 1]), C('hellking', '지옥의 군주', ['p3', 10]),
-    C('mega1', '메가 입문자', ['megas', 1]), C('mega2', '메가진화 장인', ['megas', 25]),
-    C('partner', '든든한 파트너', ['tagGames', 1]), C('combo', '환상의 콤비', ['tagWins', 5]),
+    C('rookie', '골목 새내기', null, { tier: 0 }), C('kid', '동네 꼬마', null, { tier: 0 }), C('wanderer', '떠돌이 요괴꾼', null, { tier: 0 }),
+    C('first', '첫 승리의 맛', ['wins', 1], { tier: 1 }), C('boss', '골목 짱', ['wins', 10], { tier: 2 }), C('tyrant', '동네 패왕', ['wins', 30], { tier: 3 }),
+    C('legend', '전설의 골목대장', ['wins', 100], { tier: 5 }), C('comeback', '칠전팔기', ['losses', 7], { tier: 2 }), C('regular', '골목 단골손님', ['games', 20], { tier: 1 }),
+    C('hot', '불붙은 손', ['streakBest', 3], { tier: 2 }), C('unstoppable', '무적 행진', ['streakBest', 7], { tier: 3 }),
+    C('easy', '쉬움 정복자', ['p0', 1], { tier: 1 }), C('normal', '보통 사냥꾼', ['p1', 3], { tier: 2 }), C('hard', '어려움 파괴자', ['p2', 5], { tier: 3 }),
+    C('hell', '지옥에서 돌아온 자', ['p3', 1], { tier: 4, glow: '#FF3B5C' }), C('hellking', '지옥의 군주', ['p3', 10], { tier: 5, glow: '#FF4A1C' }),
+    C('mega1', '메가 입문자', ['megas', 1], { tier: 1 }), C('mega2', '메가진화 장인', ['megas', 25], { tier: 4, glow: '#2EF2FF' }),
+    C('partner', '든든한 파트너', ['tagGames', 1], { tier: 1 }), C('combo', '환상의 콤비', ['tagWins', 5], { tier: 3 }),
   ],
   cards: [
     C('basic', '기본 딱지', null), C('blue', '망점 블루', null, { dark: true }), C('red', '집중선 레드', null, { dark: true }),
