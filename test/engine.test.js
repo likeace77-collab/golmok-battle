@@ -52,7 +52,7 @@ test('모든 요괴에게 그림이 있고 스킬이 겹치지 않는다', () =>
   const art = read('art.js'), mega = read('mega-art.js'), newArt = read('new-art.js');
   for (const [id, m] of Object.entries(MONSTERS)) {
     if (m.img) { // 사진 그림
-      for (const f of [id, `${id}-mega`]) assert.ok(require('fs').existsSync(require('path').join(__dirname, `../public/img/mon/${f}.webp`)), f);
+      for (const f of [id, `${id}-mega`, ...Array.from({ length: m.stages || 0 }, (_, i) => `${id}-s${i + 1}`)]) assert.ok(require('fs').existsSync(require('path').join(__dirname, `../public/img/mon/${f}.webp`)), f);
       assert.equal(new Set(m.moves).size, m.moves.length, id);
       continue;
     }
