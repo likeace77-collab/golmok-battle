@@ -21,7 +21,7 @@ const AVATAR_LABELS = {
 const AVATAR_SWATCH = { skin: SKIN, hairColor: HAIR_C, outfitColor: CLOTH_C, bg: BG_SWATCH, pantsColor: PANTS_C, shoeColor: SHOE_C };
 const AVATAR_ORDER = ['body', 'pose', 'skin', 'hair', 'hairColor', 'brow', 'eyes', 'mouth', 'face', 'glasses', 'hat', 'outfit', 'outfitColor', 'pantsColor', 'shoes', 'shoeColor', 'gloves', 'neck', 'back', 'hand', 'aura', 'bg'];
 const AVATAR_NAMES = {
-  body: ['보통', '날씬', '듬직', '꼬마'], pose: ['차렷', '허리에 손', '팔짱', '브이', '손 흔들기', '근육'],
+  body: ['보통', '날씬', '듬직', '꼬마'], pose: ['차렷', '허리에 손', '팔짱', '브이', '손 흔들기', '근육 자랑', '엄지척', '손가락질', '파이팅', '손하트', '뒷짐', '만세 점프'],
   shoes: ['운동화', '부츠', '슬리퍼', '구두', '하이탑', '장화', '롤러', '쪼리'], gloves: ['없음', '흰 장갑', '권투', '가죽', '고무장갑', '메카'],
   neck: ['없음', '목도리', '금목걸이', '나비넥타이', '두건', '메달'], back: ['없음', '망토', '천사 날개', '악마 날개', '책가방', '제트팩', '등검', '나비 날개', '기타', '깃발'],
   hand: ['없음', '검', '지팡이', '깃발', '마이크', '아이스크림', '국자', '뚫어뻥', '빗자루', '연탄집게'], aura: ['없음', '불꽃', '번개', '반짝', '얼음', '하트', '어둠', '무지개'],
@@ -225,6 +225,39 @@ const PIN_ART = {
   poop: '<path d="M4 20q-3-4 2-6-2-4 3-5 0-5 4-6-1 3 2 5 4 1 3 5 5 2 2 7z" fill="#8B5A2B"/><circle cx="10" cy="15" r="1.600" fill="#fff"/><circle cx="15" cy="15" r="1.600" fill="#fff"/><circle cx="10" cy="15.300" r=".7" fill="#1a1433" stroke="none"/><circle cx="15" cy="15.300" r=".7" fill="#1a1433" stroke="none"/><path d="M10 18q2.500 1.500 5 0" fill="none" stroke-width="1"/>',
   kingbad: '<path d="M2 3h20v13h-8l-4 5v-5H2z" fill="#E8402C"/><text x="12" y="12.800" font-size="6.300" text-anchor="middle" font-weight="900" fill="#fff" stroke="none">킹받네</text>',
   medal: '<path d="M7 2h4l2 7H9zM13 2h4l-2 7h-4z" fill="#2F7DE1"/><circle cx="12" cy="15" r="6" fill="#C7CDD6"/><text x="12" y="18" font-size="7" text-anchor="middle" font-weight="900" fill="#1a1433" stroke="none">2</text>',
+  cat: '<path d="M4 9L5 2l5 4h4l5-4 1 7c1 2 1 5 0 7-2 4-6 5-8 5s-6-1-8-5c-1-2-1-5 0-7z" fill="#F2A541"/><circle cx="9" cy="12" r="1.400" fill="#1a1433" stroke="none"/><circle cx="15" cy="12" r="1.400" fill="#1a1433" stroke="none"/><path d="M11 15h2l-1 1zM12 16q-1 2-3 1M12 16q1 2 3 1M2 14h4M18 14h4" fill="none" stroke-width="1"/>',
+  onigiri: '<path d="M12 2c3 0 10 13 10 16 0 2-2 3-4 3H6c-2 0-4-1-4-3C2 15 9 2 12 2z" fill="#fff"/><path d="M7 14h10v7H7z" fill="#1a1433"/><circle cx="10" cy="10" r=".8" fill="#1a1433" stroke="none"/><circle cx="14" cy="10" r=".8" fill="#1a1433" stroke="none"/>',
+  skewer: '<path d="M12 23V1" stroke="#C9924F" stroke-width="2"/><rect x="7" y="3" width="10" height="5" rx="2.500" fill="#E8402C"/><rect x="7" y="9" width="10" height="5" rx="2.500" fill="#E8402C"/><rect x="7" y="15" width="10" height="5" rx="2.500" fill="#E8402C"/><path d="M9 5h2M13 11h2M9 17h2" stroke="#fff" stroke-width="1"/>',
+  fishcake: '<path d="M12 23V1" stroke="#C9924F" stroke-width="2"/><path d="M7 3q5 2 10 0v4q-5 2-10 0zM7 8q5 2 10 0v4q-5 2-10 0zM7 13q5 2 10 0v4q-5 2-10 0z" fill="#F2D49B"/>',
+  ramen: '<path d="M2 11h20q0 9-10 10Q2 20 2 11z" fill="#E8402C"/><path d="M5 11q2-4 4 0t4 0 4 0" fill="none" stroke="#FFE27A" stroke-width="1.600"/><circle cx="16" cy="9" r="2.500" fill="#fff"/><circle cx="16" cy="9" r="1.100" fill="#FFD23F" stroke="none"/><path d="M14 2l-3 9M18 2l-4 9" stroke-width="1.300"/><path d="M8 15h8" stroke="#fff" stroke-width="1.200"/>',
+  banana: '<path d="M7 7h10l1 4v10q0 1-1 1H7q-1 0-1-1V11z" fill="#FFE27A"/><path d="M9 2h6v5H9z" fill="#3FA34D"/><path d="M8 14q4 3 8 0" fill="none" stroke-width="1.300"/><text x="12" y="20" font-size="4" text-anchor="middle" font-weight="900" fill="#1a1433" stroke="none">바나나</text>',
+  fist: '<path d="M5 9q0-3 3-3h9q3 0 3 3v6q0 6-7 7-8 0-8-7z" fill="#FFE0BD"/><path d="M9 6v5M13 6v5M17 6v5M5 12q3-1 6 1" fill="none" stroke-width="1.300"/>',
+  music: '<path d="M8 18V5l12-3v13" fill="none" stroke-width="2"/><ellipse cx="6" cy="18" rx="3" ry="2.400" fill="#9A4FB8"/><ellipse cx="18" cy="15" rx="3" ry="2.400" fill="#9A4FB8"/><path d="M8 8l12-3" stroke-width="2"/>',
+  rat: '<path d="M3 15q0-7 8-7 6 0 8 4l3 1-3 2q-2 4-8 4-8 0-8-4z" fill="#8a8f98"/><circle cx="11" cy="8" r="3" fill="#c7cdd6"/><circle cx="17" cy="12" r=".9" fill="#1a1433" stroke="none"/><path d="M3 15Q0 20 4 22" fill="none" stroke="#F27FA5" stroke-width="1.500"/><circle cx="22" cy="13" r="1" fill="#F27FA5"/>',
+  manhole: '<circle cx="12" cy="12" r="10" fill="#57505c"/><circle cx="12" cy="12" r="7" fill="none" stroke-width="1"/><path d="M5 12h14M12 5v14M7 7l10 10M17 7L7 17" stroke="#3b3640" stroke-width="1.200"/><circle cx="12" cy="12" r="2.500" fill="#8a8f98"/>',
+  ghost: '<path d="M4 22V11a8 8 0 0 1 16 0v11l-3-2-2 2-3-2-3 2-2-2z" fill="#fff"/><ellipse cx="9" cy="11" rx="1.500" ry="2.200" fill="#1a1433"/><ellipse cx="15" cy="11" rx="1.500" ry="2.200" fill="#1a1433"/><ellipse cx="12" cy="16" rx="1.500" ry="1" fill="#F27FA5" stroke="none"/>',
+  bomb: '<circle cx="11" cy="14" r="8" fill="#1a1433"/><path d="M15 6l2-2 2 2-2 2z" fill="#57505c"/><path d="M18 4q2-3 4-1" fill="none" stroke="#C9924F" stroke-width="1.500"/><path d="M22 1l1 2M20 1l.5 1.500" stroke="#FFD23F" stroke-width="1.400"/><circle cx="8" cy="11" r="2" fill="#fff" stroke="none" opacity=".6"/>',
+  rocket: '<path d="M12 1q6 5 5 14H7Q6 6 12 1z" fill="#fff"/><circle cx="12" cy="8" r="2.200" fill="#37e0ff"/><path d="M7 11l-4 5 4 1zM17 11l4 5-4 1z" fill="#E8402C"/><path d="M9 17q3 7 3 7t3-7z" fill="#F28A1E"/>',
+  moon: '<path d="M15 2a10 10 0 1 0 7 15A8 8 0 0 1 15 2z" fill="#FFE27A"/><circle cx="9" cy="10" r="1.300" fill="#E7B23A" stroke="none"/><circle cx="11" cy="16" r="1" fill="#E7B23A" stroke="none"/>',
+  sun: '<circle cx="12" cy="12" r="6" fill="#FFD23F"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3M4 4l2 2M18 18l2 2M4 20l2-2M18 6l2-2" stroke="#F28A1E" stroke-width="2"/><circle cx="10" cy="11" r=".8" fill="#1a1433" stroke="none"/><circle cx="14" cy="11" r=".8" fill="#1a1433" stroke="none"/><path d="M10 14q2 1.500 4 0" fill="none" stroke-width="1"/>',
+  snow: '<path d="M12 1v22M2.500 6.500l19 11M2.500 17.500l19-11" stroke="#BFE4FF" stroke-width="3"/><path d="M12 1v22M2.500 6.500l19 11M2.500 17.500l19-11M9 3l3 2 3-2M9 21l3-2 3 2" stroke-width="1" fill="none"/>',
+  mic: '<rect x="8" y="2" width="8" height="12" rx="4" fill="#C7CDD6"/><path d="M8 7h8M8 10h8" stroke-width="1"/><path d="M5 11q0 7 7 7t7-7M12 18v4M8 22h8" fill="none" stroke-width="1.800"/>',
+  dice: '<rect x="3" y="3" width="18" height="18" rx="4" fill="#fff"/><circle cx="8" cy="8" r="1.600" fill="#E8402C" stroke="none"/><circle cx="12" cy="12" r="1.600" fill="#1a1433" stroke="none"/><circle cx="16" cy="16" r="1.600" fill="#1a1433" stroke="none"/><circle cx="16" cy="8" r="1.600" fill="#1a1433" stroke="none"/><circle cx="8" cy="16" r="1.600" fill="#1a1433" stroke="none"/>',
+  clover: '<path d="M12 12C7 12 4 9 6 6s6 0 6 6zM12 12c0-5 3-8 6-6s0 6-6 6zM12 12c5 0 8 3 6 6s-6 0-6-6zM12 12c0 5-3 8-6 6s0-6 6-6z" fill="#3FA34D"/><path d="M12 12q3 6 2 11" fill="none" stroke-width="1.500"/>',
+  headphone: '<path d="M3 15v-3a9 9 0 0 1 18 0v3" fill="none" stroke-width="2.400"/><rect x="2" y="13" width="5" height="8" rx="2" fill="#E8402C"/><rect x="17" y="13" width="5" height="8" rx="2" fill="#E8402C"/>',
+  gamepad: '<path d="M6 7h12q5 0 5 7 0 6-4 6-2 0-4-3H9q-2 3-4 3-4 0-4-6 0-7 5-7z" fill="#9A4FB8"/><path d="M7 10v5M4.500 12.500h5" stroke="#fff" stroke-width="1.600"/><circle cx="16" cy="11" r="1.300" fill="#FFD23F"/><circle cx="18.500" cy="13.500" r="1.300" fill="#37e0ff"/>',
+  ufo: '<ellipse cx="12" cy="14" rx="11" ry="4" fill="#C7CDD6"/><path d="M6 12a6 6 0 0 1 12 0z" fill="#6CF2C2"/><circle cx="6" cy="15" r="1" fill="#FFD23F" stroke="none"/><circle cx="12" cy="16" r="1" fill="#FFD23F" stroke="none"/><circle cx="18" cy="15" r="1" fill="#FFD23F" stroke="none"/><path d="M8 18l-2 5M16 18l2 5" stroke="#FFE45C" stroke-width="1.200"/>',
+  alien: '<path d="M12 2c6 0 9 4 9 8 0 6-5 12-9 12S3 16 3 10c0-4 3-8 9-8z" fill="#6CF2C2"/><path d="M5 10q4-1 5 4-4 0-5-4zM19 10q-4-1-5 4 4 0 5-4z" fill="#1a1433"/><path d="M10 18h4" stroke-width="1.200"/>',
+  zbolt: '<circle cx="12" cy="12" r="11" fill="#FFD23F"/><path d="M6 6h12v3l-7 6h7v3H6v-3l7-6H6z" fill="#1a1433" stroke="none"/>',
+  zgold: '<path d="M12 1l3 4 5-1-1 5 4 3-4 3 1 5-5-1-3 4-3-4-5 1 1-5-4-3 4-3-1-5 5 1z" fill="#FFD23F"/><path d="M7.500 7.500h9V10l-5.500 4h5.500v2.500h-9V14l5.500-4H7.500z" fill="#E8402C" stroke-width="1"/>',
+  robot: '<rect x="4" y="6" width="16" height="13" rx="3" fill="#8a8f98"/><path d="M12 6V2" stroke-width="1.600"/><circle cx="12" cy="2" r="1.400" fill="#E8402C"/><rect x="7" y="9" width="10" height="5" rx="2" fill="#1a1433"/><circle cx="9.500" cy="11.500" r="1.200" fill="#37e0ff" stroke="none"/><circle cx="14.500" cy="11.500" r="1.200" fill="#37e0ff" stroke="none"/><path d="M8 16.500h8" stroke-width="1.200"/><path d="M2 11h2M20 11h2" stroke-width="2"/>',
+  devil: '<path d="M4 3l3 5M20 3l-3 5" stroke="#E8402C" stroke-width="2.500"/><circle cx="12" cy="13" r="9" fill="#9A4FB8"/><path d="M7 11l3 1.500M17 11l-3 1.500" stroke-width="1.500"/><path d="M8 16q4 3 8 0" fill="#fff" stroke-width="1.200"/><path d="M10 16.500v1M14 16.500v1" stroke-width=".8"/>',
+  halo: '<ellipse cx="12" cy="6" rx="8" ry="3" fill="none" stroke="#FFD23F" stroke-width="3"/><ellipse cx="12" cy="6" rx="8" ry="3" fill="none" stroke-width=".8"/><circle cx="12" cy="16" r="6" fill="#FFE0BD"/><path d="M9.500 16q1-1 2 0M12.500 16q1-1 2 0" fill="none" stroke-width="1"/>',
+  cry: '<circle cx="12" cy="12" r="10" fill="#FFD23F"/><path d="M7 9q2-2 4 0M13 9q2-2 4 0" fill="none" stroke-width="1.400"/><path d="M8 10v9M16 10v9" stroke="#37a5ff" stroke-width="2.500"/><path d="M9 17q3-3 6 0" fill="#1a1433" stroke-width="1.200"/>',
+  angry: '<circle cx="12" cy="12" r="10" fill="#E8402C"/><path d="M6 8l5 2M18 8l-5 2" stroke-width="1.800"/><circle cx="9" cy="12" r="1.200" fill="#1a1433" stroke="none"/><circle cx="15" cy="12" r="1.200" fill="#1a1433" stroke="none"/><path d="M8 17q4-3 8 0" fill="none" stroke-width="1.500"/><path d="M18 2l1 2 2-1-1 2 2 1" fill="none" stroke="#FFD23F" stroke-width="1.300"/>',
+  cool: '<circle cx="12" cy="12" r="10" fill="#FFD23F"/><path d="M3 9h18" stroke-width="1.800"/><path d="M4 9h7q0 4-3.500 4T4 9zM13 9h7q0 4-3.500 4T13 9z" fill="#1a1433"/><path d="M9 16q4 2 7-1" fill="none" stroke-width="1.400"/>',
+  lovey: '<circle cx="12" cy="12" r="10" fill="#FFD23F"/><path d="M8.500 12C5 10 5.500 7 7 7c1 0 1.500 1 1.500 1S9 7 10 7c1.500 0 2 3-1.500 5zM15.500 12C12 10 12.500 7 14 7c1 0 1.500 1 1.500 1S16 7 17 7c1.500 0 2 3-1.500 5z" fill="#E8402C" stroke-width="1"/><path d="M8 15q4 4 8 0" fill="#fff" stroke-width="1.200"/>',
+  king: '<path d="M11 1h2v3h2v2h-2v2h-2V6H9V4h2z" fill="#FFD23F" stroke-width="1"/><path d="M8 9h8l-1 8H9z" fill="#1a1433"/><path d="M5 20h14v3H5zM7 17h10v3H7z" fill="#1a1433"/><path d="M8 9h8" stroke="#FFD23F" stroke-width="1.200"/>',
 };
 const pinSVG = (id) => `<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#1a1433" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">${PIN_ART[id] || ''}</g></svg>`;
 
@@ -260,7 +293,7 @@ const recordText = (u) => `${u.wins ?? 0}승 ${u.losses ?? 0}패${u.draws ? ` ${
 
 // 해금 확인: 서버와 같은 규칙
 function statOf(u, k) {
-  if (k === 'wins' || k === 'losses') return u[k] || 0;
+  if (k === 'wins' || k === 'losses' || k === 'draws') return u[k] || 0;
   return (u.stats || {})[k] || 0;
 }
 const unlocked = (u, item) => !item.cond || statOf(u, item.cond[0]) >= item.cond[1];

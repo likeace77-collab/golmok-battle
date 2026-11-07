@@ -256,7 +256,8 @@ function showAvatar() {
         <button class="btn paper small" id="rand" style="margin-top:10px">무작위로 섞기</button>`;
     } else {
       const kind = { title: 'titles', card: 'cards', pin: 'pins' }[tab];
-      body = G.data.COSMETICS[kind].map((item) => {
+      const list = kind === 'titles' ? [...G.data.COSMETICS.titles].sort((x, y) => (x.tier || 0) - (y.tier || 0)) : G.data.COSMETICS[kind];
+      body = list.map((item) => {
         const open = unlocked(G.user, item);
         const on = tab === 'pin' ? style.pins.includes(item.id) : style[tab] === item.id;
         const look = tab === 'title' ? `<span class="ctitle">${titleTag(item.id)}<small>${TITLE_TIERS[item.tier || 0]}</small></span>` : tab === 'card' ? `<span class="cswatch bc-${item.id}"></span>` : tab === 'pin' ? `<span class="cpin">${pinSVG(item.id)}</span>` : '';

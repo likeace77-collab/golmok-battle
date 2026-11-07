@@ -111,7 +111,7 @@ const Avatar3D = (() => {
     const front = (geo, color, y, z = .3, opts) => tAdd(at(part(geo, color, opts), 0, y, z));
     ({
       0: () => front(tor(.12, .025, Math.PI), cc, .76, .2),
-      1: () => { tAdd(at(part(tor(.24, .09), cc), 0, .82, -.12, Math.PI / 2.6)); front(box(.36, .16, .04), '#00000033', .3, .3, { line: .01 }); },
+      1: () => { tAdd(at(part(tor(.24, .09), cc), 0, .82, -.12, Math.PI / 2.6)); front(box(.36, .16, .04), '#2a2440', .3, .3, { line: .01 }); },
       2: () => { front(shapeGeo('v', [[-.14, .2], [.14, .2], [0, -.12]], .02), '#fff', .66, .3, { line: .01 }); front(box(.07, .3, .03), cc, .55, .31, { line: .012 }); },
       3: () => { front(box(.03, .6, .03), '#1a1433', .42, .3, { line: 0 }); },
       4: () => { front(box(.42 * W, .36, .06), cc, .3, .27); },
@@ -147,11 +147,23 @@ const Avatar3D = (() => {
       const gl = v('gloves');
       const handColor = ['', '#fff', '#E8402C', '#5a3a22', '#E8402C', '#8a8f98'][gl] || skin;
       hand.add(part(gl === 2 ? sph(.19) : gl === 5 ? box(.24, .24, .24) : gl === 4 ? sph(.15) : sph(.13), handColor));
+      // 손가락 제스처: 브이, 검지, 엄지. 포즈의 gL/gR 값으로 하나만 보입니다.
+      const hr = gl === 2 ? .19 : gl === 5 ? .13 : gl === 4 ? .15 : .13, fr = hr * .3, fl = hr * 1.05;
+      const finger = (x, rz, len = fl, rx = 0) => { const f = at(new T.Group(), x, -hr * .7, 0, rx, 0, rz); f.add(at(part(cap(fr, len), handColor, { line: .02 }), 0, -len / 2 - fr, 0)); return f; };
+      const gest = {};
+      gest.v = new T.Group(); gest.v.add(finger(-hr * .35, -.28), finger(hr * .35, .28));
+      gest.point = new T.Group(); gest.point.add(finger(0, 0, fl * 1.1));
+      gest.thumb = new T.Group(); { const f = finger(0, 0, fl * .85, -Math.PI / 2); f.position.set(0, -hr * .15, hr * .55); gest.thumb.add(f); }
+      for (const g of Object.values(gest)) { g.visible = false; hand.add(g); }
+      hand.userData.gest = gest;
       fore.add(hand);
       sh.add(fore);
       torso.add(sh);
       J[s < 0 ? 'armL' : 'armR'] = sh; J[s < 0 ? 'foreL' : 'foreR'] = fore; J[s < 0 ? 'handL' : 'handR'] = hand;
     }
+    // 손하트 포즈용 하트
+    { const hp = at(part(shapeGeo('hp', heartPts(.2), .08), '#FF5C8A', { line: .02 }), 0, .62, .62);
+      hp.visible = false; torso.add(hp); J.heartProp = hp; }
     // 손에 든 것 (오른손)
     const hand = J.handR, H = (o) => hand.add(o);
     ({
@@ -326,25 +338,55 @@ const Avatar3D = (() => {
   const ease = (p) => (p < .5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2);
   const seg = (t, a, b) => Math.max(0, Math.min(1, (t - a) / (b - a)));
   // 각 포즈: 관절 이름 → [x, y, z] 회전, 그리고 엉덩이 높이(dy), 몸 숙임(lean), 회전(spin)
+  // 서 있는 자세 12가지 (avatar.js의 AVATAR_NAMES.pose와 순서가 같습니다)
+  // 팔 값: z가 +면 왼팔, -면 오른팔이 몸 바깥으로 들립니다. x가 -면 앞으로. gL/gR은 손가락 모양.
   const IDLE = [
-    (t) => ({ armL: [0, 0, .12], armR: [0, 0, -.12] }),
-    (t) => ({ armL: [0, 0, .75], foreL: [0, 0, -1.7], armR: [0, 0, -.75], foreR: [0, 0, 1.7] }),
-    (t) => ({ armL: [-.9, .3, .2], foreL: [0, 0, -1.9], armR: [-.9, -.3, -.2], foreR: [0, 0, 1.9] }),
-    (t) => ({ armL: [0, 0, .12], armR: [-.2, 0, -2.5], foreR: [0, 0, -.6] }),
-    (t) => ({ armL: [0, 0, .12], armR: [0, 0, -2.6], foreR: [0, 0, Math.sin(t * 7) * .6 - .2] }),
-    (t) => ({ armL: [0, 0, 1.45], foreL: [0, 0, 1.7 + Math.sin(t * 4) * .1], armR: [0, 0, -1.45], foreR: [0, 0, -1.7 - Math.sin(t * 4) * .1] }),
+    // 0 차렷
+    (t) => ({ armL: [0, 0, .1], armR: [0, 0, -.1], head: [0, Math.sin(t * .8) * .06, 0] }),
+    // 1 허리에 손
+    (t) => ({ armL: [0, 0, .75], foreL: [0, 0, -1.7], armR: [0, 0, -.75], foreR: [0, 0, 1.7], legL: [0, 0, -.16], legR: [0, 0, .16], head: [-.08, 0, 0] }),
+    // 2 팔짱
+    (t) => ({ armL: [-.25, -1.5, .28], foreL: [-1.7, 0, 0], armR: [-.38, 1.5, -.28], foreR: [-1.78, 0, 0], head: [-.14, 0, Math.sin(t) * .03], legL: [0, 0, -.1], legR: [0, 0, .1] }),
+    // 3 브이
+    (t) => ({ armL: [0, 0, .1], armR: [0, 0, -.7], foreR: [0, 0, -2.3], handR: [0, 0, Math.sin(t * 3) * .12], gR: 'v', head: [0, 0, -.18], torso: [0, 0, -.05] }),
+    // 4 손 흔들기
+    (t) => ({ armL: [0, 0, .1], armR: [0, 0, -2.5], foreR: [0, 0, Math.sin(t * 8) * .55], head: [0, 0, -.1] }),
+    // 5 근육 자랑
+    (t) => ({ armL: [0, 0, 1.5], foreL: [0, 0, 1.75 + Math.sin(t * 4) * .12], armR: [0, 0, -1.5], foreR: [0, 0, -1.75 - Math.sin(t * 4) * .12], legL: [0, 0, -.18], legR: [0, 0, .18], dy: -.04 }),
+    // 6 엄지척
+    (t) => ({ armL: [0, 0, .1], armR: [-1.0, 0, -.2], foreR: [-.5 - Math.sin(t * 3) * .1, 0, 0], gR: 'thumb', head: [0, 0, -.1] }),
+    // 7 손가락질
+    (t) => ({ armL: [0, 0, .75], foreL: [0, 0, -1.7], armR: [-1.15, 0, -.75], gR: 'point', torso: [.05, -.2, 0], head: [0, -.25, 0], legR: [-.2, 0, 0] }),
+    // 8 파이팅 자세
+    (t) => ({ armL: [-.6, 0, .15], foreL: [-2.3, 0, 0], armR: [-1.0, 0, -.15], foreR: [-1.8, 0, 0], legL: [-.35, 0, -.1], legR: [.3, 0, .1], torso: [.1, .35, 0], dy: -.05 + Math.abs(Math.sin(t * 5)) * .04 }),
+    // 9 손하트
+    (t) => ({ armL: [-.55, 0, .2], foreL: [-1.55, 0, -1.75], armR: [-.5, 0, -.2], foreR: [-1.45, 0, 1.75], heart: true, head: [0, 0, .12], dy: Math.sin(t * 3) * .015 }),
+    // 10 뒷짐
+    (t) => ({ armL: [.45, 0, .15], foreL: [.2, 0, -1.2], armR: [.45, 0, -.15], foreR: [.2, 0, 1.2], head: [-.12, Math.sin(t * .7) * .15, 0], torso: [-.05, 0, 0] }),
+    // 11 만세 점프
+    (t) => ({ armL: [0, 0, 2.6], foreL: [0, 0, .2], armR: [0, 0, -2.6], foreR: [0, 0, -.2], dy: Math.max(0, Math.sin(t * 5)) * .22, legL: [-.25 * Math.max(0, Math.sin(t * 5)), 0, 0], legR: [.2 * Math.max(0, Math.sin(t * 5)), 0, 0] }),
   ];
+  // 오른손에 물건을 들면 손가락 포즈는 왼손으로 바꿉니다.
+  const mirror = (p) => {
+    const o = {};
+    for (const [k, v] of Object.entries(p)) {
+      const m = k.endsWith('L') ? k.slice(0, -1) + 'R' : k.endsWith('R') ? k.slice(0, -1) + 'L' : k;
+      o[m] = Array.isArray(v) ? [v[0], -v[1], -v[2]] : v;
+    }
+    return o;
+  };
+  const idle = (a, t) => { const p = (IDLE[a.pose || 0] || IDLE[0])(t); return a.hand && p.gR ? mirror(p) : p; };
   const ACTIONS = {
     command: { dur: 1, pose: (p) => ({ armR: [-1.55, 0, -.15], foreR: [0, 0, 0], torso: [.18, -.3, 0], lean: .1 }) },
     cheer: { dur: 1.6, pose: (p) => ({ armL: [0, 0, 2.6], armR: [0, 0, -2.6], dy: Math.abs(Math.sin(p * Math.PI * 3)) * .35 }) },
     flinch: { dur: .6, pose: (p) => ({ torso: [-.35, 0, 0], armL: [-.8, 0, .4], armR: [-.8, 0, -.4], foreL: [0, 0, -1.2], foreR: [0, 0, 1.2], dy: -.05 }) },
     sad: { dur: 2, pose: (p) => ({ head: [.5, 0, 0], torso: [.3, 0, 0], armL: [0, 0, .05], armR: [0, 0, -.05], dy: -.08 }) },
-    mega: { dur: 1.4, pose: (p) => ({ armR: [0, 0, -2.9], foreR: [0, 0, 0], armL: [-.5, 0, .5], foreL: [0, 0, -1.6], dy: p < .5 ? -.12 : .1 }) },
+    mega: { dur: 1.4, pose: (p) => ({ armR: [-.5, 0, -2.75], foreR: [0, 0, 0], armL: [-.5, 0, .5], foreL: [0, 0, -1.6], dy: p < .5 ? -.12 : .1 }) },
     thrust: { dur: 1, pose: (p) => ({ armL: [-1.55, 0, .1], armR: [-1.55, 0, -.1], torso: [.25, 0, 0], legL: [-.4, 0, 0], legR: [.3, 0, 0] }) },
   };
   // Z기술 안무: 모든 타입 공통 4단계 중 3단계가 타입마다 다릅니다.
   const Z_POSE = {
-    fire: { armR: [0, 0, -2.95], foreR: [0, 0, 0], armL: [0, 0, .6], foreL: [0, 0, -1.7] },
+    fire: { armR: [-.5, 0, -2.8], foreR: [0, 0, 0], armL: [0, 0, .6], foreL: [0, 0, -1.7] },
     water: (t) => ({ armL: [0, 0, 1.6 + Math.sin(t * 9) * .5], armR: [0, 0, -1.6 - Math.sin(t * 9 + 1) * .5] }),
     grass: { armL: [0, 0, 2.3], armR: [0, 0, -2.3], head: [-.3, 0, 0] },
     elec: { armR: [-.3, 0, -2.8], armL: [0, 0, 1.3], legR: [-.5, 0, 0] },
@@ -365,12 +407,20 @@ const Avatar3D = (() => {
   }
   ACTIONS.z = { dur: 2.6, pose: null };
 
-  const JOINTS = ['torso', 'head', 'armL', 'armR', 'foreL', 'foreR', 'legL', 'legR'];
+  const JOINTS = ['torso', 'head', 'armL', 'armR', 'foreL', 'foreR', 'handL', 'handR', 'legL', 'legR'];
+  const FLIP = new Set(['armL', 'armR', 'foreL', 'foreR', 'handL', 'handR']);
   function applyPose(J, pose, w = 1) {
+    if (w >= .5) for (const [h, k] of [['handL', 'gL'], ['handR', 'gR']]) {
+      const g = J[h].userData.gest;
+      if (g) for (const [n, o] of Object.entries(g)) o.visible = pose[k] === n;
+    }
+    if (w >= .5 && J.heartProp) J.heartProp.visible = !!pose.heart;
     for (const j of JOINTS) {
       const r = pose[j] || [0, 0, 0];
       const o = J[j].rotation;
-      o.x = lerp(o.x, r[0], w); o.y = lerp(o.y, r[1], w); o.z = lerp(o.z, r[2], w);
+      // 팔은 포즈 값 z가 +면 왼팔이 바깥(몸 옆)으로 들리도록 뒤집어 씁니다.
+      const fz = FLIP.has(j) ? -r[2] : r[2], fy = FLIP.has(j) ? -r[1] : r[1];
+      o.x = lerp(o.x, r[0], w); o.y = lerp(o.y, fy, w); o.z = lerp(o.z, fz, w);
     }
   }
 
@@ -411,7 +461,8 @@ const Avatar3D = (() => {
     if (snaps.has(key)) return snaps.get(key);
     const J = build(a);
     J.root.rotation.y = .38;
-    applyPose(J, IDLE[a.pose || 0](0));
+    applyPose(J, idle(a, 0));
+    J.root.position.y = idle(a, 0).dy || 0;
     animateAura(J, 0);
     snapScene.add(J.root);
     snapCanvas.width = w; snapCanvas.height = h;
@@ -472,10 +523,10 @@ const Avatar3D = (() => {
       v.size();
       const t = (now - v.t0) / 1000;
       const J = v.J;
-      let pose = IDLE[v.a.pose || 0](t), w = 1;
+      let pose = idle(v.a, t), w = 1;
       // 숨쉬기
       J.hips.position.y = (J.hips.userData.y ??= J.hips.position.y) + Math.sin(t * 2.4) * .015;
-      J.root.position.set(0, 0, 0);
+      J.root.position.set(0, pose.dy || 0, 0);
       let spin = 0, lean = 0, dz = 0;
       if (v.action) {
         const ac = v.action, p = (now - ac.t0) / ac.dur;
@@ -500,5 +551,18 @@ const Avatar3D = (() => {
     if (views.size) raf = requestAnimationFrame(loop);
   }
 
-  return { snapshot, mount };
+  // 개발 확인용: 임의 포즈로 한 장 그리기
+  function poseShot(a, pose, rotY = .38, w = 200, h = 250) {
+    const J = build(a);
+    J.root.rotation.y = rotY;
+    applyPose(J, pose);
+    J.root.position.y = pose.dy || 0;
+    snapScene.add(J.root);
+    snapCanvas.width = w; snapCanvas.height = h;
+    renderTo(snapCanvas.getContext('2d'), snapScene, frameCam(w, h), w, h);
+    snapScene.remove(J.root);
+    return snapCanvas.toDataURL('image/png');
+  }
+
+  return { snapshot, mount, poseShot };
 })();

@@ -385,11 +385,11 @@ for (const [id, [sig, n, d, boost]] of Object.entries(SIGNATURE)) {
 const AVATAR_OPTIONS = {
   skin: 10, hair: 20, hairColor: 16, brow: 6, eyes: 12, mouth: 10, face: 7,
   glasses: 8, hat: 14, outfit: 14, outfitColor: 16, bg: 14,
-  body: 4, pose: 6, pantsColor: 12, shoes: 8, shoeColor: 12, gloves: 6, neck: 6, back: 10, hand: 10, aura: 8,
+  body: 4, pose: 12, pantsColor: 12, shoes: 8, shoeColor: 12, gloves: 6, neck: 6, back: 10, hand: 10, aura: 8,
 };
 
 // 칭호, 전투카드, 핀. cond: [기록 이름, 필요한 수]. 없으면 처음부터 열림.
-// 기록: wins, losses, games(1대1 판수), streakBest(최고 연승), p0~p3(연습전 난이도별 승리), tagGames, tagWins, megas
+// 기록: wins, losses, draws, games(1대1 판수), streakBest(최고 연승), p0~p3(연습전 난이도별 승리), botWins, tagGames, tagWins, megas, zmoves
 const C = (id, n, cond, extra = {}) => ({ id, n, cond, ...extra });
 // 칭호 등급(tier): 0 일반, 1 반짝, 2 별가루, 3 황금, 4 네온, 5 전설. glow는 네온·전설 색
 const COSMETICS = {
@@ -402,6 +402,21 @@ const COSMETICS = {
     C('hell', '지옥에서 돌아온 자', ['p3', 1], { tier: 4, glow: '#FF3B5C' }), C('hellking', '지옥의 군주', ['p3', 10], { tier: 5, glow: '#FF4A1C' }),
     C('mega1', '메가 입문자', ['megas', 1], { tier: 1 }), C('mega2', '메가진화 장인', ['megas', 25], { tier: 4, glow: '#2EF2FF' }),
     C('partner', '든든한 파트너', ['tagGames', 1], { tier: 1 }), C('combo', '환상의 콤비', ['tagWins', 5], { tier: 3 }),
+    // 추가 칭호
+    C('hungry', '배고픈 요괴꾼', null, { tier: 0 }), C('market', '시장 단골', null, { tier: 0 }), C('sewerx', '하수구 탐험가', null, { tier: 0 }),
+    C('parttime', '편의점 알바생', null, { tier: 0 }), C('jobless', '동네 백수', null, { tier: 0 }),
+    C('zfirst', 'Z 입문자', ['zmoves', 1], { tier: 1 }), C('trainee', '골목 연습생', ['botWins', 3], { tier: 1 }), C('tie', '팽팽한 승부사', ['draws', 1], { tier: 1 }),
+    C('walker', '골목 산책러', ['games', 5], { tier: 1 }), C('tagmate', '태그 메이트', ['tagGames', 3], { tier: 1 }), C('crybaby', '울보 요괴꾼', ['losses', 3], { tier: 1 }),
+    C('fixer', '골목 해결사', ['wins', 5], { tier: 2 }), C('rider', '연승 폭주족', ['streakBest', 5], { tier: 2 }), C('zsense', 'Z 감각파', ['zmoves', 10], { tier: 2 }),
+    C('grinder', '연습 벌레', ['botWins', 15], { tier: 2 }), C('megafan', '메가 애호가', ['megas', 10], { tier: 2 }), C('local', '골목 터줏대감', ['games', 50], { tier: 2 }),
+    C('collector', '패배 수집가', ['losses', 20], { tier: 2 }), C('tagregular', '태그 단골', ['tagGames', 10], { tier: 2 }), C('drawking', '무승부의 달인', ['draws', 5], { tier: 2 }),
+    C('ruler', '골목 지배자', ['wins', 50], { tier: 3 }), C('zmaster', 'Z 마스터', ['zmoves', 30], { tier: 3 }), C('slayer', '어려움 학살자', ['p2', 15], { tier: 3 }),
+    C('duo', '전설의 듀오', ['tagWins', 15], { tier: 3 }), C('immortal', '불멸의 연승', ['streakBest', 10], { tier: 3 }), C('witness', '골목의 산증인', ['games', 100], { tier: 3 }),
+    C('pilgrim', '지옥 순례자', ['p3', 5], { tier: 4, glow: '#B44BFF' }), C('zavatar', 'Z의 화신', ['zmoves', 50], { tier: 4, glow: '#FFE45C' }),
+    C('cyber', '골목 사이버펑크', ['wins', 75], { tier: 4, glow: '#37FF8B' }), C('overdrive', '메가 폭주', ['megas', 50], { tier: 4, glow: '#FF8A00' }),
+    C('lossicon', '패배의 아이콘', ['losses', 50], { tier: 4, glow: '#7FC8E8' }),
+    C('god', '골목대전의 신', ['wins', 200], { tier: 5, glow: '#FFF27A' }), C('demonslayer', '마왕 퇴치자', ['p3', 30], { tier: 5, glow: '#B44BFF' }),
+    C('invincible', '천하무적', ['streakBest', 20], { tier: 5, glow: '#37E0FF' }), C('bondmax', '유대의 극치', ['zmoves', 100], { tier: 5, glow: '#FF5CA8' }),
   ],
   cards: [
     C('basic', '기본 딱지', null), C('blue', '망점 블루', null, { dark: true }), C('red', '집중선 레드', null, { dark: true }),
@@ -409,6 +424,16 @@ const COSMETICS = {
     C('sakura', '벚꽃', ['tagWins', 3]), C('sewer', '하수구', ['losses', 10], { dark: true }),
     C('hell', '지옥불', ['p3', 1], { dark: true }), C('aurora', '메가 오로라', ['megas', 10], { dark: true }),
     C('rainbow', '무지개', ['streakBest', 5]), C('gold', '황금', ['wins', 30]), C('diamond', '블랙 다이아', ['wins', 100], { dark: true }),
+    // 추가 전투카드
+    C('pastel', '파스텔', null), C('mintchoco', '민트 초코', null), C('grid', '모눈종이', null),
+    C('candy', '줄무늬 사탕', ['games', 3]), C('awning', '시장 천막', ['wins', 3]), C('tteok', '떡볶이', ['botWins', 5]),
+    C('ice', '얼음 결정', ['streakBest', 4]), C('manhole', '맨홀', ['losses', 5], { dark: true }), C('night', '골목 야경', ['games', 10], { dark: true }),
+    C('ocean', '파도', ['tagGames', 5]), C('graffiti', '낙서 벽', ['wins', 8], { dark: true }), C('forest', '숲속', ['botWins', 10], { dark: true }),
+    C('cotton', '솜사탕', ['tagGames', 15]), C('lava', '용암', ['p3', 3], { dark: true }), C('matrix', '코드 비', ['zmoves', 10], { dark: true }),
+    C('thunder', '번개 폭풍', ['streakBest', 7], { dark: true }), C('nightsakura', '밤벚꽃', ['tagWins', 8], { dark: true }), C('circuit', '회로기판', ['megas', 20], { dark: true }),
+    C('flame', '불꽃 오라', ['p2', 10], { dark: true }), C('crt', '고장난 TV', ['losses', 25], { dark: true }), C('holo', '홀로그램', ['zmoves', 30]),
+    C('retro', '레트로 오락실', ['games', 40], { dark: true }), C('galaxy', '은하수', ['wins', 40], { dark: true }), C('royal', '로열 퍼플', ['wins', 60], { dark: true }),
+    C('zpower', 'Z 파워', ['zmoves', 50], { dark: true }), C('cosmic', '우주 왕좌', ['wins', 150], { dark: true }),
   ],
   pins: [
     C('star', '별', null), C('heart', '하트', null), C('sprout', '새싹', null),
@@ -424,12 +449,23 @@ const COSMETICS = {
     // 역따봉과 병맛
     C('lol', 'ㅋㅋ', null), C('zzz', '쿨쿨', null), C('sweat', '식은땀', null),
     C('thumbsdown', '역따봉', ['losses', 1]), C('poop', '똥', ['losses', 5]), C('kingbad', '킹받네', ['losses', 15]), C('golddown', '황금 역따봉', ['losses', 30]),
+    // 추가 핀
+    C('cat', '골목 고양이', null), C('onigiri', '삼각김밥', null), C('skewer', '떡꼬치', null), C('fishcake', '어묵꼬치', null),
+    C('ramen', '라면', ['botWins', 3]), C('banana', '바나나 우유', ['games', 8]), C('fist', '주먹', ['games', 12]), C('music', '음표', ['zmoves', 3]),
+    C('rat', '하수구 쥐', ['losses', 8]), C('manhole', '맨홀 뚜껑', ['losses', 12]), C('ghost', '유령', ['p1', 5]), C('bomb', '폭탄', ['wins', 15]),
+    C('rocket', '로켓', ['streakBest', 4]), C('moon', '초승달', ['games', 25]), C('sun', '태양', ['wins', 25]), C('snow', '눈꽃', ['tagGames', 8]),
+    C('mic', '마이크', ['zmoves', 15]), C('dice', '주사위', ['draws', 1]), C('clover', '네잎클로버', ['draws', 3]), C('headphone', '헤드폰', ['games', 30]),
+    C('gamepad', '게임패드', ['botWins', 20]), C('ufo', 'UFO', ['megas', 15]), C('alien', '외계인', ['megas', 30]), C('zbolt', 'Z 문양', ['zmoves', 1]),
+    C('zgold', '황금 Z', ['zmoves', 40]), C('robot', '로봇', ['botWins', 30]), C('devil', '꼬마 악마', ['p3', 15]), C('halo', '천사 링', ['tagWins', 20]),
+    C('cry', '눈물 콧물', ['losses', 20]), C('angry', '빡침', ['losses', 40]), C('cool', '쿨가이', ['wins', 40]), C('lovey', '하트 뿅뿅', ['tagGames', 2]),
+    C('king', '체스 킹', ['wins', 90]),
   ],
 };
 const STAT_NAMES = {
   wins: '1대1 승리', losses: '1대1 패배', games: '1대1 대전', streakBest: '최고 연승',
   p0: '골목대장(쉬움) 승리', p1: '골목대장(보통) 승리', p2: '골목대장(어려움) 승리', p3: '골목대장(지옥) 승리',
   tagGames: '태그 대전', tagWins: '태그 승리', megas: '메가진화 사용',
+  zmoves: 'Z기술 사용', botWins: '골목대장 승리(난이도 무관)', draws: '1대1 무승부',
 };
 
 module.exports = { TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES };

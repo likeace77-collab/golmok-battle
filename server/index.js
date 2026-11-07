@@ -98,9 +98,9 @@ const randomAvatar = (any = false) => Object.fromEntries(
 );
 const pick = (list) => list[crypto.randomInt(list.length)].id;
 const randomStyle = () => ({ title: pick(Data.COSMETICS.titles), card: pick(Data.COSMETICS.cards), pins: [pick(Data.COSMETICS.pins), pick(Data.COSMETICS.pins)] });
-const newStats = () => ({ games: 0, streak: 0, streakBest: 0, p0: 0, p1: 0, p2: 0, p3: 0, tagGames: 0, tagWins: 0, megas: 0 });
+const newStats = () => ({ games: 0, streak: 0, streakBest: 0, p0: 0, p1: 0, p2: 0, p3: 0, tagGames: 0, tagWins: 0, megas: 0, zmoves: 0, botWins: 0 });
 const defaultStyle = () => ({ title: 'rookie', card: 'basic', pins: [] });
-const statOf = (u, k) => (k === 'wins' || k === 'losses' ? u[k] || 0 : u.stats?.[k] || 0);
+const statOf = (u, k) => (k === 'wins' || k === 'losses' || k === 'draws' ? u[k] || 0 : u.stats?.[k] || 0);
 const isUnlocked = (u, item) => !item.cond || statOf(u, item.cond[0]) >= item.cond[1];
 function validStyle(u, s) {
   if (!s || typeof s !== 'object') return null;
@@ -139,6 +139,7 @@ function migrate() {
   for (const u of Object.values(db.users)) {
     for (const k of Object.keys(Data.AVATAR_OPTIONS)) if (!Number.isInteger(u.avatar[k])) { u.avatar[k] = 0; changed = true; }
     if (!u.stats) { u.stats = newStats(); changed = true; }
+    for (const [k, v0] of Object.entries(newStats())) if (!Number.isInteger(u.stats[k])) { u.stats[k] = v0; changed = true; }
     if (!u.style) { u.style = defaultStyle(); changed = true; }
     if (u.decks) continue;
     u.decks = [{ name: '기본 덱', team: u.team || defaultTeam() }];
@@ -513,9 +514,10 @@ function finish(room) {
   for (const [k, s] of humans) {
     const st = db.users[k].stats;
     if (room.b.sides[s].megaUsed) st.megas++;
+    if (room.b.sides[s].zUsed) st.zmoves++;
     const won = winner !== null && E.teamOf(room.b, s) === winner;
     if (room.tag) { st.tagGames++; if (won) st.tagWins++; }
-    else if (!pvp && won) st[`p${room.botLevel}`]++;
+    else if (!pvp && won) { st[`p${room.botLevel}`]++; st.botWins++; }
   }
   if (pvp) {
     const [a, b] = room.keys.map((k) => db.users[k]);
