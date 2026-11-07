@@ -111,13 +111,17 @@ function doMega(b, s, ev) {
   ev.push({ t: 'mega', side: s, mon: publicMon(m), text: `${josa(oldName, '이/가')} 메가진화했다! ${m.name}!` });
 }
 
+// Z기술도 한 판에 한 번. 메가진화와는 따로 셉니다.
+const canZ = (b, s) => b.phase === 'choose' && !b.sides[s].zUsed && alive(activeOf(b, s));
+
 // 플레이어 선택을 받습니다. 양쪽이 다 정하면 턴을 처리하고 이벤트를 돌려줍니다.
 function choose(b, s, action) {
   const legal = legalActions(b, s);
   if (!legal.some((a) => a.type === action?.type && a.index === action?.index)) return { ok: false };
   if (b.pending[s]) return { ok: false };
   if (action.mega && (action.type !== 'move' || !canMega(b, s))) return { ok: false };
-  b.pending[s] = { type: action.type, index: action.index, mega: !!action.mega, target: action.target };
+  if (action.z && (action.type !== 'move' || !canZ(b, s))) return { ok: false };
+  b.pending[s] = { type: action.type, index: action.index, mega: !!action.mega, z: !!action.z, target: action.target };
   const ready = seats(b).every((i) => !b.needs[i] || b.pending[i]);
   return ready ? { ok: true, events: resolve(b) } : { ok: true, events: null };
 }
@@ -157,7 +161,7 @@ function runTurn(b, ev) {
 
   const movers = acts.filter(({ a }) => a.type === 'move').map((o) => {
     const mon = activeOf(b, o.s);
-    const mv = o.a.index === -1 ? STRUGGLE : MOVES[mon.moves[o.a.index].id];
+    const mv = o.a.z ? MOVES[MONSTERS[mon.species].z] : o.a.index === -1 ? STRUGGLE : MOVES[mon.moves[o.a.index].id];
     return { ...o, pri: mv.pri, spe: speedOf(b, o.s), tie: rand(b) };
   });
   movers.sort((x, y) => y.pri - x.pri || y.spe - x.spe || x.tie - y.tie);
@@ -165,7 +169,7 @@ function runTurn(b, ev) {
   for (const { s, a } of movers) {
     if (b.phase === 'over') break;
     const mon = activeOf(b, s);
-    if (alive(mon)) useMove(b, s, a.index, ev, a.target);
+    if (alive(mon)) useMove(b, s, a.index, ev, a.target, a.z);
     if (checkOver(b, ev)) break;
   }
   if (b.phase !== 'over') endOfTurn(b, ev);
@@ -306,18 +310,24 @@ function damageOf(b, atk, def, mv, crit, roll) {
   return Math.max(1, Math.floor(dmg));
 }
 
-function useMove(b, s, index, ev, want) {
+function useMove(b, s, index, ev, want, z = false) {
   const o = targetOf(b, s, want);
   const me = activeOf(b, s);
-  const slot = index === -1 ? null : me.moves[index];
-  const mv = slot ? MOVES[slot.id] : STRUGGLE;
+  const slot = z || index === -1 ? null : me.moves[index];
+  const zid = z ? MONSTERS[me.species].z : null;
+  let mv = z ? MOVES[zid] : slot ? MOVES[slot.id] : STRUGGLE;
 
   if (!canAct(b, s, me, mv, ev)) { me.protectStreak = 0; return; }
   if (slot) slot.pp--;
+  if (z) {
+    b.sides[s].zUsed = true;
+    if (mv.rainZ && b.weather === 'rain') mv = { ...mv, pow: Math.round(mv.pow * 1.5) };
+  }
 
   ev.push({
-    t: 'move', side: s, target: o, id: slot ? slot.id : 'struggle', move: mv.n, type: mv.type, cat: mv.cat,
-    text: `${josa(me.name, '은/는')} ${josa(mv.n, '을/를')} 썼다!`,
+    t: 'move', side: s, target: o, id: z ? zid : slot ? slot.id : 'struggle', move: mv.n, type: mv.type, cat: mv.cat, z,
+    player: b.sides[s].name, mon: publicMon(me),
+    text: z ? `${josa(b.sides[s].name, '과/와')} ${me.name}의 Z기술! ${mv.n}!` : `${josa(me.name, '은/는')} ${josa(mv.n, '을/를')} 썼다!`,
   });
 
   if (mv.protect) {
@@ -335,8 +345,10 @@ function useMove(b, s, index, ev, want) {
   const foe = activeOf(b, o);
   if (!alive(foe)) { msg(ev, '그러나 맞힐 상대가 없었다!'); return; }
   if (foe.protecting) {
-    if (!mv.breakGuard) { msg(ev, `${josa(foe.name, '은/는')} 공격을 막아냈다!`); return; }
-    msg(ev, `${foe.name}의 막기를 뚫었다!`);
+    if (mv.z && !mv.breakGuard) {
+      msg(ev, `${foe.name}의 막기를 뚫었다! 하지만 위력이 줄었다.`);
+      mv = { ...mv, pow: Math.round(mv.pow / 4) };
+    } else if (!mv.breakGuard) { msg(ev, `${josa(foe.name, '은/는')} 공격을 막아냈다!`); return; } else msg(ev, `${foe.name}의 막기를 뚫었다!`);
   }
 
   if (mv.acc !== null) {
@@ -531,6 +543,8 @@ function viewFor(b, s) {
     weather: b.weather, weatherTurns: b.weatherTurns,
     mustAct: b.needs[s] && !lock,
     canMega: canMega(b, s) && !lock,
+    canZ: canZ(b, s) && !lock,
+    zUsed: !!me.zUsed,
     megaUsed: !!me.megaUsed,
     lead: preview && lock ? b.pending[s].index : null,
     me: {
@@ -702,6 +716,12 @@ function botAction(b, s, level = 1) {
   let a;
   if (b.phase === 'preview' || level === 1) a = normalAction(b, s, o);
   else a = level === 0 ? easyAction(b, s) : smartAction(b, s, level, o);
+  if (a && a.type === 'move' && level >= 1 && canZ(b, s)) {
+    // Z기술: 쓰러뜨릴 수 있거나, 판이 무르익었을 때 씁니다.
+    const me = activeOf(b, s), foe = activeOf(b, o);
+    const dmg = rawDamage(b, me, foe, MOVES[MONSTERS[me.species].z]);
+    if (dmg > 0 && (dmg >= foe.hp || (b.turn >= 3 && dmg >= foe.hp * .5 && chance(b, level >= 2 ? 60 : 35)))) a = { ...a, z: true };
+  }
   return a && a.type === 'move' && isDoubles(b) ? { ...a, target: o } : a;
 }
 
@@ -757,5 +777,5 @@ function botTeam(level, size, enemy = []) {
 }
 
 module.exports = {
-  createBattle, choose, legalActions, viewFor, botAction, botTeam, forfeit, teamOf, calcStats, effOf, josa, activeOf, canMega,
+  createBattle, choose, legalActions, viewFor, botAction, botTeam, forfeit, teamOf, canZ, calcStats, effOf, josa, activeOf, canMega,
 };

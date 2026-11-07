@@ -567,6 +567,8 @@ function openDexEntry(id) {
       </div>
       <p style="margin-top:8px;font-size:15px;line-height:1.4">${sp.mega.d}</p>
     </section>
+    ${sp.z ? `<section class="zbox" style="--zc:${G.data.TYPES[G.data.MOVES[sp.z].type].c}"><span>Z기술</span><b>${G.data.MOVES[sp.z].n}</b>
+      <small>${typeChip(G.data.MOVES[sp.z].type)}${G.data.MOVES[sp.z].cat === 'p' ? '물리' : '특수'}, 위력 ${G.data.MOVES[sp.z].pow}, 반드시 명중. ${G.data.MOVES[sp.z].d}</small></section>` : ''}
     <h3 class="dex-h">타입 상성</h3>
     ${matchups(id)}
     <h3 class="dex-h">배울 수 있는 스킬 ${sp.moves.length}개</h3>

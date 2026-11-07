@@ -127,7 +127,7 @@ test('대전 전: 선봉을 고르기 전까지 숨기고, 고른 요괴가 나�
 test('모든 스킬에 전용 연출이 있다', () => {
   const fx = require('fs').readFileSync(require('path').join(__dirname, '../public/js/fx.js'), 'utf8');
   const body = fx.slice(fx.indexOf('const MOVE_FX'), fx.indexOf('function weatherFx'));
-  for (const id of [...Object.keys(MOVES), 'struggle']) {
+  for (const id of [...Object.keys(MOVES).filter((k) => !MOVES[k].z), 'struggle']) {
     assert.match(body, new RegExp(`\\n    ${id}(:|\\()`), id);
   }
 });
@@ -242,6 +242,31 @@ test('태그: 봇 넷이서 200판 모두 끝나고 불법 행동이 없다', ()
       }
     }
   }
+});
+
+test('Z기술: 메가와 따로 한 번씩, 행동 하나로 메가와 같이 쓸 수 있고, 막기를 뚫는다', () => {
+  for (const [id, m] of Object.entries(MONSTERS)) assert.ok(MOVES[m.z]?.z && MOVES[m.z].pow >= 170, id);
+  const b = battle([{ species: 'kkaebi', moves: ['club'] }, { species: 'horong', moves: ['ember'] }], custom('maetdol', ['guard']), 4);
+  const foe = b.sides[1].mons[0]; foe.hp = foe.maxHp = 5000;
+  assert.equal(E.choose(b, 0, { type: 'switch', index: 1, z: true }).ok, false);
+  E.choose(b, 0, { type: 'move', index: 0, z: true, mega: true });
+  const { events } = E.choose(b, 1, { type: 'move', index: 0 });
+  const zev = events.find((e) => e.t === 'move' && e.side === 0);
+  assert.ok(zev.z && zev.move === '금 나와라 은 나와라');
+  assert.ok(events.some((e) => e.t === 'mega'));
+  assert.ok(foe.hp < 5000, '막기를 뚫고 피해');
+  assert.ok(5000 - foe.hp < 200, '막기 중에는 1/4 위력');
+  assert.equal(E.viewFor(b, 0).canZ, false);
+  assert.equal(E.choose(b, 0, { type: 'move', index: 0, z: true }).ok, false);
+  assert.equal(b.sides[0].mons[0].moves[0].pp, MOVES.club.pp, 'Z기술은 PP를 안 씀');
+  const c = battle([{ species: 'kkaebi', moves: ['club'] }, { species: 'horong', moves: ['ember'] }], custom('maetdol', ['tackle']), 4);
+  const f2 = c.sides[1].mons[0]; f2.hp = f2.maxHp = 5000;
+  E.choose(c, 0, { type: 'move', index: 0, z: true }); E.choose(c, 1, { type: 'move', index: 0 });
+  const zDmg = 5000 - f2.hp;
+  const d = battle([{ species: 'kkaebi', moves: ['club'] }, { species: 'horong', moves: ['ember'] }], custom('maetdol', ['tackle']), 4);
+  const f3 = d.sides[1].mons[0]; f3.hp = f3.maxHp = 5000;
+  E.choose(d, 0, { type: 'move', index: 0 }); E.choose(d, 1, { type: 'move', index: 0 });
+  assert.ok(zDmg > (5000 - f3.hp) * 1.6, `Z ${zDmg} 일반 ${5000 - f3.hp}`);
 });
 
 test('선제 기술은 스피드가 느려도 먼저 나간다', () => {

@@ -136,6 +136,61 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .megabox .stat b { font-family: var(--ui); font-weight: 400; color: var(--yellow); }
 .megabox .stat i { background: var(--yellow); }
 
+/* Z기술 */
+.btn.zbtn { color: #fff; background: linear-gradient(100deg, #1a1433, #4B3F9E 50%, #FFD23F); text-shadow: 1px 1px 0 var(--ink); }
+.btn.zbtn:disabled { color: #6c675c; background: #c9c3b5; text-shadow: none; }
+.bar-actions { flex-wrap: wrap; }
+.bar-actions .btn { flex: 1 1 22%; min-width: 0; font-size: 16px; }
+.zbox { margin: 12px 0; padding: 10px 12px; color: #fff; background: linear-gradient(110deg, #1a1433, var(--zc) 140%); border: var(--line); border-radius: 12px; }
+.zbox span { font-family: var(--ui); font-size: 14px; color: var(--yellow); }
+.zbox b { display: block; font-family: var(--display); font-weight: 400; font-size: 24px; line-height: 1.2; }
+.zbox small { display: block; margin-top: 4px; font-size: 14px; }
+.zm { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 16px; background: radial-gradient(circle, #1a1433cc, #000e); touch-action: none; user-select: none; -webkit-user-select: none; }
+.zm-box { width: min(420px, 100%); padding: 18px 16px; text-align: center; color: #fff; background: linear-gradient(160deg, #1a1433, #2a1450); border: 3px solid var(--zc); border-radius: 16px; box-shadow: 0 0 30px var(--zc); }
+.zm-kicker { font-family: var(--ui); color: var(--yellow); }
+.zm-title { font-family: var(--display); font-weight: 400; font-size: 26px; line-height: 1.2; margin: 4px 0 12px; }
+.zm-help { font-size: 15px; margin-bottom: 12px; }
+.zm-seq { display: flex; justify-content: center; gap: 10px; margin-bottom: 14px; }
+.zm-seq span { width: 54px; height: 54px; display: grid; place-items: center; font-size: 34px; font-weight: 900; color: #8a8498; background: #ffffff14; border: 3px solid #ffffff30; border-radius: 12px; }
+.zm-seq span.now { color: var(--ink); background: var(--yellow); border-color: #fff; transform: scale(1.12); }
+.zm-seq span.hit { color: #fff; background: var(--zc); border-color: #fff; }
+.zm-seq span.miss { color: #fff; background: var(--red); }
+.zm-pad { display: grid; grid-template-columns: repeat(3, 52px); grid-template-areas: '. u .' 'l . r' '. d .'; justify-content: center; gap: 4px; }
+.zm-pad button { width: 52px; height: 44px; font-size: 22px; color: #fff; background: #ffffff1c; border: 2px solid #ffffff55; border-radius: 10px; }
+.zm-pad [data-dir=up] { grid-area: u; } .zm-pad [data-dir=left] { grid-area: l; } .zm-pad [data-dir=right] { grid-area: r; } .zm-pad [data-dir=down] { grid-area: d; }
+.zm-drum { position: relative; width: 150px; height: 150px; margin: 8px auto 10px; display: grid; place-items: center; color: var(--ink); background: radial-gradient(circle, #fff 0 34%, var(--zc) 35% 48%, #ffffff10 49%); border: 0; border-radius: 50%; }
+.zm-drum b { font-family: var(--ui); font-weight: 400; font-size: 18px; }
+.zm-ring { position: absolute; left: 50%; top: 50%; width: 104px; height: 104px; border: 5px solid var(--yellow); border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%) scale(3); opacity: 0; }
+.zm-drum.good { animation: zGood .25s; } .zm-drum.bad { animation: zBad .25s; }
+@keyframes zGood { 50% { transform: scale(1.12); filter: brightness(1.6); } }
+@keyframes zBad { 30% { transform: translateX(-8px); } 70% { transform: translateX(8px); } }
+.zm-score { font-size: 26px; letter-spacing: 6px; color: var(--yellow); }
+.zm-time { height: 8px; margin: 14px 0 10px; background: #ffffff22; border-radius: 4px; overflow: hidden; }
+.zm-time i { display: block; height: 100%; width: 100%; background: var(--zc); }
+.zm-result { font-family: var(--display); font-size: 34px; padding: 30px 0; }
+.zm-result.ok { color: var(--yellow); text-shadow: 0 0 16px var(--zc); } .zm-result.bad { color: #ff8d7e; }
+.zcut { position: fixed; inset: 0; z-index: 35; overflow: hidden; pointer-events: none; background: #0d0a14e6; animation: zIn .25s ease-out; }
+.zcut.out { animation: zOut .26s ease-in forwards; }
+@keyframes zIn { from { opacity: 0; } } @keyframes zOut { to { opacity: 0; transform: scale(1.15); } }
+.zc-lines { position: absolute; inset: -50%; background: repeating-conic-gradient(from 0deg, transparent 0 4deg, #ffffff22 4deg 5deg, transparent 5deg 9deg, color-mix(in srgb, var(--zc) 45%, transparent) 9deg 10deg); animation: zSpin 2.4s linear infinite; }
+@keyframes zSpin { to { transform: rotate(40deg); } }
+.zc-band { position: absolute; left: -10%; right: -10%; top: 50%; height: 46%; display: flex; align-items: center; gap: 4%; padding: 0 14%; transform: translateY(-50%) skewY(-8deg); background: linear-gradient(90deg, #0d0a14, var(--zc) 45%, #fff 50%, var(--zc) 55%, #0d0a14); border-top: 6px solid #fff; border-bottom: 6px solid #fff; animation: zBand .5s cubic-bezier(.2, 1.3, .4, 1) both; }
+.theirs .zc-band { flex-direction: row-reverse; text-align: right; }
+@keyframes zBand { from { transform: translate(-110%, -50%) skewY(-8deg); } }
+.theirs .zc-band { animation-name: zBand2; }
+@keyframes zBand2 { from { transform: translate(110%, -50%) skewY(-8deg); } }
+.zc-mon { width: min(42vw, 230px); flex: none; transform: skewY(8deg); filter: drop-shadow(0 0 18px #fff) drop-shadow(6px 6px 0 #0d0a14); animation: zMon 1.9s ease-out both; }
+.zc-mon svg { width: 100%; height: auto; overflow: visible; }
+.mine .zc-mon svg { transform: scaleX(-1); }
+@keyframes zMon { 0% { transform: skewY(8deg) scale(.4); } 18% { transform: skewY(8deg) scale(1.12); } 30%, 100% { transform: skewY(8deg) scale(1); } }
+.zc-text { transform: skewY(8deg); min-width: 0; }
+.zc-kick { display: inline-block; padding: 3px 10px; font-family: var(--ui); font-size: clamp(13px, 3.6vw, 18px); color: var(--ink); background: var(--yellow); border-radius: 6px; animation: zTxt .5s .25s both; }
+.zc-name { display: block; margin-top: 8px; font-family: var(--display); font-weight: 400; font-size: clamp(30px, 9.5vw, 64px); line-height: 1.05; color: #fff; word-break: keep-all; text-shadow: 3px 3px 0 #0d0a14, -2px -2px 0 var(--zc), 0 0 24px var(--zc); animation: zName .6s .35s cubic-bezier(.2, 1.6, .4, 1) both; }
+@keyframes zTxt { from { opacity: 0; transform: translateY(20px); } }
+@keyframes zName { from { opacity: 0; transform: scale(2.4); letter-spacing: .3em; } }
+.zc-flash { position: absolute; inset: 0; background: #fff; animation: zFlash 1.9s both; }
+@keyframes zFlash { 0% { opacity: .9; } 12% { opacity: 0; } 88% { opacity: 0; } 100% { opacity: .85; } }
+
 /* 전투카드 */
 .bcard { position: relative; display: flex; gap: 10px; align-items: center; min-width: 0; padding: 8px; overflow: hidden; color: var(--ink); background: var(--paper); border: var(--line); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); }
 .bc-ava { position: relative; z-index: 1; width: 58px; aspect-ratio: 4 / 5; flex: none; overflow: hidden; background: #fff; border: 3px solid var(--ink); border-radius: 8px; }

@@ -32,7 +32,7 @@ const errsOf = (u) => u.errors.join('|');
 // 지금 할 수 있는 행동을 하나 합니다. 끝나면 true.
 async function playStep(page) {
   return page.evaluate(() => {
-    if (document.querySelector('.result')) return true;
+    if (document.querySelector('.result') || document.getElementById('go-team')) return true;
     (document.querySelector('.pv-lead:not([disabled])') || document.querySelector('.mb:not([disabled])') || document.querySelector('.sw:not([disabled])'))?.click();
     return false;
   });
@@ -124,6 +124,13 @@ async function playStep(page) {
   await a.page.evaluate(() => document.querySelector('.mb:not([disabled])').click());
   await b.page.evaluate(() => document.querySelector('.mb:not([disabled])').click());
   await a.page.waitForSelector('#m-me.mega', { timeout: 8000 });
+  // Z기술: 미션 실패하면 그 턴 잠김, 성공하면 컷인
+  await a.page.waitForSelector('#to-z:not([disabled])', { timeout: 15000 });
+  await a.page.evaluate(() => { window.__zAuto = false; });
+  await a.page.click('#to-z');
+  await a.page.waitForSelector('#to-z[disabled]');
+  await a.page.evaluate(() => { window.__zAuto = undefined; });
+
   await a.page.waitForSelector('#to-mega[disabled], .sw:not([disabled])', { timeout: 8000 });
   await shot(a.page, 'mega-after');
   console.log('메가 후:', await a.page.textContent('#p-me .nm'));
@@ -135,7 +142,7 @@ async function playStep(page) {
     if (d1 && d2) break;
     await a.page.waitForTimeout(60);
     turns++;
-    if (i % 200 === 0) console.log('진행', i, await a.page.textContent('#say'), '/', await b.page.textContent('#say'));
+    
     if (!midShot && i > 8 && await a.page.$('.mb')) { midShot = true; await shot(a.page, 'battle-mid'); }
     if (!reconnected && turns > 30) {
       reconnected = true;
@@ -157,7 +164,7 @@ async function playStep(page) {
   if (!/1승|1패|1무/.test(rec)) throw new Error('전적이 반영되지 않음');
 
   // 도감: 31마리, 상세에 소개, 스탯, 상성, 전체 스킬
-  await b.page.click('#to-lobby');
+  if (await b.page.$('#to-lobby')) await b.page.click('#to-lobby');
   await b.page.waitForSelector('#go-team');
   await a.page.click('#go-dex');
   await a.page.waitForSelector('[data-dex]');

@@ -327,6 +327,52 @@ const EXTRA_MOVES = {
 };
 for (const [id, list] of Object.entries(EXTRA_MOVES)) MONSTERS[id].moves.push(...list);
 
+// Z기술: [이름, 타입, 위력, 설명, 추가 효과]. 물리/특수는 공격과 특공 중 높은 쪽.
+const ZMOVES = {
+  yeontan: ['구공탄 대폭발', 'fire', 180, '스물두 구멍이 한꺼번에 터진다'],
+  bungbbang: ['팥소 대분출', 'fire', 175, '뜨거운 팥이 화산처럼 솟구친다'],
+  horong: ['청사초롱 백귀야행', 'spirit', 180, '초롱 백 개가 귀신불을 쏟아낸다'],
+  kettle: ['끓는점 돌파', 'water', 180, '50% 확률로 화상', { st: { s: 'brn', ch: 50 } }],
+  daeya: ['김장 대홍수', 'water', 175, '김장 물이 골목을 휩쓴다'],
+  usan: ['천 개의 우산살', 'wind', 175, '우산살이 비처럼 쏟아진다'],
+  kongsiru: ['콩나물 대숲', 'grass', 175, '준 피해의 1/3을 회복', { drain: 1 / 3 }],
+  ssaribi: ['새벽 네 시의 싹쓸이', 'wind', 180, '아무도 못 본 일격'],
+  ttaengcho: ['청양 핵폭발', 'fire', 185, '스코빌 측정 불가'],
+  jeonbot: ['초고압 송전', 'elec', 180, '50% 확률로 마비', { st: { s: 'par', ch: 50 } }],
+  orak: ['게임 오버', 'elec', 180, '이어하기는 없다'],
+  bangpae: ['태극 뇌전 비행', 'elec', 175, '하늘에서 번개 연이 내리꽂힌다'],
+  bingsu: ['절대영도 빙수', 'ice', 180, '30% 확률로 얼림', { st: { s: 'frz', ch: 30 } }],
+  bonaeng: ['남극 대빙하', 'ice', 180, '빙하가 통째로 떨어진다'],
+  jangdok: ['삼 년 묵은 대방출', 'poison', 180, '반드시 독', { st: { s: 'psn', ch: 100 } }],
+  maetdol: ['천년 맷돌 분쇄', 'earth', 185, '어이까지 갈아 넣었다'],
+  jangseung: ['천하대장군 강림', 'earth', 180, '상대 공격 하락', { foe: { atk: -1 } }],
+  fan: ['태풍 4단', 'wind', 180, '사용 후 자신의 스피드 상승', { self: { spe: 1 }, selfAfter: true }],
+  kkaebi: ['금 나와라 은 나와라', 'spirit', 185, '도깨비 방망이 최대 출력'],
+  kkangtong: ['분리수거 대폭격', 'steel', 180, '깡통과 병이 비처럼 쏟아진다'],
+  bongdari: ['검은 봉지 블랙홀', 'poison', 175, '상대 명중률 하락', { foe: { acc: -1 } }],
+  manhol: ['지하제국 개문', 'steel', 180, '하수도 전체가 눈을 뜬다'],
+  sigung: ['시궁쥐 대군단', 'poison', 175, '50% 확률로 독', { st: { s: 'psn', ch: 50 } }],
+  batji: ['대범람', 'water', 180, '소나기 중에는 위력 1.5배', { rainZ: true }],
+  meokarak: ['배수구 대역류', 'spirit', 175, '상대 특방 하락', { foe: { spd: -1 } }],
+  ppeong: ['세계 뚫기', 'earth', 175, '막기를 완전히 무시', { breakGuard: true }],
+  tteokppo: ['국물 쓰나미', 'fire', 180, '50% 확률로 화상', { st: { s: 'brn', ch: 50 } }],
+  sundae: ['모둠 세트 강타', 'earth', 175, '간과 허파가 같이 때린다'],
+  eomuk: ['포장마차 무한 리필', 'water', 170, '준 피해의 절반을 회복', { drain: .5 }],
+  hotteok: ['꿀 운석 낙하', 'fire', 180, '하늘에서 호떡이 떨어진다'],
+  ppeondegi: ['나방 대변신', 'grass', 170, '사용 후 자신의 특공과 스피드 상승', { self: { spa: 1, spe: 1 }, selfAfter: true }],
+  neonna: ['네온 피날레', 'fairy', 180, '골목의 모든 간판이 켜진다'],
+  yeonji: ['홍염 입맞춤', 'fairy', 175, '상대 특공 하락', { foe: { spa: -1 } }],
+  jabanbot: ['캔 일제사격', 'steel', 180, '자판기 재고가 바닥날 때까지 쏜다'],
+  baedalbot: ['광속 배달 완료', 'wind', 175, '도착 예정 시간 0초'],
+  setakbot: ['초강력 탈수', 'water', 180, '상대 스피드 2단계 하락', { foe: { spe: -2 } }],
+};
+for (const [id, [n, type, pow, d, extra = {}]] of Object.entries(ZMOVES)) {
+  const sp = MONSTERS[id];
+  const cat = sp.base.atk >= sp.base.spa ? 'p' : 's';
+  MOVES[`z_${id}`] = { n, type, cat, pow, acc: null, pp: 1, pri: 0, z: true, d, ...extra };
+  sp.z = `z_${id}`;
+}
+
 const STAT_KEYS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
 for (const [id, [sig, n, d, boost]] of Object.entries(SIGNATURE)) {
   const mon = MONSTERS[id];

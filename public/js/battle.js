@@ -2,7 +2,7 @@
 const Battle = (() => {
   let view = null, disp = null, note = '', menu = 'moves', practice = false;
   let queue = Promise.resolve(), playing = false, skip = null, armed = false;
-  let spectating = false, tag = false, moveDraft = null;
+  let spectating = false, tag = false, moveDraft = null, zLockTurn = -1;
   let deadline = 0, tick = null, gen = 0;
   const SPEED = Number(new URLSearchParams(location.search).get('speed') ?? 1); // ?speed=0 이면 연출 생략
 
@@ -260,6 +260,7 @@ const Battle = (() => {
       case 'turn': break;
       case 'msg': await wait(850); break;
       case 'move':
+        if (e.z) { await zCinematic(e, key); break; }
         await wait(Math.max(760, Fx.play(e.id, key, sideKey(e.target))));
         break;
       case 'miss': await wait(800); break;
@@ -348,6 +349,24 @@ const Battle = (() => {
     }).catch((err) => { console.error(err); playing = false; });
   }
 
+  // Z기술 컷인: 화면을 덮는 컷인 뒤에 타입별 필살 연출
+  async function zCinematic(e, key) {
+    const color = G.data.TYPES[e.type].c;
+    const cut = document.createElement('div');
+    cut.className = `zcut ${key === 'me' || key === 'ally' ? 'mine' : 'theirs'}`;
+    cut.style.setProperty('--zc', color);
+    cut.innerHTML = `<div class="zc-lines"></div>
+      <div class="zc-band"><div class="zc-mon">${monsterSVG(e.mon.species, '', e.mon.mega)}</div>
+        <div class="zc-text"><span class="zc-kick">Z기술 · ${esc(e.player)} × ${esc(e.mon.name)}</span><b class="zc-name">${esc(e.move)}</b></div></div>
+      <div class="zc-flash"></div>`;
+    document.body.appendChild(cut);
+    await wait(1900);
+    cut.classList.add('out');
+    await wait(260);
+    cut.remove();
+    await wait(Fx.zmove(e.type, key, sideKey(e.target)));
+  }
+
   function onChosen(m) { view = m.view; if (view.phase === 'preview') renderPreview(); else renderPanel(); }
   function onNoBattle() {
     // 끊긴 사이 대전이 끝났으면 멈춘 화면에 남지 않게 로비로 돌아감
@@ -404,6 +423,7 @@ const Battle = (() => {
       </div>
       <div class="bar-actions">
         <button class="btn mega ${armed ? 'on' : ''}" id="to-mega" ${view.canMega ? '' : 'disabled'} aria-pressed="${armed}">${view.megaUsed ? '메가 사용함' : armed ? '메가 취소' : '메가진화'}</button>
+        <button class="btn zbtn" id="to-z" ${view.canZ && zLockTurn !== view.turn ? '' : 'disabled'}>${view.zUsed ? 'Z 사용함' : zLockTurn === view.turn ? '다음 턴에' : 'Z기술'}</button>
         <button class="btn paper" id="to-sw" ${armed ? 'disabled' : ''}>교체</button>
         <button class="btn paper" id="ff">${tag ? '나가기' : '기권'}</button>
       </div>`;
@@ -422,6 +442,20 @@ const Battle = (() => {
       };
     });
     panel.querySelector('#to-mega').onclick = () => { armed = !armed; renderPanel(); };
+    panel.querySelector('#to-z').onclick = async () => {
+      const zid = G.data.MONSTERS[cur.species].z, zmv = G.data.MOVES[zid];
+      const ok = await ZMission.run({ moveName: zmv.n, monName: cur.name, color: G.data.TYPES[zmv.type].c });
+      if (ok === null) return; // 그만두기: 다시 시도 가능
+      if (!ok) { zLockTurn = view.turn; toast('호흡이 어긋났다! 이번 턴에는 Z기술을 쓸 수 없다.'); return renderPanel(); }
+      const index = noPP ? -1 : cur.moves.findIndex((x) => x.pp > 0);
+      const live = liveOpps();
+      if (view.doubles && live.length > 1) {
+        moveDraft = { index, mega: armed, mv: zmv, z: true };
+        menu = 'target';
+        return renderPanel();
+      }
+      act({ type: 'move', index, mega: armed, z: true, target: live[0]?.seat });
+    };
     panel.querySelector('#to-sw').onclick = () => { menu = 'switch'; renderPanel(); };
     bindForfeit();
   }
@@ -435,7 +469,7 @@ const Battle = (() => {
           <small>${esc(o.name)}${eff === 0 ? ', 효과 없음' : eff !== 1 ? `, 상성 ${eff}배` : ''}</small></div></button>`;
     }).join('')}<button class="btn paper wide" id="tg-back">기술 고르기로 돌아가기</button>`;
     panel.querySelectorAll('[data-tg]').forEach((b) => {
-      b.onclick = () => { menu = 'moves'; act({ type: 'move', index: moveDraft.index, mega: moveDraft.mega, target: +b.dataset.tg }); };
+      b.onclick = () => { menu = 'moves'; act({ type: 'move', index: moveDraft.index, mega: moveDraft.mega, z: !!moveDraft.z, target: +b.dataset.tg }); };
     });
     panel.querySelector('#tg-back').onclick = () => { menu = 'moves'; renderPanel(); };
   }

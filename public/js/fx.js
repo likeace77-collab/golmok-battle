@@ -565,6 +565,64 @@ const Fx = (() => {
   function statusTick(key, s) { if (!REDUCED) status(key, s); }
   function heal(key) { if (!REDUCED) { measure(); rise('heart', spot(key), { n: 6, gap: 60, dur: 520, size: 7 }); } }
   function stage(key, up) { if (!REDUCED) { measure(); rise(up ? 'arrowUp' : 'arrowDown', spot(key), { n: 4, gap: 90, dur: 460, size: 9, spread: 34, height: up ? 60 : -40 }); } }
+  /* ---------- Z기술 필살 연출 (약 2.5초) ---------- */
+  function zAura(A, color) {
+    act(A.key, 'charge', 900);
+    add(900, (p) => {
+      ctx.globalAlpha = .6 * Math.sin(p * 3.14);
+      const g = ctx.createRadialGradient(A.x, A.y, 4, A.x, A.y, A.r * 2.2);
+      g.addColorStop(0, '#fff'); g.addColorStop(.35, color); g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(A.x, A.y, A.r * 2.2, 0, 7); ctx.fill();
+    });
+    for (let i = 0; i < 3; i++) ring(A, { delay: i * 220, color, r0: 170, r1: 14, dur: 380, w: 8 });
+    orbit('sparkle', A, { n: 12, r: 70, dur: 880, size: 9, turns: 2.2, squash: .7 });
+    add(900, (p) => { ctx.globalAlpha = .65 * Math.min(1, p * 3); ctx.fillStyle = '#0d0a14'; ctx.fillRect(0, 0, W, H); });
+  }
+  function zImpact(T, color, delay) {
+    flash('#fff', 360, delay, .95);
+    flash(color, 700, delay + 120, .55);
+    ['#fff', color, '#FFD23F'].forEach((c, i) => ring(T, { delay: delay + i * 90, color: c, r1: 230, dur: 650, w: 14 - i * 3 }));
+    burst('sparkle', T, { delay, n: 28, dist: 190, size: 14, dur: 700 });
+    shake(16, 750, delay);
+  }
+  // 하늘에서 거대한 물체가 떨어지는 공통 연출
+  const meteor = (kind, T, size, delay, dur = 420) => prop(kind, { from: { x: T.x + 60 * u, y: -60 * u }, to: T, delay, dur, size, rot1: 4 });
+  const Z_FX = {
+    fire(A, T) { for (let i = 0; i < 3; i++) meteor('flame', { x: T.x + (i - 1) * 46 * u, y: T.y }, 60 - i * 8, 900 + i * 120); burst('flame', T, { delay: 1300, n: 40, dist: 200, size: 16, dur: 800 }); return 1300; },
+    water(A, T) {
+      add(1100, (p) => {
+        const x = lerp(-60 * u, W + 60 * u, out(p)), h = 220 * u * Math.sin(Math.min(1, p * 1.4) * 3.14);
+        ctx.fillStyle = '#2F7DE1'; ctx.strokeStyle = INK; ctx.lineWidth = 4 * u;
+        ctx.beginPath(); ctx.moveTo(x - 160 * u, H); ctx.quadraticCurveTo(x - 40 * u, H - h, x + 30 * u, H - h * .9); ctx.quadraticCurveTo(x + 70 * u, H - h * 1.05, x + 50 * u, H - h * .6); ctx.lineTo(x + 60 * u, H); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = '#BFE4FF'; ctx.lineWidth = 3 * u; ctx.beginPath(); ctx.moveTo(x - 120 * u, H - h * .5); ctx.quadraticCurveTo(x - 30 * u, H - h * .95, x + 30 * u, H - h * .85); ctx.stroke();
+      }, 850);
+      burst('drop', T, { delay: 1250, n: 36, dist: 180, size: 10 });
+      return 1300;
+    },
+    grass(A, T) { for (let i = 0; i < 10; i++) whip(ground(T), { x: T.x + rnd(-80, 80) * u, y: T.y - rnd(30, 120) * u }, { delay: 880 + i * 45, color: i % 2 ? '#3FA34D' : '#7ED08A', curve: rnd(-90, 90), dur: 700, w: 9 }); orbit('leaf', T, { delay: 900, n: 22, r: 110, dur: 1000, size: 12, turns: 2.5 }); return 1250; },
+    elec(A, T) { for (let i = 0; i < 8; i++) bolt({ x: T.x + rnd(-120, 120) * u, y: -10 }, { x: T.x + rnd(-40, 40) * u, y: T.y + rnd(-20, 30) * u }, { delay: 880 + i * 110, dur: 280, w: 9, wob: 34, flick: 2 }); [900, 1120, 1340].forEach((d) => flash('#FFF7C2', 160, d, .6)); tint(T.key, 'zap', 1100, 880); return 1350; },
+    ice(A, T) { for (let i = 0; i < 9; i++) { const x = T.x + (i - 4) * 26 * u, h = 60 + (4 - Math.abs(i - 4)) * 22; add(900, (p) => { const k = out(Math.min(1, p * 2.5)); sprite('shard', x, T.foot - h * u * k / 2, h / 5 * k + 1, 0, fade(p, .25)); }, 880 + Math.abs(i - 4) * 60); } add(1100, (p) => { ctx.globalAlpha = .5 * Math.sin(p * 3.14); ctx.fillStyle = '#E8F8FF'; ctx.fillRect(0, 0, W, H); }, 880); tint(T.key, 'cold', 1000, 1000); return 1300; },
+    earth(A, T) { meteor('rock', T, 90, 880, 380); cracks(T, { delay: 1260, dur: 900 }); cracks(T, { delay: 1300, dur: 900 }); burst('rock', ground(T), { delay: 1260, n: 30, dist: 190, size: 12 }); burst('dust', ground(T), { delay: 1240, n: 30, dist: 220, size: 18 }); return 1300; },
+    wind(A, T) { tornado(T, { delay: 880, dur: 1300, color: '#E6FFF4' }); windLines({ x: -20, y: T.y }, { x: W + 20, y: T.y }, { delay: 880, n: 24, gap: 30, spread: 120 }); act(T.key, 'lift', 1300); return 1350; },
+    poison(A, T) { cloud(T, ['#9A4FB8', '#6c3a86', '#C993DD', '#3a1a4a'], { delay: 880, n: 26, dur: 1100, size: 40, spread: 130 }); rise('bubble', T, { delay: 950, n: 18, gap: 40, dur: 800, size: 10, spread: 90 }); tint(T.key, 'poison', 1000, 1000); return 1350; },
+    steel(A, T) { for (let i = 0; i < 12; i++) prop(i % 2 ? 'scrap' : 'can', { from: { x: T.x + rnd(-140, 140) * u, y: -40 * u }, to: { x: T.x + rnd(-40, 40) * u, y: T.y + rnd(-20, 20) * u }, delay: 880 + i * 50, dur: 260, size: 24, rot1: 9 }); meteor('hammer', T, 80, 1300, 220); return 1300; },
+    spirit(A, T) { add(1200, (p) => { ctx.globalAlpha = .75 * Math.sin(p * 3.14); ctx.fillStyle = '#1a0a3a'; ctx.fillRect(0, 0, W, H); }, 880); for (let i = 0; i < 8; i++) { const a = (i / 8) * 6.28; spray('wisp', { x: T.x + Math.cos(a) * 200 * u, y: T.y + Math.sin(a) * 140 * u }, T, { n: 1, delay: 900 + i * 60, dur: 420, size: 18, spread: 0 }); } ring(T, { delay: 1300, color: '#7A6BE0', r1: 200, w: 14 }); return 1300; },
+    fairy(A, T) { for (let i = 0; i < 3; i++) ring(T, { delay: 880 + i * 120, color: ['#F27FA5', '#fff', '#37e0ff'][i], r0: 220, r1: 10, dur: 400, w: 10 }); burst('pheart', T, { delay: 1300, n: 30, dist: 200, size: 13 }); burst('sparkle', T, { delay: 1300, n: 30, dist: 230, size: 12 }); return 1300; },
+    none(A, T) { act(A.key, 'dash', 700); return 1100; },
+  };
+  function zmove(type, key, target) {
+    if (REDUCED) return 900;
+    measure();
+    const foe = target || (key === 'me' ? 'opp' : 'me');
+    const A = { ...spot(key), key }, T = { ...spot(foe), key: foe };
+    const color = { fire: '#F2622E', water: '#2F7DE1', grass: '#3FA34D', elec: '#FFE45C', ice: '#7fe0f0', earth: '#C98F5E', wind: '#CFEDE1', poison: '#B86BE0', steel: '#D7DDE5', spirit: '#7A6BE0', fairy: '#F27FA5' }[type] || '#fff';
+    zAura(A, color);
+    beam(A, T, { delay: 760, color, core: '#fff', w: 36, dur: 520 });
+    const hit = (Z_FX[type] || Z_FX.none)(A, T);
+    zImpact(T, color, hit);
+    return hit + 950;
+  }
+
   // 메가진화: 빛을 모으는 앞부분과 변신이 끝나는 뒷부분
   function megaStart(key) {
     if (REDUCED) return;
@@ -586,5 +644,5 @@ const Fx = (() => {
   }
   function weather(w) { if (REDUCED || !w) return 700; measure(); return weatherFx(w); }
 
-  return { attach, play, status, statusTick, heal, stage, weather, megaStart, megaEnd, ids: () => Object.keys(MOVE_FX) };
+  return { attach, play, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, ids: () => Object.keys(MOVE_FX) };
 })();
