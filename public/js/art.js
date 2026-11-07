@@ -254,8 +254,13 @@ ART.dummy = wrap(`
   <path d="M43 18q-6-8 0-12M77 18q6-8 0-12" fill="none" stroke="#a8843e" stroke-width="2.500"/>`);
 
 // 사진 그림을 쓰는 요괴 (루미나, 실비아). 서버 데이터의 img 표시를 따릅니다.
-function monsterSVG(id, cls = '', mega = false) {
-  if (typeof G !== 'undefined' && G.data?.MONSTERS?.[id]?.img) return `<svg class="${cls}" viewBox="0 0 200 200" aria-hidden="true"><image href="img/mon/${id}${mega ? '-mega' : ''}.webp" width="200" height="200"/></svg>`;
+// hits: 맞은 횟수. stages가 있는 요괴는 맞을 때마다 그림이 다음 단계로 바뀝니다 (메가진화 중에는 메가 그림).
+function monsterSVG(id, cls = '', mega = false, hits = 0) {
+  const sp = typeof G !== 'undefined' ? G.data?.MONSTERS?.[id] : null;
+  if (sp?.img) {
+    const stage = !mega && sp.stages ? Math.min(hits || 0, sp.stages) : 0;
+    return `<svg class="${cls}" viewBox="0 0 200 200" aria-hidden="true"><image href="img/mon/${id}${mega ? '-mega' : stage ? `-s${stage}` : ''}.webp" width="200" height="200"/></svg>`;
+  }
   if (mega) return `<svg class="${cls}" viewBox="-6 -6 212 212" aria-hidden="true">${MEGA_ART[id]}</svg>`;
   if (NEW_ART[id]) return `<svg class="${cls}" viewBox="-4 -6 208 212" aria-hidden="true">${NEW_ART[id]}</svg>`;
   return `<svg class="${cls}" viewBox="0 0 120 120" aria-hidden="true">${ART[id] || ''}</svg>`;

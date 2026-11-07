@@ -653,3 +653,7 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .swgrid span { font-size: 11px; line-height: 1.15; word-break: keep-all; text-align: center; }
 .train-card { background: linear-gradient(135deg, #fff4d8, #ffe2b8); }
 
+
+/* 맞아서 그림이 바뀔 때 번쩍 */
+.mon.swapfx svg { animation: swapFx .5s ease-out; }
+@keyframes swapFx { 0% { filter: brightness(3) saturate(0); transform: scale(1.06); } 100% { filter: none; transform: none; } }

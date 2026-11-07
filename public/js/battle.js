@@ -207,7 +207,7 @@ const Battle = (() => {
   function drawMon(key, m) {
     const box = $(`#m-${key}`);
     box.className = `mon ${key}${m.mega ? ' mega' : ''}`;
-    box.innerHTML = monsterSVG(m.species, '', m.mega);
+    box.innerHTML = monsterSVG(m.species, '', m.mega, m.hits);
   }
 
   const dispMon = (key) => (key === 'me' ? mine() : seatOf(key).active);
@@ -287,6 +287,12 @@ const Battle = (() => {
         const m = dispMon(key);
         m.hp = e.hp; m.maxHp = e.maxHp;
         setBar(key, m);
+        if (e.hits !== undefined && e.hits !== m.hits) { // 맞은 횟수가 바뀌면 그림을 다시 그림 (옷 바뀌는 요괴)
+          const before = monsterSVG(m.species, '', m.mega, m.hits);
+          m.hits = e.hits;
+          const after = monsterSVG(m.species, '', m.mega, m.hits);
+          if (after !== before) setTimeout(() => { const box = $(`#m-${key}`); if (box) { box.innerHTML = after; box.classList.add('swapfx'); setTimeout(() => box.classList.remove('swapfx'), 500); } }, 180);
+        }
         if (e.quiet) break;
         if (e.dmg !== undefined) {
           if (e.moveType) {
@@ -398,7 +404,7 @@ const Battle = (() => {
         <div class="zc-pair">
           ${duo ? '<canvas class="zc-tr"></canvas>' : ''}
           <div class="zc-bond"><i></i><i></i><i></i><b>유대 MAX</b></div>
-          <div class="zc-mon">${monsterSVG(e.mon.species, '', e.mon.mega)}</div>
+          <div class="zc-mon">${monsterSVG(e.mon.species, '', e.mon.mega, e.mon.hits)}</div>
         </div>
         <div class="zc-text"><span class="zc-kick">Z기술 · ${esc(e.player)} × ${esc(e.mon.name)}</span><b class="zc-name">${esc(e.move)}</b></div>
       </div>
@@ -515,7 +521,7 @@ const Battle = (() => {
     say(`${moveDraft.mv ? moveDraft.mv.n : '악쓰기'}, 누구에게 쓸까요?`);
     panel.innerHTML = `${liveOpps().map((o) => {
       const eff = moveDraft.mv && moveDraft.mv.cat !== 'x' ? effOn(moveDraft.mv, o.active) : 1;
-      return `<button class="sw tg" data-tg="${o.seat}">${monsterSVG(o.active.species, '', o.active.mega)}
+      return `<button class="sw tg" data-tg="${o.seat}">${monsterSVG(o.active.species, '', o.active.mega, o.active.hits)}
         <div class="inf">${o.active.name} ${o.active.types.map(typeChip).join('')}
           <small>${esc(o.name)}${eff === 0 ? ', 효과 없음' : eff !== 1 ? `, 상성 ${eff}배` : ''}</small></div></button>`;
     }).join('')}<button class="btn paper wide" id="tg-back">기술 고르기로 돌아가기</button>`;
@@ -529,7 +535,7 @@ const Battle = (() => {
     if (training) {
       say('어떤 요괴로 바꿀까요?');
       panel.innerHTML = `<div class="swgrid">${view.me.mons.map((m, i) => `<button data-sw="${i}" ${i === view.me.active ? 'disabled' : ''} aria-label="${m.name}">
-        ${monsterSVG(m.species, '', m.mega)}<span>${m.name}</span></button>`).join('')}</div>
+        ${monsterSVG(m.species, '', m.mega, m.hits)}<span>${m.name}</span></button>`).join('')}</div>
         <button class="btn paper wide" id="sw-back">기술 고르기로 돌아가기</button>`;
       panel.querySelectorAll('[data-sw]').forEach((b) => { b.onclick = () => { menu = 'moves'; act({ type: 'switch', index: +b.dataset.sw }); }; });
       panel.querySelector('#sw-back').onclick = () => { menu = 'moves'; renderPanel(); };
@@ -538,7 +544,7 @@ const Battle = (() => {
     panel.innerHTML = `${view.me.mons.map((m, i) => {
       const off = m.hp <= 0 || i === view.me.active;
       return `<button class="sw" data-sw="${i}" ${off ? 'disabled' : ''}>
-        ${monsterSVG(m.species, '', m.mega)}
+        ${monsterSVG(m.species, '', m.mega, m.hits)}
         <div class="inf">${m.name} ${m.types.map(typeChip).join('')}
           <div class="bar" style="max-width:190px"><i class="${m.hp / m.maxHp <= .2 ? 'low' : m.hp / m.maxHp <= .5 ? 'mid' : ''}" style="width:${(m.hp / m.maxHp) * 100}%"></i></div>
           <small>${m.hp <= 0 ? '쓰러짐' : `${m.hp} / ${m.maxHp}`}${m.status ? `, ${STATUS[m.status]}` : ''}${i === view.me.active && m.hp > 0 ? ', 싸우는 중' : ''}</small>

@@ -505,5 +505,7 @@ const STAT_NAMES = {
 
 // 루미나와 실비아는 사진 그림(public/img/mon)을 씁니다.
 for (const id of ['lumina', 'silvia']) MONSTERS[id].img = true;
+// 맞을 때마다 옷이 바뀌는 그림 수 (img/mon/<id>-s1 ~ sN.webp)
+MONSTERS.lumina.stages = 4;
 
 module.exports = { TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES };

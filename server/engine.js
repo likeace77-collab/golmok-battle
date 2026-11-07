@@ -223,7 +223,8 @@ function hpEvent(b, s, m, ev, extra = {}) {
 function hurt(b, s, m, amount, ev, extra) {
   const dmg = Math.min(m.hp, Math.max(1, Math.floor(amount)));
   m.hp -= dmg;
-  hpEvent(b, s, m, ev, { dmg, ...extra });
+  if (extra?.moveType) m.hits = (m.hits || 0) + 1; // 공격에 맞은 횟수 (옷이 바뀌는 요괴용)
+  hpEvent(b, s, m, ev, { dmg, ...extra, ...(extra?.moveType ? { hits: m.hits } : {}) });
   if (b.training && m.species === 'dummy') {
     const d = b.dummy;
     d.total += dmg; d.turn += dmg; d.hits++;
@@ -256,7 +257,7 @@ function faintCheck(b, s, m, ev) {
 function publicMon(m) {
   return {
     species: m.species, name: m.name, types: m.types,
-    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega,
+    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega, hits: m.hits || 0,
   };
 }
 
