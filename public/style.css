@@ -864,3 +864,11 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .forge-tag b { display: block; white-space: nowrap; font: 400 clamp(34px, 11vw, 64px)/1.05 var(--display); color: #fff; -webkit-text-stroke: 2.5px var(--ink); text-shadow: 0 0 16px var(--tc), 0 0 34px var(--tc), 4px 4px 0 var(--ink); }
 .forge-tag.ft1 { --tc: #BDB8A8; } .forge-tag.ft2 { --tc: #c9d1dc; } .forge-tag.ft3 { --tc: #FFD23F; } .forge-tag.ft4 { --tc: #9FF3FF; } .forge-tag.ft5 { --tc: #d14bff; }
 .forge-tag.ft5 b { background: linear-gradient(90deg, #d14bff, #ff4f6e, #d14bff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* 곧 공개 */
+.card.secret { --tc: #2a2440; background: repeating-linear-gradient(135deg, #2a2440 0 10px, #332c4d 10px 20px); color: #fff; }
+.card.secret span:not(.soon-art) { background: #1a1433; color: #fff; }
+.card.secret .soon-art { background: transparent; border: 0; box-shadow: none; padding: 0; }
+.soon-art { display: grid; place-items: center; width: 100%; aspect-ratio: 1; font: 400 64px/1 var(--display); color: #FFD23F; text-shadow: 0 0 14px #FFD23F, 3px 3px 0 var(--ink); }
+.bantag.soon { background: #FFD23F; color: var(--ink); animation: soonPulse 1.4s ease-in-out infinite; }
+@keyframes soonPulse { 50% { transform: scale(1.08); } }

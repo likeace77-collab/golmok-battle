@@ -166,6 +166,9 @@ function migrate() {
 const isDev = (u) => Data.DEV_ACCOUNTS.includes(u?.name);
 const bannedFor = (u) => (isDev(u) ? [] : Data.BANNED);
 const bannedIn = (u, team) => team.filter((m) => bannedFor(u).includes(m.species)).map((m) => Data.MONSTERS[m.species].n);
+// 공개 전 요괴: 다른 사람과 하는 대전에는 개발자 계정도 못 가지고 나감 (연습전·훈련장만)
+const secretIn = (team) => team.filter((m) => Data.BANNED.includes(m.species)).map((m) => Data.MONSTERS[m.species].n);
+const SECRET_TEXT = '공개 전 요괴는 다른 사람과의 대전에 데려갈 수 없습니다. 덱에서 빼 주세요.';
 const BAN_TEXT = (names) => `${names.join(', ')}${names.length > 1 ? '는' : '는'} 지금 테스트 중이라 쓸 수 없습니다. 덱에서 빼 주세요.`;
 
 function validTeam(t) {
@@ -376,6 +379,11 @@ const server = http.createServer(async (req, res) => {
   }
   // 루미나·실비아 원본 그림은 성인(모자이크 끔) 계정에만 보냅니다. 나머지는 모자이크 그림.
   let serve = file;
+  if (/^img\/mon\/(lumina|silvia)/.test(rel)) {
+    const a = userFromReq(req);
+    // 공개 전: 개발자 계정만 그림을 받음
+    if (!(a && isDev(db.users[a.key]))) { res.writeHead(404); return res.end('Not found'); }
+  }
   if (/^img\/mon\/(lumina|silvia)(-s\d|-mega)?\.webp$/.test(rel)) {
     const a = userFromReq(req);
     if (!(a && uncensored(db.users[a.key]))) serve = file.replace(/\.webp$/, '-m.webp');
@@ -639,6 +647,7 @@ function onMessage(key, msg) {
     case 'spectate': {
       const target = battles.get(String(msg.id ?? ''));
       if (room || !target || target.ended) return toast(key, '지금은 관전할 수 없습니다.');
+      if (!isDev(db.users[key]) && target.b.sides.some((sd) => sd.mons.some((m) => Data.BANNED.includes(m.species)))) return toast(key, '공개 전 요괴가 나오는 대전이라 관전할 수 없습니다.');
       stopWatching(key);
       target.spectators.add(key);
       spectating.set(key, target);
@@ -677,8 +686,8 @@ function onMessage(key, msg) {
       if (humans.some((k) => inBattle.has(k) || !online.has(k))) return toast(key, '참가자 중 대전 중인 사람이 있습니다.');
       const short = humans.find((k) => deckOf(db.users[k]).team.length < 3);
       if (short) return toast(key, `${db.users[short].name}님의 덱에 요괴가 3마리 있어야 합니다.`);
-      const bk = humans.find((k) => bannedIn(db.users[k], deckOf(db.users[k]).team.slice(0, 3)).length);
-      if (bk) return toast(key, `${db.users[bk].name}님의 덱에 테스트 중인 요괴가 있습니다.`);
+      const bk = humans.find((k) => secretIn(deckOf(db.users[k]).team.slice(0, 3)).length);
+      if (bk) return toast(key, `${db.users[bk].name}님의 덱에 공개 전 요괴가 있습니다.`);
       tagRooms.delete(r.id);
       startBattle(r.slots.map((k) => k || BOT), 3, r.level, true);
       break;
@@ -703,6 +712,7 @@ function onMessage(key, msg) {
       if (inBattle.has(to)) return toast(key, '상대가 대전 중입니다.');
       if (deckOf(db.users[key]).team.length < size) return toast(key, `선택한 덱에 요괴가 ${size}마리 있어야 합니다.`);
       { const bn = bannedIn(db.users[key], deckOf(db.users[key]).team.slice(0, size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
+      if (secretIn(deckOf(db.users[key]).team.slice(0, size)).length) return toast(key, SECRET_TEXT);
       challenges.set(key, { to, size });
       broadcastLobby();
       break;
@@ -724,7 +734,8 @@ function onMessage(key, msg) {
       if (deckOf(db.users[key]).team.length < c.size) return toast(key, `선택한 덱에 요괴가 ${c.size}마리 있어야 합니다.`);
       if (deckOf(db.users[from]).team.length < c.size) return toast(key, '상대의 덱 인원이 모자랍니다.');
       { const bn = bannedIn(db.users[key], deckOf(db.users[key]).team.slice(0, c.size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
-      if (bannedIn(db.users[from], deckOf(db.users[from]).team.slice(0, c.size)).length) return toast(key, '상대 덱에 테스트 중인 요괴가 있어 시작할 수 없습니다.');
+      if (secretIn(deckOf(db.users[key]).team.slice(0, c.size)).length) return toast(key, SECRET_TEXT);
+      if (bannedIn(db.users[from], deckOf(db.users[from]).team.slice(0, c.size)).length || secretIn(deckOf(db.users[from]).team.slice(0, c.size)).length) return toast(key, '상대 덱에 공개 전 요괴가 있어 시작할 수 없습니다.');
       startBattle([from, key], c.size);
       break;
     }
