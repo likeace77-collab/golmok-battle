@@ -183,8 +183,16 @@ function validTeam(t) {
   return out;
 }
 
+// 나이: 태어난 해로 셉니다. 19세 이하는 루미나·실비아 의상에 모자이크.
+const THIS_YEAR = () => new Date().getFullYear();
+const validYear = (y) => Number.isInteger(y) && y >= 1900 && y <= THIS_YEAR();
+const ageOf = (u) => (u?.birthYear ? THIS_YEAR() - u.birthYear : null);
+const isAdult = (u) => ageOf(u) !== null && ageOf(u) > 19;
+const uncensored = (u) => isAdult(u) && !u.settings?.mosaic;
+
 const publicUser = (u) => ({
-  dev: isDev(u), name: u.name, avatar: u.avatar, decks: u.decks, active: u.active, stats: u.stats, style: u.style,
+  dev: isDev(u), birthYear: u.birthYear || null, needAge: !u.birthYear, adult: isAdult(u), uncensored: uncensored(u), settings: { mosaic: !!u.settings?.mosaic },
+  name: u.name, avatar: u.avatar, decks: u.decks, active: u.active, stats: u.stats, style: u.style,
   wins: u.wins, losses: u.losses, draws: u.draws, h2h: u.h2h,
 });
 
@@ -265,10 +273,12 @@ async function api(req, res, url) {
     if (!/^[a-zA-Z0-9가-힣_]{2,12}$/.test(name)) return json(res, 400, { error: '아이디는 한글, 영문, 숫자로 2~12자여야 합니다.' });
     if (password.length < 6 || password.length > 100) return json(res, 400, { error: '비밀번호는 6자 이상이어야 합니다.' });
     if (db.users[key]) return json(res, 409, { error: '이미 있는 아이디입니다.' });
+    const birthYear = Number(body.birthYear);
+    if (!validYear(birthYear)) return json(res, 400, { error: '태어난 해를 정확히 넣어 주세요. (예: 1998)' });
     const salt = crypto.randomBytes(16).toString('hex');
     db.users[key] = {
       name, salt, hash: hashPw(password, salt), avatar: randomAvatar(), decks: [{ name: '기본 덱', team: defaultTeam() }], active: 0, createdAt: Date.now(), lastSeen: Date.now(), notes: {}, stats: newStats(), style: defaultStyle(),
-      wins: 0, losses: 0, draws: 0, h2h: {},
+      wins: 0, losses: 0, draws: 0, h2h: {}, birthYear, settings: { mosaic: false },
     };
     createSession(res, req, key);
     return json(res, 200, { user: publicUser(db.users[key]) });
@@ -279,6 +289,21 @@ async function api(req, res, url) {
   const user = db.users[auth.key];
 
   if (route === 'GET /api/me') return json(res, 200, { user: publicUser(user) });
+  if (route === 'PUT /api/age') {
+    if (user.birthYear) return json(res, 400, { error: '나이는 한 번만 설정할 수 있습니다.' });
+    const y = Number((await readBody(req)).birthYear);
+    if (!validYear(y)) return json(res, 400, { error: '태어난 해를 정확히 넣어 주세요. (예: 1998)' });
+    user.birthYear = y; user.settings ||= { mosaic: false }; save();
+    return json(res, 200, { user: publicUser(user) });
+  }
+  // 나이를 아직 안 정한 계정은 나이 설정과 로그아웃 말고는 아무것도 못 합니다.
+  if (!user.birthYear && route !== 'POST /api/logout') return json(res, 403, { error: '먼저 나이를 설정해 주세요.', needAge: true });
+  if (route === 'PUT /api/settings') {
+    const b = await readBody(req);
+    user.settings = { ...(user.settings || {}), mosaic: !!b.mosaic };
+    save();
+    return json(res, 200, { user: publicUser(user) });
+  }
   if (route === 'POST /api/logout') {
     delete db.sessions[auth.hashed]; save();
     res.setHeader('Set-Cookie', 'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0');
@@ -349,8 +374,15 @@ const server = http.createServer(async (req, res) => {
   if (!file.startsWith(PUBLIC + path.sep) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     res.writeHead(404); return res.end('Not found');
   }
-  res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
-  fs.createReadStream(file).pipe(res);
+  // 루미나·실비아 원본 그림은 성인(모자이크 끔) 계정에만 보냅니다. 나머지는 모자이크 그림.
+  let serve = file;
+  if (/^img\/mon\/(lumina|silvia)(-s\d|-mega)?\.webp$/.test(rel)) {
+    const a = userFromReq(req);
+    if (!(a && uncensored(db.users[a.key]))) serve = file.replace(/\.webp$/, '-m.webp');
+    res.setHeader('Cache-Control', 'private, no-store'); res.setHeader('Vary', 'Cookie');
+  }
+  res.writeHead(200, { 'Content-Type': MIME[path.extname(serve)] || 'application/octet-stream', ...(res.getHeader('Cache-Control') ? {} : { 'Cache-Control': 'no-cache' }) });
+  fs.createReadStream(serve).pipe(res);
 });
 
 /* ---------- 실시간 ---------- */
@@ -588,6 +620,7 @@ function finish(room) {
 }
 
 function onMessage(key, msg) {
+  if (!db.users[key].birthYear) return send(online.get(key), { t: 'need_age' });
   const room = inBattle.get(key);
   switch (msg?.t) {
     case 'action': {

@@ -23,6 +23,7 @@ async function signup(ctx, name) {
   await page.keyboard.type(name);
   await page.click('[name=password]');
   await page.keyboard.type('secret123');
+  await page.fill('[name=birthYear]', '1995');
   await page.click('form .btn');
   await page.waitForSelector('#go-team');
   return { page, errors };

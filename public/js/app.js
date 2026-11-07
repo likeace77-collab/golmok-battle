@@ -47,6 +47,8 @@ function showAuth(mode = 'login') {
       </div>
       <label class="field">아이디<input name="name" autocomplete="username" required maxlength="12"></label>
       <label class="field">비밀번호<input name="password" type="password" autocomplete="${signup ? 'new-password' : 'current-password'}" required></label>
+      ${signup ? `<label class="field">태어난 해<input name="birthYear" type="number" inputmode="numeric" min="1900" max="${new Date().getFullYear()}" placeholder="예: 1998" required></label>
+        <p class="muted" style="margin:-4px 0 10px;font-size:13px">19세 이하는 일부 캐릭터 의상이 모자이크로 보입니다. 나중에 바꿀 수 없어요.</p>` : ''}
       ${signup && G.data.inviteRequired ? '<label class="field">초대 코드<input name="invite" required></label>' : ''}
       <p class="err" id="err"></p>
       <button class="btn wide">${signup ? '계정 만들기' : '로그인'}</button>
@@ -56,10 +58,63 @@ function showAuth(mode = 'login') {
     e.preventDefault();
     const body = Object.fromEntries(new FormData(e.target));
     try {
+      if (body.birthYear) body.birthYear = Number(body.birthYear);
       const { user } = await api('POST', signup ? '/api/signup' : '/api/login', body);
-      G.user = user; connect(); showLobby();
+      G.user = user; enterGame();
     } catch (err) { app.querySelector('#err').textContent = err.message; }
   };
+}
+
+// 로그인 뒤: 나이를 안 정한 계정은 나이 설정부터
+function enterGame() {
+  if (G.user.needAge) return showAgeGate();
+  connect(); showLobby();
+}
+
+function showAgeGate() {
+  G.screen = 'age';
+  app.className = '';
+  const y = new Date().getFullYear();
+  app.innerHTML = `<div class="auth">
+    <h1 class="title">골목대전</h1>
+    <form class="panel" id="af">
+      <h2>나이 설정</h2>
+      <p style="margin-bottom:10px">게임을 계속하려면 태어난 해를 설정해야 합니다. 19세 이하는 루미나, 실비아의 의상이 모자이크로 보입니다.</p>
+      <label class="field">태어난 해<input name="birthYear" type="number" inputmode="numeric" min="1900" max="${y}" placeholder="예: 1998" required></label>
+      <p class="muted" style="margin:-4px 0 10px;font-size:13px">한 번 설정하면 바꿀 수 없어요.</p>
+      <p class="err" id="err"></p>
+      <button class="btn wide">설정하고 시작하기</button>
+      <button type="button" class="btn paper wide" id="out" style="margin-top:8px">로그아웃</button>
+    </form></div>`;
+  app.querySelector('#af').onsubmit = async (e) => {
+    e.preventDefault();
+    const birthYear = Number(new FormData(e.target).get('birthYear'));
+    try { G.user = (await api('PUT', '/api/age', { birthYear })).user; enterGame(); }
+    catch (err) { app.querySelector('#err').textContent = err.message; }
+  };
+  app.querySelector('#out').onclick = async () => { await api('POST', '/api/logout').catch(() => {}); G.user = null; showAuth(); };
+}
+
+function showSettings() {
+  G.screen = 'settings';
+  const u = G.user, age = new Date().getFullYear() - u.birthYear;
+  app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>설정</h1></div>
+    <section class="panel">
+      <h2>나이</h2>
+      <p>태어난 해 <b>${u.birthYear}</b> (${age}세)</p>
+      <p class="muted" style="font-size:13px">나이는 한 번만 설정할 수 있습니다.</p>
+    </section>
+    <section class="panel">
+      <h2>캐릭터 모자이크</h2>
+      ${u.adult ? `<label class="toggle"><input type="checkbox" id="mosaic" ${u.settings.mosaic ? 'checked' : ''}> 루미나, 실비아 의상에 모자이크 켜기</label>
+        <p class="muted" style="font-size:13px;margin-top:6px">켜면 성인 계정도 모자이크로 보입니다.</p>`
+        : '<p>19세 이하 계정이라 루미나, 실비아의 의상이 모자이크로 보입니다.</p>'}
+    </section>`;
+  app.querySelector('#back').onclick = showLobby;
+  app.querySelector('#mosaic')?.addEventListener('change', async (e) => {
+    try { G.user = (await api('PUT', '/api/settings', { mosaic: e.target.checked })).user; toast(e.target.checked ? '모자이크를 켰습니다.' : '모자이크를 껐습니다.'); }
+    catch (err) { toast(err.message); }
+  });
 }
 
 /* ---------- 실시간 연결 ---------- */
@@ -95,6 +150,7 @@ function onServer(m) {
     case 'opp_ready': Battle.setNote('상대가 행동을 골랐습니다.'); break;
     case 'opp_conn': Battle.setNote(m.online ? `${m.name}님이 돌아왔습니다.` : `${m.name}님이 나갔습니다. ${m.grace}초 안에 돌아오지 않으면 ${m.tag ? '골목대장이 자리를 맡습니다' : '승리합니다'}.`); break;
     case 'kicked': if (m.text) toast(m.text); Battle.exit(); break;
+    case 'need_age': G.user.needAge = true; showAgeGate(); break;
     default:
   }
 }
@@ -164,6 +220,7 @@ function renderLobby() {
         <button class="btn paper" id="go-ava">꾸미기</button>
         <button class="btn mint" id="go-dex">도감</button>
         <button class="btn paper" id="go-players">플레이어 목록</button>
+        <button class="btn paper" id="go-settings">설정</button>
       </div>
     </section>
     <section class="panel">
@@ -214,6 +271,7 @@ function renderLobby() {
   app.querySelector('#go-ava').onclick = showAvatar;
   app.querySelector('#go-dex').onclick = showDex;
   app.querySelector('#go-players').onclick = showPlayers;
+  app.querySelector('#go-settings').onclick = showSettings;
   app.querySelector('#go-bot').onclick = () => wsSend({ t: 'practice', size: G.size, level: G.botLevel });
   app.querySelector('#go-train').onclick = () => wsSend({ t: 'training' });
   app.querySelectorAll('[data-level]').forEach((b) => {
@@ -608,6 +666,6 @@ function openDexEntry(id) {
   G.data = await api('GET', '/api/data');
   try {
     G.user = (await api('GET', '/api/me')).user;
-    showLobby(); connect();
+    enterGame();
   } catch { showAuth(); }
 })();
