@@ -39,7 +39,6 @@ function showAuth(mode = 'login') {
   const signup = mode === 'signup';
   app.innerHTML = `<div class="auth">
     <h1 class="title">골목대전</h1>
-    ${G.data?.ROSTER === 'new' ? '<p class="ver-tag">루미나·실비아 버전</p>' : ''}
     <div class="lineup">${['kkaebi', 'bungbbang', 'jangdok', 'bongdari'].map((m) => monsterSVG(m)).join('')}</div>
     <form class="panel" id="f">
       <div class="tabs" role="tablist">
@@ -169,7 +168,7 @@ function renderLobby() {
     </section>
     <section class="panel">
       <div class="row" style="justify-content:space-between;margin-bottom:8px">
-        <h2 style="margin:0">대전 인원${G.data.ROSTER === 'new' ? ' <span class="ver-tag small">루미나·실비아 버전</span>' : ''}</h2>
+        <h2 style="margin:0">대전 인원</h2>
         <div class="seg">
           ${[3, 6].map((n) => `<button data-size="${n}" aria-pressed="${G.size === n}">${n}대${n}</button>`).join('')}
         </div>
@@ -600,7 +599,6 @@ function openDexEntry(id) {
 /* ---------- 시작 ---------- */
 (async () => {
   G.data = await api('GET', '/api/data');
-  if (G.data.ROSTER === 'new') document.title = '골목대전 (루미나·실비아 버전)';
   try {
     G.user = (await api('GET', '/api/me')).user;
     showLobby(); connect();

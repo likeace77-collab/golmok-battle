@@ -653,7 +653,3 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .swgrid span { font-size: 11px; line-height: 1.15; word-break: keep-all; text-align: center; }
 .train-card { background: linear-gradient(135deg, #fff4d8, #ffe2b8); }
 
-/* 게임 버전 표시 */
-.ver-tag { display: inline-block; margin: -4px auto 10px; padding: 3px 10px; font-family: var(--ui); font-size: 15px; color: #fff; background: linear-gradient(90deg, #E8402C, #3FA34D); border: 2px solid var(--ink); border-radius: 999px; }
-.auth .ver-tag { display: table; }
-.ver-tag.small { margin: 0 0 0 4px; padding: 1px 7px; font-size: 12px; vertical-align: middle; }

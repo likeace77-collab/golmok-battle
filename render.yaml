@@ -1,5 +1,4 @@
 services:
-  # 원래 버전 (네온나·연지)
   - type: web
     name: golmok-battle
     runtime: node
@@ -7,24 +6,6 @@ services:
     buildCommand: npm install
     startCommand: npm start
     envVars:
-      - key: INVITE_CODE
-        sync: false
-      - key: GIST_ID
-        sync: false
-      - key: GIST_TOKEN
-        sync: false
-  # 루미나·실비아 버전. 같은 Gist를 쓰되 저장 파일이 달라 계정과 전적이 따로입니다.
-  - type: web
-    name: golmok-battle-lumina
-    runtime: node
-    plan: free
-    buildCommand: npm install
-    startCommand: npm start
-    envVars:
-      - key: ROSTER
-        value: new
-      - key: GIST_FILE
-        value: db-lumina.json
       - key: INVITE_CODE
         sync: false
       - key: GIST_ID
