@@ -627,6 +627,37 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 @keyframes ttSpin { to { --ta: 360deg; } }
 @keyframes ttFloat { 50% { transform: translateY(-2px); filter: drop-shadow(0 0 7px var(--g)); } }
 @keyframes ttRise { to { background-position: 0 -22px; } }
+
+/* 6 개발자: 회전하는 RGB 테두리 + 글리치 + 코드 기호 + 스캔라인 + 빛줄기 */
+.tt-6 { --g: #37E0FF; gap: 4px; align-items: center; padding: 3px 9px 2px; color: #fff; background: radial-gradient(circle at 30% 0, #1b2a55, #05060c 70%); border-radius: 6px;
+  box-shadow: 0 0 8px #37E0FF88, 0 0 14px #FF4FD866; animation: ttFloat 2.2s ease-in-out infinite, ttHue 6s linear infinite; }
+.tt-6::before { content: ''; position: absolute; inset: 0; z-index: 0; border-radius: 6px; padding: 2px; pointer-events: none;
+  background: conic-gradient(from var(--ta, 0deg), #37E0FF, #FF4FD8, #FFE45C, #37FF8B, #37E0FF);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: ttSpin 1.8s linear infinite; }
+.tt-6::after { content: ''; position: absolute; z-index: 3; top: -20%; bottom: -20%; left: -60%; width: 40%; pointer-events: none; background: linear-gradient(100deg, transparent, #ffffffd0 50%, transparent); transform: skewX(-20deg); animation: ttShine 2s ease-in-out infinite; }
+.tt-6 s { inset: 2px; border-radius: 4px; background: repeating-linear-gradient(#fff1 0 1px, transparent 1px 3px), radial-gradient(circle, #37E0FF 0 1px, transparent 1.5px) 0 0 / 11px 9px; animation: ttRise 1.2s linear infinite; opacity: .7; }
+.tt-6 .tt-code { position: relative; z-index: 2; font: 900 .85em/1 ui-monospace, Menlo, monospace; color: #37FF8B; text-shadow: 0 0 6px #37FF8B; }
+.tt-6 i { overflow: visible; background: linear-gradient(90deg, #37E0FF, #fff, #FF4FD8, #FFE45C, #37E0FF) 0 0 / 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: ttFlow 2.4s linear infinite; font-weight: 700; letter-spacing: .06em; }
+.tt-6 i::before, .tt-6 i::after { content: attr(data-t); position: absolute; inset: 0; -webkit-text-fill-color: currentColor; background: none; pointer-events: none; }
+.tt-6 i::before { color: #37E0FF; animation: ttGlitchA 2.6s steps(1) infinite; }
+.tt-6 i::after { color: #FF4FD8; animation: ttGlitchB 2.6s steps(1) infinite; }
+@keyframes ttGlitchA { 0%, 86%, 100% { opacity: 0; transform: none; clip-path: none; } 87% { opacity: .9; transform: translate(-2px, -1px); clip-path: inset(0 0 55% 0); } 90% { opacity: .9; transform: translate(2px, 1px); clip-path: inset(45% 0 0 0); } 93% { opacity: .9; transform: translate(-1px, 0); clip-path: inset(20% 0 40% 0); } }
+@keyframes ttGlitchB { 0%, 86%, 100% { opacity: 0; transform: none; clip-path: none; } 88% { opacity: .9; transform: translate(2px, 1px); clip-path: inset(50% 0 0 0); } 91% { opacity: .9; transform: translate(-2px, 0); clip-path: inset(0 0 60% 0); } 94% { opacity: .9; transform: translate(1px, -1px); clip-path: inset(30% 0 30% 0); } }
+@keyframes ttHue { 0% { filter: none; } 50% { filter: drop-shadow(0 0 6px #FF4FD8); } 100% { filter: none; } }
+
+/* 개발자 콘솔 전투카드 */
+.bc-devcore { background: radial-gradient(ellipse at 85% 20%, #12305a, transparent 60%), #04060b; box-shadow: 0 0 0 0 transparent, 3px 3px 0 var(--ink); }
+.bc-devcore::before { content: '$ sudo battle --god-mode\A > loading golmok.core ......... OK\A > patching bugs ............... 99%\A > while (alive) fight();\A > deploy --force main\A > 0xDEADBEEF 0xC0FFEE 0x1337\A > ERROR: too powerful\A > git commit -m \"gg\"\A $ sudo battle --god-mode\A > loading golmok.core ......... OK\A > patching bugs ............... 99%\A > while (alive) fight();\A > deploy --force main\A > 0xDEADBEEF 0xC0FFEE 0x1337\A > ERROR: too powerful\A > git commit -m \"gg\"';
+  position: absolute; left: 34%; right: 4px; top: 0; white-space: pre; font: 9px/1.35 ui-monospace, Menlo, monospace; color: #37FF8B; opacity: .45; text-shadow: 0 0 4px #37FF8B; animation: bcCode 7s linear infinite; }
+@keyframes bcCode { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+.bc-devcore::after { content: ''; position: absolute; inset: 0; border-radius: 9px; padding: 3px; pointer-events: none; z-index: 2;
+  background: conic-gradient(from var(--ta, 0deg), #37E0FF, #FF4FD8, #FFE45C, #37FF8B, #37E0FF);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: ttSpin 2.2s linear infinite, bcFlick 4s steps(1) infinite; }
+@keyframes bcFlick { 0%, 92%, 100% { opacity: 1; } 93%, 95% { opacity: .2; } 94% { opacity: 1; } }
+.bc-devcore .bc-name { color: #fff; text-shadow: -2px 0 #FF4FD8, 2px 0 #37E0FF, 0 0 10px #37E0FF; animation: bcGlitchName 3s steps(1) infinite; }
+@keyframes bcGlitchName { 0%, 90%, 100% { transform: none; text-shadow: -2px 0 #FF4FD8, 2px 0 #37E0FF, 0 0 10px #37E0FF; } 91% { transform: translate(2px, -1px) skewX(-8deg); text-shadow: -4px 0 #FF4FD8, 4px 0 #37E0FF; } 94% { transform: translate(-2px, 1px); text-shadow: 3px 0 #FF4FD8, -3px 0 #37E0FF; } }
+.bc-devcore .bc-ava { box-shadow: 0 0 10px #37E0FF; }
+.bc-devcore .bc-rec { color: #9fdcff; font-family: ui-monospace, Menlo, monospace; }
 /* 칭호 고르기 화면 */
 .ctitle { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; flex: none; max-width: 58%; padding: 4px 2px; }
 .ctitle small { font-size: 11px; color: #5f5870; }

@@ -444,6 +444,8 @@ const COSMETICS = {
     C('dummy5', '훈련장의 악몽', ['dummyDmg', 500000], { tier: 4, glow: '#FF8A00' }), C('dummy6', '백만 데미지', ['dummyDmg', 1000000], { tier: 5, glow: '#FF3B5C' }),
     C('onehit1', '한 방 있는 녀석', ['dummyBest', 300], { tier: 2 }), C('onehit2', '원펀맨', ['dummyBest', 600], { tier: 4, glow: '#FFE45C' }),
     C('onehit3', '더미 일격 분쇄', ['dummyBest', 1000], { tier: 5, glow: '#37E0FF' }),
+    // 개발자 계정 전용
+    C('developer', '개발자', ['dev', 1], { tier: 6 }),
   ],
   cards: [
     C('basic', '기본 딱지', null), C('blue', '망점 블루', null, { dark: true }), C('red', '집중선 레드', null, { dark: true }),
@@ -465,6 +467,7 @@ const COSMETICS = {
     C('dojo', '훈련장 다다미', ['dummyDmg', 5000]), C('sandbag', '샌드백', ['dummyDmg', 30000], { dark: true }),
     C('dmgmeter', '데미지 미터', ['dummyDmg', 150000], { dark: true }), C('shatter', '산산조각', ['dummyBest', 500], { dark: true }),
     C('millon', '백만 폭발', ['dummyDmg', 1000000], { dark: true }),
+    C('devcore', '개발자 콘솔', ['dev', 1], { dark: true }),
   ],
   pins: [
     C('star', '별', null), C('heart', '하트', null), C('sprout', '새싹', null),
@@ -493,13 +496,14 @@ const COSMETICS = {
     // 훈련장
     C('dummy', '훈련용 더미', ['dummyDmg', 1000]), C('glove', '권투 글러브', ['dummyDmg', 20000]), C('dumbbell', '아령', ['dummyDmg', 80000]),
     C('crack', '금 간 더미', ['dummyBest', 400]), C('dmg999', '9999', ['dummyDmg', 300000]), C('goldglove', '황금 글러브', ['dummyDmg', 1000000]),
+    C('error', '에러', ['dev', 1]),
   ],
 };
 const STAT_NAMES = {
   wins: '1대1 승리', losses: '1대1 패배', games: '1대1 대전', streakBest: '최고 연승',
   p0: '골목대장(쉬움) 승리', p1: '골목대장(보통) 승리', p2: '골목대장(어려움) 승리', p3: '골목대장(지옥) 승리',
   tagGames: '태그 대전', tagWins: '태그 승리', megas: '메가진화 사용',
-  dummyDmg: '훈련장 누적 피해', dummyBest: '훈련장 한 턴 최고 피해',
+  dev: '개발자 계정', dummyDmg: '훈련장 누적 피해', dummyBest: '훈련장 한 턴 최고 피해',
   zmoves: 'Z기술 사용', botWins: '골목대장 승리(난이도 무관)', draws: '1대1 무승부',
 };
 

@@ -257,6 +257,7 @@ const PIN_ART = {
   angry: '<circle cx="12" cy="12" r="10" fill="#E8402C"/><path d="M6 8l5 2M18 8l-5 2" stroke-width="1.800"/><circle cx="9" cy="12" r="1.200" fill="#1a1433" stroke="none"/><circle cx="15" cy="12" r="1.200" fill="#1a1433" stroke="none"/><path d="M8 17q4-3 8 0" fill="none" stroke-width="1.500"/><path d="M18 2l1 2 2-1-1 2 2 1" fill="none" stroke="#FFD23F" stroke-width="1.300"/>',
   cool: '<circle cx="12" cy="12" r="10" fill="#FFD23F"/><path d="M3 9h18" stroke-width="1.800"/><path d="M4 9h7q0 4-3.500 4T4 9zM13 9h7q0 4-3.500 4T13 9z" fill="#1a1433"/><path d="M9 16q4 2 7-1" fill="none" stroke-width="1.400"/>',
   lovey: '<circle cx="12" cy="12" r="10" fill="#FFD23F"/><path d="M8.500 12C5 10 5.500 7 7 7c1 0 1.500 1 1.500 1S9 7 10 7c1.500 0 2 3-1.500 5zM15.500 12C12 10 12.500 7 14 7c1 0 1.500 1 1.500 1S16 7 17 7c1.500 0 2 3-1.500 5z" fill="#E8402C" stroke-width="1"/><path d="M8 15q4 4 8 0" fill="#fff" stroke-width="1.200"/>',
+  error: '<rect x="1.500" y="3" width="21" height="18" rx="2" fill="#fff"/><path d="M1.500 5a2 2 0 0 1 2-2h17a2 2 0 0 1 2 2v3h-21z" fill="#E8402C"/><circle cx="19.300" cy="5.500" r="1" fill="#fff" stroke="none"/><circle cx="16.300" cy="5.500" r="1" fill="#fff" stroke="none"/><circle cx="7.500" cy="14.500" r="4" fill="#E8402C"/><path d="M6 13l3 3M9 13l-3 3" stroke="#fff" stroke-width="1.500"/><text x="16.500" y="16.200" font-size="5.200" text-anchor="middle" font-weight="900" fill="#1a1433" stroke="none">ERR</text><path d="M12.500 18.500h8" stroke="#E8402C" stroke-width="1.200" stroke-dasharray="1.500 1"/>',
   king: '<path d="M11 1h2v3h2v2h-2v2h-2V6H9V4h2z" fill="#FFD23F" stroke-width="1"/><path d="M8 9h8l-1 8H9z" fill="#1a1433"/><path d="M5 20h14v3H5zM7 17h10v3H7z" fill="#1a1433"/><path d="M8 9h8" stroke="#FFD23F" stroke-width="1.200"/>',
   dummy: '<path d="M11 14h2v9h-2z" fill="#8B5A2B"/><path d="M5 11h14" stroke="#8B5A2B" stroke-width="2.500"/><path d="M8 9q-1 8 2 10h4q3-2 2-10-4-2-8 0z" fill="#D9B66A"/><circle cx="12" cy="5.500" r="4" fill="#D9B66A"/><circle cx="12" cy="13" r="2.200" fill="#E8402C" stroke-width="1"/><path d="M10 4.500l1.200 1.200M11.200 4.500L10 5.700M12.800 4.500L14 5.700M14 4.500l-1.200 1.200" stroke-width="1"/>',
   glove: '<path d="M6 10q0-7 7-7 7 0 7 7v5q0 4-4 4H9q-3 0-3-4z" fill="#E8402C"/><path d="M6 13q-3 0-3-3t3-2" fill="#E8402C"/><path d="M8 19h10v3H8z" fill="#fff"/><path d="M10 7q3-2 6 0" fill="none" stroke="#fff" stroke-width="1.300"/>',
@@ -274,9 +275,10 @@ function cosmetic(kind, id) {
 }
 
 // 칭호 등급별 효과: 0 일반, 1 반짝, 2 별가루, 3 황금, 4 네온, 5 전설
-const TITLE_TIERS = ['일반', '반짝', '별가루', '황금', '네온', '전설'];
+const TITLE_TIERS = ['일반', '반짝', '별가루', '황금', '네온', '전설', '개발자'];
 function titleTag(id, cls = '') {
   const t = cosmetic('titles', id), tier = t.tier || 0;
+  if (tier === 6) return `<span class="tt tt-6 ${cls}"><s aria-hidden="true"></s><b class="tt-code" aria-hidden="true">&lt;/&gt;</b><i data-t="${esc(t.n)}">${esc(t.n)}</i></span>`;
   return `<span class="tt tt-${tier} ${cls}"${t.glow ? ` style="--g:${t.glow}"` : ''}>${tier >= 2 ? '<s aria-hidden="true"></s>' : ''}<i>${esc(t.n)}</i></span>`;
 }
 
@@ -302,4 +304,4 @@ function statOf(u, k) {
   if (k === 'wins' || k === 'losses' || k === 'draws') return u[k] || 0;
   return (u.stats || {})[k] || 0;
 }
-const unlocked = (u, item) => !item.cond || statOf(u, item.cond[0]) >= item.cond[1];
+const unlocked = (u, item) => !item.cond || !!u.dev || (item.cond[0] !== 'dev' && statOf(u, item.cond[0]) >= item.cond[1]);

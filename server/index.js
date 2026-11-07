@@ -103,7 +103,8 @@ const randomStyle = () => ({ title: pick(Data.COSMETICS.titles), card: pick(Data
 const newStats = () => ({ games: 0, streak: 0, streakBest: 0, p0: 0, p1: 0, p2: 0, p3: 0, tagGames: 0, tagWins: 0, megas: 0, zmoves: 0, botWins: 0, dummyDmg: 0, dummyBest: 0 });
 const defaultStyle = () => ({ title: 'rookie', card: 'basic', pins: [] });
 const statOf = (u, k) => (k === 'wins' || k === 'losses' || k === 'draws' ? u[k] || 0 : u.stats?.[k] || 0);
-const isUnlocked = (u, item) => !item.cond || statOf(u, item.cond[0]) >= item.cond[1];
+// 개발자 계정은 모든 꾸미기를 씁니다. 'dev' 조건은 개발자 계정 전용.
+const isUnlocked = (u, item) => !item.cond || isDev(u) || (item.cond[0] !== 'dev' && statOf(u, item.cond[0]) >= item.cond[1]);
 function validStyle(u, s) {
   if (!s || typeof s !== 'object') return null;
   const find = (kind, id) => Data.COSMETICS[kind].find((x) => x.id === id && isUnlocked(u, x));

@@ -241,6 +241,7 @@ function renderLobby() {
 /* ---------- 꾸미기 ---------- */
 function condText(item) {
   if (!item.cond) return '처음부터 사용 가능';
+  if (item.cond[0] === 'dev') return '개발자 계정 전용';
   const [k, n] = item.cond;
   const dmg = k.startsWith('dummy'), f = (x) => x.toLocaleString('ko-KR');
   return `${G.data.STAT_NAMES[k]} ${f(n)}${k === 'streakBest' ? '연승' : dmg ? '' : '회'} (${f(Math.min(statOf(G.user, k), n))}/${f(n)})`;
@@ -264,7 +265,8 @@ function showAvatar() {
         <button class="btn paper small" id="rand" style="margin-top:10px">무작위로 섞기</button>`;
     } else {
       const kind = { title: 'titles', card: 'cards', pin: 'pins' }[tab];
-      const list = kind === 'titles' ? [...G.data.COSMETICS.titles].sort((x, y) => (x.tier || 0) - (y.tier || 0)) : G.data.COSMETICS[kind];
+      const devOnly = (x) => x.cond?.[0] === 'dev' && !G.user.dev; // 개발자 전용은 다른 계정에 안 보임
+      const list = (kind === 'titles' ? [...G.data.COSMETICS.titles].sort((x, y) => (x.tier || 0) - (y.tier || 0)) : G.data.COSMETICS[kind]).filter((x) => !devOnly(x));
       body = list.map((item) => {
         const open = unlocked(G.user, item);
         const on = tab === 'pin' ? style.pins.includes(item.id) : style[tab] === item.id;
