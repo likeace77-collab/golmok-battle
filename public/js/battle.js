@@ -202,6 +202,7 @@ const Battle = (() => {
       ${m.status ? `<span class="badge">${STATUS[m.status]}</span>` : ''}
       ${m.seeded ? `<span class="badge">${m.seeded === 'hair' ? '머리카락' : '씨앗'}</span>` : ''}
       ${m.strip ? `<span class="badge strip">각성${m.strip}</span>` : ''}
+      ${G.data.MONSTERS[m.species]?.forms ? `<span class="badge tier rgb${m.mega ? 5 : m.tier || 0}">${G.data.FORMS?.[m.mega ? 5 : m.tier || 0] || ''}</span>` : ''}
       ${G.data.MONSTERS[m.species]?.tiers ? `<span class="badge tier tb${Math.min(m.tier || 0, 4)}${(m.tier || 0) > 4 ? ' tplus' : ''}">${G.data.TIERS?.[m.tier || 0] || ''}</span>` : ''}
       ${stages.map(([k, v]) => `<span class="badge">${lb[k]}${v > 0 ? '+' : ''}${v}</span>`).join('')}</div>
       <div class="bar"><i></i></div><div class="num"></div>`;
@@ -334,6 +335,13 @@ const Battle = (() => {
           m.hits = e.hits;
           if (sp?.stages) { m.strip = Math.min(m.hits, sp.stages); awoke = m.strip > was && m.hp > 0; }
         }
+        { // 투혼: 체력에 맞는 폼 그림 (훈련장 회복처럼 form 이벤트 없이 바뀌는 경우)
+          const sp = G.data.MONSTERS[m.species];
+          if (sp?.forms && !m.mega && m.hp > 0) {
+            const r = m.hp / m.maxHp, f = r > .75 ? 0 : r > .5 ? 1 : r > .25 ? 2 : r > .05 ? 3 : 4;
+            if (f !== (m.tier || 0) && (e.healed || e.quiet)) { m.tier = f; const box = $(`#m-${key}`); if (box) box.innerHTML = monsterSVG(m.species, '', m.mega, m.hits, m.tier); drawPlate(key, m); }
+          }
+        }
         if (e.quiet) break;
         if (e.dmg !== undefined) {
           if (e.moveType) {
@@ -407,6 +415,24 @@ const Battle = (() => {
           else m.classList.remove('record');
         }
         if (e.turn) { say(`이번 턴 피해 ${fmt(e.turn)}!${e.turn >= e.best ? ' 최고 기록!' : ''}`); await wait(700); }
+        break;
+      }
+      case 'form': { // 투혼 광폭화
+        const m = dispMon(key);
+        m.tier = e.form;
+        const box = $(`#m-${key}`);
+        const ms = Fx.rage(key, e.form, e.up);
+        await wait(e.up ? 420 : 200);
+        if (box) { box.innerHTML = monsterSVG(m.species, '', m.mega, m.hits, m.tier); box.classList.add('swapfx', 'forged'); setTimeout(() => box.classList.remove('swapfx', 'forged'), 700); }
+        drawPlate(key, m);
+        if (e.up) {
+          const tag = document.createElement('div');
+          tag.className = `forge-tag rage-tag rg${e.form} ${key}`;
+          tag.innerHTML = `<small>광폭화!</small><b>${G.data.FORMS?.[e.form] || ''}</b>`;
+          $('#scene')?.appendChild(tag);
+          setTimeout(() => tag.remove(), 1500);
+        }
+        await wait(Math.max(600, ms - 420));
         break;
       }
       case 'forge': {

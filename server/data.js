@@ -170,6 +170,7 @@ const MOVES = {
   vineshock: M('덩굴 감전', 'elec', 's', 75, 100, 15, { st: { s: 'par', ch: 30 }, d: '전기가 흐르는 덩굴로 휘감는다. 30% 확률로 마비' }),
   scrub:     M('때밀이', 'water', 's', 75, 100, 15, { clearFoe: true, d: '이태리타월로 박박. 상대의 능력치 상승을 모두 없앤다' }),
   metalnoise:M('금속음', 'steel', 's', 65, 100, 10, { foe: { spd: -2 }, d: '앰프로 키운 쇳소리. 상대 특방 2단계 하락' }),
+  rageaxe:   M('분노의 도끼', 'fire', 'p', 70, 100, 10, { rage: true, d: '잃은 체력이 많을수록 강해진다. 위력 70~150' }),
   yellowgust:M('황사 경보', 'earth', 'p', 25, 95, 15, { hits: [2, 5], d: '모래 알갱이가 2~5번 연속으로 때린다' }),
   // 보통
   tackle:    M('몸통 박치기', 'none', 'p', 50, 100, 30, { d: '기본 공격' }),
@@ -323,6 +324,10 @@ const MONSTERS = {
   hwangsari:X('황사리', ['earth', 'wind'], 80, 110, 75, 50, 70, 110,
     ['yellowgust', 'quake', 'rockthrow', 'razorwind', 'windcut', 'wall', 'breeze', 'spirit_up', 'grind', 'guard'],
     'KF94 마스크를 쓴 황사 구름. 본인도 숨이 막혀서 늘 화가 나 있다.'),
+  // 광전사
+  tuhon:    X('투혼', ['fire', 'steel'], 110, 115, 100, 60, 80, 45,
+    ['rageaxe', 'firerush', 'hammer', 'ironhead', 'coalhead', 'quake', 'rockthrow', 'spirit_up', 'armor', 'guard'],
+    '붉은 결정이 박힌 갑옷을 입은 광전사. 맞을수록 화가 쌓이고, 화가 쌓일수록 도끼가 불탄다. 겉으로는 탱커지만 속은 버서커다.'),
   // 무대
   harmonium:X('하르모니움', ['steel', 'spirit'], 90, 50, 110, 115, 85, 50,
     ['metalnoise', 'magnet', 'highvolt', 'scold', 'nightmare', 'charge', 'armor', 'shock', 'lionroar', 'guard'],
@@ -377,6 +382,7 @@ Object.assign(SIGNATURE, {
   yangmeori: ['stoneegg', '불가마 양머리', '양머리 수건이 황금 테를 두른 숫양 뿔이 되었다. 왼쪽은 불가마, 오른쪽은 얼음방.', [15, 30, 15, 30, 10, 0]],
   damjaengjeon: ['vineshock', '고압 담쟁전', '변압기가 철탑처럼 자랐다. 애자에 형광빛이 돌고 덩굴에 꽃이 피었다.', [10, 0, 25, 40, 25, 0]],
   ppogeuri: ['scrub', '거품여왕 뽀글이', '방울 왕관과 나비 날개, 거품 드레스. 이태리타월 리본이 길게 휘날린다.', [15, 0, 20, 30, 25, 10]],
+  tuhon: ['rageaxe', '초(超)극대노 투혼', '분노가 갑옷까지 녹여 온몸이 용암처럼 붉게 달아올랐다. 등 뒤의 룬 방패가 불타고, 도끼에서 쇳물이 흘러내린다.', [0, 30, 25, 15, 20, 10]],
   harmonium: ['metalnoise', '월드투어 하르모니움', '아치가 두 겹으로 늘고 LED 화면과 레이저가 달렸다. 마이크는 황금 무선 마이크로 업그레이드.', [10, 0, 20, 40, 20, 10]],
   hwangsari: ['yellowgust', '대황사 황사리', '방독면과 고글을 쓴 거대 모래폭풍. 아래는 토네이도가 되었고 주변에 돌덩이가 돈다.', [10, 40, 25, 0, 15, 10]],
 });
@@ -436,6 +442,7 @@ const ZMOVES = {
   yangmeori: ['불가마 대폭발', 'fire', 180, '찜질방 전체가 증기로 뒤덮인다. 50% 확률로 화상', { st: { s: 'brn', ch: 50 } }],
   damjaengjeon: ['골목 대정전', 'elec', 180, '동네 불이 전부 꺼진다. 50% 확률로 마비', { st: { s: 'par', ch: 50 } }],
   ppogeuri: ['목욕탕 대방출', 'water', 175, '거대한 비눗방울에 가둬 터뜨린다. 준 피해의 1/3을 회복', { drain: 1 / 3 }],
+  tuhon: ['분노 대폭발', 'fire', 180, '쌓인 분노를 도끼에 실어 땅째로 내리찍는다. 체력이 적을수록 위력 증가 (최대 1.5배)', { rage: true }],
   harmonium: ['오버드라이브', 'steel', 175, '앰프 출력을 한계까지 올린다. 태그 배틀에서는 상대 모두를 공격', { spread: true }],
   hwangsari: ['누런 하늘', 'earth', 180, '하늘이 누렇게 덮인다. 상대 명중률 하락', { foe: { acc: -1 } }],
 };
@@ -611,10 +618,16 @@ Object.assign(MONSTERS.kongsiru, { trait: { n: '넘치는콩', d: '공격에 맞
 Object.assign(MONSTERS.bungbbang, { trait: { n: '크리스피', d: '비가 오거나 물 기술에 맞으면 눅눅해져 스피드가 1단계 떨어진다. 땡볕이거나 불 기술에 맞으면 바삭해져, 물리 공격을 한 상대에게 그 피해의 1/4을 돌려준다.' } });
 Object.assign(MONSTERS.jeonbot, { trait: { n: '비상전력', d: '체력이 절반 이하가 되면(한 번만) 방어와 특방이 1단계 떨어지는 대신 특공과 스피드가 2단계 올라간다.' } });
 MONSTERS.ssaribi.trait.d = '싸움에 나오면 날씨, 그래스필드, 양쪽 압정을 모두 치워 버린다.';
+// 투혼: 남은 체력에 따라 폼이 바뀜 (img/mon/tuhon, tuhon-f1~f4, 메가는 tuhon-mega)
+const FORMS = {
+  names: ['일반폼', '소노폼', '중노폼', '대노폼', '극대노폼', '초(超)극대노'],
+  mul: [1, 1.1, 1.2, 1.35, 1.5, 1.6], // 공격·특공·방어·특방 배율 (마지막은 메가진화)
+};
+Object.assign(MONSTERS.tuhon, { img: true, forms: 4, trait: { n: '광폭화', d: '남은 체력에 따라 폼이 바뀌고, 폼이 오를수록 공격·특공·방어·특방이 오른다. 일반폼(75% 초과) 1배 → 소노폼(50% 초과) 1.1배 → 중노폼(25% 초과) 1.2배 → 대노폼(5% 초과) 1.35배 → 극대노폼(5% 이하) 1.5배 → 메가진화하면 초(超)극대노 1.6배.' } });
 MONSTERS.hwangsari.trait = { n: '황사 경보', d: '싸움에 나오면 5턴 동안 황사가 분다.' };
 
 // 잠시 밴: 테스트 중인 요괴는 개발자 계정만 씁니다.
 const BANNED = ['lumina', 'silvia'];
 const DEV_ACCOUNTS = ['PEGADORA'];
 
-module.exports = { TIERS, BANNED, DEV_ACCOUNTS, STRIP, TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES };
+module.exports = { FORMS, TIERS, BANNED, DEV_ACCOUNTS, STRIP, TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES };

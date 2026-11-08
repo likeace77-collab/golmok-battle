@@ -259,6 +259,9 @@ function monsterSVG(id, cls = '', mega = false, hits = 0, tier = 0) {
   const sp = typeof G !== 'undefined' ? G.data?.MONSTERS?.[id] : null;
   if (sp?.img) {
     const stage = !mega && sp.stages ? Math.min(hits || 0, sp.stages) : 0;
+    if (sp.forms) { // 투혼 광폭화 폼 (tier 자리에 폼 번호)
+      return `<svg class="${cls}" viewBox="0 0 200 200" aria-hidden="true"><image href="img/mon/${id}${mega ? '-mega' : tier ? `-f${Math.min(tier, sp.forms)}` : ''}.webp" width="200" height="200"/></svg>`;
+    }
     if (sp.tiers) { // 강화 단계 그림. 네더라이트 뒤(+1~)는 같은 그림에 보랏빛이 진해짐
       const top = sp.tierImgs ?? sp.tiers, plus = mega ? 0 : Math.max(0, (tier || 0) - top);
       return `<svg class="${cls}${plus ? ' tplus' : ''}" ${plus ? `style="--plus:${plus}"` : ''} viewBox="0 0 200 200" aria-hidden="true"><image href="img/mon/${id}${mega ? '-mega' : tier ? `-t${Math.min(tier, top)}` : ''}.webp" width="200" height="200"/></svg>`;

@@ -52,7 +52,7 @@ test('모든 요괴에게 그림이 있고 스킬이 겹치지 않는다', () =>
   const art = read('art.js'), mega = read('mega-art.js'), newArt = read('new-art.js');
   for (const [id, m] of Object.entries(MONSTERS)) {
     if (m.img) { // 사진 그림
-      for (const f of [id, `${id}-mega`, ...Array.from({ length: m.stages || 0 }, (_, i) => `${id}-s${i + 1}`), ...Array.from({ length: m.tierImgs ?? m.tiers ?? 0 }, (_, i) => `${id}-t${i + 1}`)]) assert.ok(require('fs').existsSync(require('path').join(__dirname, `../public/img/mon/${f}.webp`)), f);
+      for (const f of [id, `${id}-mega`, ...Array.from({ length: m.stages || 0 }, (_, i) => `${id}-s${i + 1}`), ...Array.from({ length: m.tierImgs ?? m.tiers ?? 0 }, (_, i) => `${id}-t${i + 1}`), ...Array.from({ length: m.forms || 0 }, (_, i) => `${id}-f${i + 1}`)]) assert.ok(require('fs').existsSync(require('path').join(__dirname, `../public/img/mon/${f}.webp`)), f);
       assert.equal(new Set(m.moves).size, m.moves.length, id);
       continue;
     }
@@ -60,7 +60,7 @@ test('모든 요괴에게 그림이 있고 스킬이 겹치지 않는다', () =>
     assert.match(mega + newArt, new RegExp(`\\b${id}: L\\(`), `메가 ${id}`);
     assert.equal(new Set(m.moves).size, m.moves.length, id);
   }
-  assert.equal(Object.keys(MONSTERS).length, 45);
+  assert.equal(Object.keys(MONSTERS).length, 46);
 });
 
 test('역류는 소나기에서 2배, 뻥 뚫기는 막기를 뚫고 압정을 치운다', () => {
@@ -145,7 +145,7 @@ test('모든 요괴에게 전용기가 있고 다른 요괴는 배울 수 없다
     owner[m.sig] = (owner[m.sig] || 0) + 1;
     assert.equal(Object.values(m.mega.boost).reduce((a, c) => a + c), 100, id);
   }
-  assert.equal(Object.keys(owner).length, 45);
+  assert.equal(Object.keys(owner).length, 46);
   // 전용기는 한 요괴만 배운다 (단조처럼 전용기가 여럿일 수는 있음)
   const who = {};
   for (const [id, m] of Object.entries(MONSTERS)) for (const mv of m.moves) if (MOVES[mv].sig) (who[mv] ||= new Set()).add(id);
@@ -618,4 +618,27 @@ test('친구가 정한 특성 2차 9개', () => {
     if (x.disabled) { sealed = true; assert.ok(!E.legalActions(b, 0).some((a) => a.type === 'move' && a.index === 0)); }
   }
   assert.ok(sealed);
+});
+
+test('투혼 광폭화: 체력에 따라 폼이 바뀌고 능력치가 오른다', () => {
+  const b = battle(custom('maetdol', ['quake']), custom('tuhon', ['spirit_up']), 4);
+  const t = E.activeOf(b, 1); t.hp = t.maxHp = 1000; t.stats = { ...t.stats, def: 200, spe: 1 };
+  const forms = [];
+  for (let i = 0; i < 10 && t.hp > 0 && b.phase === 'choose'; i++) { // 땅 울리기 PP 10
+    const r = move(b, 0, 'quake'); const ev = r.events || move(b, 1, 'spirit_up').events;
+    for (const e of ev) if (e.t === 'form') forms.push(e.form);
+  }
+  assert.deepEqual(forms.filter((f, i) => forms.indexOf(f) === i).sort(), forms.slice().sort());
+  assert.ok(forms.length >= 3, forms.join());
+  assert.ok(forms.every((f, i) => !i || f > forms[i - 1]));
+  // 분노의 도끼: 체력이 적을수록 위력이 오름
+  const pow = (ratio) => {
+    const x = battle(custom('tuhon', ['rageaxe']), custom('daeya', ['breeze']), 7);
+    const me = E.activeOf(x, 0), foe = E.activeOf(x, 1);
+    me.hp = Math.max(1, Math.round(me.maxHp * ratio)); foe.hp = foe.maxHp = 5000; foe.stats.spe = 999; foe.types = ['none'];
+    me.stats.spe = 999;
+    const ev = move(x, 0, 'rageaxe').events || move(x, 1, 'breeze').events;
+    return ev.find((e) => e.t === 'hp' && e.side === 1 && e.dmg)?.dmg || 0;
+  };
+  assert.ok(pow(.1) > pow(1) * 1.4, `${pow(.1)} ${pow(1)}`);
 });

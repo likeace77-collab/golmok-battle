@@ -507,6 +507,7 @@ const Fx = (() => {
     bulletdash(A, T, k) { act(k, 'dash', 420); windLines(A, T, { n: 10, gap: 12, dur: 220, spread: 40, color: '#FFE45C' }); prop('plate', { from: A, to: T, dur: 190, size: 22 }); ring(T, { delay: 190, color: '#FFD23F', r1: 76 }); return 640; },
     spincycle(A, T, k, t) { act(k, 'spin', 760); act(t, 'lift', 760); orbit('drop', T, { n: 12, r: 58, dur: 760, size: 8, turns: 3 }); orbit('bubble', T, { n: 8, r: 34, dur: 760, size: 6, turns: -2 }); ring(T, { color: '#BFE4FF', r1: 92, delay: 640 }); return 1040; },
     metalnoise(A, T, k, t) { act(k, 'cast', 700); for (let i = 0; i < 4; i++) ring(A, { delay: i * 110, color: ['#C9A24A', '#cfd6df'][i % 2], r0: 20, r1: 150, w: 5, dur: 420 }); for (let i = 0; i < 3; i++) ring(T, { delay: 300 + i * 110, color: '#ff7ad9', r0: 10, r1: 70, w: 4, dur: 300 }); shake(8, 420, 300); tint(t, 'hex', 420, 360); return 1000; },
+    rageaxe(A, T, k, t) { return rageAxe(A, T, k, t); },
     elemblade(A, T, k, t, e) { return elemBlade(A, T, k, t, e?.type); },
     reflector(A, T, k) { act(k, 'cast', 400); return 500; },
     icicledrop(A, T, k, t) { act(k, 'cast', 420); const sp = above(T, 150); prop('shard', { from: sp, to: sp, dur: 240, size: 34, rot0: 3.14, rot1: 3.14 }); prop('shard', { from: sp, to: T, delay: 240, dur: 160, size: 34, rot0: 3.14, rot1: 3.14 }); burst('snow', T, { delay: 400, n: 14, dist: 64 }); burst('wisp', T, { delay: 420, n: 6, dist: 40 }); flash('#bfeaff', 160, 400, .35); tint(t, 'cold', 360, 420); return 900; },
@@ -846,6 +847,35 @@ const Fx = (() => {
     return 1100;
   }
 
+  // 투혼 광폭화: 폼이 오를수록 붉은 기운이 커짐
+  const RAGE_C = ['#c7cdd6', '#ff8a3d', '#ff5a1f', '#ff2a2a', '#d4001a', '#ff0040'];
+  function rage(key, form, up) {
+    if (REDUCED) return 600;
+    measure();
+    const at = spot(key), c = RAGE_C[form] || '#ff2a2a', k = .6 + form * .2;
+    if (!up) { ring(at, { color: '#9fd4ff', r1: 90, dur: 500, w: 4 }); return 600; }
+    darken(900, .3 + form * .07, 0, '#2a0005');
+    for (let i = 0; i < 2 + form; i++) ring(at, { delay: i * 80, color: i % 2 ? '#ffd23f' : c, r0: 20, r1: 110 * k, dur: 420, w: 7 });
+    rise('flame', at, { delay: 100, n: 8 + form * 4, dur: 600, size: 10 + form, spread: 50, height: 100 + form * 15, gap: 22 });
+    burst('spark', at, { delay: 180, n: 14 + form * 4, dist: 90 * k, size: 8 });
+    if (form >= 3) burst('shard', at, { delay: 220, n: 12, dist: 120, size: 10 });
+    flash(c, 260, 260, .25 + form * .06);
+    shake(4 + form * 2, 420, 240);
+    return 1000;
+  }
+  // 분노의 도끼
+  function rageAxe(A, T, k, t) {
+    darken(1100, .45, 0, '#2a0005');
+    act(k, 'lunge', 560);
+    rise('flame', A, { n: 8, dur: 420, size: 10, spread: 30, height: 80, gap: 20 });
+    slash(T, { delay: 300, angle: -1.25, len: 200, color: '#ff5a1f', w: 16, dur: 260 });
+    slash(T, { delay: 360, angle: -1.25, len: 170, color: '#ffd23f', w: 6, dur: 240 });
+    cracks(T, { delay: 420 }); ring(ground(T), { delay: 420, color: '#ff5a1f', r1: 170, squash: .3, w: 8, dur: 520 });
+    burst('flame', T, { delay: 420, n: 20, dist: 110, size: 12, dur: 560 }); burst('rock', ground(T), { delay: 440, n: 12, dist: 90, size: 9 });
+    flash('#ff3a1a', 220, 420, .45); shake(16, 480, 420); tint(t, 'burn', 600, 460);
+    return 1200;
+  }
+
   function forge(key, tier = 1) {
     if (REDUCED) return 700;
     measure();
@@ -889,5 +919,5 @@ const Fx = (() => {
   }
   function weather(w) { if (REDUCED || !w) return 700; measure(); return weatherFx(w); }
 
-  return { attach, play, reflectReady, reflect, counter, terrain, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, awaken, entrance, forge, ids: () => Object.keys(MOVE_FX) };
+  return { attach, play, reflectReady, reflect, counter, terrain, rage, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, awaken, entrance, forge, ids: () => Object.keys(MOVE_FX) };
 })();

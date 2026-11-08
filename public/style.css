@@ -962,3 +962,10 @@ svg.tplus { filter: drop-shadow(0 0 calc(3px + var(--plus) * 1px) #b026ff) drop-
 .fe-jump { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .fe-jump button { font-family: var(--ui); font-size: 15px; color: #fff; text-shadow: 0 1px 0 var(--ink); border: 2px solid var(--ink); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
 .fe-list { margin-top: 12px; }
+
+/* ===== 투혼 광폭화 ===== */
+.badge.rgb0 { background: #6b7280; } .badge.rgb1 { background: #e0782f; } .badge.rgb2 { background: #e0471f; }
+.badge.rgb3 { background: #c4161c; } .badge.rgb4 { background: linear-gradient(90deg, #7a000f, #ff1a3c, #7a000f); box-shadow: 0 0 8px #ff1a3c; }
+.badge.rgb5 { background: linear-gradient(90deg, #ff3a00, #ffd23f, #ff3a00); color: #3a0000; box-shadow: 0 0 12px #ff5a1f; }
+.rage-tag { --tc: #ff3a1a; } .rage-tag.rg4, .rage-tag.rg5 { --tc: #ff0040; }
+.rage-tag b { background: linear-gradient(90deg, #ffd23f, #ff3a1a, #ffd23f); -webkit-background-clip: text; background-clip: text; color: transparent; }

@@ -1,5 +1,5 @@
 // 배틀 엔진. 서버에서만 돌고, 모든 판정은 여기서 결정됩니다.
-const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP, BANNED, TIERS } = require('./data');
+const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP, BANNED, TIERS, FORMS } = require('./data');
 
 const LEVEL = 50;
 // 요괴가 너무 빨리 쓰러지지 않도록 모든 요괴의 체력을 1.3배로 (훈련장 더미 1000은 그대로)
@@ -242,14 +242,29 @@ const stripMul = (m) => 1 + stripOf(m) * STRIP.boost;
 const tierOf = (m) => (MONSTERS[m.species]?.tiers ? m.tier || 0 : 0);
 const tierAtk = (m) => (MONSTERS[m.species]?.tiers ? TIERS.atk[tierOf(m)] : 1);
 const tierDef = (m) => (MONSTERS[m.species]?.tiers ? TIERS.def[tierOf(m)] : 1);
+// 투혼 광폭화: 남은 체력 비율로 폼(0~4), 메가진화는 5
+const formOf = (m) => {
+  if (!MONSTERS[m.species]?.forms) return 0;
+  if (m.mega) return 5;
+  const r = m.hp / m.maxHp;
+  return r > .75 ? 0 : r > .5 ? 1 : r > .25 ? 2 : r > .05 ? 3 : 4;
+};
+const formMul = (m) => (MONSTERS[m.species]?.forms ? FORMS.mul[formOf(m)] : 1);
+function formCheck(b, s, m, before, ev) {
+  const now = formOf(m);
+  if (now === before || !MONSTERS[m.species]?.forms || (m.hp <= 0)) return;
+  ev.push({ t: 'form', side: s, form: now, up: now > before, mon: publicMon(m), text: `${m.name}의 광폭화! ${FORMS.names[now]}${now > before ? '으로 분노가 치솟았다!' : '으로 진정했다.'}` });
+}
 const tierHp = (m) => Math.round(m.stats.hp * TIERS.hp) * tierOf(m);
 
 function hurt(b, s, m, amount, ev, extra) {
   const dmg = Math.min(m.hp, Math.max(1, Math.floor(amount)));
+  const form0 = formOf(m);
   m.hp -= dmg;
   const before = stripOf(m);
   if (extra?.moveType) m.hits = (m.hits || 0) + 1; // 공격에 맞은 횟수 (옷이 바뀌는 요괴용)
   hpEvent(b, s, m, ev, { dmg, ...extra, ...(extra?.moveType ? { hits: m.hits } : {}) });
+  formCheck(b, s, m, form0, ev);
   if (m.species === 'jeonbot' && !m.emergency && m.hp > 0 && m.hp * 2 <= m.maxHp) { // 전봇이 비상전력
     m.emergency = true;
     msg(ev, `${m.name}의 비상전력! 방어를 버리고 출력을 끌어올린다!`);
@@ -275,8 +290,10 @@ function hurt(b, s, m, amount, ev, extra) {
 function heal(b, s, m, amount, ev) {
   const v = Math.min(m.maxHp - m.hp, Math.max(1, Math.floor(amount)));
   if (v <= 0) return 0;
+  const form0 = formOf(m);
   m.hp += v;
   hpEvent(b, s, m, ev, { healed: v });
+  formCheck(b, s, m, form0, ev);
   return v;
 }
 function faintCheck(b, s, m, ev) {
@@ -292,7 +309,7 @@ function faintCheck(b, s, m, ev) {
 function publicMon(m) {
   return {
     species: m.species, name: m.name, types: m.types,
-    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega, hits: m.hits || 0, strip: stripOf(m), tier: tierOf(m),
+    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega, hits: m.hits || 0, strip: stripOf(m), tier: tierOf(m) || formOf(m),
   };
 }
 
@@ -391,7 +408,7 @@ function damageOf(b, atk, def, mv, crit, roll) {
   let as = phys ? atk.stages.atk : atk.stages.spa;
   let ds = phys ? def.stages.def : def.stages.spd;
   if (crit) { as = Math.max(as, 0); ds = Math.min(ds, 0); } // 급소는 불리한 변화 무시
-  a *= stageMul(as) * stripMul(atk) * (phys ? tierAtk(atk) : 1); d *= stageMul(ds) * tierDef(def);
+  a *= stageMul(as) * stripMul(atk) * (phys ? tierAtk(atk) : 1) * formMul(atk); d *= stageMul(ds) * tierDef(def) * formMul(def);
   if (def.species === 'daeya' && (mv.type === 'ice' || b.weather === 'snow')) d *= 2; // 특성 김장
   if (b.weather === 'snow' && phys && def.types.includes('ice')) d *= 1.5; // 눈: 얼음 타입 방어 1.5배
   let dmg = (((2 * LEVEL) / 5 + 2) * mv.pow * a) / d / 50 + 2;
@@ -471,6 +488,10 @@ function useMove(b, s, index, ev, want, z = false) {
 
   if (mv.tierPow) mv = { ...mv, pow: mv.pow + Math.min(tierOf(me), TIERS.base) * mv.tierPow }; // 강화 단계만큼 위력 증가 (네더라이트까지)
   if (mv.elem) mv = elemBlade(b, s, me, mv, want);
+  if (mv.rage) { // 분노의 도끼: 잃은 체력만큼 강해짐
+    const lost = 1 - me.hp / me.maxHp;
+    mv = { ...mv, pow: mv.z ? Math.round(mv.pow * (1 + lost * .5)) : Math.round(70 + 80 * lost) };
+  }
   if (mv.bath) mv = isHot(b) ? { ...mv, type: 'fire', st: { s: 'brn', ch: 30 } } : { ...mv, type: 'ice', st: { s: 'frz', ch: 30 } };
   if (!canAct(b, s, me, mv, ev)) { me.protectStreak = 0; return; }
   if (slot) slot.pp--;
