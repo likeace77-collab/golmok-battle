@@ -971,3 +971,16 @@ svg.tplus { filter: drop-shadow(0 0 calc(3px + var(--plus) * 1px) #b026ff) drop-
 .badge.rgb5 { background: linear-gradient(90deg, #ff3a00, #ffd23f, #ff3a00); color: #3a0000; box-shadow: 0 0 12px #ff5a1f; }
 .rage-tag { --tc: #ff3a1a; } .rage-tag.rg4, .rage-tag.rg5 { --tc: #ff0040; }
 .rage-tag b { background: linear-gradient(90deg, #ffd23f, #ff3a1a, #ffd23f); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* ===== 붕빵이 반갈쭉: 반으로 갈라 단면 보이기 ===== */
+.split-wrap { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+.split-half { position: absolute; inset: 0; }
+.split-half svg { width: 100%; height: 100%; overflow: visible; }
+.split-l { clip-path: inset(-20% 50% -20% -20%); animation: splitL var(--d) cubic-bezier(.2, .9, .3, 1) both; transform-origin: 50% 100%; }
+.split-r { clip-path: inset(-20% -20% -20% 50%); animation: splitR var(--d) cubic-bezier(.2, .9, .3, 1) both; transform-origin: 50% 100%; }
+.split-face { position: absolute; left: 50%; top: 50%; width: 24%; height: 62%; transform: translate(-50%, -50%) scaleX(0); animation: splitFace var(--d) ease-out both; }
+.split-tag { position: absolute; left: 50%; top: -10%; transform: translateX(-50%); font: 400 clamp(18px, 6vw, 28px)/1 var(--display, var(--ui)); color: #FFD23F; -webkit-text-stroke: 1.5px var(--ink); text-shadow: 0 2px 0 var(--ink); white-space: nowrap; opacity: 0; animation: splitTag var(--d) ease-out both; }
+@keyframes splitL { 0%, 18% { transform: none; } 45%, 82% { transform: translateX(-22%) rotate(-14deg); } 100% { transform: none; } }
+@keyframes splitR { 0%, 18% { transform: none; } 45%, 82% { transform: translateX(22%) rotate(14deg); } 100% { transform: none; } }
+@keyframes splitFace { 0%, 22% { transform: translate(-50%, -50%) scaleX(0); } 45%, 82% { transform: translate(-50%, -50%) scaleX(1); } 100% { transform: translate(-50%, -50%) scaleX(0); } }
+@keyframes splitTag { 0%, 40% { opacity: 0; transform: translate(-50%, 10px); } 55%, 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; } }

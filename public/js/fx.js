@@ -509,18 +509,19 @@ const Fx = (() => {
     spincycle(A, T, k, t) { act(k, 'spin', 760); act(t, 'lift', 760); orbit('drop', T, { n: 12, r: 58, dur: 760, size: 8, turns: 3 }); orbit('bubble', T, { n: 8, r: 34, dur: 760, size: 6, turns: -2 }); ring(T, { color: '#BFE4FF', r1: 92, delay: 640 }); return 1040; },
     metalnoise(A, T, k, t) { act(k, 'cast', 700); for (let i = 0; i < 4; i++) ring(A, { delay: i * 110, color: ['#C9A24A', '#cfd6df'][i % 2], r0: 20, r1: 150, w: 5, dur: 420 }); for (let i = 0; i < 3; i++) ring(T, { delay: 300 + i * 110, color: '#ff7ad9', r0: 10, r1: 70, w: 4, dur: 300 }); shake(8, 420, 300); tint(t, 'hex', 420, 360); return 1000; },
     bangalzzuk(A, T, k, t, e) {
-      // 몸을 세로로 반 가르는 연출 뒤, 속에 따라 다르게
-      darken(500, .3);
-      slash(A, { angle: -1.5708, len: 150, color: '#fff', w: 8, dur: 260 });
-      burst('redbean', A, { delay: 200, n: 6, dist: 30, size: 7 });
-      flash('#ffd23f', 140, 220, .3);
-      if (e?.fill === 'cream') { rise('heart', A, { delay: 420, n: 8, dur: 600, size: 9 }); burst('bubble', A, { delay: 360, n: 10, dist: 50, size: 8 }); return 1100; }
-      if (e?.fill === 'pizza') { rise('arrowUp', A, { delay: 420, n: 6, dur: 520, size: 10 }); burst('spark', A, { delay: 380, n: 14, dist: 70, size: 8 }); ring(A, { delay: 380, color: '#E8402C', r1: 110, w: 6 }); return 1100; }
-      act(k, 'throw', 420);
-      spray('redbean', A, T, { delay: 380, n: 16, gap: 24, dur: 300, size: 9, spread: 22, spin: 8 });
-      burst('redbean', T, { delay: 720, n: 14, dist: 80, size: 8 }); ring(T, { delay: 720, color: '#5a1f2a', r1: 120, w: 7 });
-      shake(10, 360, 720); tint(t, 'burn', 400, 740);
-      return 1300;
+      // 붕빵이를 세로로 반 갈라 단면(속)을 보여 준 뒤, 속에 따라 다르게
+      const open = splitOpen(k, e?.fill || 'pat');
+      darken(open, .3);
+      slash(A, { angle: -1.5708, len: 160, color: '#fff', w: 8, dur: 240 });
+      flash('#ffffff', 120, 200, .35);
+      const d = open - 300;
+      if (e?.fill === 'cream') { rise('heart', A, { delay: d, n: 8, dur: 600, size: 9 }); burst('bubble', A, { delay: d, n: 10, dist: 50, size: 8 }); return open + 500; }
+      if (e?.fill === 'pizza') { rise('arrowUp', A, { delay: d, n: 6, dur: 520, size: 10 }); burst('spark', A, { delay: d, n: 14, dist: 70, size: 8 }); ring(A, { delay: d, color: '#E8402C', r1: 110, w: 6 }); return open + 500; }
+      setTimeout(() => act(k, 'throw', 420), d * SPEED);
+      spray('redbean', A, T, { delay: d, n: 16, gap: 24, dur: 300, size: 9, spread: 22, spin: 8 });
+      burst('redbean', T, { delay: d + 340, n: 14, dist: 80, size: 8 }); ring(T, { delay: d + 340, color: '#5a1f2a', r1: 120, w: 7 });
+      shake(10, 360, d + 340); tint(t, 'burn', 400, d + 360);
+      return open + 700;
     },
     rageaxe(A, T, k, t) { return rageAxe(A, T, k, t); },
     elemblade(A, T, k, t, e) { return elemBlade(A, T, k, t, e?.type); },
@@ -878,6 +879,30 @@ const Fx = (() => {
     shake(4 + form * 2, 420, 240);
     return 1000;
   }
+  // 반갈쭉: 요괴 그림을 두 쪽으로 나눠 벌리고, 가운데에 단면을 보여 줌
+  const FILL_FACE = {
+    pat: `<ellipse cx="20" cy="50" rx="12" ry="34" fill="#5a1f2a"/>${[[16, 32], [24, 44], [17, 58], [23, 70], [19, 46]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="2.6" ry="1.8" fill="#8a2f3a"/>`).join('')}`,
+    cream: `<ellipse cx="20" cy="50" rx="12" ry="34" fill="#FFE39A"/><path d="M14 36q6 6 12 0M13 56q7 6 14 0" fill="none" stroke="#fff6cf" stroke-width="2.4"/>`,
+    pizza: `<ellipse cx="20" cy="50" rx="12" ry="34" fill="#E8402C"/><path d="M10 40q10 6 20 0M10 62q10-6 20 0" fill="none" stroke="#FFD23F" stroke-width="3.4"/>${[[17, 30], [23, 52], [16, 72]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4" fill="#9e1b26" stroke="#1a1433" stroke-width="1"/>`).join('')}`,
+  };
+  const FILL_NAME = { pat: '팥', cream: '슈크림', pizza: '피자' };
+  function splitOpen(key, fill) {
+    const box = document.getElementById(`m-${key}`);
+    const art = box?.querySelector('svg');
+    if (!box || !art || REDUCED) return 600;
+    const ms = 1100;
+    const wrap = document.createElement('div');
+    wrap.className = 'split-wrap';
+    wrap.style.setProperty('--d', `${ms * SPEED}ms`);
+    wrap.innerHTML = `<div class="split-half split-l">${art.outerHTML}</div><div class="split-half split-r">${art.outerHTML}</div>
+      <svg class="split-face" viewBox="0 0 40 100" aria-hidden="true"><ellipse cx="20" cy="50" rx="18" ry="46" fill="#D9903A" stroke="#1a1433" stroke-width="3"/><ellipse cx="20" cy="50" rx="15" ry="42" fill="#F2C98A"/>${FILL_FACE[fill] || FILL_FACE.pat}</svg>
+      <span class="split-tag">${FILL_NAME[fill] || ''}</span>`;
+    art.style.visibility = 'hidden';
+    box.appendChild(wrap);
+    setTimeout(() => { wrap.remove(); art.style.visibility = ''; }, ms * SPEED);
+    return ms - 200;
+  }
+
   // 분노의 도끼
   function rageAxe(A, T, k, t) {
     darken(1100, .45, 0, '#2a0005');
