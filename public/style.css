@@ -939,3 +939,7 @@ svg.tplus { filter: drop-shadow(0 0 calc(3px + var(--plus) * 1px) #b026ff) drop-
 .tc-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 13px; margin-bottom: 10px; }
 .tc-legend span { display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center; border-radius: 5px; font-weight: 900; border: 2px solid var(--ink); margin-left: 6px; }
 .tc-say { margin-top: 12px; text-align: center; line-height: 2; }
+
+/* 그래스필드 */
+.scene.tr-grass .road { fill: #4f8a4a; }
+.fieldbar .f-grassfield { background: #3FA34D; }

@@ -601,6 +601,16 @@ Object.assign(MONSTERS.fan, { trait: { n: '돌풍', d: '공격에 맞으면 공�
 Object.assign(MONSTERS.ttaengcho, { trait: { n: '하바네로분출', d: '물리 공격(접촉)에 맞으면 공격한 상대가 화상을 입는다.' } });
 Object.assign(MONSTERS.bangpae, { trait: { n: '바람타기', d: '체력이 꽉 차 있을 때 바람 타입 기술이 우선도 +1로 먼저 나간다.' } });
 Object.assign(MONSTERS.ssaribi, { trait: { n: '정리정돈', d: '싸움에 나오면 날씨와 양쪽 압정을 모두 치워 버린다.' } });
+Object.assign(MONSTERS.yeontan, { trait: { n: '불꽃의무장', d: '얼음 상태가 되지 않는다. 물리(접촉) 공격에 맞으면 30% 확률로 공격한 상대가 화상을 입는다.' } });
+Object.assign(MONSTERS.bongdari, { trait: { n: '내용물분출', d: '쓰러질 때, 마지막으로 받은 물리 공격의 피해만큼 쓰러뜨린 상대에게 돌려준다.' } });
+Object.assign(MONSTERS.orak, { trait: { n: '돈지랄', d: '상태이상, 위협, 압정의 영향을 받지 않는다. 공격에 맞을 때마다 돈이 떨어져 30% 확률로 상대가 다음 턴에 돈을 줍느라 공격하지 못한다.' } });
+Object.assign(MONSTERS.maetdol, { trait: { n: '옹골참', d: '체력이 꽉 차 있을 때는 한 방에 쓰러질 공격을 맞아도 체력 1을 남기고 버틴다.' } });
+Object.assign(MONSTERS.kettle, { trait: { n: '끓는물', d: '물 기술이 풀 타입에게도 2배로 들어간다.' } });
+Object.assign(MONSTERS.kkaebi, { trait: { n: '저주받은바디', d: '공격에 맞으면 30% 확률로 그 기술을 4턴 동안 봉인한다.' } });
+Object.assign(MONSTERS.kongsiru, { trait: { n: '넘치는콩', d: '공격에 맞으면 5턴 동안 그래스필드를 펼친다. 그래스필드에서는 풀 기술이 1.3배가 되고 매 턴 모두 체력을 1/16 회복한다.' } });
+Object.assign(MONSTERS.bungbbang, { trait: { n: '크리스피', d: '비가 오거나 물 기술에 맞으면 눅눅해져 스피드가 1단계 떨어진다. 땡볕이거나 불 기술에 맞으면 바삭해져, 물리 공격을 한 상대에게 그 피해의 1/4을 돌려준다.' } });
+Object.assign(MONSTERS.jeonbot, { trait: { n: '비상전력', d: '체력이 절반 이하가 되면(한 번만) 방어와 특방이 1단계 떨어지는 대신 특공과 스피드가 2단계 올라간다.' } });
+MONSTERS.ssaribi.trait.d = '싸움에 나오면 날씨, 그래스필드, 양쪽 압정을 모두 치워 버린다.';
 MONSTERS.hwangsari.trait = { n: '황사 경보', d: '싸움에 나오면 5턴 동안 황사가 분다.' };
 
 // 잠시 밴: 테스트 중인 요괴는 개발자 계정만 씁니다.

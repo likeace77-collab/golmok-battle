@@ -39,8 +39,8 @@ test('2배 상성은 1배보다 약 2배 피해를 주고, 절반 상성은 약 
     foe.stats = { ...foe.stats, spd: 100, spe: 1 };
     foe.hp = foe.maxHp = 2000;
     E.choose(b, 0, { type: 'move', index: 0 });
-    E.choose(b, 1, { type: 'move', index: 0 });
-    return 2000 - foe.hp;
+    const ev = E.choose(b, 1, { type: 'move', index: 0 }).events;
+    return ev.find((e) => e.t === 'hp' && e.side === 1 && e.dmg).dmg; // 기술 한 방의 피해만 (화상·특성 회복 제외)
   };
   const neutral = dmg('kkaebi'), strong = dmg('kongsiru'), weak = dmg('daeya');
   assert.ok(Math.abs(strong / neutral - 2) < .1, `${strong}/${neutral}`);
@@ -577,4 +577,45 @@ test('친구가 정한 특성 11개', () => {
   E.activeOf(bp, 0).stats.spe = 1; E.activeOf(bp, 1).stats.spe = 999;
   const ev = (move(bp, 0, 'gust').events || move(bp, 1, 'tackle').events).filter((e) => e.t === 'move');
   assert.equal(ev[0].side, 0);
+});
+
+test('친구가 정한 특성 2차 9개', () => {
+  const setup = (a, am, d, dm, seed = 5) => {
+    const b = battle(custom(a, am), custom(d, dm), seed);
+    const x = E.activeOf(b, 0), y = E.activeOf(b, 1);
+    return { b, x, y };
+  };
+  const turn = (b, m0, m1) => (move(b, 0, m0).events || move(b, 1, m1).events);
+  // 연탄이: 얼지 않음
+  { const { b, y } = setup('bingsu', ['frost'], 'yeontan', ['tackle']); y.types = ['earth']; y.hp = y.maxHp = 3000;
+    for (let i = 0; i < 20; i++) turn(b, 'frost', 'tackle'); assert.notEqual(y.status, 'frz'); }
+  // 맷돌이 옹골참
+  { const { b, x, y } = setup('daeya', ['hose'], 'maetdol', ['tackle']); x.stats.spa = 999; x.stats.spe = 999;
+    turn(b, 'hose', 'tackle'); assert.ok(y.hp >= 1); }
+  // 봉다리 내용물분출: 물리 공격으로 쓰러지면 그 피해를 돌려줌
+  { const { b, x, y } = setup('maetdol', ['rockthrow'], 'bongdari', ['tackle']); x.hp = x.maxHp = 3000; x.stats.spe = 999; y.types = ['none']; y.hp = 5;
+    const ev = turn(b, 'rockthrow', 'tackle'); assert.ok(ev.some((e) => e.t === 'msg' && e.text.includes('내용물분출'))); assert.ok(x.hp < 3000); }
+  // 오락이: 상태이상 없음, 압정 무시
+  { const { b, y } = setup('jangdok', ['fog'], 'orak', ['tackle']); turn(b, 'fog', 'tackle'); assert.equal(y.status, null); }
+  // 주전이 끓는물: 물 기술이 풀에게 2배
+  { const { b, x, y } = setup('kettle', ['squirt'], 'kongsiru', ['tackle'], 9); y.hp = y.maxHp = 3000;
+    const ev = turn(b, 'squirt', 'tackle'); assert.ok(ev.some((e) => e.t === 'msg' && e.text === '효과가 굉장했다!')); }
+  // 콩시루 넘치는콩: 맞으면 그래스필드
+  { const { b, y } = setup('daeya', ['squirt'], 'kongsiru', ['tackle']); y.hp = y.maxHp = 3000; turn(b, 'squirt', 'tackle'); assert.equal(b.terrain, 'grass'); }
+  // 붕빵이 크리스피: 불에 맞으면 바삭, 물에 맞으면 눅눅(스피드↓)
+  { const { b, y } = setup('horong', ['ember'], 'bungbbang', ['tackle']); y.hp = y.maxHp = 3000; y.types = ['none'];
+    turn(b, 'ember', 'tackle'); assert.equal(y.crisp, 'crispy'); }
+  { const { b, y } = setup('daeya', ['squirt'], 'bungbbang', ['tackle']); y.hp = y.maxHp = 3000;
+    turn(b, 'squirt', 'tackle'); assert.equal(y.crisp, 'soggy'); assert.equal(y.stages.spe, -1); }
+  // 전봇이 비상전력
+  { const { b, y } = setup('maetdol', ['quake'], 'jeonbot', ['tackle']); y.hp = y.maxHp = 1000; y.stats.def = 1;
+    turn(b, 'quake', 'tackle'); if (y.hp > 0 && y.hp * 2 <= y.maxHp) { assert.equal(y.stages.spa, 2); assert.equal(y.stages.spe, 2); } }
+  // 깨비 저주받은바디: 여러 번 맞으면 언젠가 봉인
+  let sealed = false;
+  for (let seed = 1; seed < 40 && !sealed; seed++) {
+    const { b, x, y } = setup('daeya', ['tackle', 'squirt'], 'kkaebi', ['breeze'], seed); y.hp = y.maxHp = 3000; y.types = ['none'];
+    E.choose(b, 0, { type: 'move', index: 0 }); E.choose(b, 1, { type: 'move', index: 0 });
+    if (x.disabled) { sealed = true; assert.ok(!E.legalActions(b, 0).some((a) => a.type === 'move' && a.index === 0)); }
+  }
+  assert.ok(sealed);
 });

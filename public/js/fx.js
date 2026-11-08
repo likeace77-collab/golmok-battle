@@ -880,7 +880,14 @@ const Fx = (() => {
       windLines({ x: at.x - 160 * u, y: at.y }, { x: at.x + 160 * u, y: at.y }, { delay: 100, n: 8, gap: 26, spread: 50 });
     }
   }
+  function terrain(t) {
+    if (REDUCED || t !== 'grass') return 700;
+    measure();
+    for (let i = 0; i < 26; i++) { const x = rnd(0, W); rise('leaf', { x, y: H * .92, r: 10 * u, foot: H }, { delay: i * 25, n: 1, dur: 700, size: 8, spread: 6, height: 90 }); }
+    flash('#7ed957', 500, 80, .3);
+    return 1000;
+  }
   function weather(w) { if (REDUCED || !w) return 700; measure(); return weatherFx(w); }
 
-  return { attach, play, reflectReady, reflect, counter, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, awaken, entrance, forge, ids: () => Object.keys(MOVE_FX) };
+  return { attach, play, reflectReady, reflect, counter, terrain, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, awaken, entrance, forge, ids: () => Object.keys(MOVE_FX) };
 })();

@@ -267,9 +267,10 @@ const Battle = (() => {
 
   function drawWeather() {
     const s = $('#scene');
-    s.className = `scene${s.classList.contains('has-tr') ? ' has-tr' : ''}${view.doubles ? ' dbl' : ''}${disp.weather ? ` w-${disp.weather}` : ''}${disp.me.hazard ? ' haz-me' : ''}${disp.opp.hazard ? ' haz-opp' : ''}`;
+    s.className = `scene${s.classList.contains('has-tr') ? ' has-tr' : ''}${view.doubles ? ' dbl' : ''}${disp.weather ? ` w-${disp.weather}` : ''}${disp.terrain ? ` tr-${disp.terrain}` : ''}${disp.me.hazard ? ' haz-me' : ''}${disp.opp.hazard ? ' haz-opp' : ''}`;
     const chips = [];
     if (disp.weather) chips.push(`<span class="f-${disp.weather}">${WEATHER[disp.weather]} ${disp.weatherTurns}턴</span>`);
+    if (disp.terrain) chips.push(`<span class="f-grassfield">그래스필드 ${disp.terrainTurns}턴</span>`);
     if (disp.opp.hazard) chips.push(`<span class="f-tack">${spectating ? `${esc(oppNames())} 쪽` : '상대 쪽'} 압정</span>`);
     if (disp.me.hazard) chips.push(`<span class="f-tack">${spectating ? `${esc(myNames())} 쪽` : '내 쪽'} 압정</span>`);
     $('#field').innerHTML = chips.join('');
@@ -391,6 +392,10 @@ const Battle = (() => {
       case 'weather':
         disp.weather = e.weather; disp.weatherTurns = e.weather ? 5 : 0; drawWeather();
         await wait(Math.max(1000, e.trait ? Fx.weather(e.weather) : 0)); break;
+      case 'terrain':
+        disp.terrain = e.terrain; disp.terrainTurns = e.terrain ? 5 : 0; drawWeather();
+        if (e.terrain) Fx.terrain?.(e.terrain);
+        await wait(1000); break;
       case 'hazard':
         disp[key === 'me' || key === 'ally' ? 'me' : 'opp'].hazard = e.on; drawWeather();
         await wait(900); break;
@@ -575,15 +580,15 @@ const Battle = (() => {
 
     const cur = view.me.mons[view.me.active];
     say(armed ? `메가진화! ${cur.name}의 기술을 고르세요.` : note || `${cur.name}, 뭘 할까?`);
-    const noPP = cur.moves.every((x) => x.pp <= 0);
+    const noPP = cur.moves.every((x) => x.pp <= 0 || x.off);
     panel.innerHTML = `<div class="moves ${cur.moves.length > 4 ? 'ten' : ''}">
       ${noPP ? `<button class="mb" data-mv="-1" style="--tc:${G.data.TYPES.none.c}"><b>악쓰기</b><small>기술을 다 써서 몸으로 부딪힌다</small></button>`
         : cur.moves.map((x, i) => {
           const mv = G.data.MOVES[x.id];
           const dark = ['elec', 'ice', 'wind', 'none'].includes(mv.type);
           const hint = effHint(mv);
-          return `<button class="mb ${dark ? 'dark' : ''}" data-mv="${i}" style="--tc:${G.data.TYPES[mv.type].c}" ${x.pp > 0 ? '' : 'disabled'}>
-            <b>${mv.n}</b>
+          return `<button class="mb ${dark ? 'dark' : ''}" data-mv="${i}" style="--tc:${G.data.TYPES[mv.type].c}" ${x.pp > 0 && !x.off ? '' : 'disabled'}>
+            <b>${mv.n}${x.off ? ' (봉인)' : ''}</b>
             <small>${G.data.TYPES[mv.type].n}${mv.pow ? `, 위력 ${mv.pow}` : ''}, PP ${x.pp}/${mv.pp}</small>
             <small class="eff">${hint || mv.d}</small></button>`;
         }).join('')}
