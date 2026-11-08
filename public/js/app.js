@@ -272,6 +272,7 @@ function renderLobby() {
         <button class="btn paper" id="go-team">덱 관리</button>
         <button class="btn paper" id="go-ava">꾸미기</button>
         <button class="btn mint" id="go-dex">도감</button>
+        <button class="btn paper" id="go-types">타입 상성표</button>
         <button class="btn paper" id="go-players">플레이어 목록</button>
         <button class="btn paper mailbtn" id="go-mail">우편함${u.mailNew ? `<em class="mailbadge">${u.mailNew}</em>` : ''}</button>
         <button class="btn paper" id="go-settings">설정</button>
@@ -324,6 +325,7 @@ function renderLobby() {
   app.querySelectorAll('[data-tlevel]').forEach((b) => { b.onclick = () => wsSend({ t: 'tag_level', level: +b.dataset.tlevel }); });
   app.querySelector('#go-ava').onclick = showAvatar;
   app.querySelector('#go-dex').onclick = showDex;
+  app.querySelector('#go-types').onclick = showTypeChart;
   app.querySelector('#go-players').onclick = showPlayers;
   app.querySelector('#go-settings').onclick = showSettings;
   app.querySelector('#go-mail').onclick = showMail;
@@ -670,6 +672,39 @@ function showDex() {
     app.querySelectorAll('[data-t]').forEach((b) => { b.onclick = () => { G.dexType = b.dataset.t; render(); }; });
     app.querySelectorAll('[data-dex]').forEach((b) => { b.onclick = () => openDexEntry(b.dataset.dex); });
     app.querySelectorAll('[data-soon]').forEach((b) => { b.onclick = () => toast('곧 공개합니다!'); });
+  };
+  render();
+}
+
+// 타입 상성표: 가로줄이 공격 타입, 세로줄이 맞는 타입. 칸을 누르면 그 줄과 칸이 강조됩니다.
+function showTypeChart() {
+  G.screen = 'types';
+  const types = Object.keys(G.data.TYPES).filter((t) => t !== 'none');
+  const T = G.data.TYPES, C = G.data.CHART;
+  const dark = (t) => ['elec', 'ice', 'wind'].includes(t);
+  const head = (t) => `<span class="tc-type" style="background:${T[t].c};color:${dark(t) ? 'var(--ink)' : '#fff'}">${T[t].n}</span>`;
+  const mark = (e) => (e === 2 ? ['2', 'x2'] : e === .5 ? ['½', 'xh'] : e === 0 ? ['0', 'x0'] : ['', '']);
+  let pick = null; // [공격, 방어]
+  const render = () => {
+    const [pa, pd] = pick || [];
+    app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>타입 상성표</h1></div>
+      <section class="panel">
+        <p class="muted" style="margin-bottom:8px">가로줄이 <b>공격하는 기술의 타입</b>, 세로줄이 <b>맞는 요괴의 타입</b>입니다. 타입이 둘인 요괴는 두 배율을 곱합니다(2×2=4배, 2×½=1배). 칸을 누르면 그 상성을 알려 줍니다.</p>
+        <div class="tc-legend"><span class="x2">2</span> 효과 굉장 (2배) <span class="xh">½</span> 별로 (절반) <span class="x0">0</span> 효과 없음 <span class="x1"></span> 보통 (1배)</div>
+        <div class="tc-wrap"><table class="tchart">
+          <thead><tr><th class="tc-corner tc-c0"><small>공격↓<br>방어→</small></th>${types.map((d) => `<th class="${d === pd ? 'on' : ''}">${head(d)}</th>`).join('')}</tr></thead>
+          <tbody>${types.map((a) => `<tr class="${a === pa ? 'on' : ''}"><th>${head(a)}</th>${types.map((d) => {
+            const [txt, cls] = mark(C[a][d] ?? 1);
+            return `<td class="${cls || 'x1'}${a === pa && d === pd ? ' sel' : ''}${d === pd ? ' col' : ''}" data-a="${a}" data-d="${d}">${txt}</td>`;
+          }).join('')}</tr>`).join('')}</tbody>
+        </table></div>
+        <p class="tc-say" aria-live="polite">${pick ? (() => {
+          const e = C[pa][pd] ?? 1;
+          return `${head(pa)} 기술로 ${head(pd)} 요괴를 때리면 <b>${e === 2 ? '2배 (효과가 굉장했다!)' : e === .5 ? '절반 (효과가 별로인 듯하다...)' : e === 0 ? '효과 없음' : '보통 (1배)'}</b>`;
+        })() : '칸을 눌러 보세요.'}</p>
+      </section>`;
+    app.querySelector('#back').onclick = showLobby;
+    app.querySelectorAll('[data-a]').forEach((td) => { td.onclick = () => { pick = [td.dataset.a, td.dataset.d]; render(); }; });
   };
   render();
 }
