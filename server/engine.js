@@ -577,9 +577,9 @@ function hitOne(b, s, me, o, mv, ev) {
     let dmg = damageOf(b, me, foe, mv, crit, .85 + rand(b) * .15);
     if (ref) {
       const full = dmg;
-      dmg = Math.max(1, Math.floor(full * .1));
-      if (mv.cat === 'p') counter += Math.floor(full * .9);
-      if (!landed) ev.push({ t: 'reflect', side: o, by: s, counter: mv.cat === 'p', text: mv.cat === 'p' ? `${josa(foe.name, '은/는')} 방패로 막아냈다!` : `${josa(foe.name, '은/는')} 방패로 막아냈다! 피해가 10%로 줄었다.` });
+      dmg = Math.max(1, Math.floor(full * .5)); // 리플렉터: 피해를 반씩 나눠 가짐
+      counter += full - dmg;
+      if (!landed) ev.push({ t: 'reflect', side: o, by: s, counter: true, text: `${josa(foe.name, '은/는')} 방패로 받아내며 피해를 반으로 나눴다!` });
     }
     if (foe.species === 'ppogeuri' && !foe.popped) { // 특성 거품막
       foe.popped = true; dmg = Math.max(1, Math.floor(dmg / 2));

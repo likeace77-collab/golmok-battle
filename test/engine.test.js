@@ -500,7 +500,7 @@ test('특성검술은 상대에게 효과가 있는 무작위 속성으로 벤�
   assert.ok(seen.size >= 6, [...seen].join());
 });
 
-test('리플렉터: 물리는 10%만 받고 90% 반격, 특수는 10%만, 공격이 없으면 찌른다', () => {
+test('리플렉터: 공격 피해를 반씩 나눠 가지고, 공격이 없으면 찌른다', () => {
   const run = (foeSp, foeMove) => {
     const b = battle(custom('danjo', ['reflector']), custom(foeSp, [foeMove]), 3);
     const me = E.activeOf(b, 0), foe = E.activeOf(b, 1);
@@ -509,12 +509,11 @@ test('리플렉터: 물리는 10%만 받고 90% 반격, 특수는 10%만, 공격
     const r = move(b, 0, 'reflector'); const ev = r.events || move(b, 1, foeMove).events;
     return { me: 5000 - me.hp, foe: 5000 - foe.hp, ev };
   };
-  const p = run('maetdol', 'quake'); // 물리
-  assert.ok(p.ev.some((e) => e.t === 'reflect' && e.counter));
-  assert.ok(p.foe > p.me * 7, `${p.me} ${p.foe}`);
-  const s = run('horong', 'flame'); // 특수
-  assert.ok(s.ev.some((e) => e.t === 'reflect' && !e.counter));
-  assert.equal(s.foe, 0);
+  for (const [sp, mv] of [['maetdol', 'quake'], ['horong', 'flame']]) { // 물리, 특수 모두
+    const r = run(sp, mv);
+    assert.ok(r.ev.some((e) => e.t === 'reflect' && e.counter));
+    assert.ok(Math.abs(r.me - r.foe) <= 1 && r.me > 0, `${r.me} ${r.foe}`);
+  }
   const x = run('maetdol', 'wall'); // 공격 아님
   assert.ok(x.ev.some((e) => e.t === 'counter' && e.stab));
   assert.ok(x.foe > 0 && x.me === 0);
