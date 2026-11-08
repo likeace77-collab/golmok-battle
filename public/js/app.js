@@ -743,7 +743,7 @@ function showFields() {
   ];
   app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>필드 효과</h1></div>
     <section class="panel">
-      <p class="muted">날씨와 바닥은 한 번에 하나씩만 깔립니다. 새 날씨가 오면 이전 날씨는 사라집니다. 싸리비(정리정돈)가 나오면 날씨, 그래스필드, 압정이 모두 치워집니다.</p>
+      <p class="muted">날씨와 바닥은 한 번에 하나씩만 깔립니다. 새 날씨가 오면 이전 날씨는 사라집니다. 싸리비(정리정돈)가 나오면 날씨, 그래스필드, 싸리비 쪽 압정이 치워집니다.</p>
       <div class="fe-jump">${FIELDS.map((f) => `<button data-jump="${f.id}" style="background:${f.bg}">${f.name}</button>`).join('')}</div>
     </section>
     <div class="fe-list">${FIELDS.map((f) => `<section class="panel fe" id="fe-${f.id}">

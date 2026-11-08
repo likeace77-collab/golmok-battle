@@ -463,11 +463,11 @@ function onEntry(b, s, m, ev) {
     }
   }
   if (m.species === 'ssaribi') { // 정리정돈: 날씨와 압정을 모두 치움
-    const had = b.weather || b.terrain || seats(b).some((i) => b.sides[i].hazard);
+    const had = b.weather || b.terrain || b.sides[s].hazard;
     if (b.terrain) { b.terrain = null; b.terrainTurns = 0; ev.push({ t: 'terrain', terrain: null, text: '그래스필드가 깨끗이 치워졌다!' }); }
     msg(ev, `${m.name}의 정리정돈!${had ? '' : ' 하지만 치울 것이 없었다.'}`);
     if (b.weather) { ev.push({ t: 'weather', weather: null, text: `${josa(WEATHER_NAME[b.weather], '이/가')} 깨끗이 걷혔다!` }); b.weather = null; b.weatherTurns = 0; }
-    for (const t of [0, 1]) {
+    for (const t of [teamOf(b, s)]) { // 우리 쪽 압정만 치움 (상대 쪽 압정은 그대로)
       const team = seats(b).filter((i) => teamOf(b, i) === t);
       if (team.some((i) => b.sides[i].hazard)) {
         team.forEach((i) => { b.sides[i].hazard = false; });

@@ -596,6 +596,22 @@ MONSTERS.ppogeuri.trait = { n: '거품막', d: '전투에서 처음 맞는 공�
 for (const id of ['metalnoise', 'scold', 'lionroar']) { MOVES[id].sound = true; MOVES[id].d = `[소리] ${MOVES[id].d}`; }
 MOVES.z_harmonium.sound = true;
 MONSTERS.harmonium.trait = { n: '펑크록', d: '소리 기술(금속음, 혼쭐내기, 사자후, 오버드라이브)의 위력이 1.3배가 되고, 상대의 소리 기술은 피해를 절반만 받는다.' };
+// 하위권 상향: 기본 능력치에 더하는 값 [체력, 공격, 방어, 특공, 특방, 스피드]
+const BUFFS = {
+  danjo: [15, 15, 10, 0, 10, 10], ssaribi: [20, 10, 10, 0, 5, 0], yeonji: [10, 0, 5, 15, 0, 5],
+  kkangtong: [15, 10, 0, 0, 10, 5], ppeondegi: [15, 0, 0, 15, 0, 10], kongsiru: [10, 0, 10, 15, 5, 0],
+  hotteok: [15, 10, 10, 0, 0, 0], baedalbot: [15, 10, 10, 0, 0, 0], godeuri: [15, 0, 10, 0, 5, 0],
+  jangdok: [0, 0, 0, 10, 0, 10], eomuk: [5, 0, 10, 10, 0, 0],
+};
+// 2차 상향 (승률 45% 아래)
+const BUFFS2 = {
+  ssaribi: [15, 20, 0, 0, 10, 0], danjo: [10, 10, 10, 0, 10, 0], godeuri: [10, 0, 5, 10, 0, 0], jangdok: [10, 0, 0, 10, 0, 0],
+  kongsiru: [10, 0, 0, 10, 5, 0], yeonji: [5, 0, 0, 10, 5, 5], baedalbot: [10, 10, 0, 0, 5, 0], silvia: [10, 10, 5, 0, 5, 0],
+  ppeondegi: [5, 0, 0, 10, 0, 5], hotteok: [5, 5, 5, 0, 0, 0], fan: [5, 0, 5, 5, 0, 0], sigung: [5, 5, 5, 0, 0, 0],
+  bonaeng: [5, 5, 0, 0, 5, 0], jangseung: [5, 5, 0, 0, 5, 0], kkangtong: [5, 5, 0, 0, 5, 0], yangmeori: [5, 5, 0, 5, 0, 0],
+};
+for (const [id, add] of Object.entries(BUFFS2)) BUFFS[id] = (BUFFS[id] || [0, 0, 0, 0, 0, 0]).map((v, i) => v + add[i]);
+for (const [id, add] of Object.entries(BUFFS)) ['hp', 'atk', 'def', 'spa', 'spd', 'spe'].forEach((k, i) => { MONSTERS[id].base[k] += add[i]; });
 // 친구가 정한 특성들
 Object.assign(MONSTERS.usan, { trait: { n: '폭우', d: '싸움에 나오면 5턴 동안 비(소나기)가 내린다.' } });
 Object.assign(MONSTERS.horong, { trait: { n: '그림자밟기', d: '호롱이가 싸우는 동안 상대는 교체할 수 없다. (쓰러져서 바꾸는 것은 가능)' } });
@@ -617,7 +633,7 @@ Object.assign(MONSTERS.kkaebi, { trait: { n: '저주받은바디', d: '공격에
 Object.assign(MONSTERS.kongsiru, { trait: { n: '넘치는콩', d: '공격에 맞으면 5턴 동안 그래스필드를 펼친다. 그래스필드에서는 풀 기술이 1.3배가 되고 매 턴 모두 체력을 1/16 회복한다.' } });
 Object.assign(MONSTERS.bungbbang, { trait: { n: '크리스피', d: '비가 오거나 물 기술에 맞으면 눅눅해져 스피드가 1단계 떨어진다. 땡볕이거나 불 기술에 맞으면 바삭해져, 물리 공격을 한 상대에게 그 피해의 1/4을 돌려준다.' } });
 Object.assign(MONSTERS.jeonbot, { trait: { n: '비상전력', d: '체력이 절반 이하가 되면(한 번만) 방어와 특방이 1단계 떨어지는 대신 특공과 스피드가 2단계 올라간다.' } });
-MONSTERS.ssaribi.trait.d = '싸움에 나오면 날씨, 그래스필드, 양쪽 압정을 모두 치워 버린다.';
+MONSTERS.ssaribi.trait.d = '싸움에 나오면 날씨와 그래스필드, 우리 쪽 압정을 치워 버린다. (상대 쪽 압정은 그대로 둔다)';
 // 투혼: 남은 체력에 따라 폼이 바뀜 (img/mon/tuhon, tuhon-f1~f4, 메가는 tuhon-mega)
 const FORMS = {
   names: ['일반폼', '소노폼', '중노폼', '대노폼', '극대노폼', '초(超)극대노'],
