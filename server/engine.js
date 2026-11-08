@@ -45,7 +45,7 @@ function makeMon(spec) {
 }
 const freshVolatile = () => ({
   stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0 },
-  seeded: false, flinched: false, protecting: false, protectStreak: 0,
+  seeded: false, flinched: false, protecting: false, protectStreak: 0, reflecting: null,
 });
 
 // 훈련장 더미: 타입 없음, 체력 1000. 공격하지 않고, 부서지면 바로 새 더미가 나옵니다.
@@ -380,6 +380,21 @@ function damageOf(b, atk, def, mv, crit, roll) {
   return Math.max(1, Math.floor(dmg));
 }
 
+// 특성검술: 무작위 속성 (상대에게 효과가 없는 속성은 빼고)
+const BLADES = {
+  fire: ['화염', { st: { s: 'brn', ch: 30 } }], water: ['파도', { foe: { spe: -1 } }], grass: ['신록', { drain: .3 }],
+  elec: ['뇌광', { st: { s: 'par', ch: 30 } }], ice: ['빙결', { st: { s: 'frz', ch: 20 } }], earth: ['대지', { foe: { def: -1 }, sc: 50 }],
+  wind: ['질풍', { crit: true }], poison: ['맹독', { st: { s: 'psn', ch: 40 } }], spirit: ['혼백', { fl: 30 }],
+  fairy: ['성광', { foe: { atk: -1 } }], steel: ['강철', { pow: 110 }],
+};
+function elemBlade(b, s, me, mv, want) {
+  const foe = activeOf(b, targetOf(b, s, want));
+  const ok = Object.keys(BLADES).filter((t) => effOf(t, foe.types) > 0);
+  const type = ok[Math.floor(rand(b) * ok.length)] || 'steel';
+  const [name, extra] = BLADES[type];
+  return { ...mv, ...extra, type, n: `특성검술 · ${name}`, blade: type };
+}
+
 // 특성 온탕냉탕: 홀수 턴은 온탕, 짝수 턴은 냉탕
 const isHot = (b) => b.turn % 2 === 1;
 // 등장할 때 발동하는 특성
@@ -397,7 +412,8 @@ function useMove(b, s, index, ev, want, z = false) {
   const zid = z ? MONSTERS[me.species].z : null;
   let mv = z ? MOVES[zid] : slot ? MOVES[slot.id] : STRUGGLE;
 
-  if (mv.tierPow) mv = { ...mv, pow: mv.pow + tierOf(me) * mv.tierPow }; // 강화 단계만큼 위력 증가
+  if (mv.tierPow) mv = { ...mv, pow: mv.pow + Math.min(tierOf(me), TIERS.base) * mv.tierPow }; // 강화 단계만큼 위력 증가 (네더라이트까지)
+  if (mv.elem) mv = elemBlade(b, s, me, mv, want);
   if (mv.bath) mv = isHot(b) ? { ...mv, type: 'fire', st: { s: 'brn', ch: 30 } } : { ...mv, type: 'ice', st: { s: 'frz', ch: 30 } };
   if (!canAct(b, s, me, mv, ev)) { me.protectStreak = 0; return; }
   if (slot) slot.pp--;
@@ -420,6 +436,14 @@ function useMove(b, s, index, ev, want, z = false) {
     } else { me.protectStreak = 0; msg(ev, '그러나 실패했다!'); }
     return;
   }
+  if (mv.reflect) {
+    const ok = chance(b, 100 / 2 ** me.protectStreak);
+    if (ok) {
+      me.reflecting = { target: o, used: false }; me.protectStreak++;
+      ev.push({ t: 'reflectReady', side: s, text: `${josa(me.name, '은/는')} 방패를 들고 반격 자세를 취했다!` });
+    } else { me.protectStreak = 0; msg(ev, '그러나 실패했다!'); }
+    return;
+  }
   me.protectStreak = 0;
 
   if (mv.self_) return selfMove(b, s, me, mv, ev);
@@ -432,6 +456,9 @@ function useMove(b, s, index, ev, want, z = false) {
 
 function hitOne(b, s, me, o, mv, ev) {
   const foe = activeOf(b, o);
+  const ref = foe.reflecting && mv.cat !== 'x' && alive(foe) ? foe.reflecting : null; // 리플렉터
+  if (ref) ref.used = true;
+  let counter = 0;
   if (!alive(foe)) { msg(ev, '그러나 맞힐 상대가 없었다!'); return; }
   if (foe.protecting) {
     if (mv.z && !mv.breakGuard) {
@@ -458,6 +485,12 @@ function hitOne(b, s, me, o, mv, ev) {
   for (let i = 0; i < hits && alive(foe); i++) {
     const crit = rand(b) < (mv.crit ? 1 / 8 : 1 / 24);
     let dmg = damageOf(b, me, foe, mv, crit, .85 + rand(b) * .15);
+    if (ref) {
+      const full = dmg;
+      dmg = Math.max(1, Math.floor(full * .1));
+      if (mv.cat === 'p') counter += Math.floor(full * .9);
+      if (!landed) ev.push({ t: 'reflect', side: o, by: s, counter: mv.cat === 'p', text: mv.cat === 'p' ? `${josa(foe.name, '은/는')} 방패로 막아냈다!` : `${josa(foe.name, '은/는')} 방패로 막아냈다! 피해가 10%로 줄었다.` });
+    }
     if (foe.species === 'ppogeuri' && !foe.popped) { // 특성 거품막
       foe.popped = true; dmg = Math.max(1, Math.floor(dmg / 2));
       msg(ev, `${foe.name}의 거품막이 피해를 줄였다! 거품이 터졌다.`);
@@ -467,6 +500,10 @@ function hitOne(b, s, me, o, mv, ev) {
     if (crit) msg(ev, '급소에 맞았다!');
   }
   if (hits > 1) msg(ev, `${landed}번 맞았다!`);
+  if (counter > 0 && alive(me) && alive(foe)) {
+    ev.push({ t: 'counter', side: o, target: s, text: `${josa(foe.name, '이/가')} 검으로 찔러 피해를 돌려줬다!` });
+    hurt(b, s, me, counter, ev, { counter: 1 });
+  }
   if (eff > 1) msg(ev, '효과가 굉장했다!');
   else if (eff < 1) msg(ev, '효과가 별로인 듯하다...');
 
@@ -569,6 +606,22 @@ function statusMove(b, s, me, o, foe, mv, ev) {
 }
 
 function endOfTurn(b, ev) {
+  // 리플렉터: 상대가 공격하지 않았으면 그냥 찌른다
+  for (const s of seats(b)) {
+    const m = activeOf(b, s), r = m.reflecting;
+    if (!r) continue;
+    m.reflecting = null;
+    if (r.used || !alive(m) || b.phase === 'over') continue;
+    const o = targetOf(b, s, r.target), foe = activeOf(b, o);
+    if (!alive(foe)) continue;
+    const stab = { n: '찌르기', type: 'steel', cat: 'p', pow: 80 };
+    ev.push({ t: 'counter', side: s, target: o, stab: true, text: `상대가 공격하지 않자 ${josa(m.name, '이/가')} 검으로 찔렀다!` });
+    const eff = effOf('steel', foe.types);
+    if (!eff) { msg(ev, `${foe.name}에게는 효과가 없는 것 같다...`); continue; }
+    hurt(b, o, foe, damageOf(b, m, foe, stab, false, .85 + rand(b) * .15), ev, { eff, moveType: 'steel' });
+    faintCheck(b, o, foe, ev);
+  }
+  if (checkOver(b, ev)) return;
   for (const s of seats(b)) {
     const m = activeOf(b, s);
     m.protecting = false; m.flinched = false;
@@ -841,7 +894,8 @@ function botAction(b, s, level = 1) {
   // 강화 용사: 체력이 넉넉하면 강화부터
   if (a && a.type === 'move' && level >= 1 && b.phase === 'choose') {
     const me = activeOf(b, s), fi = me.moves.findIndex((x) => MOVES[x.id].forge && x.pp > 0);
-    if (fi >= 0 && tierOf(me) < (MONSTERS[me.species].tiers || 0) && me.hp > me.maxHp * .5 && chance(b, level >= 2 ? 65 : 45)) return { type: 'move', index: fi, ...(isDoubles(b) ? { target: o } : {}) };
+    const t = tierOf(me), want = t < TIERS.base ? (level >= 2 ? 65 : 45) : 20; // 네더라이트 뒤로는 가끔만
+    if (fi >= 0 && t < (MONSTERS[me.species].tiers || 0) && me.hp > me.maxHp * .5 && chance(b, want)) return { type: 'move', index: fi, ...(isDoubles(b) ? { target: o } : {}) };
   }
   if (a && a.type === 'move' && level >= 1 && canZ(b, s)) {
     // Z기술: 쓰러뜨릴 수 있거나, 판이 무르익었을 때 씁니다.

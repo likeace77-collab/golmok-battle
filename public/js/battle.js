@@ -200,7 +200,7 @@ const Battle = (() => {
       ${m.status ? `<span class="badge">${STATUS[m.status]}</span>` : ''}
       ${m.seeded ? `<span class="badge">${m.seeded === 'hair' ? '머리카락' : '씨앗'}</span>` : ''}
       ${m.strip ? `<span class="badge strip">각성${m.strip}</span>` : ''}
-      ${G.data.MONSTERS[m.species]?.tiers ? `<span class="badge tier tb${m.tier || 0}">${G.data.TIERS?.[m.tier || 0] || ''}</span>` : ''}
+      ${G.data.MONSTERS[m.species]?.tiers ? `<span class="badge tier tb${Math.min(m.tier || 0, 4)}${(m.tier || 0) > 4 ? ' tplus' : ''}">${G.data.TIERS?.[m.tier || 0] || ''}</span>` : ''}
       ${stages.map(([k, v]) => `<span class="badge">${lb[k]}${v > 0 ? '+' : ''}${v}</span>`).join('')}</div>
       <div class="bar"><i></i></div><div class="num"></div>`;
     setBar(key, m);
@@ -315,8 +315,11 @@ const Battle = (() => {
       case 'move':
         if (e.z) { await zCinematic(e, key); break; }
         trainer(key)?.play('command');
-        await wait(Math.max(760, Fx.play(e.id, key, sideKey(e.target))));
+        await wait(Math.max(760, Fx.play(e.id, key, sideKey(e.target), e)));
         break;
+      case 'reflectReady': await wait(Fx.reflectReady(key)); break;
+      case 'reflect': await wait(Fx.reflect(key, sideKey(e.by), e.counter)); break;
+      case 'counter': anim(key, 'lunge', 600); await wait(Fx.counter(key, sideKey(e.target), e.stab)); break;
       case 'miss': await wait(800); break;
       case 'hp': {
         const m = dispMon(key);
@@ -408,8 +411,8 @@ const Battle = (() => {
         if (box) { box.innerHTML = monsterSVG(m.species, '', m.mega, m.hits, m.tier); box.classList.add('swapfx', 'forged'); setTimeout(() => box.classList.remove('swapfx', 'forged'), 700); }
         drawPlate(key, m);
         const tag = document.createElement('div');
-        tag.className = `forge-tag ft${e.tier} ${key}`;
-        tag.innerHTML = `<small>강화 성공!</small><b>+${e.tier} ${G.data.TIERS?.[e.tier] || ''}</b>`;
+        tag.className = `forge-tag ft${Math.min(e.tier, 4)} ${key}`;
+        tag.innerHTML = `<small>강화 성공!</small><b>${G.data.TIERS?.[e.tier] || ''}</b>`;
         $('#scene')?.appendChild(tag);
         setTimeout(() => tag.remove(), 1500);
         await wait(Math.max(700, ms - 520));

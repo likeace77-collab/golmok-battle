@@ -889,18 +889,21 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 
 /* ===== 단조 강화 ===== */
 .badge.tier { color: #fff; border: 1px solid var(--ink); }
-.badge.tb0 { background: #8B5A2B; } .badge.tb1 { background: #8a8578; } .badge.tb2 { background: #555b66; }
-.badge.tb3 { background: linear-gradient(90deg, #b8860b, #ffd23f, #b8860b); color: #3a2a00; }
-.badge.tb4 { background: linear-gradient(90deg, #7fe0f0, #fff, #9FF3FF); color: #12305a; }
-.badge.tb5 { background: linear-gradient(90deg, #2a1240, #6a2c9a, #2a1240); box-shadow: 0 0 6px #d14bff; }
+.badge.tb0 { background: #8B5A2B; } .badge.tb1 { background: #555b66; }
+.badge.tb2 { background: linear-gradient(90deg, #b8860b, #ffd23f, #b8860b); color: #3a2a00; }
+.badge.tb3 { background: linear-gradient(90deg, #7fe0f0, #fff, #9FF3FF); color: #12305a; }
+.badge.tb4 { background: linear-gradient(90deg, #2a1240, #6a2c9a, #2a1240); box-shadow: 0 0 6px #d14bff; }
+.badge.tb4.tplus { background: linear-gradient(90deg, #2a1240, #b026ff, #ff4fd8, #2a1240); background-size: 200% 100%; animation: tplusBadge 1.6s linear infinite; box-shadow: 0 0 10px #ff4fd8; }
+@keyframes tplusBadge { to { background-position: 200% 0; } }
+svg.tplus { filter: drop-shadow(0 0 calc(3px + var(--plus) * 1px) #b026ff) drop-shadow(0 0 calc(var(--plus) * 1.4px) #ff4fd8); }
 .mon.forged svg { animation: forgedIn .7s cubic-bezier(.2, 1.4, .4, 1); }
 @keyframes forgedIn { 0% { filter: brightness(4) saturate(0); transform: scale(1.18); } 60% { filter: brightness(1.4); } 100% { filter: none; transform: none; } }
 .forge-tag { position: absolute; z-index: 9; top: 30%; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; line-height: 1; animation: awTag 1.5s cubic-bezier(.2, 1.4, .4, 1) forwards; --tc: #FFD23F; }
 .forge-tag.me { left: 34%; top: 42%; } .forge-tag.opp { left: 70%; top: 16%; }
 .forge-tag small { display: block; font: 400 clamp(14px, 4vw, 20px)/1 var(--ui); letter-spacing: .2em; color: #fff; text-shadow: 0 0 8px var(--tc), 0 2px 0 var(--ink); }
 .forge-tag b { display: block; white-space: nowrap; font: 400 clamp(34px, 11vw, 64px)/1.05 var(--display); color: #fff; -webkit-text-stroke: 2.5px var(--ink); text-shadow: 0 0 16px var(--tc), 0 0 34px var(--tc), 4px 4px 0 var(--ink); }
-.forge-tag.ft1 { --tc: #BDB8A8; } .forge-tag.ft2 { --tc: #c9d1dc; } .forge-tag.ft3 { --tc: #FFD23F; } .forge-tag.ft4 { --tc: #9FF3FF; } .forge-tag.ft5 { --tc: #d14bff; }
-.forge-tag.ft5 b { background: linear-gradient(90deg, #d14bff, #ff4f6e, #d14bff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.forge-tag.ft1 { --tc: #c9d1dc; } .forge-tag.ft2 { --tc: #FFD23F; } .forge-tag.ft3 { --tc: #9FF3FF; } .forge-tag.ft4 { --tc: #d14bff; }
+.forge-tag.ft4 b { background: linear-gradient(90deg, #d14bff, #ff4f6e, #d14bff); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
 /* 곧 공개 */
 .card.secret { --tc: #2a2440; background: repeating-linear-gradient(135deg, #2a2440 0 10px, #332c4d 10px 20px); color: #fff; }

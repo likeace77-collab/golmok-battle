@@ -145,8 +145,10 @@ const MOVES = {
   neonwink:  M('네온 윙크', 'fairy', 's', 85, 100, 10, { foe: { atk: -1 }, sc: 50, d: '50% 확률로 상대 공격 하락' }),
   lipmark:   M('입술 도장', 'fairy', 's', 85, 100, 10, { foe: { spa: -1 }, sc: 50, d: '50% 확률로 상대 특공 하락' }),
   // 단조 (강화 용사)
-  forge:     M('강화', 'steel', 'x', 0, null, 10, { forge: true, self_: true, d: '100% 확률로 다음 단계로 강화. 체력이 약간, 공격과 방어가 크게 오름 (나무→돌→철→금→다이아몬드→네더라이트)' }),
-  tierslash: M('강화 베기', 'steel', 'p', 50, 100, 15, { tierPow: 18, d: '강화 단계마다 위력 18 증가 (최대 140)' }),
+  forge:     M('강화', 'steel', 'x', 0, null, 15, { forge: true, self_: true, d: '100% 확률로 다음 단계로 강화. 체력이 약간, 공격과 방어가 크게 오름 (나무→철→금→다이아몬드→네더라이트→네더라이트+1 … +10)' }),
+  tierslash: M('강화 베기', 'steel', 'p', 50, 100, 15, { tierPow: 22, d: '강화 단계마다 위력 22 증가 (네더라이트에서 최대 138)' }),
+  elemblade: M('특성검술', 'steel', 'p', 100, 100, 10, { elem: true, d: '불·물·풀·전기·얼음·땅·바람·독·혼·페어리·쇠 중 무작위 속성을 검에 실어 벤다. 속성마다 추가 효과가 다르고, 상대에게 효과가 없는 속성은 나오지 않는다' }),
+  reflector: M('리플렉터', 'steel', 'x', 0, null, 10, { reflect: true, pri: 4, d: '스피드와 상관없이 먼저 방패를 든다. 이번 턴 받는 공격 피해를 10%로 줄이고, 물리 공격이면 나머지 90%를 검으로 찔러 돌려준다. 상대가 공격하지 않으면 그냥 찌른다. 연속으로 쓰면 실패하기 쉽다' }),
   shieldbash: M('방패 밀치기', 'steel', 'p', 60, 100, 15, { fl: 30, d: '30% 확률로 풀죽음' }),
   lionroar:  M('사자후', 'none', 'x', 0, 100, 10, { foe: { atk: -1, def: -1 }, d: '방패의 사자가 포효한다. 상대 공격과 방어 하락' }),
   // 루미나 (견습 마법사)
@@ -293,7 +295,7 @@ const MONSTERS = {
     '은발을 땋아 올린 성인 숲의 궁수. 윙크 한 번에 화살이 날아가고, 화살이 떨어지면 허벅지 단검을 뽑는다.'),
   // 강화 용사
   danjo:    X('단조', ['steel'], 85, 80, 85, 40, 70, 60,
-    ['forge', 'tierslash', 'shieldbash', 'lionroar', 'ironhead', 'hammer', 'armor', 'rockthrow', 'tackle', 'guard'],
+    ['forge', 'tierslash', 'elemblade', 'reflector', 'shieldbash', 'lionroar', 'ironhead', 'hammer', 'armor', 'rockthrow'],
     '나무 검 한 자루로 시작한 용사. 대장간 망치 소리가 들리면 갑옷이 한 단계 올라간다. 목표는 풀강.'),
   // 로봇
   jabanbot: X('자판봇', ['steel', 'elec'], 95, 105, 100, 70, 75, 55,
@@ -426,7 +428,7 @@ const ZMOVES = {
   yeonji: ['홍염 입맞춤', 'fairy', 175, '상대 특공 하락', { foe: { spa: -1 } }],
   lumina: ['아르카나 썬더', 'elec', 185, '하늘에 거대한 마법진이 열리고 벼락이 쏟아진다. 30% 확률로 마비', { st: { s: 'par', ch: 30 } }],
   silvia: ['템페스트 애로우', 'wind', 180, '폭풍을 두른 화살 한 발이 모든 것을 꿰뚫는다. 급소에 잘 맞음', { crit: true }],
-  danjo: ['풀강 일격', 'steel', 170, '강화 단계마다 위력 6 증가. 풀강(네더라이트)이면 위력 200', { tierPow: 6 }],
+  danjo: ['풀강 일격', 'steel', 172, '강화 단계마다 위력 7 증가. 네더라이트면 위력 200', { tierPow: 7 }],
   jabanbot: ['캔 일제사격', 'steel', 180, '자판기 재고가 바닥날 때까지 쏜다'],
   baedalbot: ['광속 배달 완료', 'wind', 175, '도착 예정 시간 0초'],
   setakbot: ['초강력 탈수', 'water', 180, '상대 스피드 2단계 하락', { foe: { spe: -2 } }],
@@ -563,11 +565,19 @@ const STAT_NAMES = {
 for (const id of ['lumina', 'silvia']) MONSTERS[id].img = true;
 // 맞을 때마다 옷이 바뀌는 그림 수 (img/mon/<id>-s1 ~ sN.webp)
 for (const id of ['lumina', 'silvia']) MONSTERS[id].censor = true; // 19세 이하 모자이크
-// 강화 단계 (단조): 그림 img/mon/danjo-t1~t5, 단계마다 체력 +8%, 공격·방어 배율
+// 강화 단계 (단조): 그림 img/mon/danjo-t1~t4 (철·금·다이아몬드·네더라이트), 단계마다 체력 +8%, 공격·방어 배율
+// 네더라이트 다음부터는 네더라이트+1 ~ +10 (그림은 네더라이트, 보랏빛이 점점 진해짐)
 MONSTERS.danjo.img = true;
-const TIERS = { names: ['나무', '돌', '철', '금', '다이아몬드', '네더라이트'], atk: [.6, .8, 1, 1.25, 1.55, 1.9], def: [.6, .8, 1, 1.25, 1.55, 1.9], hp: .08 };
+const BASE_TIERS = ['나무', '철', '금', '다이아몬드', '네더라이트'], PLUS_MAX = 10;
+const TIERS = {
+  names: [...BASE_TIERS, ...Array.from({ length: PLUS_MAX }, (_, i) => `네더라이트+${i + 1}`)],
+  atk: [.6, 1, 1.25, 1.55, 1.9, ...Array.from({ length: PLUS_MAX }, (_, i) => +(1.9 + (i + 1) * .08).toFixed(2))],
+  hp: .08, base: BASE_TIERS.length - 1, // 그림이 있는 마지막 단계 (네더라이트)
+};
+TIERS.def = TIERS.atk;
 MONSTERS.danjo.tiers = TIERS.names.length - 1;
-MONSTERS.danjo.trait = { n: '강화 용사', d: `강화를 쓰면 ${TIERS.names.join(' → ')} 순서로 100% 강화된다. 나무일 때는 약하지만 단계마다 체력이 ${TIERS.hp * 100}% 늘고 공격·방어가 크게 올라 네더라이트에서는 약 ${TIERS.atk[5]}배가 된다. 교체해도 단계는 유지된다.` };
+MONSTERS.danjo.tierImgs = TIERS.base;
+MONSTERS.danjo.trait = { n: '강화 용사', d: `강화를 쓰면 ${BASE_TIERS.join(' → ')} 순서로 100% 강화되고, 그 뒤로는 네더라이트+1부터 +${PLUS_MAX}까지 계속 강화된다. 나무일 때는 약하지만 단계마다 체력이 ${TIERS.hp * 100}% 늘고 공격·방어가 크게 올라 네더라이트에서 약 ${TIERS.atk[4]}배, +${PLUS_MAX}에서 약 ${TIERS.atk[TIERS.names.length - 1]}배가 된다. 교체해도 단계는 유지된다.` };
 const STRIP = { boost: .04, heal: 20 };
 MONSTERS.godeuri.trait = { n: '녹아내림', d: '체력이 절반 이하가 되면 스피드가 1.5배가 된다.' };
 MONSTERS.yangmeori.trait = { n: '온탕냉탕', d: '홀수 턴은 온탕(불 기술 1.3배), 짝수 턴은 냉탕(얼음 기술 1.3배)이다.' };

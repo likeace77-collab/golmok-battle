@@ -259,7 +259,10 @@ function monsterSVG(id, cls = '', mega = false, hits = 0, tier = 0) {
   const sp = typeof G !== 'undefined' ? G.data?.MONSTERS?.[id] : null;
   if (sp?.img) {
     const stage = !mega && sp.stages ? Math.min(hits || 0, sp.stages) : 0;
-    if (sp.tiers) return `<svg class="${cls}" viewBox="0 0 200 200" aria-hidden="true"><image href="img/mon/${id}${mega ? '-mega' : tier ? `-t${Math.min(tier, sp.tiers)}` : ''}.webp" width="200" height="200"/></svg>`;
+    if (sp.tiers) { // 강화 단계 그림. 네더라이트 뒤(+1~)는 같은 그림에 보랏빛이 진해짐
+      const top = sp.tierImgs ?? sp.tiers, plus = mega ? 0 : Math.max(0, (tier || 0) - top);
+      return `<svg class="${cls}${plus ? ' tplus' : ''}" ${plus ? `style="--plus:${plus}"` : ''} viewBox="0 0 200 200" aria-hidden="true"><image href="img/mon/${id}${mega ? '-mega' : tier ? `-t${Math.min(tier, top)}` : ''}.webp" width="200" height="200"/></svg>`;
+    }
     // 19세 이하이거나 모자이크를 켠 계정은 모자이크 그림 (-m). 서버도 원본을 안 보냅니다.
     const mosaic = sp.censor && !(typeof G !== 'undefined' && G.user?.uncensored);
     return `<svg class="${cls}" viewBox="0 0 200 200" aria-hidden="true"><image href="img/mon/${id}${mega ? '-mega' : stage ? `-s${stage}` : ''}${mosaic ? '-m' : ''}.webp" width="200" height="200"/></svg>`;

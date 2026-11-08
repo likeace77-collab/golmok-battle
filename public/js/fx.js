@@ -507,6 +507,8 @@ const Fx = (() => {
     bulletdash(A, T, k) { act(k, 'dash', 420); windLines(A, T, { n: 10, gap: 12, dur: 220, spread: 40, color: '#FFE45C' }); prop('plate', { from: A, to: T, dur: 190, size: 22 }); ring(T, { delay: 190, color: '#FFD23F', r1: 76 }); return 640; },
     spincycle(A, T, k, t) { act(k, 'spin', 760); act(t, 'lift', 760); orbit('drop', T, { n: 12, r: 58, dur: 760, size: 8, turns: 3 }); orbit('bubble', T, { n: 8, r: 34, dur: 760, size: 6, turns: -2 }); ring(T, { color: '#BFE4FF', r1: 92, delay: 640 }); return 1040; },
     metalnoise(A, T, k, t) { act(k, 'cast', 700); for (let i = 0; i < 4; i++) ring(A, { delay: i * 110, color: ['#C9A24A', '#cfd6df'][i % 2], r0: 20, r1: 150, w: 5, dur: 420 }); for (let i = 0; i < 3; i++) ring(T, { delay: 300 + i * 110, color: '#ff7ad9', r0: 10, r1: 70, w: 4, dur: 300 }); shake(8, 420, 300); tint(t, 'hex', 420, 360); return 1000; },
+    elemblade(A, T, k, t, e) { return elemBlade(A, T, k, t, e?.type); },
+    reflector(A, T, k) { act(k, 'cast', 400); return 500; },
     icicledrop(A, T, k, t) { act(k, 'cast', 420); const sp = above(T, 150); prop('shard', { from: sp, to: sp, dur: 240, size: 34, rot0: 3.14, rot1: 3.14 }); prop('shard', { from: sp, to: T, delay: 240, dur: 160, size: 34, rot0: 3.14, rot1: 3.14 }); burst('snow', T, { delay: 400, n: 14, dist: 64 }); burst('wisp', T, { delay: 420, n: 6, dist: 40 }); flash('#bfeaff', 160, 400, .35); tint(t, 'cold', 360, 420); return 900; },
     stoneegg(A, T, k, t) { act(k, 'throw', 420); prop('bean', { from: A, to: T, dur: 360, size: 26, rot1: 8 }); burst('flame', T, { delay: 360, n: 8, dist: 46 }); burst('snow', T, { delay: 360, n: 8, dist: 46 }); shake(6, 240, 360); return 860; },
     vineshock(A, T, k, t) { act(k, 'cast', 600); whip(A, T, { color: '#4cbf3a', dur: 420, w: 7 }); bolt(A, T, { delay: 220, dur: 380, w: 3 }); burst('leaf', T, { delay: 380, n: 8, dist: 44 }); tint(t, 'zap', 380, 420); return 960; },
@@ -562,12 +564,12 @@ const Fx = (() => {
   }
 
   /* ---------- 바깥에서 부르는 함수 ---------- */
-  function play(id, key, target) {
+  function play(id, key, target, e) {
     const foe = target || (key === 'me' ? 'opp' : 'me');
     const run = MOVE_FX[id] || MOVE_FX.tackle;
     if (REDUCED) return 500;
     measure();
-    return (run(spot(key), spot(foe), key, foe) || 700);
+    return (run(spot(key), spot(foe), key, foe, e) || 700);
   }
   function status(key, s) {
     if (REDUCED || !s) return;
@@ -740,19 +742,115 @@ const Fx = (() => {
     return 1250;
   }
   // 강화 성공: 망치질 불꽃 → 재료 색 빛기둥 → 폭발
-  const TIER_C = ['#C98F5E', '#BDB8A8', '#8a8f98', '#FFD23F', '#9FF3FF', '#9A4FB8'];
+  const TIER_C = ['#C98F5E', '#8a8f98', '#FFD23F', '#9FF3FF', '#9A4FB8'];
+  // ===== 단조: 특성검술과 리플렉터 =====
+  const BLADE = {
+    fire: ['#ff5a1f', '#ffd23f', 'flame'], water: ['#2f9bff', '#bfe8ff', 'drop'], grass: ['#3fbf4a', '#c8ff6a', 'leaf'],
+    elec: ['#ffe14d', '#ffffff', 'spark'], ice: ['#7fdcff', '#ffffff', 'shard'], earth: ['#b07a3a', '#e6c48a', 'rock'],
+    wind: ['#6fe0c0', '#e6fff4', 'crescent'], poison: ['#9a4fb8', '#e0a8ff', 'glob'], spirit: ['#6a5cff', '#c9b8ff', 'wisp'],
+    fairy: ['#ff8ccb', '#ffffff', 'petal'], steel: ['#c7cdd6', '#ffffff', 'spark'],
+  };
+  function elemBlade(A, T, k, t, type) {
+    const [c, c2, p] = BLADE[type] || BLADE.steel;
+    darken(1500, .5);
+    ring(A, { color: c, r0: 10, r1: 70, dur: 360, w: 6 }); ring(A, { delay: 120, color: c2, r0: 6, r1: 50, dur: 300, w: 4 });
+    rise(p, A, { n: 10, dur: 420, size: 8, spread: 26, height: 70, gap: 25 });
+    act(k, 'lunge', 620);
+    windLines(A, T, { delay: 260, n: 8, gap: 14, dur: 200, spread: 30, color: c2 });
+    slash(T, { delay: 340, angle: -.9, len: 180, color: c, w: 13, dur: 280 });
+    slash(T, { delay: 430, angle: .75, len: 160, color: c2, w: 10, dur: 260 });
+    slash(T, { delay: 520, angle: 0, len: 210, color: '#ffffff', w: 6, dur: 240 });
+    flash(c, 200, 470, .45); flash('#ffffff', 120, 540, .35);
+    ring(T, { delay: 470, color: c, r1: 170, w: 9, dur: 520 }); ring(T, { delay: 540, color: c2, r1: 120, w: 5, dur: 420 });
+    burst(p, T, { delay: 470, n: 22, dist: 110, size: 11, dur: 560 });
+    shake(12, 460, 470);
+    const X = {
+      fire: () => { rise('flame', T, { delay: 520, n: 16, dur: 700, size: 12, spread: 50, height: 140, gap: 30 }); tint(t, 'burn', 600, 520); },
+      water: () => { orbit('drop', T, { delay: 480, n: 16, r: 74, dur: 760, size: 9, turns: 2 }); orbit('bubble', T, { delay: 520, n: 8, r: 40, dur: 700, size: 7, turns: -2 }); },
+      grass: () => { whip(A, T, { delay: 120, color: c, w: 7 }); spray('leaf', T, A, { delay: 700, n: 10, gap: 30, dur: 380, size: 8, arc: 20 }); },
+      elec: () => { bolt({ x: T.x, y: -20 }, T, { delay: 420, dur: 420, w: 6 }); bolt({ x: T.x - 40 * u, y: -20 }, T, { delay: 520, dur: 360, w: 3 }); tint(t, 'zap', 500, 480); },
+      ice: () => { fall('shard', T, { delay: 420, n: 12, dur: 380, size: 14, spread: 60, gap: 35 }); burst('snow', T, { delay: 600, n: 16, dist: 90 }); tint(t, 'cold', 600, 520); },
+      earth: () => { cracks(T, { delay: 480 }); burst('rock', ground(T), { delay: 500, n: 14, dist: 90, size: 10 }); burst('dust', ground(T), { delay: 480, n: 14, dist: 100, size: 12 }); },
+      wind: () => { tornado(T, { delay: 400, dur: 800, color: c }); windLines(A, T, { delay: 500, n: 10, gap: 12, dur: 240, spread: 50, color: c }); },
+      poison: () => { cloud(T, ['#9a4fb8', '#c77dff', '#5b2a7a'], { delay: 480, n: 12, dur: 800, size: 22, spread: 50 }); tint(t, 'poison', 600, 520); },
+      spirit: () => { orbit('wisp', T, { delay: 420, n: 10, r: 70, dur: 800, size: 10, turns: 1.5 }); tint(t, 'hex', 600, 500); darken(500, .4, 600, '#1a0f40'); },
+      fairy: () => { burst('sparkle', T, { delay: 520, n: 24, dist: 130, size: 10, dur: 640 }); rise('petal', T, { delay: 540, n: 12, dur: 700, size: 9, spread: 60, height: 110, gap: 30 }); },
+      steel: () => { for (let i = 0; i < 3; i++) slash(T, { delay: 620 + i * 70, angle: -1.2 + i * 1.2, len: 140, color: '#fff', w: 5 }); burst('spark', T, { delay: 640, n: 20, dist: 90, size: 8 }); },
+    };
+    (X[type] || X.steel)();
+    return 1500;
+  }
+  // 방패: 단조 앞에 빛나는 육각 방패
+  function hexShield(at, toward, { delay = 0, dur = 900, color = '#FFD23F', size = 62 } = {}) {
+    const dx = toward.x - at.x, dy = toward.y - at.y, d = Math.hypot(dx, dy) || 1;
+    const cx = at.x + dx / d * at.r * .9, cy = at.y + dy / d * at.r * .5;
+    add(dur, (p) => {
+      const grow = out(Math.min(1, p * 3)), a = fade(p, .25), r = size * u * grow;
+      ctx.globalAlpha = a; ctx.translate(cx, cy); ctx.rotate(p * .6);
+      const hex = (rr) => { ctx.beginPath(); for (let i = 0; i < 6; i++) { const t = i / 6 * 6.283; ctx.lineTo(Math.cos(t) * rr, Math.sin(t) * rr); } ctx.closePath(); };
+      ctx.shadowColor = color; ctx.shadowBlur = 24 * u;
+      hex(r); ctx.fillStyle = 'rgba(255,230,140,.22)'; ctx.fill();
+      ctx.lineWidth = 5 * u; ctx.strokeStyle = color; ctx.stroke();
+      hex(r * .66); ctx.lineWidth = 2.5 * u; ctx.strokeStyle = '#fff'; ctx.stroke();
+      ctx.beginPath(); for (let i = 0; i < 6; i++) { const t = i / 6 * 6.283; ctx.moveTo(0, 0); ctx.lineTo(Math.cos(t) * r * .66, Math.sin(t) * r * .66); } ctx.lineWidth = 1.5 * u; ctx.stroke();
+    }, delay);
+    return { x: cx, y: cy, r: size * u };
+  }
+  function reflectReady(key) {
+    if (REDUCED) return 600;
+    measure();
+    const at = spot(key), foe = spot(key === 'me' ? 'opp' : 'me');
+    darken(900, .35);
+    ring(ground(at), { color: '#FFD23F', r0: 20, r1: 110, squash: .3, w: 6, dur: 600 });
+    hexShield(at, foe, { dur: 1000 });
+    rise('sparkle', at, { delay: 100, n: 12, dur: 600, size: 8, spread: 50, height: 90, gap: 30 });
+    flash('#fff3c2', 160, 200, .35);
+    return 1000;
+  }
+  function reflect(key, by, counter) {
+    if (REDUCED) return 600;
+    measure();
+    const at = spot(key), from = spot(by);
+    const s = hexShield(at, from, { dur: 760, color: counter ? '#FFD23F' : '#9FF3FF', size: 70 });
+    for (let i = 0; i < 3; i++) ring(s, { delay: 80 + i * 90, color: i % 2 ? '#fff' : (counter ? '#FFD23F' : '#9FF3FF'), r0: 20, r1: 110, w: 6 - i, dur: 380 });
+    burst('shard', s, { delay: 80, n: 16, dist: 90, size: 9, dur: 420 });
+    burst('spark', s, { delay: 60, n: 14, dist: 70, size: 7, dur: 320 });
+    flash('#ffffff', 140, 60, .5); shake(8, 260, 60);
+    return 720;
+  }
+  function counter(key, target, stab) {
+    if (REDUCED) return 600;
+    measure();
+    const A = spot(key), T = spot(target);
+    darken(1100, .55);
+    act(key, 'lunge', 600);
+    beam(A, T, { delay: 120, color: '#FFD23F', core: '#fff', w: 10, dur: 260 });
+    windLines(A, T, { delay: 80, n: 10, gap: 10, dur: 180, spread: 26, color: '#fff3c2' });
+    slash(T, { delay: 300, angle: -.15, len: 220, color: '#fff', w: 10, dur: 220 });
+    if (!stab) { slash(T, { delay: 380, angle: -.9, len: 170, color: '#FFD23F', w: 9 }); slash(T, { delay: 450, angle: .9, len: 170, color: '#FFD23F', w: 9 }); }
+    ring(T, { delay: 320, color: '#FFD23F', r1: 160, w: 9, dur: 480 }); ring(T, { delay: 380, color: '#fff', r1: 110, w: 5, dur: 400 });
+    burst('spark', T, { delay: 320, n: 22, dist: 110, size: 9, dur: 480 });
+    burst('shard', T, { delay: 360, n: 10, dist: 80, size: 8 });
+    flash('#ffffff', 160, 320, .6); flash('#FFD23F', 220, 380, .3);
+    shake(stab ? 9 : 14, 420, 320);
+    tint(target, 'zap', 300, 340);
+    return 1100;
+  }
+
   function forge(key, tier = 1) {
     if (REDUCED) return 700;
     measure();
-    const at = spot(key), c = TIER_C[tier] || '#fff', big = .8 + tier * .12;
+    const plus = Math.max(0, tier - 4); tier = Math.min(tier, 4);
+    const at = spot(key), c = TIER_C[tier] || '#fff', big = .8 + tier * .14 + plus * .04;
+    for (let i = 0; i < plus; i++) ring(at, { delay: 700 + i * 60, color: i % 2 ? '#ff4fd8' : '#b26bff', r1: 170 + i * 12, dur: 600, w: 5 });
     darken(1100, .35 + tier * .05);
     for (let i = 0; i < 3; i++) { burst('spark', { x: at.x + rnd(-20, 20) * u, y: at.y - at.r * .2 }, { delay: i * 150, n: 10, dist: 60, size: 7, dur: 260 }); ring(at, { delay: i * 150, color: '#FFD23F', r0: 20, r1: 60, dur: 220, w: 4 }); }
     shake(4, 150, 0); shake(4, 150, 150); shake(5, 150, 300);
     beam({ x: at.x, y: -20 }, { x: at.x, y: at.foot || at.y + at.r }, { delay: 460, color: c, core: '#fff', w: 60 * big, dur: 520 });
     ['#fff', c, '#FFD23F'].forEach((cc, i) => ring(at, { delay: 520 + i * 80, color: cc, r1: 150 * big, dur: 520, w: 10 - i * 2 }));
-    burst(tier >= 4 ? 'shard' : 'sparkle', at, { delay: 520, n: 18 + tier * 5, dist: 140 * big, size: 11, dur: 620 });
+    burst(tier >= 3 ? 'shard' : 'sparkle', at, { delay: 520, n: 18 + tier * 5, dist: 140 * big, size: 11, dur: 620 });
     rise('spark', at, { delay: 600, n: 10 + tier * 2, dur: 600, size: 7, spread: 50, height: 120 });
-    flash(tier === 5 ? '#d9b3ff' : '#fff', 220, 520, .6 + tier * .05);
+    flash(tier >= 4 ? '#d9b3ff' : '#fff', 220, 520, .6 + tier * .05);
     shake(6 + tier * 2, 360, 540);
     return 1250;
   }
@@ -775,5 +873,5 @@ const Fx = (() => {
   }
   function weather(w) { if (REDUCED || !w) return 700; measure(); return weatherFx(w); }
 
-  return { attach, play, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, awaken, entrance, forge, ids: () => Object.keys(MOVE_FX) };
+  return { attach, play, reflectReady, reflect, counter, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, awaken, entrance, forge, ids: () => Object.keys(MOVE_FX) };
 })();

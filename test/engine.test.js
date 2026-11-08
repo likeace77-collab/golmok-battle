@@ -52,7 +52,7 @@ test('모든 요괴에게 그림이 있고 스킬이 겹치지 않는다', () =>
   const art = read('art.js'), mega = read('mega-art.js'), newArt = read('new-art.js');
   for (const [id, m] of Object.entries(MONSTERS)) {
     if (m.img) { // 사진 그림
-      for (const f of [id, `${id}-mega`, ...Array.from({ length: m.stages || 0 }, (_, i) => `${id}-s${i + 1}`), ...Array.from({ length: m.tiers || 0 }, (_, i) => `${id}-t${i + 1}`)]) assert.ok(require('fs').existsSync(require('path').join(__dirname, `../public/img/mon/${f}.webp`)), f);
+      for (const f of [id, `${id}-mega`, ...Array.from({ length: m.stages || 0 }, (_, i) => `${id}-s${i + 1}`), ...Array.from({ length: m.tierImgs ?? m.tiers ?? 0 }, (_, i) => `${id}-t${i + 1}`)]) assert.ok(require('fs').existsSync(require('path').join(__dirname, `../public/img/mon/${f}.webp`)), f);
       assert.equal(new Set(m.moves).size, m.moves.length, id);
       continue;
     }
@@ -468,4 +468,50 @@ test('하르모니움 특성 펑크록: 소리 기술 1.3배, 받는 소리 기�
   const base = dmg('kkaebi', 'kkaebi', 'scold');
   assert.ok(Math.abs(dmg('harmonium', 'kkaebi', 'scold') / base - 1.3) < .12);
   assert.ok(Math.abs(dmg('kkaebi', 'harmonium', 'scold') / base - .5) < .08);
+});
+
+test('단조: 돌 없이 나무→철→금→다이아몬드→네더라이트, 그 뒤 네더라이트+1~+10', () => {
+  const { TIERS } = require('../server/data');
+  assert.deepEqual(TIERS.names.slice(0, 6), ['나무', '철', '금', '다이아몬드', '네더라이트', '네더라이트+1']);
+  assert.equal(TIERS.names.at(-1), '네더라이트+10');
+  assert.equal(MONSTERS.danjo.tierImgs, 4);
+  assert.ok(!MONSTERS.danjo.moves.includes('tackle') && !MONSTERS.danjo.moves.includes('guard'));
+  assert.ok(MONSTERS.danjo.moves.includes('elemblade') && MONSTERS.danjo.moves.includes('reflector'));
+  const b = battle(custom('danjo', ['forge']), custom('daeya', ['guard']));
+  const me = E.activeOf(b, 0);
+  for (let i = 0; i < 6; i++) { move(b, 0, 'forge'); move(b, 1, 'guard'); }
+  assert.equal(me.tier, 6); // 네더라이트+2
+});
+
+test('특성검술은 상대에게 효과가 있는 무작위 속성으로 벤다', () => {
+  const seen = new Set();
+  for (let seed = 1; seed < 60; seed++) {
+    const b = battle(custom('danjo', ['elemblade']), custom('maetdol', ['tackle']), seed); // 땅: 전기 무효
+    const r = move(b, 0, 'elemblade'); const ev = r.events || move(b, 1, 'tackle').events;
+    const mv = ev.find((e) => e.t === 'move' && e.side === 0);
+    seen.add(mv.type);
+    assert.ok(mv.move.startsWith('특성검술 · '));
+    assert.notEqual(mv.type, 'elec');
+  }
+  assert.ok(seen.size >= 6, [...seen].join());
+});
+
+test('리플렉터: 물리는 10%만 받고 90% 반격, 특수는 10%만, 공격이 없으면 찌른다', () => {
+  const run = (foeSp, foeMove) => {
+    const b = battle(custom('danjo', ['reflector']), custom(foeSp, [foeMove]), 3);
+    const me = E.activeOf(b, 0), foe = E.activeOf(b, 1);
+    me.hp = me.maxHp = 5000; foe.hp = foe.maxHp = 5000;
+    me.stats = { ...me.stats, spe: 1 }; foe.stats = { ...foe.stats, spe: 300 };
+    const r = move(b, 0, 'reflector'); const ev = r.events || move(b, 1, foeMove).events;
+    return { me: 5000 - me.hp, foe: 5000 - foe.hp, ev };
+  };
+  const p = run('maetdol', 'quake'); // 물리
+  assert.ok(p.ev.some((e) => e.t === 'reflect' && e.counter));
+  assert.ok(p.foe > p.me * 7, `${p.me} ${p.foe}`);
+  const s = run('horong', 'flame'); // 특수
+  assert.ok(s.ev.some((e) => e.t === 'reflect' && !e.counter));
+  assert.equal(s.foe, 0);
+  const x = run('maetdol', 'wall'); // 공격 아님
+  assert.ok(x.ev.some((e) => e.t === 'counter' && e.stab));
+  assert.ok(x.foe > 0 && x.me === 0);
 });
