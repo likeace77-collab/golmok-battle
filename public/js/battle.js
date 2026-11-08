@@ -15,7 +15,7 @@ const Battle = (() => {
     skip = () => { clearTimeout(t); res(); };
   });
   const STATUS = { brn: '화상', psn: '독', par: '마비', slp: '수면', frz: '얼음' };
-  const WEATHER = { sun: '땡볕', rain: '소나기', dust: '황사' };
+  const WEATHER = { sun: '땡볕', rain: '소나기', dust: '황사', snow: '눈' };
   const $ = (s) => app.querySelector(s);
 
   // 바닥에 깔린 압정. 자리는 쪽마다 고정이라 판 내내 같은 곳에 보입니다.
@@ -42,6 +42,8 @@ const Battle = (() => {
       <path d="M0 0h400v24q-30 12-60 0-34 14-70 0-30 12-66 0-34 12-68 0-34 14-70 0-30 12-66 0z" fill="#59606c"/>
       <ellipse cx="60" cy="196" rx="44" ry="7" fill="#7fc8e8aa"/><ellipse cx="346" cy="250" rx="46" ry="8" fill="#7fc8e8aa"/><ellipse cx="206" cy="282" rx="52" ry="8" fill="#7fc8e8aa"/></g>
     <g class="wx wx-dust"><path d="M0 170q50-40 110-16t110-12 180 10v148H0z" fill="#D9B66A88"/></g>
+    <g class="wx wx-snow"><path d="M0 168q60-10 120 0t140-4 140 6v130H0z" fill="#ffffffcc"/>
+      ${Array.from({ length: 34 }, (_, i) => `<circle class="flake" cx="${(i * 53) % 400}" cy="${(i * 37) % 160}" r="${1.6 + (i % 3)}" fill="#fff" style="animation-delay:${-(i % 7) * .6}s"/>`).join('')}</g>
     <ellipse cx="288" cy="166" rx="74" ry="15" fill="#1a143355"/><ellipse cx="106" cy="274" rx="92" ry="18" fill="#1a143355"/>
     ${tackLayer('opp', 288, 172, 74, 14)}${tackLayer('me', 106, 268, 94, 20)}
   </svg>`;
@@ -388,7 +390,7 @@ const Battle = (() => {
         await wait(800); break;
       case 'weather':
         disp.weather = e.weather; disp.weatherTurns = e.weather ? 5 : 0; drawWeather();
-        await wait(1000); break;
+        await wait(Math.max(1000, e.trait ? Fx.weather(e.weather) : 0)); break;
       case 'hazard':
         disp[key === 'me' || key === 'ally' ? 'me' : 'opp'].hazard = e.on; drawWeather();
         await wait(900); break;
@@ -544,7 +546,7 @@ const Battle = (() => {
   }
   const act = (action) => { armed = false; wsSend({ t: 'action', action }); $('#panel').innerHTML = '<p class="wait">기다리는 중...</p>'; };
 
-  const effOn = (mv, mon) => mon.types.reduce((x, t) => x * (G.data.CHART[mv.type][t] ?? 1), 1);
+  const effOn = (mv, mon) => (mon.species === 'bonaeng' && mv.type === 'fire' ? 1 : mon.types.reduce((x, t) => x * (G.data.CHART[mv.type][t] ?? 1), 1)); // 보냉이 아이스박스
   function effHint(mv) {
     if (mv.cat === 'x' || view.doubles) return '';
     const eff = effOn(mv, view.opp.active);
@@ -649,8 +651,10 @@ const Battle = (() => {
       panel.querySelector('#sw-back').onclick = () => { menu = 'moves'; renderPanel(); };
       return;
     }
+    const stuck = canBack && view.trapped; // 호롱이 그림자밟기
+    if (stuck) say('그림자밟기 때문에 교체할 수 없다!');
     panel.innerHTML = `${view.me.mons.map((m, i) => {
-      const off = m.hp <= 0 || i === view.me.active;
+      const off = m.hp <= 0 || i === view.me.active || stuck;
       return `<button class="sw" data-sw="${i}" ${off ? 'disabled' : ''}>
         ${monsterSVG(m.species, '', m.mega, m.hits, m.tier)}
         <div class="inf">${m.name} ${m.types.map(typeChip).join('')}

@@ -554,6 +554,15 @@ const Fx = (() => {
       }
       return 1250;
     }
+    if (w === 'snow') {
+      cloud({ x: W / 2, y: 22 * u }, ['#dfe8f2', '#ffffff', '#c9d6e6'], { n: 14, dur: 1000, size: 34, spread: 180 });
+      for (let i = 0; i < 46; i++) {
+        const x = rnd(0, W), sway = rnd(-30, 30) * u;
+        add(900, (p) => sprite('snow', x + Math.sin(p * 6) * sway, p * H, 7, p * 4, fade(p, .15)), 150 + i * 16);
+      }
+      flash('#ffffff', 700, 100, .4);
+      return 1300;
+    }
     if (w === 'dust') {
       const left = { x: -30 * u, y: H * .5 }, right = { x: W + 30 * u, y: H * .5 };
       spray('dust', left, right, { n: 60, gap: 12, dur: 620, size: 16, spread: 120 });

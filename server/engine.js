@@ -6,7 +6,7 @@ const LEVEL = 50;
 const HP_MUL = 1.3;
 const STATUS_NAME = { brn: '화상', psn: '독', par: '마비', slp: '수면', frz: '얼음' };
 const STAT_NAME = { atk: '공격', def: '방어', spa: '특공', spd: '특방', spe: '스피드', acc: '명중률' };
-const WEATHER_NAME = { sun: '땡볕', rain: '소나기', dust: '황사' };
+const WEATHER_NAME = { sun: '땡볕', rain: '소나기', dust: '황사', snow: '눈' };
 
 // 한글 조사 처리: 마지막 글자의 받침 유무로 고름
 function josa(word, pair) {
@@ -100,6 +100,10 @@ function targetOf(b, s, want) {
 const alive = (m) => m.hp > 0;
 const effOf = (moveType, types) =>
   types.reduce((x, t) => x * (CHART[moveType][t] ?? 1), 1);
+// 요괴 특성까지 따진 상성 (보냉이 아이스박스: 불 기술을 1배로 받음)
+const effMon = (moveType, mon) => (mon.species === 'bonaeng' && moveType === 'fire' ? 1 : effOf(moveType, mon.types));
+// 호롱이 그림자밟기: 상대 자리에 호롱이가 서 있으면 교체할 수 없음
+const trapped = (b, s) => !b.training && foesOf(b, s).some((i) => { const m = activeOf(b, i); return m.species === 'horong' && alive(m); });
 
 function legalActions(b, s) {
   const side = b.sides[s];
@@ -110,6 +114,7 @@ function legalActions(b, s) {
     .filter(({ m, i }) => alive(m) && i !== side.active)
     .map(({ i }) => ({ type: 'switch', index: i }));
   if (b.phase === 'switch') return switches;
+  if (trapped(b, s)) switches.length = 0;
   const moves = activeOf(b, s).moves
     .map((mv, i) => ({ mv, i }))
     .filter(({ mv }) => mv.pp > 0)
@@ -187,7 +192,8 @@ function runTurn(b, ev) {
   const movers = acts.filter(({ a }) => a.type === 'move').map((o) => {
     const mon = activeOf(b, o.s);
     const mv = o.a.z ? MOVES[MONSTERS[mon.species].z] : o.a.index === -1 ? STRUGGLE : MOVES[mon.moves[o.a.index].id];
-    return { ...o, pri: mv.pri, spe: speedOf(b, o.s), tie: rand(b) };
+    const ride = mon.species === 'bangpae' && mon.hp === mon.maxHp && mv.type === 'wind' ? 1 : 0; // 방패연 바람타기
+    return { ...o, pri: mv.pri + ride, spe: speedOf(b, o.s), tie: rand(b) };
   });
   movers.sort((x, y) => y.pri - x.pri || y.spe - x.spe || x.tie - y.tie);
 
@@ -367,6 +373,8 @@ function damageOf(b, atk, def, mv, crit, roll) {
   let ds = phys ? def.stages.def : def.stages.spd;
   if (crit) { as = Math.max(as, 0); ds = Math.min(ds, 0); } // 급소는 불리한 변화 무시
   a *= stageMul(as) * stripMul(atk) * (phys ? tierAtk(atk) : 1); d *= stageMul(ds) * tierDef(def);
+  if (def.species === 'daeya' && (mv.type === 'ice' || b.weather === 'snow')) d *= 2; // 특성 김장
+  if (b.weather === 'snow' && phys && def.types.includes('ice')) d *= 1.5; // 눈: 얼음 타입 방어 1.5배
   let dmg = (((2 * LEVEL) / 5 + 2) * mv.pow * a) / d / 50 + 2;
   if (b.weather === 'sun') dmg *= mv.type === 'fire' ? 1.5 : mv.type === 'water' ? .5 : 1;
   if (b.weather === 'rain') dmg *= mv.type === 'water' ? 1.5 : mv.type === 'fire' ? .5 : 1;
@@ -374,7 +382,7 @@ function damageOf(b, atk, def, mv, crit, roll) {
   if (crit) dmg *= 1.5;
   dmg *= roll;
   if (atk.types.includes(mv.type)) dmg *= 1.5;
-  dmg *= effOf(mv.type, def.types);
+  dmg *= effMon(mv.type, def);
   if (mv.sound && atk.species === 'harmonium') dmg *= 1.3; // 특성 펑크록
   if (mv.sound && def.species === 'harmonium') dmg *= .5;
   if (atk.species === 'yangmeori' && mv.type === (isHot(b) ? 'fire' : 'ice')) dmg *= 1.3; // 특성 온탕냉탕
@@ -391,7 +399,7 @@ const BLADES = {
 };
 function elemBlade(b, s, me, mv, want) {
   const foe = activeOf(b, targetOf(b, s, want));
-  const ok = Object.keys(BLADES).filter((t) => effOf(t, foe.types) > 0);
+  const ok = Object.keys(BLADES).filter((t) => effMon(t, foe) > 0);
   const type = ok[Math.floor(rand(b) * ok.length)] || 'steel';
   const [name, extra] = BLADES[type];
   return { ...mv, ...extra, type, n: `특성검술 · ${name}`, blade: type };
@@ -401,10 +409,30 @@ function elemBlade(b, s, me, mv, want) {
 const isHot = (b) => b.turn % 2 === 1;
 // 등장할 때 발동하는 특성
 function onEntry(b, s, m, ev) {
-  if (m.species === 'hwangsari' && alive(m) && b.weather !== 'dust') {
-    b.weather = 'dust'; b.weatherTurns = 5;
-    ev.push({ t: 'weather', weather: 'dust', text: `${m.name}의 황사 경보! 황사가 불기 시작했다!` });
+  if (!alive(m) || b.phase === 'over') return;
+  const sky = { hwangsari: ['dust', '황사 경보', '황사가 불기 시작했다!'], usan: ['rain', '폭우', '비가 쏟아지기 시작했다!'], bingsu: ['snow', '설경', '눈이 내리기 시작했다!'] }[m.species];
+  if (sky && b.weather !== sky[0]) {
+    b.weather = sky[0]; b.weatherTurns = 5;
+    ev.push({ t: 'weather', weather: sky[0], trait: true, text: `${m.name}의 ${sky[1]}! ${sky[2]}` });
   }
+  const drop = { jangdok: ['acc', '발효'], jangseung: ['atk', '위협'] }[m.species];
+  if (drop) {
+    msg(ev, `${m.name}의 ${drop[1]}!`);
+    for (const o of foesOf(b, s)) { const f = activeOf(b, o); if (alive(f)) changeStage(b, o, f, drop[0], -1, ev); }
+  }
+  if (m.species === 'ssaribi') { // 정리정돈: 날씨와 압정을 모두 치움
+    const had = b.weather || seats(b).some((i) => b.sides[i].hazard);
+    msg(ev, `${m.name}의 정리정돈!${had ? '' : ' 하지만 치울 것이 없었다.'}`);
+    if (b.weather) { ev.push({ t: 'weather', weather: null, text: `${josa(WEATHER_NAME[b.weather], '이/가')} 깨끗이 걷혔다!` }); b.weather = null; b.weatherTurns = 0; }
+    for (const t of [0, 1]) {
+      const team = seats(b).filter((i) => teamOf(b, i) === t);
+      if (team.some((i) => b.sides[i].hazard)) {
+        team.forEach((i) => { b.sides[i].hazard = false; });
+        ev.push({ t: 'hazard', side: team[0], on: false, text: `${teamName(b, t)} 쪽 압정이 말끔히 치워졌다!` });
+      }
+    }
+  }
+  if (m.species === 'horong') msg(ev, `${m.name}의 그림자밟기! 상대는 교체할 수 없다.`);
 }
 
 function useMove(b, s, index, ev, want, z = false) {
@@ -479,7 +507,7 @@ function hitOne(b, s, me, o, mv, ev) {
 
   if (mv.cat === 'x') return statusMove(b, s, me, o, foe, mv, ev);
 
-  const eff = effOf(mv.type, foe.types);
+  const eff = effMon(mv.type, foe);
   if (eff === 0) { msg(ev, `${foe.name}에게는 효과가 없는 것 같다...`); return; }
 
   const hits = mv.hits ? randInt(b, mv.hits[0], mv.hits[1]) : 1;
@@ -509,6 +537,13 @@ function hitOne(b, s, me, o, mv, ev) {
   if (eff > 1) msg(ev, '효과가 굉장했다!');
   else if (eff < 1) msg(ev, '효과가 별로인 듯하다...');
 
+  if (landed && alive(me)) {
+    // 땡초 하바네로분출: 물리(접촉) 공격을 한 상대를 화상
+    if (foe.species === 'ttaengcho' && mv.cat === 'p' && !me.status && !me.types.includes('fire')) {
+      msg(ev, `${foe.name}의 하바네로분출!`);
+      applyStatus(b, s, me, 'brn', ev, true);
+    }
+  }
   if (mv.type === 'fire' && foe.status === 'frz' && alive(foe)) {
     foe.status = null;
     ev.push({ t: 'status', side: o, status: null, text: `${foe.name}의 얼음이 녹았다!` });
@@ -544,6 +579,14 @@ function hitOne(b, s, me, o, mv, ev) {
   }
   if (!meDown && mv.selfAfter) {
     for (const [k, v] of Object.entries(mv.self)) changeStage(b, s, me, k, v, ev);
+  }
+  // 선풍이 돌풍: 공격한 상대를 날려 다른 요괴로 바꿔 버림
+  if (landed && foe.species === 'fan' && alive(me) && !b.training) {
+    const bench = b.sides[s].mons.map((m, i) => i).filter((i) => i !== b.sides[s].active && alive(b.sides[s].mons[i]));
+    if (bench.length) {
+      msg(ev, `${foe.name}의 돌풍! ${josa(me.name, '은/는')} 바람에 날려 갔다!`);
+      doSwitch(b, s, bench[Math.floor(rand(b) * bench.length)], ev);
+    }
   }
 }
 
@@ -618,7 +661,7 @@ function endOfTurn(b, ev) {
     if (!alive(foe)) continue;
     const stab = { n: '찌르기', type: 'steel', cat: 'p', pow: 80 };
     ev.push({ t: 'counter', side: s, target: o, stab: true, text: `상대가 공격하지 않자 ${josa(m.name, '이/가')} 검으로 찔렀다!` });
-    const eff = effOf('steel', foe.types);
+    const eff = effMon('steel', foe);
     if (!eff) { msg(ev, `${foe.name}에게는 효과가 없는 것 같다...`); continue; }
     hurt(b, o, foe, damageOf(b, m, foe, stab, false, .85 + rand(b) * .15), ev, { eff, moveType: 'steel' });
     faintCheck(b, o, foe, ev);
@@ -719,6 +762,7 @@ function viewFor(b, s) {
     weather: b.weather, weatherTurns: b.weatherTurns,
     mustAct: b.needs[s] && !lock,
     canMega: canMega(b, s) && !lock,
+    trapped: b.phase === 'choose' && trapped(b, s),
     canZ: canZ(b, s) && !lock,
     zUsed: !!me.zUsed,
     megaUsed: !!me.megaUsed,

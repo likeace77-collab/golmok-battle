@@ -519,3 +519,62 @@ test('리플렉터: 물리는 10%만 받고 90% 반격, 특수는 10%만, 공격
   assert.ok(x.ev.some((e) => e.t === 'counter' && e.stab));
   assert.ok(x.foe > 0 && x.me === 0);
 });
+
+test('친구가 정한 특성 11개', () => {
+  const lead = (a, b, seed = 3) => {
+    const bt = E.createBattle([{ name: '가', team: a }, { name: '나', team: b }], seed, { preview: true });
+    E.choose(bt, 0, { type: 'lead', index: 0 }); const ev = E.choose(bt, 1, { type: 'lead', index: 0 }).events;
+    return { bt, ev };
+  };
+  // 폭우, 설경
+  assert.equal(lead(custom('usan', ['tackle']), custom('daeya', ['tackle'])).bt.weather, 'rain');
+  assert.equal(lead(custom('bingsu', ['tackle']), custom('daeya', ['tackle'])).bt.weather, 'snow');
+  // 발효, 위협
+  assert.equal(E.activeOf(lead(custom('jangdok', ['tackle']), custom('daeya', ['tackle'])).bt, 1).stages.acc, -1);
+  assert.equal(E.activeOf(lead(custom('jangseung', ['tackle']), custom('daeya', ['tackle'])).bt, 1).stages.atk, -1);
+  // 정리정돈: 상대 우산령의 비를 걷음
+  const { bt: clean } = lead(custom('usan', ['tackle']), custom('ssaribi', ['tackle']));
+  assert.equal(clean.weather, null);
+  // 그림자밟기
+  const tr = battle(custom('daeya', ['tackle']), custom('horong', ['tackle']));
+  assert.ok(!E.legalActions(tr, 0).some((a) => a.type === 'switch'));
+  assert.ok(E.legalActions(tr, 1).some((a) => a.type === 'switch'));
+  // 아이스박스: 불 기술 1배
+  const hit = (sp) => {
+    const b = battle(custom('horong', ['flame']), custom(sp, ['tackle']), 11);
+    const f = E.activeOf(b, 1); f.stats = { ...f.stats, spd: 100, spe: 1 }; f.types = ['ice', 'steel']; f.hp = f.maxHp = 3000;
+    move(b, 0, 'flame'); move(b, 1, 'tackle'); return 3000 - f.hp;
+  };
+  const box = hit('bonaeng'), plain = hit('bingsu');
+  assert.ok(Math.abs(box / plain - .25) < .05, `${box}/${plain}`);
+  // 김장: 얼음 기술은 방어 2배
+  const kim = (sp) => {
+    const b = battle(custom('bingsu', ['icestorm']), custom(sp, ['tackle']), 11);
+    const f = E.activeOf(b, 1); f.stats = { ...f.stats, spd: 100, spe: 1 }; f.types = ['water']; f.hp = f.maxHp = 3000;
+    move(b, 0, 'icestorm'); move(b, 1, 'tackle'); return 3000 - f.hp;
+  };
+  assert.ok(kim('daeya') < kim('usan') * .65);
+  // 하바네로분출: 물리 공격한 상대 화상
+  const hb = battle(custom('maetdol', ['quake']), custom('ttaengcho', ['guard']));
+  E.activeOf(hb, 1).hp = E.activeOf(hb, 1).maxHp = 3000; E.activeOf(hb, 1).stats.spe = 1;
+  move(hb, 0, 'quake'); E.choose(hb, 1, { type: 'move', index: 0 });
+  // 막기로 막히면 발동 안 함 → 막기 대신 다른 기술로 다시
+  const hb2 = battle(custom('maetdol', ['quake']), custom('ttaengcho', ['tackle']));
+  E.activeOf(hb2, 1).hp = E.activeOf(hb2, 1).maxHp = 3000;
+  move(hb2, 0, 'quake'); move(hb2, 1, 'tackle');
+  assert.equal(E.activeOf(hb2, 0).status, 'brn');
+  // 돌풍: 공격한 상대가 다른 요괴로 바뀜
+  const fn = battle([{ species: 'maetdol', moves: ['quake'] }, { species: 'daeya', moves: ['tackle'] }], custom('fan', ['guard']));
+  E.activeOf(fn, 1).hp = E.activeOf(fn, 1).maxHp = 3000; E.activeOf(fn, 1).stats.spe = 1;
+  const r = move(fn, 0, 'quake'); E.choose(fn, 1, { type: 'move', index: 0 });
+  // guard가 먼저 막으면 맞지 않으므로, 막기 없이 다시
+  const fn2 = battle([{ species: 'maetdol', moves: ['tackle'] }, { species: 'daeya', moves: ['tackle'] }], custom('fan', ['breeze']));
+  E.activeOf(fn2, 1).hp = E.activeOf(fn2, 1).maxHp = 3000;
+  move(fn2, 0, 'tackle'); move(fn2, 1, 'breeze');
+  assert.equal(E.activeOf(fn2, 0).species, 'daeya');
+  // 바람타기: 체력이 꽉 차면 바람 기술 선공
+  const bp = battle(custom('bangpae', ['gust']), custom('daeya', ['tackle']));
+  E.activeOf(bp, 0).stats.spe = 1; E.activeOf(bp, 1).stats.spe = 999;
+  const ev = (move(bp, 0, 'gust').events || move(bp, 1, 'tackle').events).filter((e) => e.t === 'move');
+  assert.equal(ev[0].side, 0);
+});

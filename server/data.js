@@ -589,6 +589,18 @@ MONSTERS.ppogeuri.trait = { n: '거품막', d: '전투에서 처음 맞는 공�
 for (const id of ['metalnoise', 'scold', 'lionroar']) { MOVES[id].sound = true; MOVES[id].d = `[소리] ${MOVES[id].d}`; }
 MOVES.z_harmonium.sound = true;
 MONSTERS.harmonium.trait = { n: '펑크록', d: '소리 기술(금속음, 혼쭐내기, 사자후, 오버드라이브)의 위력이 1.3배가 되고, 상대의 소리 기술은 피해를 절반만 받는다.' };
+// 친구가 정한 특성들
+Object.assign(MONSTERS.usan, { trait: { n: '폭우', d: '싸움에 나오면 5턴 동안 비(소나기)가 내린다.' } });
+Object.assign(MONSTERS.horong, { trait: { n: '그림자밟기', d: '호롱이가 싸우는 동안 상대는 교체할 수 없다. (쓰러져서 바꾸는 것은 가능)' } });
+Object.assign(MONSTERS.daeya, { trait: { n: '김장', d: '얼음 기술에 맞거나 눈이 오는 동안 방어와 특방이 2배가 된다.' } });
+Object.assign(MONSTERS.bingsu, { trait: { n: '설경', d: '싸움에 나오면 5턴 동안 눈이 내린다. 눈이 오면 얼음 타입의 방어가 1.5배가 된다.' } });
+Object.assign(MONSTERS.bonaeng, { trait: { n: '아이스박스', d: '불 기술을 상성과 상관없이 1배로 받는다.' } });
+Object.assign(MONSTERS.jangdok, { trait: { n: '발효', d: '싸움에 나오자마자 상대의 명중률을 1단계 떨어뜨린다.' } });
+Object.assign(MONSTERS.jangseung, { trait: { n: '위협', d: '싸움에 나오자마자 상대의 공격을 1단계 떨어뜨린다.' } });
+Object.assign(MONSTERS.fan, { trait: { n: '돌풍', d: '공격에 맞으면 공격한 상대를 날려서 다른 요괴로 바꿔 버린다.' } });
+Object.assign(MONSTERS.ttaengcho, { trait: { n: '하바네로분출', d: '물리 공격(접촉)에 맞으면 공격한 상대가 화상을 입는다.' } });
+Object.assign(MONSTERS.bangpae, { trait: { n: '바람타기', d: '체력이 꽉 차 있을 때 바람 타입 기술이 우선도 +1로 먼저 나간다.' } });
+Object.assign(MONSTERS.ssaribi, { trait: { n: '정리정돈', d: '싸움에 나오면 날씨와 양쪽 압정을 모두 치워 버린다.' } });
 MONSTERS.hwangsari.trait = { n: '황사 경보', d: '싸움에 나오면 5턴 동안 황사가 분다.' };
 
 // 잠시 밴: 테스트 중인 요괴는 개발자 계정만 씁니다.
