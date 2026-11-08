@@ -60,7 +60,7 @@ test('모든 요괴에게 그림이 있고 스킬이 겹치지 않는다', () =>
     assert.match(mega + newArt, new RegExp(`\\b${id}: L\\(`), `메가 ${id}`);
     assert.equal(new Set(m.moves).size, m.moves.length, id);
   }
-  assert.equal(Object.keys(MONSTERS).length, 44);
+  assert.equal(Object.keys(MONSTERS).length, 45);
 });
 
 test('역류는 소나기에서 2배, 뻥 뚫기는 막기를 뚫고 압정을 치운다', () => {
@@ -145,7 +145,7 @@ test('모든 요괴에게 전용기가 있고 다른 요괴는 배울 수 없다
     owner[m.sig] = (owner[m.sig] || 0) + 1;
     assert.equal(Object.values(m.mega.boost).reduce((a, c) => a + c), 100, id);
   }
-  assert.equal(Object.keys(owner).length, 44);
+  assert.equal(Object.keys(owner).length, 45);
   for (const m of Object.values(MONSTERS)) for (const mv of m.moves) if (MOVES[mv].sig) assert.equal(mv, m.sig);
 });
 
@@ -444,4 +444,14 @@ test('신캐 특성: 황사 경보, 거품막, 광합성 충전, 온탕냉탕, �
   E.activeOf(c, 1).stages.def = 2; E.activeOf(c, 1).popped = true;
   move(c, 0, 'scrub'); move(c, 1, 'tackle');
   assert.equal(E.activeOf(c, 1).stages.def, 0);
+});
+
+test('하르모니움 Z기술 오버드라이브는 태그 배틀에서 상대 둘 다 맞힌다', () => {
+  const p = (species) => ({ name: species, team: [{ species, moves: ['tackle'] }] });
+  const b = E.createBattle([{ name: '가', team: [{ species: 'harmonium', moves: ['metalnoise'] }] }, p('daeya'), p('kkaebi'), p('maetdol')], 4);
+  const foes = [2, 3].map((s) => E.activeOf(b, s));
+  for (const f of foes) { f.hp = f.maxHp = 3000; }
+  E.choose(b, 0, { type: 'move', index: 0, z: true, target: 2 });
+  for (const s of [1, 2, 3]) E.choose(b, s, { type: 'move', index: 0, target: s === 1 ? 2 : 0 });
+  for (const f of foes) assert.ok(f.hp < 3000, f.name);
 });

@@ -167,6 +167,7 @@ const MOVES = {
   stoneegg:  M('맥반석 투척', 'fire', 'p', 80, 100, 10, { bath: true, d: '온탕일 땐 불 타입·30% 화상, 냉탕일 땐 얼음 타입·30% 얼림' }),
   vineshock: M('덩굴 감전', 'elec', 's', 75, 100, 15, { st: { s: 'par', ch: 30 }, d: '전기가 흐르는 덩굴로 휘감는다. 30% 확률로 마비' }),
   scrub:     M('때밀이', 'water', 's', 75, 100, 15, { clearFoe: true, d: '이태리타월로 박박. 상대의 능력치 상승을 모두 없앤다' }),
+  metalnoise:M('금속음', 'steel', 's', 65, 100, 10, { foe: { spd: -2 }, d: '앰프로 키운 쇳소리. 상대 특방 2단계 하락' }),
   yellowgust:M('황사 경보', 'earth', 'p', 25, 95, 15, { hits: [2, 5], d: '모래 알갱이가 2~5번 연속으로 때린다' }),
   // 보통
   tackle:    M('몸통 박치기', 'none', 'p', 50, 100, 30, { d: '기본 공격' }),
@@ -320,6 +321,10 @@ const MONSTERS = {
   hwangsari:X('황사리', ['earth', 'wind'], 80, 110, 75, 50, 70, 110,
     ['yellowgust', 'quake', 'rockthrow', 'razorwind', 'windcut', 'wall', 'breeze', 'spirit_up', 'grind', 'guard'],
     'KF94 마스크를 쓴 황사 구름. 본인도 숨이 막혀서 늘 화가 나 있다.'),
+  // 무대
+  harmonium:X('하르모니움', ['steel'], 90, 50, 110, 115, 85, 50,
+    ['metalnoise', 'magnet', 'highvolt', 'scold', 'gust', 'charge', 'armor', 'shock', 'lionroar', 'guard'],
+    '철골 아치 무대가 요괴가 되었다. 양쪽 스피커는 몸이고, 가운데 매달린 유선 마이크가 뇌다. 선이 뽑히면 아무 말도 못 한다.'),
 };
 
 // 캐릭터별 전용기와 메가진화: [전용기, 메가 이름, 소개, [체력, 공격, 방어, 특공, 특방, 스피드 상승값]]
@@ -370,6 +375,7 @@ Object.assign(SIGNATURE, {
   yangmeori: ['stoneegg', '불가마 양머리', '양머리 수건이 황금 테를 두른 숫양 뿔이 되었다. 왼쪽은 불가마, 오른쪽은 얼음방.', [15, 30, 15, 30, 10, 0]],
   damjaengjeon: ['vineshock', '고압 담쟁전', '변압기가 철탑처럼 자랐다. 애자에 형광빛이 돌고 덩굴에 꽃이 피었다.', [10, 0, 25, 40, 25, 0]],
   ppogeuri: ['scrub', '거품여왕 뽀글이', '방울 왕관과 나비 날개, 거품 드레스. 이태리타월 리본이 길게 휘날린다.', [15, 0, 20, 30, 25, 10]],
+  harmonium: ['metalnoise', '월드투어 하르모니움', '아치가 두 겹으로 늘고 LED 화면과 레이저가 달렸다. 마이크는 황금 무선 마이크로 업그레이드.', [10, 0, 20, 40, 20, 10]],
   hwangsari: ['yellowgust', '대황사 황사리', '방독면과 고글을 쓴 거대 모래폭풍. 아래는 토네이도가 되었고 주변에 돌덩이가 돈다.', [10, 40, 25, 0, 15, 10]],
 });
 
@@ -428,6 +434,7 @@ const ZMOVES = {
   yangmeori: ['불가마 대폭발', 'fire', 180, '찜질방 전체가 증기로 뒤덮인다. 50% 확률로 화상', { st: { s: 'brn', ch: 50 } }],
   damjaengjeon: ['골목 대정전', 'elec', 180, '동네 불이 전부 꺼진다. 50% 확률로 마비', { st: { s: 'par', ch: 50 } }],
   ppogeuri: ['목욕탕 대방출', 'water', 175, '거대한 비눗방울에 가둬 터뜨린다. 준 피해의 1/3을 회복', { drain: 1 / 3 }],
+  harmonium: ['오버드라이브', 'steel', 175, '앰프 출력을 한계까지 올린다. 태그 배틀에서는 상대 모두를 공격', { spread: true }],
   hwangsari: ['누런 하늘', 'earth', 180, '하늘이 누렇게 덮인다. 상대 명중률 하락', { foe: { acc: -1 } }],
 };
 for (const [id, [n, type, pow, d, extra = {}]] of Object.entries(ZMOVES)) {

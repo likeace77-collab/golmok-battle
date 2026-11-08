@@ -422,6 +422,13 @@ function useMove(b, s, index, ev, want, z = false) {
 
   if (mv.self_) return selfMove(b, s, me, mv, ev);
 
+  // 광역기: 태그 배틀에서는 살아 있는 상대 모두를 공격 (위력 3/4)
+  const targets = mv.spread && isDoubles(b) ? foesOf(b, s).filter((i) => alive(activeOf(b, i))) : [o];
+  if (targets.length > 1) { msg(ev, '상대 모두를 공격했다!'); mv = { ...mv, pow: Math.round(mv.pow * .75) }; }
+  for (const t of targets) { if (!alive(me) || b.phase === 'over') break; hitOne(b, s, me, t, mv, ev); }
+}
+
+function hitOne(b, s, me, o, mv, ev) {
   const foe = activeOf(b, o);
   if (!alive(foe)) { msg(ev, '그러나 맞힐 상대가 없었다!'); return; }
   if (foe.protecting) {

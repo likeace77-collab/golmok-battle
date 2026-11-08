@@ -16,6 +16,15 @@ if (typeof document !== 'undefined') {
  <linearGradient id="mTor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b47a28"/><stop offset="1" stop-color="#6e4310"/></linearGradient></defs></svg>`);
   if (document.body) put(); else document.addEventListener('DOMContentLoaded', put);
 }
+// 하르모니움: 철골 아치 무대
+const truss = (cx, cy, r1, r2, n, c, lc) => {
+  const P = (r, a) => `${(cx + r * Math.cos(a)).toFixed(1)} ${(cy - r * Math.sin(a)).toFixed(1)}`;
+  let z = '';
+  for (let i = 0; i < n; i++) { const a0 = Math.PI * i / n, a1 = Math.PI * (i + 1) / n; z += `M${P(r1, a0)}L${P(r2, a1)}`; }
+  return `<path d="M${P(r1, 0)}A${r1} ${r1} 0 0 0 ${P(r1, Math.PI)}L${P(r2, Math.PI)}A${r2} ${r2} 0 0 1 ${P(r2, 0)}z" fill="${c}"/><path d="${z}" fill="none" stroke="${lc}" stroke-width="2"/><path d="M${P(r1, 0)}A${r1} ${r1} 0 0 0 ${P(r1, Math.PI)}M${P(r2, Math.PI)}A${r2} ${r2} 0 0 1 ${P(r2, 0)}" fill="none"/>`;
+};
+const tower = (x, y, w, h, n, cone = '#C9A24A') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="#3a3f48"/>${Array.from({ length: n }, (_, i) => { const cy = y + h / n * (i + .5); return `<circle cx="${x + w / 2}" cy="${cy}" r="${w * .34}" fill="${cone}"/><circle cx="${x + w / 2}" cy="${cy}" r="${w * .14}" fill="#2a2a30" stroke-width="1.6"/>`; }).join('')}`;
+const can = (x, y, rot, iris, glow) => `<g transform="translate(${x} ${y}) rotate(${rot})"><path d="M0 -26v10" stroke-width="2"/><rect x="-13" y="-16" width="26" height="22" rx="4" fill="#2f343c"/><ellipse cx="0" cy="8" rx="15" ry="9" fill="${glow}"/><circle cx="1" cy="9" r="5.5" fill="${iris}" stroke="none"/><circle cx="1" cy="9" r="2.4" fill="#1a1433" stroke="none"/><circle cx="3" cy="7" r="1.6" fill="#fff" stroke="none"/></g>`;
 const lady = ({ eyeY = 41, lip = '#D31C4A', iris = '#7A2BC9' }) => [91, 109].map((x, i) => {
   const d = i ? 1 : -1;
   return `<path d="M${x - 6} ${eyeY + 1}q6-7 12 0-6 5-12 0z" fill="#fff" stroke-width="1"/>
@@ -182,6 +191,24 @@ const ART = {
  ${[[24,60],[178,70],[22,140],[180,150],[40,30],[160,28],[64,182],[138,186],[14,104],[186,108]].map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="${2+i%3}" fill="#c9963c" stroke-width="1.4"/>`).join('')}
  <path d="M10 70q20 6 28-4M162 182q18 4 30-8M8 180q14 0 22-10" fill="none" stroke="#d9a84a" stroke-width="3"/>
  </g>`),
+ harmonium: L(`<g stroke-width="3">
+ ${truss(100, 116, 78, 60, 9, '#6b7380', '#2b3038')}
+ ${tower(14, 96, 36, 82, 3)}${tower(150, 96, 36, 82, 3)}
+ ${[24, 34, 166, 176].map((x, i) => `<circle cx="${x}" cy="${i < 2 ? 88 : 88}" r="2.5" fill="#1a1433" stroke="none"/>`).join('')}
+ <path d="M50 164h100l10 16H40z" fill="#B88A4E"/><path d="M62 164l-6 16M84 164l-2 16M116 164l2 16M138 164l6 16" fill="none" stroke="#8a6332" stroke-width="1.6"/>
+ <path d="M40 180h120v14H40z" fill="#2f343c"/>
+ <path d="M76 184q24 10 48 0" fill="#fff" stroke-width="2.4"/><path d="M86 185v4M100 186v5M114 185v4" stroke-width="1.4"/>
+ ${can(84, 64, 12, '#3aa0ff', '#fff6c2')}${can(116, 64, -12, '#3aa0ff', '#fff6c2')}
+ <path d="M80 50l4-12M120 50l-4-12" fill="none" stroke-width="2"/>
+ <path d="M100 164v-36" stroke-width="3.4"/><path d="M90 164h20" stroke-width="3.4"/>
+ <path d="M100 160c18 4 30 6 40 0s14-10 10-18" fill="none" stroke="#1a1433" stroke-width="2.6"/>
+ <path d="M150 142c4-6 2-12-2-14" fill="none" stroke-width="2.6"/>
+ <rect x="95" y="118" width="10" height="14" rx="2" fill="#2f343c"/>
+ <circle cx="100" cy="110" r="11" fill="#cfd6df"/>
+ <path d="M92 105q4 4 8 0t8 0M91 111q4 4 9 0t9 0" fill="none" stroke="#ff7ad9" stroke-width="2"/>
+ <circle cx="96" cy="104" r="2.4" fill="#fff" stroke="none"/>
+ ${[[100, 92], [88, 96], [112, 96]].map(([x, y], i) => `<path d="M${x} ${y}l${[0, -4, 4][i]}-6" stroke="#ff7ad9" stroke-width="2"/>`).join('')}
+</g>`),
 };
 const glowEye = (x, y, dir = 1, c = '#FFE45C') => `<path d="M${x - 15 * dir} ${y - 7}L${x + 15 * dir} ${y + 4}Q${x} ${y + 11} ${x - 15 * dir} ${y - 7}z" fill="${c}"/>`;
 const flame = (x, y, s, c1 = '#F2622E', c2 = '#FFD23F') => `<g transform="translate(${x} ${y}) scale(${s})"><path d="M0 -30C14 -12 18 -2 12 10-3 18-14 10-13 -2-13 -10-6 -14-3 -8-5 -18-3 -24 0 -30z" fill="${c1}"/><path d="M1 -12C7 -4 8 2 4 7-2 10-6 6-5 1-4 -4-1 -6 1 -12z" fill="${c2}" stroke-width="2"/></g>`;
@@ -356,6 +383,28 @@ const MEGA = {
  ${[[18,30,8],[180,28,7],[14,170,9],[186,166,8],[100,8,6],[44,196,5],[160,198,6]].map(([x,y,r])=>`<path d="M${x-r} ${y}l${r*.6}-${r}h${r*.9}l${r*.6} ${r*.8}-${r*.6} ${r}h-${r}z" fill="#8a5a22" stroke-width="2"/>`).join('')}
  ${[[30,60],[170,64],[24,104],[178,100],[60,186],[140,184]].map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="${2+i%3}" fill="#e9b85a" stroke-width="1.4"/>`).join('')}
  </g>`),
+ harmonium: L(`<g stroke-width="3">
+ ${[[30, 0, '#ff4fd8'], [170, 0, '#4fe3ff'], [60, 0, '#7dff6a'], [140, 0, '#ffe14d']].map(([x, , c], i) => `<path d="M${x} 12L${[4, 196, 40, 160][i]} 196" stroke="${c}" stroke-width="2.4" stroke-opacity=".75"/>`).join('')}
+ ${truss(100, 120, 96, 82, 11, '#C9A24A', '#6b4f17')}
+ ${truss(100, 120, 78, 62, 9, '#6b7380', '#2b3038')}
+ <rect x="64" y="70" width="72" height="34" rx="4" fill="#120d22"/>
+ <path d="M70 87h6l3-10 4 20 4-16 4 12 4-18 4 22 4-14 4 8 4-4h9" fill="none" stroke="#4fe3ff" stroke-width="2.2"/>
+ ${tower(6, 86, 40, 100, 4, '#F2C94C')}${tower(154, 86, 40, 100, 4, '#F2C94C')}
+ <path d="M46 168h108l10 16H36z" fill="#3b2a52"/>
+ ${[56, 72, 88, 104, 120, 136].map((x, i) => `<circle cx="${x + 6}" cy="176" r="3" fill="${['#ff4fd8', '#4fe3ff', '#ffe14d', '#7dff6a', '#ff4fd8', '#4fe3ff'][i]}" stroke-width="1.2"/>`).join('')}
+ <path d="M36 184h128v12H36z" fill="#2f343c"/>
+ <path d="M70 186q30 12 60 0" fill="#fff" stroke-width="2.4"/><path d="M82 187l3 5 3-4M112 187l3 4 3-5" fill="none" stroke-width="1.4"/>
+ ${can(78, 48, 18, '#ff3fa1', '#fff')}${can(122, 48, -18, '#ff3fa1', '#fff')}
+ <path d="M72 50l-16 10M128 50l16 10" stroke="#fff27a" stroke-width="3" stroke-opacity=".8"/>
+ <path d="M100 168v-34" stroke-width="3.4"/><path d="M88 168h24" stroke-width="3.4"/>
+ <rect x="94" y="122" width="12" height="18" rx="3" fill="#C9A24A"/>
+ <circle cx="100" cy="114" r="13" fill="#F2C94C"/>
+ <path d="M91 109q4 4 9 0t9 0M90 116q5 4 10 0t10 0" fill="none" stroke="#8a5a00" stroke-width="2"/>
+ <circle cx="95" cy="108" r="2.6" fill="#fff" stroke="none"/>
+ ${[[-1], [1]].map(([d]) => `<path d="M${100 + d * 18} 112q${d * 6} 4 0 8M${100 + d * 24} 108q${d * 10} 8 0 16" fill="none" stroke="#fff27a" stroke-width="2.4"/>`).join('')}
+ ${[[18, 40], [182, 44], [100, 6]].map(([x, y]) => `<path d="M${x} ${y - 9}q2 7 9 9-7 2-9 9-2-7-9-9 7-2 9-9z" fill="#fff59a" stroke-width="1.6"/>`).join('')}
+ <text x="22" y="74" font-size="16" font-weight="900" fill="#ff7ad9" stroke-width="1.6">♪</text><text x="164" y="72" font-size="16" font-weight="900" fill="#4fe3ff" stroke-width="1.6">♫</text>
+</g>`),
 };
 Object.assign(MEGA_ART, MEGA);
 return ART;
