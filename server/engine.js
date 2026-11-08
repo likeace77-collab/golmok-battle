@@ -2,8 +2,8 @@
 const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP, BANNED, TIERS } = require('./data');
 
 const LEVEL = 50;
-// 요괴가 너무 빨리 쓰러지지 않도록 모든 요괴의 체력을 1.8배로 (훈련장 더미 1000은 그대로)
-const HP_MUL = 1.8;
+// 요괴가 너무 빨리 쓰러지지 않도록 모든 요괴의 체력을 1.3배로 (훈련장 더미 1000은 그대로)
+const HP_MUL = 1.3;
 const STATUS_NAME = { brn: '화상', psn: '독', par: '마비', slp: '수면', frz: '얼음' };
 const STAT_NAME = { atk: '공격', def: '방어', spa: '특공', spd: '특방', spe: '스피드', acc: '명중률' };
 const WEATHER_NAME = { sun: '땡볕', rain: '소나기', dust: '황사' };
