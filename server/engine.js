@@ -154,6 +154,7 @@ function resolve(b) {
       const m = activeOf(b, s);
       ev.push({ t: 'switch', side: s, mon: publicMon(m), text: `${b.sides[s].name}: 가라, ${m.name}!` });
     }
+    for (const s of seats(b)) onEntry(b, s, activeOf(b, s), ev);
   } else if (b.phase === 'switch') {
     for (const s of seats(b)) if (b.pending[s]) doSwitch(b, s, b.pending[s].index, ev);
   } else {
@@ -168,6 +169,7 @@ function resolve(b) {
 function speedOf(b, s) {
   const m = activeOf(b, s);
   let v = m.stats.spe * stageMul(m.stages.spe) * stripMul(m);
+  if (m.species === 'godeuri' && m.hp * 2 <= m.maxHp) v *= 1.5; // 특성 녹아내림
   if (m.status === 'par') v *= .5;
   return v;
 }
@@ -288,6 +290,7 @@ function doSwitch(b, s, idx, ev) {
   const m = activeOf(b, s);
   Object.assign(m, freshVolatile());
   ev.push({ t: 'switch', side: s, mon: publicMon(m), text: `${side.name}: 가라, ${m.name}!` });
+  onEntry(b, s, m, ev);
   if (side.hazard && !m.types.includes('wind')) {
     msg(ev, `${josa(m.name, '이/가')} 압정을 밟았다!`);
     hurt(b, s, m, m.maxHp / 8, ev);
@@ -370,8 +373,19 @@ function damageOf(b, atk, def, mv, crit, roll) {
   dmg *= roll;
   if (atk.types.includes(mv.type)) dmg *= 1.5;
   dmg *= effOf(mv.type, def.types);
+  if (atk.species === 'yangmeori' && mv.type === (isHot(b) ? 'fire' : 'ice')) dmg *= 1.3; // 특성 온탕냉탕
   if (phys && atk.status === 'brn') dmg *= .5;
   return Math.max(1, Math.floor(dmg));
+}
+
+// 특성 온탕냉탕: 홀수 턴은 온탕, 짝수 턴은 냉탕
+const isHot = (b) => b.turn % 2 === 1;
+// 등장할 때 발동하는 특성
+function onEntry(b, s, m, ev) {
+  if (m.species === 'hwangsari' && alive(m) && b.weather !== 'dust') {
+    b.weather = 'dust'; b.weatherTurns = 5;
+    ev.push({ t: 'weather', weather: 'dust', text: `${m.name}의 황사 경보! 황사가 불기 시작했다!` });
+  }
 }
 
 function useMove(b, s, index, ev, want, z = false) {
@@ -382,6 +396,7 @@ function useMove(b, s, index, ev, want, z = false) {
   let mv = z ? MOVES[zid] : slot ? MOVES[slot.id] : STRUGGLE;
 
   if (mv.tierPow) mv = { ...mv, pow: mv.pow + tierOf(me) * mv.tierPow }; // 강화 단계만큼 위력 증가
+  if (mv.bath) mv = isHot(b) ? { ...mv, type: 'fire', st: { s: 'brn', ch: 30 } } : { ...mv, type: 'ice', st: { s: 'frz', ch: 30 } };
   if (!canAct(b, s, me, mv, ev)) { me.protectStreak = 0; return; }
   if (slot) slot.pp--;
   if (z) {
@@ -433,7 +448,11 @@ function useMove(b, s, index, ev, want, z = false) {
   let total = 0, landed = 0;
   for (let i = 0; i < hits && alive(foe); i++) {
     const crit = rand(b) < (mv.crit ? 1 / 8 : 1 / 24);
-    const dmg = damageOf(b, me, foe, mv, crit, .85 + rand(b) * .15);
+    let dmg = damageOf(b, me, foe, mv, crit, .85 + rand(b) * .15);
+    if (foe.species === 'ppogeuri' && !foe.popped) { // 특성 거품막
+      foe.popped = true; dmg = Math.max(1, Math.floor(dmg / 2));
+      msg(ev, `${foe.name}의 거품막이 피해를 줄였다! 거품이 터졌다.`);
+    }
     total += hurt(b, o, foe, dmg, ev, { eff, crit, moveType: mv.type });
     landed++;
     if (crit) msg(ev, '급소에 맞았다!');
@@ -463,6 +482,14 @@ function useMove(b, s, index, ev, want, z = false) {
   if (!foeDown) {
     if (mv.st && chance(b, mv.st.ch)) applyStatus(b, o, foe, mv.st.s, ev, true);
     if (mv.fl && chance(b, mv.fl)) foe.flinched = true;
+    if (mv.clearFoe) {
+      const ups = Object.entries(foe.stages).filter(([, v]) => v > 0);
+      for (const [k] of ups) {
+        foe.stages[k] = 0;
+        ev.push({ t: 'stage', side: o, stat: k, value: 0, up: false, text: `${foe.name}의 ${josa(STAT_NAME[k], '이/가')} 원래대로 돌아왔다!` });
+      }
+      if (!ups.length) msg(ev, `${josa(foe.name, '은/는')} 이미 깨끗하다.`);
+    }
     if (mv.foe && chance(b, mv.sc ?? 100)) {
       for (const [k, v] of Object.entries(mv.foe)) changeStage(b, o, foe, k, v, ev);
     }
@@ -562,6 +589,15 @@ function endOfTurn(b, ev) {
       if (alive(foe)) heal(b, by, foe, taken, ev);
       faintCheck(b, s, m, ev);
     }
+  }
+  for (const s of seats(b)) {
+    const m = activeOf(b, s);
+    if (!alive(m)) continue;
+    if (m.species === 'damjaengjeon' && m.hp < m.maxHp) { // 특성 광합성 충전
+      msg(ev, `${josa(m.name, '은/는')} 광합성으로 충전했다!`);
+      heal(b, s, m, m.maxHp / 16, ev);
+    }
+    if (m.species === 'yangmeori') msg(ev, isHot(b) ? `${josa(m.name, '은/는')} 냉탕으로 옮겼다! 얼음 기술이 강해진다.` : `${josa(m.name, '은/는')} 온탕으로 옮겼다! 불 기술이 강해진다.`);
   }
   if (b.weather && --b.weatherTurns <= 0) {
     ev.push({ t: 'weather', weather: null, text: `${josa(WEATHER_NAME[b.weather], '이/가')} 그쳤다.` });
@@ -859,5 +895,5 @@ function botTeam(level, size, enemy = []) {
 }
 
 module.exports = {
-  createBattle, createTraining, DUMMY_HP, choose, legalActions, viewFor, botAction, botTeam, forfeit, teamOf, canZ, calcStats, effOf, josa, activeOf, canMega,
+  createBattle, createTraining, DUMMY_HP, choose, speedOf, legalActions, viewFor, botAction, botTeam, forfeit, teamOf, canZ, calcStats, effOf, josa, activeOf, canMega,
 };

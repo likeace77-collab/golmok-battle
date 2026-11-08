@@ -60,7 +60,7 @@ test('모든 요괴에게 그림이 있고 스킬이 겹치지 않는다', () =>
     assert.match(mega + newArt, new RegExp(`\\b${id}: L\\(`), `메가 ${id}`);
     assert.equal(new Set(m.moves).size, m.moves.length, id);
   }
-  assert.equal(Object.keys(MONSTERS).length, 39);
+  assert.equal(Object.keys(MONSTERS).length, 44);
 });
 
 test('역류는 소나기에서 2배, 뻥 뚫기는 막기를 뚫고 압정을 치운다', () => {
@@ -145,7 +145,7 @@ test('모든 요괴에게 전용기가 있고 다른 요괴는 배울 수 없다
     owner[m.sig] = (owner[m.sig] || 0) + 1;
     assert.equal(Object.values(m.mega.boost).reduce((a, c) => a + c), 100, id);
   }
-  assert.equal(Object.keys(owner).length, 39);
+  assert.equal(Object.keys(owner).length, 44);
   for (const m of Object.values(MONSTERS)) for (const mv of m.moves) if (MOVES[mv].sig) assert.equal(mv, m.sig);
 });
 
@@ -407,4 +407,41 @@ test('훈련장: 모든 요괴와 기술 10개, 더미는 1000 체력에 안 끝
   assert.strictEqual(b.dummy.total, total); // 더미 피해는 넘친 피해까지 셈
   assert.ok(b.dummy.breaks > 0, '더미가 한 번도 안 부서짐');
   assert.ok(E.viewFor(b, 0).canZ && E.viewFor(b, 0).canMega, '턴마다 Z, 메가 다시 가능해야 함');
+});
+
+test('신캐 특성: 황사 경보, 거품막, 광합성 충전, 온탕냉탕, 녹아내림, 때밀이', () => {
+  // 황사리: 등장하면 황사
+  const p = E.createBattle([{ name: '가', team: custom('hwangsari', ['tackle']) }, { name: '나', team: custom('daeya', ['tackle']) }], 3, { preview: true });
+  E.choose(p, 0, { type: 'lead', index: 0 }); const ev = E.choose(p, 1, { type: 'lead', index: 0 }).events;
+  assert.equal(p.weather, 'dust');
+  assert.ok(ev.some((e) => e.t === 'weather' && e.weather === 'dust'));
+  // 뽀글이: 첫 공격 절반
+  const hit = (pop) => {
+    const b = battle(custom('maetdol', ['tackle']), custom('ppogeuri', ['tackle']), 5);
+    const f = E.activeOf(b, 1); f.hp = f.maxHp = 3000; f.popped = pop;
+    move(b, 0, 'tackle'); move(b, 1, 'tackle');
+    return 3000 - f.hp;
+  };
+  const halved = hit(false), full = hit(true);
+  assert.ok(Math.abs(halved / full - .5) < .1, `${halved}/${full}`);
+  // 담쟁전: 턴 끝 회복
+  const d = battle(custom('damjaengjeon', ['charge']), custom('daeya', ['guard']));
+  const me = E.activeOf(d, 0); me.hp = 10;
+  move(d, 0, 'charge'); move(d, 1, 'guard');
+  assert.equal(me.hp, 10 + Math.floor(me.maxHp / 16));
+  // 양머리: 1턴(온탕) 맥반석은 불, 2턴(냉탕)은 얼음
+  const y = battle(custom('yangmeori', ['stoneegg']), custom('daeya', ['guard']));
+  const types = [];
+  for (let i = 0; i < 2; i++) { const r = move(y, 0, 'stoneegg'); const out = r.events || move(y, 1, 'guard').events; types.push(out.find((e) => e.t === 'move' && e.side === 0).type); }
+  assert.deepEqual(types, ['fire', 'ice']);
+  // 고드리: 체력 절반 이하에서 스피드 1.5배
+  const g = battle(custom('godeuri', ['tackle']), custom('daeya', ['tackle']));
+  const gm = E.activeOf(g, 0); const fast = gm.stats.spe;
+  gm.hp = Math.floor(gm.maxHp / 2);
+  assert.equal(E.speedOf(g, 0), fast * 1.5);
+  // 뽀글이 때밀이: 상대 능력치 상승 제거
+  const c = battle(custom('ppogeuri', ['scrub']), custom('maetdol', ['tackle']), 9);
+  E.activeOf(c, 1).stages.def = 2; E.activeOf(c, 1).popped = true;
+  move(c, 0, 'scrub'); move(c, 1, 'tackle');
+  assert.equal(E.activeOf(c, 1).stages.def, 0);
 });

@@ -163,6 +163,11 @@ const MOVES = {
   canburst:  M('캔 연사', 'steel', 'p', 25, 100, 15, { hits: [2, 5], d: '2~5번 연속 공격' }),
   bulletdash:M('총알 배달', 'wind', 'p', 65, 100, 15, { pri: 1, d: '선제 공격' }),
   spincycle: M('탈수 회전', 'water', 's', 85, 100, 10, { foe: { spe: -1 }, d: '상대 스피드 1단계 하락' }),
+  icicledrop:M('처마 낙하', 'ice', 's', 80, 100, 10, { crit: true, st: { s: 'frz', ch: 20 }, d: '처마 끝 고드름이 떨어진다. 급소에 잘 맞고 20% 확률로 얼림' }),
+  stoneegg:  M('맥반석 투척', 'fire', 'p', 80, 100, 10, { bath: true, d: '온탕일 땐 불 타입·30% 화상, 냉탕일 땐 얼음 타입·30% 얼림' }),
+  vineshock: M('덩굴 감전', 'elec', 's', 75, 100, 15, { st: { s: 'par', ch: 30 }, d: '전기가 흐르는 덩굴로 휘감는다. 30% 확률로 마비' }),
+  scrub:     M('때밀이', 'water', 's', 75, 100, 15, { clearFoe: true, d: '이태리타월로 박박. 상대의 능력치 상승을 모두 없앤다' }),
+  yellowgust:M('황사 경보', 'earth', 'p', 25, 95, 15, { hits: [2, 5], d: '모래 알갱이가 2~5번 연속으로 때린다' }),
   // 보통
   tackle:    M('몸통 박치기', 'none', 'p', 50, 100, 30, { d: '기본 공격' }),
   guard:     M('막기', 'none', 'x', 0, null, 10, { protect: true, pri: 3, self_: true, d: '이번 턴 공격을 막음 (연속 사용 시 실패하기 쉬움)' }),
@@ -299,6 +304,22 @@ const MONSTERS = {
   setakbot: X('세탁봇', ['steel', 'water'], 100, 65, 105, 100, 90, 45,
     ['spincycle', 'bucket', 'hose', 'magnet', 'squirt', 'paddle', 'rainy', 'armor', 'tacks', 'guard'],
     '가슴의 세탁 통으로 상대를 돌린다. 눈처럼 보이는 것은 세제 투입구다.'),
+  // 골목 사계절
+  godeuri:  X('고드리', ['ice', 'spirit'], 65, 55, 55, 120, 75, 115,
+    ['icicledrop', 'icestorm', 'blizzard', 'brainfrz', 'scold', 'nightmare', 'wisp', 'frost', 'breeze', 'guard'],
+    '한겨울 처마 끝에 매달린 고드름 도깨비. 몸속 푸른 도깨비불 덕에 봄이 와도 잘 녹지 않는다.'),
+  yangmeori:X('양머리', ['fire', 'ice'], 105, 90, 80, 90, 80, 55,
+    ['stoneegg', 'flame', 'coalhead', 'icicle', 'icestorm', 'firerush', 'heatwave', 'spirit_up', 'nap', 'guard'],
+    '찜질방 양머리 수건을 쓴 단골. 불가마와 얼음방을 오가며 식혜와 맥반석 계란을 놓지 않는다.'),
+  damjaengjeon:X('담쟁전', ['grass', 'elec'], 95, 60, 110, 90, 110, 35,
+    ['vineshock', 'highvolt', 'sapdrain', 'pollen', 'bolt', 'seed', 'shock', 'charge', 'sunbathe', 'guard'],
+    '담쟁이덩굴에 칭칭 감긴 낡은 변압기. 잎맥으로 전기가 흘러 밤마다 형광색으로 빛난다.'),
+  ppogeuri: X('뽀글이', ['fairy', 'water'], 80, 45, 75, 100, 105, 95,
+    ['scrub', 'pixiedust', 'bucket', 'hose', 'squirt', 'charm', 'fairydance', 'rainy', 'potion', 'guard'],
+    '동네 목욕탕 비눗방울 요정. 이태리타월 리본을 매고 다니며, 때를 보면 참지 못한다.'),
+  hwangsari:X('황사리', ['earth', 'wind'], 80, 110, 75, 50, 70, 110,
+    ['yellowgust', 'quake', 'rockthrow', 'razorwind', 'windcut', 'wall', 'breeze', 'spirit_up', 'grind', 'guard'],
+    'KF94 마스크를 쓴 황사 구름. 본인도 숨이 막혀서 늘 화가 나 있다.'),
 };
 
 // 캐릭터별 전용기와 메가진화: [전용기, 메가 이름, 소개, [체력, 공격, 방어, 특공, 특방, 스피드 상승값]]
@@ -344,6 +365,12 @@ Object.assign(SIGNATURE, {
   jabanbot: ['canburst', '초합금 자판왕', '어깨에 캔 발사기를 달고 금장을 둘렀다. 화면에 뜬 MAX는 가격이다.', [0, 40, 30, 0, 10, 20]],
   baedalbot: ['bulletdash', '광속 철가방', '바퀴와 몸이 합체해 오토바이가 되었다. 철가방이 둘로 늘어 이제 한 번에 두 집.', [20, 40, 25, 0, 15, 0]],
   setakbot: ['spincycle', '코인세탁 합체왕', '세탁기 세 대가 합체했다. 가운데 통이 뜨겁게 돌면 빨래방 영업 개시.', [10, 0, 20, 30, 10, 30]],
+
+  godeuri: ['icicledrop', '만년설 고드리', '고드름 왕관을 쓰고 얼음 날개를 폈다. 도깨비불이 보랏빛으로 타오르고 가슴에 결정이 박혔다.', [10, 0, 15, 40, 15, 20]],
+  yangmeori: ['stoneegg', '불가마 양머리', '양머리 수건이 황금 테를 두른 숫양 뿔이 되었다. 왼쪽은 불가마, 오른쪽은 얼음방.', [15, 30, 15, 30, 10, 0]],
+  damjaengjeon: ['vineshock', '고압 담쟁전', '변압기가 철탑처럼 자랐다. 애자에 형광빛이 돌고 덩굴에 꽃이 피었다.', [10, 0, 25, 40, 25, 0]],
+  ppogeuri: ['scrub', '거품여왕 뽀글이', '방울 왕관과 나비 날개, 거품 드레스. 이태리타월 리본이 길게 휘날린다.', [15, 0, 20, 30, 25, 10]],
+  hwangsari: ['yellowgust', '대황사 황사리', '방독면과 고글을 쓴 거대 모래폭풍. 아래는 토네이도가 되었고 주변에 돌덩이가 돈다.', [10, 40, 25, 0, 15, 10]],
 });
 
 // 모든 요괴가 기술 10개가 되도록 채우는 추가 기술
@@ -397,6 +424,11 @@ const ZMOVES = {
   jabanbot: ['캔 일제사격', 'steel', 180, '자판기 재고가 바닥날 때까지 쏜다'],
   baedalbot: ['광속 배달 완료', 'wind', 175, '도착 예정 시간 0초'],
   setakbot: ['초강력 탈수', 'water', 180, '상대 스피드 2단계 하락', { foe: { spe: -2 } }],
+  godeuri: ['한겨울 백귀야행', 'ice', 180, '고드름 수백 개가 쏟아진다. 30% 확률로 얼림', { st: { s: 'frz', ch: 30 } }],
+  yangmeori: ['불가마 대폭발', 'fire', 180, '찜질방 전체가 증기로 뒤덮인다. 50% 확률로 화상', { st: { s: 'brn', ch: 50 } }],
+  damjaengjeon: ['골목 대정전', 'elec', 180, '동네 불이 전부 꺼진다. 50% 확률로 마비', { st: { s: 'par', ch: 50 } }],
+  ppogeuri: ['목욕탕 대방출', 'water', 175, '거대한 비눗방울에 가둬 터뜨린다. 준 피해의 1/3을 회복', { drain: 1 / 3 }],
+  hwangsari: ['누런 하늘', 'earth', 180, '하늘이 누렇게 덮인다. 상대 명중률 하락', { foe: { acc: -1 } }],
 };
 for (const [id, [n, type, pow, d, extra = {}]] of Object.entries(ZMOVES)) {
   const sp = MONSTERS[id];
@@ -530,6 +562,11 @@ const TIERS = { names: ['나무', '돌', '철', '금', '다이아몬드', '네�
 MONSTERS.danjo.tiers = TIERS.names.length - 1;
 MONSTERS.danjo.trait = { n: '강화 용사', d: `강화를 쓰면 ${TIERS.names.join(' → ')} 순서로 100% 강화된다. 나무일 때는 약하지만 단계마다 체력이 ${TIERS.hp * 100}% 늘고 공격·방어가 크게 올라 네더라이트에서는 약 ${TIERS.atk[5]}배가 된다. 교체해도 단계는 유지된다.` };
 const STRIP = { boost: .04, heal: 20 };
+MONSTERS.godeuri.trait = { n: '녹아내림', d: '체력이 절반 이하가 되면 스피드가 1.5배가 된다.' };
+MONSTERS.yangmeori.trait = { n: '온탕냉탕', d: '홀수 턴은 온탕(불 기술 1.3배), 짝수 턴은 냉탕(얼음 기술 1.3배)이다.' };
+MONSTERS.damjaengjeon.trait = { n: '광합성 충전', d: '매 턴이 끝날 때 최대 체력의 1/16을 회복한다.' };
+MONSTERS.ppogeuri.trait = { n: '거품막', d: '전투에서 처음 맞는 공격 한 번의 피해를 절반으로 줄인다.' };
+MONSTERS.hwangsari.trait = { n: '황사 경보', d: '싸움에 나오면 5턴 동안 황사가 분다.' };
 
 // 잠시 밴: 테스트 중인 요괴는 개발자 계정만 씁니다.
 const BANNED = ['lumina', 'silvia'];

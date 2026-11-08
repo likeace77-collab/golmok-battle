@@ -1,6 +1,21 @@
 // 페어리와 로봇 요괴 그림. 200 크기로 그렸습니다.
 const NEW_ART = (() => {
 const L = (s) => `<g stroke="#1a1433" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">${s}</g>`;
+// 골목 사계절 신캐 (고드리·양머리·담쟁전·뽀글이·황사리)
+const eyeN = (x, y, r, iris = '#1a1433') => `<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * 1.15}" fill="#fff"/><circle cx="${x + 1}" cy="${y + 1.5}" r="${r * .58}" fill="${iris}" stroke="none"/><circle cx="${x + 1}" cy="${y + 1.5}" r="${r * .28}" fill="#1a1433" stroke="none"/><circle cx="${x + r * .3}" cy="${y - r * .25}" r="${r * .22}" fill="#fff" stroke="none"/>`;
+const glowN = (x, y, r, c, d = 1) => `<path d="M${x - r * 1.3} ${y + 2}q${r * 1.3}-${r * 1.6} ${r * 2.6} ${d > 0 ? -2 : 2}q-${r * 1.3} ${r * 1.3}-${r * 2.6} 2z" fill="#fff"/><circle cx="${x + 1}" cy="${y}" r="${r * .55}" fill="${c}" stroke="none"/><circle cx="${x + 1}" cy="${y}" r="${r * .22}" fill="#fff" stroke="none"/>`;
+// 그라데이션은 페이지에 한 번만 둡니다 (같은 요괴가 여러 번 그려져도 id가 겹치지 않게).
+if (typeof document !== 'undefined') {
+  const put = () => document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="gIce" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eafbff"/><stop offset=".6" stop-color="#a9e6fb"/><stop offset="1" stop-color="#6cc4ef"/></linearGradient>
+ <radialGradient id="gFl" cx=".5" cy=".7" r=".6"><stop offset="0" stop-color="#e8fbff"/><stop offset=".45" stop-color="#5fd0ff"/><stop offset="1" stop-color="#2a5cff"/></radialGradient><linearGradient id="gMet" x1="0" x2="1"><stop offset="0" stop-color="#6f7c8a"/><stop offset=".45" stop-color="#b4c0cc"/><stop offset="1" stop-color="#5d6875"/></linearGradient><radialGradient id="gBub" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#dff7ff"/><stop offset=".6" stop-color="#ffd1f1"/><stop offset=".8" stop-color="#c9b8ff"/><stop offset="1" stop-color="#8fe6ff"/></radialGradient>
+ <radialGradient id="gSm" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff"/><stop offset=".7" stop-color="#e2d4ff"/><stop offset="1" stop-color="#9ee9ff"/></radialGradient><radialGradient id="gDust" cx=".45" cy=".35" r=".7"><stop offset="0" stop-color="#f7dc8f"/><stop offset=".7" stop-color="#d9a84a"/><stop offset="1" stop-color="#b07d2a"/></radialGradient><linearGradient id="mIce" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#9fe2ff"/><stop offset="1" stop-color="#3f8fe0"/></linearGradient>
+ <radialGradient id="mFl" cx=".5" cy=".7" r=".6"><stop offset="0" stop-color="#fff"/><stop offset=".4" stop-color="#a98bff"/><stop offset="1" stop-color="#3a1fd1"/></radialGradient>
+ <radialGradient id="mAura" cx=".5" cy=".5" r=".5"><stop offset=".5" stop-color="#7fd8ff" stop-opacity=".45"/><stop offset="1" stop-color="#7fd8ff" stop-opacity="0"/></radialGradient><linearGradient id="mSplit" x1="0" x2="1"><stop offset=".5" stop-color="#ff6a2b" stop-opacity=".55"/><stop offset=".5" stop-color="#4fb6ff" stop-opacity=".55"/></linearGradient><linearGradient id="mMet" x1="0" x2="1"><stop offset="0" stop-color="#3a4250"/><stop offset=".45" stop-color="#8b98a8"/><stop offset="1" stop-color="#2f3640"/></linearGradient>
+ <radialGradient id="mGlow" cx=".5" cy=".5" r=".5"><stop offset=".3" stop-color="#b6ff5c" stop-opacity=".5"/><stop offset="1" stop-color="#b6ff5c" stop-opacity="0"/></radialGradient><radialGradient id="mBub" cx=".38" cy=".3" r=".8"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="#d8f6ff"/><stop offset=".55" stop-color="#ffc2ec"/><stop offset=".75" stop-color="#bba6ff"/><stop offset="1" stop-color="#6fdcff"/></radialGradient>
+ <linearGradient id="mWing" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe3f6"/><stop offset=".5" stop-color="#d9ccff"/><stop offset="1" stop-color="#a6f0ff"/></linearGradient><radialGradient id="mDust" cx=".45" cy=".35" r=".7"><stop offset="0" stop-color="#e9b85a"/><stop offset=".7" stop-color="#a8701f"/><stop offset="1" stop-color="#6e4310"/></radialGradient>
+ <linearGradient id="mTor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b47a28"/><stop offset="1" stop-color="#6e4310"/></linearGradient></defs></svg>`);
+  if (document.body) put(); else document.addEventListener('DOMContentLoaded', put);
+}
 const lady = ({ eyeY = 41, lip = '#D31C4A', iris = '#7A2BC9' }) => [91, 109].map((x, i) => {
   const d = i ? 1 : -1;
   return `<path d="M${x - 6} ${eyeY + 1}q6-7 12 0-6 5-12 0z" fill="#fff" stroke-width="1"/>
@@ -80,6 +95,93 @@ const ART = {
   <path d="M100 76q22 10 14 34-6 10-16 4M100 140q-22-10-14-34" fill="none" stroke="#BFE4FF" stroke-width="3"/>
   <circle cx="100" cy="102" r="11" fill="#FFD23F"/><circle cx="100" cy="102" r="4.500" fill="#1a1433"/>
   ${[[52, 8], [150, 12], [14, 42], [186, 46]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="6" fill="#BFE4FF"/>`).join('')}`),
+
+ godeuri: L(`<g stroke-width="3.2">
+ 
+ ${[38,54,146,162].map((x,i)=>`<path d="M${x-7} 40l7 ${[58,78,80,56][i]}l7-${[58,78,80,56][i]}z" fill="url(#gIce)" stroke-width="2.4"/>`).join('')}
+ <path d="M56 40Q46 112 100 194Q154 112 144 40z" fill="url(#gIce)"/>
+ <path d="M70 52Q64 108 96 168" fill="none" stroke="#fff" stroke-width="5" stroke-opacity=".8"/>
+ <path d="M100 104c14 12 20 22 14 36-4 10-24 12-30 0-5-10 0-14 2-22 4 6 8 6 9 2 1-6-2-10 5-16z" fill="url(#gFl)" stroke="#2a5cff" stroke-width="2"/>
+ <path d="M48 98q-16 6-18 22l12-4q2-10 10-12zM152 98q16 6 18 22l-12-4q-2-10-10-12z" fill="url(#gIce)" stroke-width="2.4"/>
+ ${eyeN(84,72,9,'#2fb8ff')}${eyeN(116,72,9,'#2fb8ff')}
+ <path d="M72 58l18 6M128 58l-18 6" fill="none"/>
+ <path d="M86 90q14 10 28 0" fill="#fff"/><path d="M90 91l3 6 3-5M104 91l3 5 3-6" fill="#fff" stroke-width="1.6"/>
+ <path d="M20 40h160" stroke="#3b4a66" stroke-width="3.2"/>
+ <path d="M18 22h164v20H18z" fill="#4f5f80"/>
+ ${[30,58,86,114,142,170].map(x=>`<path d="M${x-14} 42a14 12 0 0 0 28 0z" fill="#6c7da0"/>`).join('')}
+ <path d="M18 22q40-10 82-10t82 10" fill="#fff" stroke-width="2.4"/>
+ <path d="M80 14l-10-14 16 10zM120 14l10-14-16 10z" fill="#d9f6ff" stroke-width="2.4"/>
+ ${[[30,150],[170,140],[24,96],[176,84]].map(([x,y])=>`<path d="M${x} ${y-6}v12M${x-6} ${y}h12M${x-4} ${y-4}l8 8M${x+4} ${y-4}l-8 8" stroke="#8fe0ff" stroke-width="2"/>`).join('')}
+ </g>`),
+ yangmeori: L(`<g stroke-width="3.2">
+ <path d="M32 34q-6-8 0-14t0-14M42 32q-6-8 0-14t0-14M52 34q-6-8 0-14t0-14" fill="none" stroke="#ffb08a" stroke-width="3"/>
+ <path d="M160 12v18M151 21h18M154 15l12 12M166 15l-12 12" stroke="#7fd4ff" stroke-width="2.6"/>
+ <path d="M66 126q34-12 68 0l10 46q-44 14-88 0z" fill="#ff9a3c"/>
+ <path d="M66 126q34 10 68 0" fill="none" stroke="#e46a12"/>
+ <path d="M60 168q40 10 80 0l2 14q-42 10-84 0z" fill="#f2c94c"/>
+ <path d="M76 182v12h16v-10M108 184v10h16v-12" fill="#ffd9b8"/>
+ <circle cx="100" cy="84" r="46" fill="#ffe0c2"/>
+ <path d="M54 76q-2-48 46-50 48 2 46 50-46-26-92 0z" fill="#ffffff"/>
+ <path d="M58 64q42-22 84 0" fill="none" stroke="#f0d8ff" stroke-width="5"/>
+ ${[[-1,52],[1,148]].map(([d,x])=>`<circle cx="${x}" cy="64" r="19" fill="#fff"/><path d="M${x} 64m-11 0a11 11 0 1 1 11 11a7 7 0 1 1-7-7a3 3 0 1 1 3 3" fill="none" stroke-width="2.4"/>`).join('')}
+ <ellipse cx="74" cy="100" rx="13" ry="8" fill="#ff4d3d" fill-opacity=".55" stroke="none"/>
+ <ellipse cx="126" cy="100" rx="13" ry="8" fill="#56b9ff" fill-opacity=".55" stroke="none"/>
+ <path d="M120 96l12 8M126 94v12" stroke="#fff" stroke-width="1.6"/>
+ ${eyeN(84,86,8,'#c2410c')}${eyeN(116,86,8,'#1e7fd8')}
+ <path d="M90 108q10 9 20 0" fill="#c2410c"/>
+ <path d="M64 134q-18 8-20 26" fill="none" stroke-width="12"/><path d="M64 134q-18 8-20 26" fill="none" stroke="#ff9a3c" stroke-width="6"/>
+ <path d="M136 134q18 8 22 24" fill="none" stroke-width="12"/><path d="M136 134q18 8 22 24" fill="none" stroke="#ff9a3c" stroke-width="6"/>
+ <path d="M28 150h26l-4 30H32z" fill="#fff"/><path d="M30 158h22l-2 20H33z" fill="#e9c58a" stroke="none"/>
+ ${[[36,164],[44,168],[40,172],[47,162]].map(([x,y])=>`<ellipse cx="${x}" cy="${y}" rx="1.8" ry="1.2" fill="#fffbe8" stroke="none"/>`).join('')}
+ <path d="M38 150q2-6 8-4" fill="none" stroke="#e46a12" stroke-width="2"/>
+ <ellipse cx="160" cy="164" rx="13" ry="16" fill="#8a4b2a"/><path d="M154 156q4-4 8-2" fill="none" stroke="#c8865b" stroke-width="2.4"/>
+ </g>`),
+ damjaengjeon: L(`<g stroke-width="3.2">
+ 
+ ${[76,100,124].map(x=>`<path d="M${x} 50v-18" stroke-width="3"/><path d="M${x-7} 30h14M${x-6} 22h12M${x-5} 14h10" stroke="#a8562c" stroke-width="5"/><circle cx="${x}" cy="8" r="3" fill="#ddd"/>`).join('')}
+ <path d="M76 8q-30-4-60 10M124 8q30-4 60 10" fill="none" stroke-width="2"/>
+ <rect x="58" y="46" width="84" height="134" rx="12" fill="url(#gMet)"/>
+ <path d="M58 60h84M58 166h84" fill="none" stroke-width="2.4"/>
+ ${[72,86,114,128].map(x=>`<path d="M${x} 120v40" stroke="#4b5561" stroke-width="2"/>`).join('')}
+ <path d="M64 180h-10v12h92v-12h-10" fill="#4b5561"/>
+ <path d="M90 128l10-16 10 16z" fill="#ffd60a"/><path d="M100 117l-3 6h5l-3 6" fill="none" stroke-width="1.6"/>
+ ${eyeN(84,90,9,'#38d430')}${eyeN(116,90,9,'#38d430')}
+ <path d="M72 76l18 6M128 76l-18 6" fill="none" stroke-width="3.6"/>
+ <path d="M90 108h20" fill="none"/>
+ <path d="M48 186C40 150 56 130 60 140S110 150 146 132 156 80 148 62 100 46 64 56" fill="none" stroke="#2f7a24" stroke-width="7"/>
+ ${[[48,168,-30],[54,140,0],[88,148,10],[124,140,40],[152,110,-20],[150,78,20],[130,56,-10],[98,50,30],[66,56,-40]].map(([x,y,r])=>`<g transform="translate(${x} ${y}) rotate(${r})"><path d="M0 8C-14 6-16-6-8-8-10-16 0-18 0-12 0-18 10-16 8-8 16-6 14 6 0 8z" fill="#4cbf3a" stroke-width="2.4"/><path d="M0 8V-10M0-2l-6-4M0-2l6-4" fill="none" stroke="#b6ff5c" stroke-width="1.8"/></g>`).join('')}
+ ${[[34,60],[166,90],[30,110],[170,150]].map(([x,y])=>`<path d="M${x} ${y-14}l-6 12h8l-6 14" fill="none" stroke="#ffe14d" stroke-width="3.2"/>`).join('')}
+ </g>`),
+ ppogeuri: L(`<g stroke-width="3.2">
+ 
+ ${[-1,1].map(d=>`<path d="M${100+d*44} 96C${100+d*80} 50 ${100+d*96} 76 ${100+d*86} 100 ${100+d*96} 120 ${100+d*76} 146 ${100+d*46} 120z" fill="#e8f9ff" fill-opacity=".85" stroke="#7fb8e6" stroke-width="2.4"/><path d="M${100+d*52} 106C${100+d*70} 84 ${100+d*82} 90 ${100+d*78} 100" fill="none" stroke="#ffb3e6" stroke-width="2"/>`).join('')}
+ <circle cx="100" cy="110" r="56" fill="url(#gBub)" stroke="#6a8fd6"/>
+ <path d="M66 86a40 40 0 0 1 30-24" fill="none" stroke="#fff" stroke-width="7"/>
+ <circle cx="134" cy="138" r="5" fill="#fff" stroke="none"/>
+ ${eyeN(84,112,10,'#ff6fb5')}${eyeN(116,112,10,'#ff6fb5')}
+ <ellipse cx="70" cy="128" rx="8" ry="5" fill="#ff8ccb" fill-opacity=".55" stroke="none"/><ellipse cx="130" cy="128" rx="8" ry="5" fill="#ff8ccb" fill-opacity=".55" stroke="none"/>
+ <path d="M94 130q6 7 12 0" fill="#ff6f8e" stroke-width="2.4"/>
+ <path d="M100 56l-30-16q-6 14 2 26zM100 56l30-16q6 14-2 26z" fill="#39b54a"/>
+ ${[[-1],[1]].map(([d])=>[0,1,2].map(i=>`<path d="M${100+d*(8+i*7)} ${50-i*2}l${d*2} ${10+i*2}" stroke="#1f7a2c" stroke-width="1.4"/>`).join('')).join('')}
+ <rect x="92" y="48" width="16" height="14" rx="4" fill="#4fd162"/>
+ ${[[42,170,12],[60,186,8],[148,172,11],[166,156,7],[30,138,7],[176,120,8],[140,190,6]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="url(#gSm)" stroke="#6a8fd6" stroke-width="2"/><circle cx="${x-r*.35}" cy="${y-r*.35}" r="${r*.25}" fill="#fff" stroke="none"/>`).join('')}
+ ${[[34,40],[168,34],[150,24]].map(([x,y])=>`<path d="M${x} ${y-7}q1.500 5.500 7 7-5.500 1.500-7 7-1.500-5.500-7-7 5.500-1.500 7-7z" fill="#fff59a" stroke-width="1.6"/>`).join('')}
+ </g>`),
+ hwangsari: L(`<g stroke-width="3.2">
+ 
+ <path d="M84 150q16 8 32 0l-6 14q-10 4-20 0zM90 164q10 4 20 0l-4 12q-6 2-12 0zM95 176q5 2 10 0l-3 14q-2 1-4 0z" fill="#c9963c"/>
+ <path d="M50 150c-24 0-34-26-18-40-16-14-6-44 16-40 0-30 30-42 52-30 20-14 52-4 54 24 22 0 32 26 18 40 16 16 2 46-22 44-6 14-34 14-50 6-16 8-40 6-50-4z" fill="url(#gDust)"/>
+ <path d="M44 96q16-10 30 0M126 96q16-10 30 0M60 60q16-12 34-4" fill="none" stroke="#fff3c9" stroke-width="3" stroke-opacity=".7"/>
+ ${eyeN(80,92,9,'#7a4a12')}${eyeN(120,92,9,'#7a4a12')}
+ <path d="M66 74l22 10M134 74l-22 10" fill="none" stroke-width="4"/>
+ <path d="M70 108q30-8 60 0l-4 26q-26 10-52 0z" fill="#ffffff"/>
+ <path d="M76 116q24-5 48 0M76 124q24-5 48 0" fill="none" stroke="#c9d3df" stroke-width="2"/>
+ <path d="M100 108l2 30" fill="none" stroke="#c9d3df" stroke-width="2"/>
+ <path d="M70 110q-20-4-24-18M130 110q20-4 24-18" fill="none" stroke-width="2.4"/>
+ <text x="88" y="132" font-family="Arial Black,Arial" font-weight="900" font-size="8" fill="#5a6b80" stroke="none">KF94</text>
+ ${[[24,60],[178,70],[22,140],[180,150],[40,30],[160,28],[64,182],[138,186],[14,104],[186,108]].map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="${2+i%3}" fill="#c9963c" stroke-width="1.4"/>`).join('')}
+ <path d="M10 70q20 6 28-4M162 182q18 4 30-8M8 180q14 0 22-10" fill="none" stroke="#d9a84a" stroke-width="3"/>
+ </g>`),
 };
 const glowEye = (x, y, dir = 1, c = '#FFE45C') => `<path d="M${x - 15 * dir} ${y - 7}L${x + 15 * dir} ${y + 4}Q${x} ${y + 11} ${x - 15 * dir} ${y - 7}z" fill="${c}"/>`;
 const flame = (x, y, s, c1 = '#F2622E', c2 = '#FFD23F') => `<g transform="translate(${x} ${y}) scale(${s})"><path d="M0 -30C14 -12 18 -2 12 10-3 18-14 10-13 -2-13 -10-6 -14-3 -8-5 -18-3 -24 0 -30z" fill="${c1}"/><path d="M1 -12C7 -4 8 2 4 7-2 10-6 6-5 1-4 -4-1 -6 1 -12z" fill="${c2}" stroke-width="2"/></g>`;
@@ -161,6 +263,99 @@ const MEGA = {
   <rect x="14" y="92" width="78" height="10" fill="#C7CDD6"/><rect x="108" y="92" width="78" height="10" fill="#C7CDD6"/>
   <text x="100" y="192" font-size="10.500" font-weight="900" text-anchor="middle" fill="#fff" stroke="none">코인세탁</text>
   ${[[20, 40], [184, 44], [36, 18], [170, 20], [8, 70], [192, 74]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="7" fill="#BFE4FF"/>`).join('')}`),
+
+ godeuri: L(`<g stroke-width="3.2">
+ 
+ <circle cx="100" cy="104" r="98" fill="url(#mAura)" stroke="none"/>
+ ${[[-1],[1]].map(([d])=>`<path d="M${100+d*40} 70L${100+d*92} 40 ${100+d*78} 66 ${100+d*98} 78 ${100+d*72} 90 ${100+d*86} 112 ${100+d*54} 104z" fill="url(#mIce)" stroke-width="2.6"/><path d="M${100+d*54} 116q${d*30} 6 ${d*36} 34l${-d*8}-4-4 10-6-12-8 4q0-18-${d*18}-26z" fill="url(#mIce)" stroke-width="2.4"/>`).join('')}
+ <path d="M54 44Q40 120 100 198Q160 120 146 44z" fill="url(#mIce)"/>
+ <path d="M66 58Q58 112 94 176" fill="none" stroke="#fff" stroke-width="5" stroke-opacity=".85"/>
+ <path d="M100 98c20 14 28 30 18 48-6 12-32 14-38 0-7-14 0-20 3-30 5 8 10 8 11 2 1-8-3-12 6-20z" fill="url(#mFl)" stroke="#3a1fd1" stroke-width="2.2"/>
+ <path d="M100 128l6 8-6 8-6-8z" fill="#fff" stroke="#3a1fd1" stroke-width="1.6"/>
+ ${glowN(82,72,10,'#7a5cff')}${glowN(118,72,10,'#7a5cff',-1)}
+ <path d="M68 60l24 6M132 60l-24 6" fill="none" stroke-width="3.6"/>
+ <path d="M84 88q16 12 32 0z" fill="#1a1433"/><path d="M88 88l3 7 3-6M106 88l3 6 3-7" fill="#fff" stroke-width="1.4"/>
+ <path d="M42 46l14-30 10 22 12-34 12 30 10-38 10 38 12-30 12 34 10-22 14 30z" fill="url(#mIce)"/>
+ <path d="M42 46h116" stroke-width="3.6"/>
+ <circle cx="100" cy="30" r="6" fill="#a98bff" stroke-width="2"/>
+ ${[[22,150],[178,146],[18,98],[182,94],[40,186],[160,186]].map(([x,y])=>`<path d="M${x} ${y-8}v16M${x-8} ${y}h16M${x-5} ${y-5}l10 10M${x+5} ${y-5}l-10 10" stroke="#d6f3ff" stroke-width="2.2"/>`).join('')}
+ </g>`),
+ yangmeori: L(`<g stroke-width="3.2">
+ 
+ <circle cx="100" cy="100" r="96" fill="url(#mSplit)" stroke="none" opacity=".6"/>
+ ${[20,40,60,80].map((y,i)=>`<path d="M${14+i*6} ${y+110}q-10-20 4-34 2 12 10 14-2-14 8-26 6 24-2 40z" fill="#ff8a3d" stroke-width="2"/>`).join('')}
+ ${[[176,120],[166,160],[182,80],[154,190]].map(([x,y])=>`<path d="M${x} ${y-12}l5 9 9 3-9 3-5 9-5-9-9-3 9-3z" fill="#bfeaff" stroke-width="2"/>`).join('')}
+ <path d="M56 126q44-16 88 0l16 50q-60 18-120 0z" fill="#d42f6b"/>
+ <path d="M56 126q44 12 88 0" fill="none" stroke="#ffd34d" stroke-width="4"/>
+ <path d="M58 132l-30 52 30-8zM142 132l30 52-30-8z" fill="#fff"/>
+ <path d="M52 172q48 12 96 0l2 14q-50 12-100 0z" fill="#ffd34d"/>
+ <path d="M74 184v12h18v-10M108 186v10h18v-12" fill="#ffd9b8"/>
+ <circle cx="100" cy="84" r="44" fill="#ffe0c2"/>
+ <path d="M52 74q-2-50 48-52 50 2 48 52-48-26-96 0z" fill="#fff"/>
+ <path d="M58 60q42-22 84 0" fill="none" stroke="#ffd34d" stroke-width="6"/>
+ <path d="M100 20l-6 12h12z" fill="#ffd34d"/>
+ ${[[-1,46],[1,154]].map(([d,x])=>`<path d="M${x} 60c${d*20}-4 ${d*26} 18 ${d*14} 30-${d*4} 4 ${d*2} 14 ${d*10} 10" fill="none" stroke-width="10"/><path d="M${x} 60c${d*20}-4 ${d*26} 18 ${d*14} 30-${d*4} 4 ${d*2} 14 ${d*10} 10" fill="none" stroke="${d<0?'#ffb36b':'#bfeaff'}" stroke-width="5"/><circle cx="${x}" cy="62" r="17" fill="#fff"/><path d="M${x} 62m-10 0a10 10 0 1 1 10 10a6 6 0 1 1-6-6" fill="none" stroke-width="2.4"/>`).join('')}
+ <path d="M70 102q-6-14 4-22 2 8 8 8 0-8 6-12 4 16-4 28z" fill="#ff6a2b" fill-opacity=".8" stroke-width="1.6"/>
+ <path d="M122 92l12 12M134 92l-12 12M128 88v20" stroke="#4fb6ff" stroke-width="2.4"/>
+ ${glowN(84,84,8,'#ff4d1a')}${glowN(116,84,8,'#1e9bff',-1)}
+ <path d="M72 70l16 6M128 70l-16 6" fill="none" stroke-width="3"/>
+ <path d="M88 104q12 10 24 0z" fill="#8a1d1d"/><path d="M92 104h16" stroke="#fff" stroke-width="2"/>
+ <ellipse cx="34" cy="96" rx="16" ry="20" fill="#5a2e14"/><path d="M28 86q4-6 10-4" fill="none" stroke="#ffb36b" stroke-width="3"/>
+ <path d="M30 76q-4-10 2-16M38 76q-4-10 2-16" fill="none" stroke="#ff8a3d" stroke-width="2.6"/>
+ <path d="M150 88h32l-4 40h-24z" fill="#e8f6ff"/><path d="M152 98h28l-3 28h-22z" fill="#e9c58a" stroke="none"/>
+ <path d="M150 88h32" stroke-width="4"/><path d="M158 82l2-6M172 82l-2-6" stroke="#bfeaff" stroke-width="2"/>
+ </g>`),
+ damjaengjeon: L(`<g stroke-width="3.2">
+ 
+ <circle cx="100" cy="104" r="98" fill="url(#mGlow)" stroke="none"/>
+ <path d="M30 12l26 34-10 0 18 26M170 12l-26 34h10l-18 26M100 0v10" fill="none" stroke="#fff27a" stroke-width="4"/>
+ <path d="M30 12l26 34-10 0 18 26M170 12l-26 34h10l-18 26" fill="none" stroke="#ffd60a" stroke-width="1.6"/>
+ ${[64,82,100,118,136].map((x,i)=>`<path d="M${x} 46v-${[14,22,30,22,14][i]}" stroke-width="3"/>${[0,1,2,3].slice(0,[2,3,4,3,2][i]).map(j=>`<path d="M${x-7} ${42-j*8}h14" stroke="#8fff6a" stroke-width="5"/>`).join('')}<circle cx="${x}" cy="${46-[14,22,30,22,14][i]-4}" r="4" fill="#fffbd0" stroke-width="2"/>`).join('')}
+ <path d="M50 46h100l6 140H44z" fill="url(#mMet)"/>
+ <path d="M50 60h100M46 168h108" fill="none" stroke-width="2.4"/>
+ <path d="M64 78h72l-6 22H70z" fill="#0d1a10"/>
+ <path d="M70 84l20 8-20 4zM130 84l-20 8 20 4z" fill="#b6ff5c" stroke="#b6ff5c" stroke-width="1.5"/>
+ <path d="M80 118h40v26H80z" fill="#ffd60a"/><path d="M102 122l-8 11h7l-5 9" fill="none" stroke-width="2.4"/>
+ <path d="M38 186h124v10H38z" fill="#2f3640"/>
+ <path d="M42 194C24 150 48 120 60 150S120 170 150 140 180 90 150 64 96 58 60 70 28 40 40 20" fill="none" stroke="#1f5c19" stroke-width="10"/>
+ <path d="M42 194C24 150 48 120 60 150S120 170 150 140 180 90 150 64 96 58 60 70 28 40 40 20" fill="none" stroke="#3fa82f" stroke-width="5"/>
+ ${[[36,170,-30],[48,128,0],[84,160,10],[120,158,30],[156,124,-20],[164,88,20],[140,62,-10],[60,66,30],[34,40,-40],[100,62,10]].map(([x,y,r])=>`<g transform="translate(${x} ${y}) rotate(${r}) scale(1.15)"><path d="M0 8C-14 6-16-6-8-8-10-16 0-18 0-12 0-18 10-16 8-8 16-6 14 6 0 8z" fill="#2f9c25" stroke-width="2.2"/><path d="M0 8V-10M0-2l-6-4M0-2l6-4" fill="none" stroke="#d6ff5c" stroke-width="2"/></g>`).join('')}
+ ${[[150,166],[46,104],[170,108]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="7" fill="#ff5fb0" stroke-width="2"/><circle cx="${x}" cy="${y}" r="2.6" fill="#ffe14d" stroke="none"/>`).join('')}
+ </g>`),
+ ppogeuri: L(`<g stroke-width="3.2">
+ 
+ ${[-1,1].map(d=>`<path d="M${100+d*40} 90C${100+d*70} 20 ${100+d*104} 30 ${100+d*96} 76 ${100+d*92} 98 ${100+d*70} 104 ${100+d*48} 100z" fill="url(#mWing)" fill-opacity=".9" stroke="#7a8ee6" stroke-width="2.4"/><path d="M${100+d*44} 108C${100+d*86} 108 ${100+d*100} 138 ${100+d*82} 160 ${100+d*66} 172 ${100+d*52} 146 ${100+d*42} 120z" fill="url(#mWing)" fill-opacity=".9" stroke="#7a8ee6" stroke-width="2.4"/><circle cx="${100+d*80}" cy="58" r="7" fill="#fff" fill-opacity=".8" stroke="#ff9ad5" stroke-width="1.6"/><circle cx="${100+d*72}" cy="140" r="5" fill="#fff" fill-opacity=".8" stroke="#8fe6ff" stroke-width="1.6"/>`).join('')}
+ <path d="M60 140q40 20 80 0l14 50q-54 16-108 0z" fill="#fff"/>
+ ${[56,72,88,104,120,136].map(x=>`<circle cx="${x+4}" cy="${186+(x%3)}" r="9" fill="#fff"/>`).join('')}
+ <path d="M64 150q36 14 72 0" fill="none" stroke="#c9b8ff" stroke-width="2"/>
+ <path d="M92 56q-40 30-60 70M108 56q40 30 60 70" fill="none" stroke="#2fbf4a" stroke-width="6"/>
+ <circle cx="100" cy="100" r="50" fill="url(#mBub)" stroke="#5f7fd6"/>
+ <path d="M68 78a36 36 0 0 1 28-22" fill="none" stroke="#fff" stroke-width="7"/>
+ ${glowN(84,102,10,'#ff3fa1')}${glowN(116,102,10,'#ff3fa1',-1)}
+ <ellipse cx="70" cy="118" rx="8" ry="5" fill="#ff8ccb" fill-opacity=".6" stroke="none"/><ellipse cx="130" cy="118" rx="8" ry="5" fill="#ff8ccb" fill-opacity=".6" stroke="none"/>
+ <path d="M92 120q8 9 16 0z" fill="#ff5c86" stroke-width="2.2"/>
+ <path d="M100 52l-34-20q-8 16 2 30zM100 52l34-20q8 16-2 30z" fill="#2fbf4a"/>
+ <rect x="91" y="44" width="18" height="16" rx="5" fill="#5ee874"/>
+ ${[[100,18,11],[78,22,8],[122,22,8],[62,32,6],[138,32,6]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="url(#mBub)" stroke="#5f7fd6" stroke-width="2"/><circle cx="${x-r*.35}" cy="${y-r*.35}" r="${r*.25}" fill="#fff" stroke="none"/>`).join('')}
+ ${[[24,40],[176,36],[18,128],[184,120],[34,190],[168,192]].map(([x,y])=>`<path d="M${x} ${y-8}q2 6 8 8-6 2-8 8-2-6-8-8 6-2 8-8z" fill="#fff59a" stroke-width="1.6"/>`).join('')}
+ </g>`),
+ hwangsari: L(`<g stroke-width="3.2">
+ 
+ <path d="M8 40q40-14 70 6M192 40q-40-14-70 6M4 120q30 20 60 6M196 120q-30 20-60 6" fill="none" stroke="#d9a84a" stroke-width="4" stroke-opacity=".7"/>
+ <path d="M60 140q40 14 80 0l-12 18q-28 10-56 0zM70 158q30 10 60 0l-10 16q-20 6-40 0zM80 174q20 6 40 0l-8 14q-12 4-24 0zM90 188q10 3 20 0l-6 10q-4 2-8 0z" fill="url(#mTor)"/>
+ <path d="M42 138c-30 0-40-32-20-48-18-18-4-54 24-50 2-36 40-48 62-30 26-16 62-2 62 30 28 0 38 32 20 48 20 20 2 54-28 52-8 16-42 16-60 6-20 10-50 6-60-8z" fill="url(#mDust)"/>
+ <path d="M38 80q20-12 36 0M126 80q20-12 36 0M58 46q20-14 40-4" fill="none" stroke="#ffe0a0" stroke-width="3" stroke-opacity=".6"/>
+ <path d="M58 72q42-18 84 0l-4 22q-38 10-76 0z" fill="#3a3f47"/>
+ <circle cx="80" cy="82" r="13" fill="#ffb02e" stroke-width="3.6"/><circle cx="120" cy="82" r="13" fill="#ffb02e" stroke-width="3.6"/>
+ <circle cx="80" cy="82" r="6" fill="#fff7d0" stroke="none"/><circle cx="120" cy="82" r="6" fill="#fff7d0" stroke="none"/>
+ <path d="M66 66l24 8M134 66l-24 8" fill="none" stroke-width="4.5"/>
+ <path d="M72 102q28-10 56 0l-6 26q-22 10-44 0z" fill="#d6dbe2"/>
+ <circle cx="62" cy="120" r="13" fill="#5a6270"/><circle cx="138" cy="120" r="13" fill="#5a6270"/>
+ ${[62,138].map(x=>`<path d="M${x-7} 120h14M${x} 113v14" stroke="#9aa3b0" stroke-width="2"/>`).join('')}
+ <path d="M72 108l-10 12M128 108l10 12" stroke-width="3"/>
+ ${[[18,30,8],[180,28,7],[14,170,9],[186,166,8],[100,8,6],[44,196,5],[160,198,6]].map(([x,y,r])=>`<path d="M${x-r} ${y}l${r*.6}-${r}h${r*.9}l${r*.6} ${r*.8}-${r*.6} ${r}h-${r}z" fill="#8a5a22" stroke-width="2"/>`).join('')}
+ ${[[30,60],[170,64],[24,104],[178,100],[60,186],[140,184]].map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="${2+i%3}" fill="#e9b85a" stroke-width="1.4"/>`).join('')}
+ </g>`),
 };
 Object.assign(MEGA_ART, MEGA);
 return ART;
