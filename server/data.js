@@ -573,6 +573,10 @@ MONSTERS.godeuri.trait = { n: '녹아내림', d: '체력이 절반 이하가 되
 MONSTERS.yangmeori.trait = { n: '온탕냉탕', d: '홀수 턴은 온탕(불 기술 1.3배), 짝수 턴은 냉탕(얼음 기술 1.3배)이다.' };
 MONSTERS.damjaengjeon.trait = { n: '광합성 충전', d: '매 턴이 끝날 때 최대 체력의 1/16을 회복한다.' };
 MONSTERS.ppogeuri.trait = { n: '거품막', d: '전투에서 처음 맞는 공격 한 번의 피해를 절반으로 줄인다.' };
+// 소리 기술: 하르모니움 특성 펑크록이 영향을 줌
+for (const id of ['metalnoise', 'scold', 'lionroar']) { MOVES[id].sound = true; MOVES[id].d = `[소리] ${MOVES[id].d}`; }
+MOVES.z_harmonium.sound = true;
+MONSTERS.harmonium.trait = { n: '펑크록', d: '소리 기술(금속음, 혼쭐내기, 사자후, 오버드라이브)의 위력이 1.3배가 되고, 상대의 소리 기술은 피해를 절반만 받는다.' };
 MONSTERS.hwangsari.trait = { n: '황사 경보', d: '싸움에 나오면 5턴 동안 황사가 분다.' };
 
 // 잠시 밴: 테스트 중인 요괴는 개발자 계정만 씁니다.

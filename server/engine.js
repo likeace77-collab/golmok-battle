@@ -373,6 +373,8 @@ function damageOf(b, atk, def, mv, crit, roll) {
   dmg *= roll;
   if (atk.types.includes(mv.type)) dmg *= 1.5;
   dmg *= effOf(mv.type, def.types);
+  if (mv.sound && atk.species === 'harmonium') dmg *= 1.3; // 특성 펑크록
+  if (mv.sound && def.species === 'harmonium') dmg *= .5;
   if (atk.species === 'yangmeori' && mv.type === (isHot(b) ? 'fire' : 'ice')) dmg *= 1.3; // 특성 온탕냉탕
   if (phys && atk.status === 'brn') dmg *= .5;
   return Math.max(1, Math.floor(dmg));

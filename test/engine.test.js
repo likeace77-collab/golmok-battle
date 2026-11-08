@@ -455,3 +455,17 @@ test('하르모니움 Z기술 오버드라이브는 태그 배틀에서 상대 �
   for (const s of [1, 2, 3]) E.choose(b, s, { type: 'move', index: 0, target: s === 1 ? 2 : 0 });
   for (const f of foes) assert.ok(f.hp < 3000, f.name);
 });
+
+test('하르모니움 특성 펑크록: 소리 기술 1.3배, 받는 소리 기술 절반', () => {
+  const dmg = (atkSp, defSp, mv) => {
+    const b = battle(custom(atkSp, [mv]), custom(defSp, ['tackle']), 21);
+    const a = E.activeOf(b, 0), f = E.activeOf(b, 1);
+    a.stats = { ...a.stats, atk: 100, spa: 100, spe: 200 }; a.types = ['none'];
+    f.stats = { ...f.stats, def: 100, spd: 100, spe: 1 }; f.types = ['none']; f.hp = f.maxHp = 5000;
+    move(b, 0, mv); move(b, 1, 'tackle');
+    return 5000 - f.hp;
+  };
+  const base = dmg('kkaebi', 'kkaebi', 'scold');
+  assert.ok(Math.abs(dmg('harmonium', 'kkaebi', 'scold') / base - 1.3) < .12);
+  assert.ok(Math.abs(dmg('kkaebi', 'harmonium', 'scold') / base - .5) < .08);
+});
