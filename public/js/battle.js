@@ -447,8 +447,11 @@ const Battle = (() => {
   const ROMAN = ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
   // 얼굴만 잘라 보이는 컷: eyes는 눈매 클로즈업, head는 머리와 어깨
   const crop = (m, cls, box) => monsterSVG(m.species, cls, m.mega, m.hits, m.tier).replace('viewBox="0 0 200 200"', `viewBox="${box}" preserveAspectRatio="xMidYMid slice"`);
-  const bust = (m) => crop(m, 'zx-bust', '70 0 70 70');
-  const eyes = (m) => crop(m, 'zx-bust', '75 17 60 24');
+  // 메가진화 그림은 얼굴 위치가 달라서 따로 자릅니다.
+  const FACE = { 'lumina-mega': ['64 29 60 60', '71 44 45 18'], 'silvia-mega': ['35 21 60 60', '43 36 45 18'] };
+  const face = (m) => FACE[`${m.species}${m.mega ? '-mega' : ''}`] || ['70 0 70 70', '75 17 60 24'];
+  const bust = (m) => crop(m, 'zx-bust', face(m)[0]);
+  const eyes = (m) => crop(m, 'zx-bust', face(m)[1]);
   const magicCircle = (c1, c2) => `<svg class="zx-mc" viewBox="-100 -100 200 200" aria-hidden="true">
     <g fill="none" stroke="${c1}" stroke-width="1.6">
       <circle r="96"/><circle r="88" stroke-dasharray="2 4"/><circle r="62" stroke="${c2}"/><circle r="40"/>

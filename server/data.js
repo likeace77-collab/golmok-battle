@@ -322,8 +322,8 @@ const MONSTERS = {
     ['yellowgust', 'quake', 'rockthrow', 'razorwind', 'windcut', 'wall', 'breeze', 'spirit_up', 'grind', 'guard'],
     'KF94 마스크를 쓴 황사 구름. 본인도 숨이 막혀서 늘 화가 나 있다.'),
   // 무대
-  harmonium:X('하르모니움', ['steel'], 90, 50, 110, 115, 85, 50,
-    ['metalnoise', 'magnet', 'highvolt', 'scold', 'gust', 'charge', 'armor', 'shock', 'lionroar', 'guard'],
+  harmonium:X('하르모니움', ['steel', 'spirit'], 90, 50, 110, 115, 85, 50,
+    ['metalnoise', 'magnet', 'highvolt', 'scold', 'nightmare', 'charge', 'armor', 'shock', 'lionroar', 'guard'],
     '철골 아치 무대가 요괴가 되었다. 양쪽 스피커는 몸이고, 가운데 매달린 유선 마이크가 뇌다. 선이 뽑히면 아무 말도 못 한다.'),
 };
 
@@ -364,8 +364,8 @@ const SIGNATURE = {
 Object.assign(SIGNATURE, {
   neonna: ['neonwink', '네온 디바', '날개가 세 겹으로 늘고 조명이 내려왔다. 왕관까지 불이 들어오면 공연이 시작된다.', [15, 0, 10, 40, 10, 25]],
   yeonji: ['lipmark', '홍염 왕비', '금관을 쓰고 붉은 날개를 펼쳤다. 황금 립스틱은 왕의 지팡이가 되었다.', [10, 0, 20, 40, 30, 0]],
-  lumina: ['crystalbolt', '대마도사 루미나', '수정이 벼락을 두르고 손끝에 마법진이 떠오른다. 보석 장식이 전부 마력으로 빛난다.', [10, 0, 10, 45, 15, 20]],
-  silvia: ['winksnipe', '폭풍 사수 실비아', '활과 화살에 푸른 바람이 감긴다. 룬 문양이 새겨진 경장 갑옷으로 더 가볍고 빨라졌다.', [10, 40, 10, 0, 10, 30]],
+  lumina: ['crystalbolt', '대마도사 루미나', '붉은 망토와 불꽃·얼음 날개를 두르고 머리 위에 마법진을 띄웠다. 지팡이 끝 수정은 고리에 감싸여 공중에서 돈다.', [10, 0, 10, 45, 15, 20]],
+  silvia: ['winksnipe', '폭풍 사수 실비아', '수정 왕관과 초록 갑옷 차림에 룬이 새겨진 바람 날개를 펼쳤다. 활 두 자루와 수십 발의 바람 화살이 주위를 맴돈다.', [10, 40, 10, 0, 10, 30]],
   danjo: ['forge', '프리즘 용사 단조', '모든 재료를 녹여 하나로 만든 무지개 갑옷. 검은 일곱 빛깔로 빛나고 방패의 사자가 금빛으로 깨어났다.', [15, 40, 30, 0, 15, 0]],
   jabanbot: ['canburst', '초합금 자판왕', '어깨에 캔 발사기를 달고 금장을 둘렀다. 화면에 뜬 MAX는 가격이다.', [0, 40, 30, 0, 10, 20]],
   baedalbot: ['bulletdash', '광속 철가방', '바퀴와 몸이 합체해 오토바이가 되었다. 철가방이 둘로 늘어 이제 한 번에 두 집.', [20, 40, 25, 0, 15, 0]],
