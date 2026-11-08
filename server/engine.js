@@ -419,7 +419,8 @@ function damageOf(b, atk, def, mv, crit, roll) {
   dmg *= roll;
   if (atk.types.includes(mv.type)) dmg *= 1.5;
   dmg *= effMon(mv.type, def, atk);
-  if (b.terrain === 'grass' && mv.type === 'grass') dmg *= 1.3; // 그래스필드
+  if (b.terrain === 'grass' && mv.type === 'grass' && teamOf(b, seats(b).find((i) => activeOf(b, i) === atk) ?? -1) === b.terrainTeam) dmg *= 1.3;
+  if (mv.bean && def.types.includes('spirit')) dmg *= 2; // 팥붕: 팥은 귀신에게 두 배 // 그래스필드 (깐 쪽만)
   if (mv.sound && atk.species === 'harmonium') dmg *= 1.3; // 특성 펑크록
   if (mv.sound && def.species === 'harmonium') dmg *= .5;
   if (atk.species === 'yangmeori' && mv.type === (isHot(b) ? 'fire' : 'ice')) dmg *= 1.3; // 특성 온탕냉탕
@@ -500,12 +501,23 @@ function useMove(b, s, index, ev, want, z = false) {
     if (mv.rainZ && b.weather === 'rain') mv = { ...mv, pow: Math.round(mv.pow * 1.5) };
   }
 
+  // 붕빵이 반갈쭉: 속을 갈라 확인
+  let fill = null;
+  if (mv.split) fill = ['pat', 'cream', 'pizza'][Math.floor(rand(b) * 3)];
   ev.push({
-    t: 'move', side: s, target: o, id: z ? zid : slot ? slot.id : 'struggle', move: mv.n, type: mv.type, cat: mv.cat, z,
+    t: 'move', side: s, target: o, fill, id: z ? zid : slot ? slot.id : 'struggle', move: mv.n, type: mv.type, cat: mv.cat, z,
     player: b.sides[s].name, mon: publicMon(me),
     text: z ? `${josa(b.sides[s].name, '과/와')} ${me.name}의 Z기술! ${mv.n}!` : `${josa(me.name, '은/는')} ${josa(mv.n, '을/를')} 썼다!`,
   });
 
+  if (fill) {
+    const FILL = { pat: '팥붕', cream: '슈붕', pizza: '피붕' };
+    msg(ev, `${josa(me.name, '은/는')} ${FILL[fill]}이었다!`);
+    if (fill === 'cream') { me.protectStreak = 0; if (!heal(b, s, me, me.maxHp / 2, ev)) msg(ev, '체력이 이미 가득하다!'); return; }
+    if (fill === 'pizza') { me.protectStreak = 0; for (const k of ['atk', 'def', 'spe']) changeStage(b, s, me, k, 1, ev); return; }
+    msg(ev, `${josa(me.name, '은/는')} 뜨거운 팥을 던졌다!`);
+    mv = { ...mv, bean: true };
+  }
   if (mv.protect) {
     const ok = chance(b, 100 / 2 ** me.protectStreak);
     if (ok) {
@@ -666,9 +678,9 @@ function afterHit(b, s, me, o, foe, mv, total, ev) {
     me.disabled = { id: mv._id, turns: 4 };
     msg(ev, `${foe.name}의 저주받은바디! ${me.name}의 ${josa(mv.n, '이/가')} 봉인되었다!`);
   }
-  if (foe.species === 'kongsiru' && b.terrain !== 'grass') { // 콩시루 넘치는콩
-    b.terrain = 'grass'; b.terrainTurns = 5;
-    ev.push({ t: 'terrain', terrain: 'grass', text: `${foe.name}의 넘치는콩! 발밑에 그래스필드가 펼쳐졌다!` });
+  if (foe.species === 'kongsiru' && !(b.terrain === 'grass' && b.terrainTeam === teamOf(b, o))) { // 콩시루 넘치는콩: 우리 쪽에만
+    b.terrain = 'grass'; b.terrainTurns = 5; b.terrainTeam = teamOf(b, o);
+    ev.push({ t: 'terrain', terrain: 'grass', side: o, text: `${foe.name}의 넘치는콩! ${teamName(b, teamOf(b, o))} 쪽 발밑에 그래스필드가 펼쳐졌다!` });
   }
   faintCheck(b, s, me, ev);
 }
@@ -799,7 +811,7 @@ function endOfTurn(b, ev) {
     const m = activeOf(b, s);
     if (!alive(m)) continue;
     if (b.weather === 'rain') crisp(b, s, m, 'soggy', ev); else if (b.weather === 'sun') crisp(b, s, m, 'crispy', ev);
-    if (b.terrain === 'grass' && m.hp < m.maxHp) { msg(ev, `${josa(m.name, '은/는')} 그래스필드에서 회복했다!`); heal(b, s, m, m.maxHp / 16, ev); }
+    if (b.terrain === 'grass' && teamOf(b, s) === b.terrainTeam && m.hp < m.maxHp) { msg(ev, `${josa(m.name, '은/는')} 그래스필드에서 회복했다!`); heal(b, s, m, m.maxHp / 16, ev); }
     if (m.disabled && --m.disabled.turns <= 0) { m.disabled = null; msg(ev, `${m.name}의 기술 봉인이 풀렸다!`); }
   }
   if (b.terrain && --b.terrainTurns <= 0) { b.terrain = null; ev.push({ t: 'terrain', terrain: null, text: '그래스필드가 사라졌다.' }); }
@@ -856,7 +868,7 @@ function viewFor(b, s) {
   const ally = matesOf(b, s).filter((i) => i !== s).map(seatView)[0] ?? null;
   return {
     you: s, team: teamOf(b, s), doubles: isDoubles(b), turn: b.turn, phase: b.phase, winner: b.winner,
-    weather: b.weather, weatherTurns: b.weatherTurns, terrain: b.terrain, terrainTurns: b.terrainTurns,
+    weather: b.weather, weatherTurns: b.weatherTurns, terrain: b.terrain, terrainTurns: b.terrainTurns, terrainMine: b.terrain ? b.terrainTeam === teamOf(b, s) : null,
     mustAct: b.needs[s] && !lock,
     canMega: canMega(b, s) && !lock,
     trapped: b.phase === 'choose' && trapped(b, s),

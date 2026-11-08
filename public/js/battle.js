@@ -268,10 +268,10 @@ const Battle = (() => {
 
   function drawWeather() {
     const s = $('#scene');
-    s.className = `scene${s.classList.contains('has-tr') ? ' has-tr' : ''}${view.doubles ? ' dbl' : ''}${disp.weather ? ` w-${disp.weather}` : ''}${disp.terrain ? ` tr-${disp.terrain}` : ''}${disp.me.hazard ? ' haz-me' : ''}${disp.opp.hazard ? ' haz-opp' : ''}`;
+    s.className = `scene${s.classList.contains('has-tr') ? ' has-tr' : ''}${view.doubles ? ' dbl' : ''}${disp.weather ? ` w-${disp.weather}` : ''}${disp.terrain ? ` tr-${disp.terrain} tr-${disp.terrainMine ? 'mine' : 'theirs'}` : ''}${disp.me.hazard ? ' haz-me' : ''}${disp.opp.hazard ? ' haz-opp' : ''}`;
     const chips = [];
     if (disp.weather) chips.push(`<span class="f-${disp.weather}">${WEATHER[disp.weather]} ${disp.weatherTurns}턴</span>`);
-    if (disp.terrain) chips.push(`<span class="f-grassfield">그래스필드 ${disp.terrainTurns}턴</span>`);
+    if (disp.terrain) chips.push(`<span class="f-grassfield">${disp.terrainMine ? (spectating ? `${esc(myNames())} 쪽` : '내 쪽') : (spectating ? `${esc(oppNames())} 쪽` : '상대 쪽')} 그래스필드 ${disp.terrainTurns}턴</span>`);
     if (disp.opp.hazard) chips.push(`<span class="f-tack">${spectating ? `${esc(oppNames())} 쪽` : '상대 쪽'} 압정</span>`);
     if (disp.me.hazard) chips.push(`<span class="f-tack">${spectating ? `${esc(myNames())} 쪽` : '내 쪽'} 압정</span>`);
     $('#field').innerHTML = chips.join('');
@@ -401,7 +401,9 @@ const Battle = (() => {
         disp.weather = e.weather; disp.weatherTurns = e.weather ? 5 : 0; drawWeather();
         await wait(Math.max(1000, e.trait ? Fx.weather(e.weather) : 0)); break;
       case 'terrain':
-        disp.terrain = e.terrain; disp.terrainTurns = e.terrain ? 5 : 0; drawWeather();
+        disp.terrain = e.terrain; disp.terrainTurns = e.terrain ? 5 : 0;
+        if (e.terrain) disp.terrainMine = key === 'me' || key === 'ally';
+        drawWeather();
         if (e.terrain) Fx.terrain?.(e.terrain);
         await wait(1000); break;
       case 'hazard':

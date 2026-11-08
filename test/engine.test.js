@@ -642,3 +642,38 @@ test('투혼 광폭화: 체력에 따라 폼이 바뀌고 능력치가 오른다
   };
   assert.ok(pow(.1) > pow(1) * 1.4, `${pow(.1)} ${pow(1)}`);
 });
+
+test('붕빵이 반갈쭉: 팥붕·슈붕·피붕, 콩시루 그래스필드는 우리 쪽만', () => {
+  assert.ok(MONSTERS.bungbbang.moves.includes('bangalzzuk') && !MONSTERS.bungbbang.moves.includes('ember'));
+  const seen = new Set();
+  for (let seed = 1; seed < 40; seed++) {
+    const b = battle(custom('bungbbang', ['bangalzzuk']), custom('kkaebi', ['breeze']), seed);
+    const me = E.activeOf(b, 0), foe = E.activeOf(b, 1);
+    me.hp = Math.floor(me.maxHp / 2); foe.hp = foe.maxHp = 3000; me.stats.spe = 999;
+    const ev = move(b, 0, 'bangalzzuk').events || move(b, 1, 'breeze').events;
+    const fill = ev.find((e) => e.t === 'move' && e.side === 0).fill;
+    seen.add(fill);
+    if (fill === 'cream') assert.ok(me.hp > me.maxHp / 2);
+    if (fill === 'pizza') assert.equal(me.stages.atk, 1);
+    if (fill === 'pat') assert.ok(foe.hp < 3000);
+  }
+  assert.equal(seen.size, 3);
+  // 팥은 혼 타입에게 2배
+  const pat = (sp) => {
+    for (let seed = 1; seed < 60; seed++) {
+      const b = battle(custom('bungbbang', ['bangalzzuk']), custom(sp, ['breeze']), seed);
+      const foe = E.activeOf(b, 1); foe.hp = foe.maxHp = 5000; foe.types = sp === 'kkaebi' ? ['spirit'] : ['none']; foe.stats = { ...foe.stats, def: 100 };
+      E.activeOf(b, 0).stats.spe = 999;
+      const ev = move(b, 0, 'bangalzzuk').events || move(b, 1, 'breeze').events;
+      if (ev.find((e) => e.t === 'move' && e.side === 0).fill === 'pat') return ev.find((e) => e.t === 'hp' && e.side === 1 && e.dmg).dmg;
+    }
+  };
+  assert.ok(pat('kkaebi') > pat('daeya') * 1.6);
+  // 그래스필드: 콩시루 쪽만 회복
+  const g = battle(custom('daeya', ['squirt']), custom('kongsiru', ['breeze']));
+  const atk = E.activeOf(g, 0), k = E.activeOf(g, 1);
+  atk.hp = atk.maxHp - 50; k.hp = k.maxHp = 3000;
+  move(g, 0, 'squirt'); move(g, 1, 'breeze');
+  assert.equal(g.terrain, 'grass');
+  assert.equal(atk.hp, atk.maxHp - 50); // 상대(대야몽)는 회복 안 됨
+});

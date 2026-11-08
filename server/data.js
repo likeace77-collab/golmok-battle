@@ -170,6 +170,7 @@ const MOVES = {
   vineshock: M('덩굴 감전', 'elec', 's', 75, 100, 15, { st: { s: 'par', ch: 30 }, d: '전기가 흐르는 덩굴로 휘감는다. 30% 확률로 마비' }),
   scrub:     M('때밀이', 'water', 's', 75, 100, 15, { clearFoe: true, d: '이태리타월로 박박. 상대의 능력치 상승을 모두 없앤다' }),
   metalnoise:M('금속음', 'steel', 's', 65, 100, 10, { foe: { spd: -2 }, d: '앰프로 키운 쇳소리. 상대 특방 2단계 하락' }),
+  bangalzzuk:M('반갈쭉', 'fire', 'p', 100, 100, 10, { split: true, d: '몸을 세로로 반 갈라 속을 확인한다. 팥붕: 팥을 던져 강하게 공격(혼 타입에게 2배) / 슈붕: 체력 절반 회복 / 피붕: 공격·방어·스피드 1단계 상승' }),
   rageaxe:   M('분노의 도끼', 'fire', 'p', 70, 100, 10, { rage: true, d: '잃은 체력이 많을수록 강해진다. 위력 70~150' }),
   yellowgust:M('황사 경보', 'earth', 'p', 25, 95, 15, { hits: [2, 5], d: '모래 알갱이가 2~5번 연속으로 때린다' }),
   // 보통
@@ -337,7 +338,7 @@ const MONSTERS = {
 // 캐릭터별 전용기와 메가진화: [전용기, 메가 이름, 소개, [체력, 공격, 방어, 특공, 특방, 스피드 상승값]]
 const SIGNATURE = {
   yeontan: ['gugong', '불땀 연탄대왕', '구멍 22개가 전부 타오르고 몸 전체가 용암처럼 갈라진다. 양팔은 쌓아 올린 연탄.', [0, 40, 30, 0, 20, 10]],
-  bungbbang: ['headfirst', '근육 붕어빵', '팥이 입으로 새는 중. 다리는 왜 났는지 본인도 모르고 선글라스는 벗지 않는다.', [15, 45, 15, 0, 0, 25]],
+  bungbbang: ['headfirst', '까맣게 탄 붕빵이', '메가진화의 열을 못 이기고 까맣게 타 버렸다. 탄 붕어빵을 팔 수 없다며 붕어빵 아줌마가 붕어빵 틀을 들고 쫓아온다.', [15, 45, 15, 0, 0, 25]],
   horong: ['rekindle', '청사초롱 귀신', '청색과 홍색 초롱으로 커졌다. 푸른 도깨비불을 거느린다.', [15, 0, 0, 50, 15, 20]],
   kettle: ['boil', '증기 폭군', '주전자를 졸업하고 증기기관이 되었다. 압력계 바늘이 빨간 칸을 넘으면 도망쳐라.', [10, 0, 15, 30, 0, 45]],
   daeya: ['kimjang', '김장 대모', '뽀글 파마에 고무장갑을 끼면 김장 시즌이 시작된다. 눈이 마주치면 배추를 절인다.', [0, 35, 25, 0, 20, 20]],
@@ -462,7 +463,8 @@ for (const [id, [sig, n, d, boost]] of Object.entries(SIGNATURE)) {
   mon.mega = { n, d, boost: Object.fromEntries(STAT_KEYS.map((k, i) => [k, boost[i]])) };
 }
 // 전용기가 여럿인 요괴: 단조는 강화·강화 베기·특성검술·리플렉터가 모두 전용기
-for (const id of ['tierslash', 'elemblade', 'reflector']) MOVES[id].sig = true;
+for (const id of ['tierslash', 'elemblade', 'reflector', 'bangalzzuk']) MOVES[id].sig = true;
+MONSTERS.bungbbang.moves = MONSTERS.bungbbang.moves.map((m) => (m === 'ember' ? 'bangalzzuk' : m));
 
 const AVATAR_OPTIONS = {
   skin: 10, hair: 20, hairColor: 16, brow: 6, eyes: 12, mouth: 10, face: 7,
@@ -630,7 +632,7 @@ Object.assign(MONSTERS.orak, { trait: { n: '돈지랄', d: '상태이상, 위협
 Object.assign(MONSTERS.maetdol, { trait: { n: '옹골참', d: '체력이 꽉 차 있을 때는 한 방에 쓰러질 공격을 맞아도 체력 1을 남기고 버틴다.' } });
 Object.assign(MONSTERS.kettle, { trait: { n: '끓는물', d: '물 기술이 풀 타입에게도 2배로 들어간다.' } });
 Object.assign(MONSTERS.kkaebi, { trait: { n: '저주받은바디', d: '공격에 맞으면 30% 확률로 그 기술을 4턴 동안 봉인한다.' } });
-Object.assign(MONSTERS.kongsiru, { trait: { n: '넘치는콩', d: '공격에 맞으면 5턴 동안 그래스필드를 펼친다. 그래스필드에서는 풀 기술이 1.3배가 되고 매 턴 모두 체력을 1/16 회복한다.' } });
+Object.assign(MONSTERS.kongsiru, { trait: { n: '넘치는콩', d: '공격에 맞으면 5턴 동안 우리 쪽에만 그래스필드를 펼친다. 우리 편의 풀 기술이 1.3배가 되고, 우리 편 요괴가 매 턴 체력을 1/16 회복한다.' } });
 Object.assign(MONSTERS.bungbbang, { trait: { n: '크리스피', d: '비가 오거나 물 기술에 맞으면 눅눅해져 스피드가 1단계 떨어진다. 땡볕이거나 불 기술에 맞으면 바삭해져, 물리 공격을 한 상대에게 그 피해의 1/4을 돌려준다.' } });
 Object.assign(MONSTERS.jeonbot, { trait: { n: '비상전력', d: '체력이 절반 이하가 되면(한 번만) 방어와 특방이 1단계 떨어지는 대신 특공과 스피드가 2단계 올라간다.' } });
 MONSTERS.ssaribi.trait.d = '싸움에 나오면 날씨와 그래스필드, 우리 쪽 압정을 치워 버린다. (상대 쪽 압정은 그대로 둔다)';

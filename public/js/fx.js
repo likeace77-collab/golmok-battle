@@ -114,6 +114,7 @@ const Fx = (() => {
     lips() { ctx.beginPath(); ctx.moveTo(-11, 0); ctx.quadraticCurveTo(-5, -7, 0, -3); ctx.quadraticCurveTo(5, -7, 11, 0); ctx.quadraticCurveTo(0, 9, -11, 0); paint('#E0123E'); },
     bag() { ctx.beginPath(); ctx.moveTo(-11, -6); ctx.lineTo(-13, -14); ctx.lineTo(-6, -8); ctx.quadraticCurveTo(0, -5, 6, -8); ctx.lineTo(13, -14); ctx.lineTo(11, -6); ctx.quadraticCurveTo(15, 12, 0, 13); ctx.quadraticCurveTo(-15, 12, -11, -6); paint('#2f2b38'); },
     can() { ctx.beginPath(); ctx.rect(-8, -11, 16, 22); paint('#AEB7C2'); ctx.beginPath(); ctx.rect(-8, -3, 16, 8); paint('#E8402C', .9); },
+    redbean() { ctx.beginPath(); ctx.ellipse(0, 0, 7, 5, .3, 0, 7); paint('#6a1a24', 1.4); ctx.beginPath(); ctx.ellipse(-2, -1.5, 2, 1, .3, 0, 7); ctx.fillStyle = '#c45a66'; ctx.fill(); },
     bean() { ctx.beginPath(); ctx.moveTo(0, 12); ctx.quadraticCurveTo(-3, 0, 3, -6); ctx.strokeStyle = '#E9E2B5'; ctx.lineWidth = 3; ctx.stroke(); ctx.beginPath(); ctx.ellipse(4, -8, 5, 3.5, .4, 0, 7); paint('#F2D64B', .9); },
     bread() { ctx.beginPath(); ctx.ellipse(0, 0, 13, 8, 0, 0, 7); paint('#E7A84B'); ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(19, -6); ctx.lineTo(19, 6); ctx.closePath(); paint('#D9903A'); },
     paddle() { ctx.beginPath(); ctx.rect(-2, 2, 4, 16); paint('#A9713A'); ctx.beginPath(); ctx.rect(-6, -16, 12, 18); paint('#C9924F'); },
@@ -507,6 +508,20 @@ const Fx = (() => {
     bulletdash(A, T, k) { act(k, 'dash', 420); windLines(A, T, { n: 10, gap: 12, dur: 220, spread: 40, color: '#FFE45C' }); prop('plate', { from: A, to: T, dur: 190, size: 22 }); ring(T, { delay: 190, color: '#FFD23F', r1: 76 }); return 640; },
     spincycle(A, T, k, t) { act(k, 'spin', 760); act(t, 'lift', 760); orbit('drop', T, { n: 12, r: 58, dur: 760, size: 8, turns: 3 }); orbit('bubble', T, { n: 8, r: 34, dur: 760, size: 6, turns: -2 }); ring(T, { color: '#BFE4FF', r1: 92, delay: 640 }); return 1040; },
     metalnoise(A, T, k, t) { act(k, 'cast', 700); for (let i = 0; i < 4; i++) ring(A, { delay: i * 110, color: ['#C9A24A', '#cfd6df'][i % 2], r0: 20, r1: 150, w: 5, dur: 420 }); for (let i = 0; i < 3; i++) ring(T, { delay: 300 + i * 110, color: '#ff7ad9', r0: 10, r1: 70, w: 4, dur: 300 }); shake(8, 420, 300); tint(t, 'hex', 420, 360); return 1000; },
+    bangalzzuk(A, T, k, t, e) {
+      // 몸을 세로로 반 가르는 연출 뒤, 속에 따라 다르게
+      darken(500, .3);
+      slash(A, { angle: -1.5708, len: 150, color: '#fff', w: 8, dur: 260 });
+      burst('redbean', A, { delay: 200, n: 6, dist: 30, size: 7 });
+      flash('#ffd23f', 140, 220, .3);
+      if (e?.fill === 'cream') { rise('heart', A, { delay: 420, n: 8, dur: 600, size: 9 }); burst('bubble', A, { delay: 360, n: 10, dist: 50, size: 8 }); return 1100; }
+      if (e?.fill === 'pizza') { rise('arrowUp', A, { delay: 420, n: 6, dur: 520, size: 10 }); burst('spark', A, { delay: 380, n: 14, dist: 70, size: 8 }); ring(A, { delay: 380, color: '#E8402C', r1: 110, w: 6 }); return 1100; }
+      act(k, 'throw', 420);
+      spray('redbean', A, T, { delay: 380, n: 16, gap: 24, dur: 300, size: 9, spread: 22, spin: 8 });
+      burst('redbean', T, { delay: 720, n: 14, dist: 80, size: 8 }); ring(T, { delay: 720, color: '#5a1f2a', r1: 120, w: 7 });
+      shake(10, 360, 720); tint(t, 'burn', 400, 740);
+      return 1300;
+    },
     rageaxe(A, T, k, t) { return rageAxe(A, T, k, t); },
     elemblade(A, T, k, t, e) { return elemBlade(A, T, k, t, e?.type); },
     reflector(A, T, k) { act(k, 'cast', 400); return 500; },

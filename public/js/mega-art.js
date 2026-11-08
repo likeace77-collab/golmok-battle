@@ -81,18 +81,41 @@ return {
   <path d="M42 44q58-40 116 0l-10 20-14-14-12 8-12-16-10 16-14-16-12 12-12-8-12 14z" fill="#8a8f98"/>
   <path d="M62 30l-6-16 14 8 8-14 8 14 12-14 8 14 12-14 8 14 14-8-6 16z" fill="#E7B23A"/>`),
  bungbbang: L(`
-  <path d="M60 134l-22 8-6 44 20 4 8-30 14-4zM122 134l22 8 6 44-20 4-8-30-14-4z" fill="#F2C9A0"/>
-  <path d="M22 186h34v12H18zM130 186h34l4 12h-38z" fill="#fff"/><path d="M18 192h38M130 192h38" stroke="#E8402C" stroke-width="3" fill="none"/>
-  <path d="M46 96L12 62l-10 12 26 40 26 6zM140 96l34-34 10 12-26 40-26 6z" fill="#F2C9A0"/>
-  <path d="M12 62Q0 52 4 40l14 2 4 12zM174 62q12-10 8-22l-14 2-4 12z" fill="#F2C9A0"/>
-  <path d="M152 86l36-32q2 36-4 62z" fill="#D9903A" transform="translate(0 2)"/>
-  <path d="M14 96q22-62 86-58 44 2 56 54-10 48-58 52-62 2-84-48z" fill="#E7A84B"/>
-  <path d="M84 44q12 42 0 98M104 42q10 46 0 100M124 48q8 42 0 88" fill="none" stroke="#B87426"/>
-  <path d="M64 124q10 12 30 8 2 14-12 18-14-6-18-26z" fill="#5a1f2a"/><path d="M78 146q-2 12 4 18M90 142q2 12 0 22" fill="none" stroke="#5a1f2a" stroke-width="5"/>
-  <path d="M26 78h44q0 16-20 16-10 0-14-8h-8z" fill="#1a1433"/><path d="M70 78h26q0 14-14 14-12 0-12-14z" fill="#1a1433"/><path d="M34 84h14" stroke="#fff" fill="none"/>
-  <path d="M20 112q18 10 36 0" fill="none" stroke-width="3"/>
-  <path d="M34 126q24 14 56 2l-2 8q-26 12-52-2z" fill="#FFD23F"/>
-  <path d="M84 134l6 12 8-12" fill="none"/>`),
+  <path d="M150 196l4-14M184 196l-2-14" stroke-width="6"/>
+  <path d="M140 198h18v-6h-16zM176 198h20l-2-6h-16z" fill="#F27FA5"/>
+  <path d="M140 98q26-12 52 0l8 94h-68z" fill="#3F6FD8"/>
+  <path d="M152 108h30l4 82h-38z" fill="#fff"/><path d="M158 150h20v14h-20z" fill="#fff" stroke-width="2.4"/><path d="M152 108q15 8 30 0" fill="none" stroke-width="2.4"/>
+  <g transform="translate(0 -24)">
+  <path d="M188 126q10-14 6-34" fill="none" stroke-width="12"/><path d="M188 126q10-14 6-34" fill="none" stroke="#F2C9A0" stroke-width="6"/>
+  <g transform="translate(194 80) rotate(18)"><rect x="-16" y="-12" width="32" height="20" rx="3" fill="#3a3f48"/><path d="M-10 -2q8-8 16 0-8 6-16 0zM6 -2l5-4v8z" fill="#5b616d" stroke-width="2"/><path d="M0 8v12" stroke-width="4"/></g>
+  <path d="M146 128q-14-4-22-18" fill="none" stroke-width="12"/><path d="M146 128q-14-4-22-18" fill="none" stroke="#F2C9A0" stroke-width="6"/>
+  <path d="M126 112l-24-22M122 108l-26-12" stroke="#c7cdd6" stroke-width="4"/>
+  <circle cx="166" cy="96" r="20" fill="#F2C9A0"/>
+  <path d="M146 92q2-26 22-26t20 26q-6-8-20-8t-22 8z" fill="#E8402C"/>
+  ${[[156,78],[168,74],[178,82],[162,86],[174,90]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="2.2" fill="#fff" stroke="none"/>`).join('')}
+  <path d="M186 90l10 4-8 6z" fill="#E8402C" stroke-width="2.4"/>
+  <path d="M152 92l10 4M182 92l-10 4" fill="none" stroke-width="3.2"/>
+  <circle cx="158" cy="100" r="2.6" fill="#1a1433" stroke="none"/><circle cx="176" cy="100" r="2.6" fill="#1a1433" stroke="none"/>
+  <path d="M158 108q8 10 18 0z" fill="#8a1d1d"/><path d="M160 108h14" stroke="#fff" stroke-width="2"/>
+  <ellipse cx="154" cy="106" rx="4" ry="2.4" fill="#ff8ca0" fill-opacity=".6" stroke="none"/><ellipse cx="180" cy="106" rx="4" ry="2.4" fill="#ff8ca0" fill-opacity=".6" stroke="none"/>
+  <path d="M186 104l6-2M186 110l7 1" fill="none" stroke-width="2"/>
+  <path d="M110 30h58q6 0 6 6v14q0 6-6 6h-24l-2 10-8-10h-24q-6 0-6-6v-14q0-6 6-6z" fill="#fff" stroke-width="2.6"/>
+  <text x="139" y="49" text-anchor="middle" font-size="15" font-weight="900" fill="#E8402C" stroke="none">거기 서!</text>
+  </g>
+  <path d="M58 150l-10 34-14 4M86 152l4 30 16 6" fill="none" stroke-width="7"/>
+  <path d="M20 186h22l4 8H18zM96 186h22l2 8H94z" fill="#fff"/><path d="M18 190h26M94 190h26" stroke="#E8402C" stroke-width="2.4"/>
+  <path d="M146 108l20-18q4 22-2 40z" fill="#2a1810"/>
+  <path d="M10 104q22-58 84-54 46 2 56 50-10 46-58 50-60 2-82-46z" fill="#3b2216"/>
+  <path d="M30 78q20-18 48-20M24 128q24 20 60 18" fill="none" stroke="#1a0d08" stroke-width="5"/>
+  <path d="M82 58q10 44 0 90M104 56q10 46 0 92M124 62q8 40 0 82" fill="none" stroke="#1f120c" stroke-width="4"/>
+  <path d="M96 76l8 10-6 8 10 12M118 96l-8 12 8 6M64 116l10 6-4 10" fill="none" stroke="#ff7a2a" stroke-width="2.6"/>
+  <circle cx="42" cy="88" r="14" fill="#fff"/><circle cx="38" cy="88" r="4" fill="#1a1433" stroke="none"/>
+  <path d="M28 70l20 8" fill="none" stroke-width="3.2"/>
+  <ellipse cx="34" cy="116" rx="9" ry="11" fill="#1a1433"/><ellipse cx="34" cy="118" rx="5" ry="6" fill="#ff7a6a" stroke="none"/>
+  <path d="M60 72q4-10 8-2 2 8-4 10z" fill="#7fd4ff" stroke-width="2"/><path d="M68 98q4-10 8-2 2 8-4 10z" fill="#7fd4ff" stroke-width="2"/>
+  ${[[52,42,10],[70,28,13],[92,36,11],[36,30,7]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="#8a8f98" fill-opacity=".85" stroke-width="2.4"/>`).join('')}
+  ${[[84,52],[112,58],[56,64]].map(([x,y])=>`<path d="M${x} ${y}q-6-10 0-16 2 8 6 6 2 6-6 10z" fill="#ff7a2a" stroke-width="2"/>`).join('')}
+  <path d="M-2 92h-0M2 80h-14M0 100h-10M4 120h-14" fill="none" stroke-width="3"/>`),
  bongdari: L(`
   <path d="M60 58q-26-46-4-54 16 16 16 50zM140 58q26-46 4-54-16 16-16 50z" fill="#E8E0B8"/>
   <path d="M28 54q72 22 144 0 34 56 10 110-14 32-82 32t-82-32q-24-54 10-110z" fill="#F4ECC4"/>
