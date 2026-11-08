@@ -382,10 +382,10 @@ function damageOf(b, atk, def, mv, crit, roll) {
 
 // 특성검술: 무작위 속성 (상대에게 효과가 없는 속성은 빼고)
 const BLADES = {
-  fire: ['화염', { st: { s: 'brn', ch: 30 } }], water: ['파도', { foe: { spe: -1 } }], grass: ['신록', { drain: .3 }],
-  elec: ['뇌광', { st: { s: 'par', ch: 30 } }], ice: ['빙결', { st: { s: 'frz', ch: 20 } }], earth: ['대지', { foe: { def: -1 }, sc: 50 }],
-  wind: ['질풍', { crit: true }], poison: ['맹독', { st: { s: 'psn', ch: 40 } }], spirit: ['혼백', { fl: 30 }],
-  fairy: ['성광', { foe: { atk: -1 } }], steel: ['강철', { pow: 110 }],
+  fire: ['화염', { st: { s: 'brn', ch: 60 } }], water: ['파도', { foe: { spe: -2 } }], grass: ['신록', { drain: .5 }],
+  elec: ['뇌광', { st: { s: 'par', ch: 50 } }], ice: ['빙결', { st: { s: 'frz', ch: 35 } }], earth: ['대지', { foe: { def: -2 } }],
+  wind: ['질풍', { critAll: true }], poison: ['맹독', { st: { s: 'psn', ch: 80 } }], spirit: ['혼백', { fl: 50, foe: { spd: -1 } }],
+  fairy: ['성광', { foe: { atk: -2 } }], steel: ['강철', { pow: 130 }],
 };
 function elemBlade(b, s, me, mv, want) {
   const foe = activeOf(b, targetOf(b, s, want));
@@ -483,7 +483,7 @@ function hitOne(b, s, me, o, mv, ev) {
   const hits = mv.hits ? randInt(b, mv.hits[0], mv.hits[1]) : 1;
   let total = 0, landed = 0;
   for (let i = 0; i < hits && alive(foe); i++) {
-    const crit = rand(b) < (mv.crit ? 1 / 8 : 1 / 24);
+    const crit = mv.critAll || rand(b) < (mv.crit ? 1 / 8 : 1 / 24);
     let dmg = damageOf(b, me, foe, mv, crit, .85 + rand(b) * .15);
     if (ref) {
       const full = dmg;

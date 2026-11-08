@@ -147,7 +147,7 @@ const MOVES = {
   // 단조 (강화 용사)
   forge:     M('강화', 'steel', 'x', 0, null, 15, { forge: true, self_: true, d: '100% 확률로 다음 단계로 강화. 체력이 약간, 공격과 방어가 크게 오름 (나무→철→금→다이아몬드→네더라이트→네더라이트+1 … +10)' }),
   tierslash: M('강화 베기', 'steel', 'p', 50, 100, 15, { tierPow: 22, d: '강화 단계마다 위력 22 증가 (네더라이트에서 최대 138)' }),
-  elemblade: M('특성검술', 'steel', 'p', 100, 100, 10, { elem: true, d: '불·물·풀·전기·얼음·땅·바람·독·혼·페어리·쇠 중 무작위 속성을 검에 실어 벤다. 속성마다 추가 효과가 다르고, 상대에게 효과가 없는 속성은 나오지 않는다' }),
+  elemblade: M('특성검술', 'steel', 'p', 100, 100, 10, { elem: true, d: '무작위 속성을 검에 실어 벤다. 화염: 화상 60% / 파도: 상대 스피드 2단계↓ / 신록: 피해 절반 흡수 / 뇌광: 마비 50% / 빙결: 얼림 35% / 대지: 상대 방어 2단계↓ / 질풍: 반드시 급소 / 맹독: 독 80% / 혼백: 풀죽음 50%·상대 특방↓ / 성광: 상대 공격 2단계↓ / 강철: 위력 130. 상대에게 효과가 없는 속성은 나오지 않는다' }),
   reflector: M('리플렉터', 'steel', 'x', 0, null, 10, { reflect: true, pri: 4, d: '스피드와 상관없이 먼저 방패를 든다. 이번 턴 받는 공격 피해를 10%로 줄이고, 물리 공격이면 나머지 90%를 검으로 찔러 돌려준다. 상대가 공격하지 않으면 그냥 찌른다. 연속으로 쓰면 실패하기 쉽다' }),
   shieldbash: M('방패 밀치기', 'steel', 'p', 60, 100, 15, { fl: 30, d: '30% 확률로 풀죽음' }),
   lionroar:  M('사자후', 'none', 'x', 0, 100, 10, { foe: { atk: -1, def: -1 }, d: '방패의 사자가 포효한다. 상대 공격과 방어 하락' }),
@@ -454,6 +454,8 @@ for (const [id, [sig, n, d, boost]] of Object.entries(SIGNATURE)) {
   mon.moves = [sig, ...mon.moves.filter((m) => m !== sig)];
   mon.mega = { n, d, boost: Object.fromEntries(STAT_KEYS.map((k, i) => [k, boost[i]])) };
 }
+// 전용기가 여럿인 요괴: 단조는 강화·강화 베기·특성검술·리플렉터가 모두 전용기
+for (const id of ['tierslash', 'elemblade', 'reflector']) MOVES[id].sig = true;
 
 const AVATAR_OPTIONS = {
   skin: 10, hair: 20, hairColor: 16, brow: 6, eyes: 12, mouth: 10, face: 7,

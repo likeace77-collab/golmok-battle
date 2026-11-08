@@ -146,7 +146,11 @@ test('모든 요괴에게 전용기가 있고 다른 요괴는 배울 수 없다
     assert.equal(Object.values(m.mega.boost).reduce((a, c) => a + c), 100, id);
   }
   assert.equal(Object.keys(owner).length, 45);
-  for (const m of Object.values(MONSTERS)) for (const mv of m.moves) if (MOVES[mv].sig) assert.equal(mv, m.sig);
+  // 전용기는 한 요괴만 배운다 (단조처럼 전용기가 여럿일 수는 있음)
+  const who = {};
+  for (const [id, m] of Object.entries(MONSTERS)) for (const mv of m.moves) if (MOVES[mv].sig) (who[mv] ||= new Set()).add(id);
+  for (const [mv, set] of Object.entries(who)) assert.equal(set.size, 1, mv);
+  assert.deepEqual(MONSTERS.danjo.moves.filter((mv) => MOVES[mv].sig), ['forge', 'tierslash', 'elemblade', 'reflector']);
 });
 
 test('메가진화: 행동을 쓰지 않고, 능력치가 오르며, 한 판에 한 번만 된다', () => {
