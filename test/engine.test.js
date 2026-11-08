@@ -729,9 +729,12 @@ test('도구 20개: 덱에서 들려 주고 전투에서 효과가 난다', () =
   assert.equal(Object.keys(ITEMS).length, 20);
   const withItem = (sp, moves, item) => [{ species: sp, moves, item }, { species: 'daeya', moves: ['tackle'] }];
   const turn = (b, m0, m1) => (move(b, 0, m0).events || move(b, 1, m1).events);
-  // 기합의띠: 체력 1로 버티고 사라짐
-  { const b = battle(custom('maetdol', ['quake']), withItem('yeontan', ['wall'], 'sash')); const y = E.activeOf(b, 1); E.activeOf(b, 0).stats.atk = 999; y.stats.def = 1;
+  // 기합의띠: 체력이 꽉 차 있지 않아도 체력 1로 버티고 사라짐
+  { const b = battle(custom('maetdol', ['quake']), withItem('yeontan', ['wall'], 'sash')); const y = E.activeOf(b, 1); E.activeOf(b, 0).stats.atk = 999; y.stats.def = 1; y.hp = 30;
     turn(b, 'quake', 'wall'); assert.equal(y.hp, 1); assert.ok(y.itemUsed); }
+  // 실비보험: 효과 굉장한 공격을 버티면 공격·특공 2단계
+  { const b = battle(custom('daeya', ['squirt']), withItem('yeontan', ['wall'], 'insure')); const y = E.activeOf(b, 1); y.hp = y.maxHp = 3000;
+    turn(b, 'squirt', 'wall'); assert.equal(y.stages.atk, 2); assert.equal(y.stages.spa, 2); assert.ok(y.itemUsed); }
   // 응원 머리띠: 1.5배 + 첫 기술 고정
   const hit = (item) => { const b = battle(withItem('maetdol', ['tackle', 'rockthrow'], item), custom('daeya', ['wall']), 5); const f = E.activeOf(b, 1); f.hp = f.maxHp = 5000;
     const ev = turn(b, 'tackle', 'wall'); return { b, d: ev.find((e) => e.t === 'hp' && e.side === 1 && e.dmg).dmg }; };

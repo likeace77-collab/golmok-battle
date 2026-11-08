@@ -662,11 +662,7 @@ function hitOne(b, s, me, o, mv, ev) {
     const sturdy = foe.species === 'maetdol' && foe.hp === foe.maxHp && dmg >= foe.hp && foe.hp > 1; // 맷돌이 옹골참
     if (sturdy) dmg = foe.hp - 1;
     let hold = null;
-    if (!sturdy && dmg >= foe.hp && foe.hp > 1) { // 기합의띠, 행운 부적
-      if (has(foe, 'sash') && foe.hp === foe.maxHp) hold = '기합으로 버텼다!';
-      else if (has(foe, 'charm') && chance(b, 10)) hold = '부적 덕분에 버텼다!';
-      if (hold) dmg = foe.hp - 1;
-    }
+    if (!sturdy && dmg >= foe.hp && foe.hp > 1 && has(foe, 'sash')) { hold = '기합으로 버텼다!'; dmg = foe.hp - 1; } // 기합의띠
     const got = hurt(b, o, foe, dmg, ev, { eff, crit, moveType: mv.type });
     total += got;
     if (sturdy) msg(ev, `${josa(foe.name, '은/는')} 옹골참으로 버텼다!`);
@@ -758,6 +754,10 @@ function afterHit(b, s, me, o, foe, mv, total, ev) {
     if (foe.species === 'setakbot') { msg(ev, `${foe.name}의 세제거품! 거품이 눈에 들어갔다!`); changeStage(b, s, me, 'acc', -1, ev); }
   }
   if (foe.species === 'jabanbot' && alive(foe)) snack(b, o, foe, ev);
+  if (alive(foe) && has(foe, 'insure') && effMon(mv.type, foe, me) > 1) { // 실비보험
+    useItem(b, o, foe, ev, '보험금이 나왔다!');
+    changeStage(b, o, foe, 'atk', 2, ev); changeStage(b, o, foe, 'spa', 2, ev);
+  }
   if (phys && alive(me) && has(foe, 'helmet')) { useItem(b, o, foe, ev, `${me.name}에게 가시가 박혔다!`); hurt(b, s, me, me.maxHp / 6, ev); }
   if (alive(me) && has(me, 'straw') && total > 0 && me.hp < me.maxHp) { useItem(b, s, me, ev, '쭉 빨아 마셨다!'); heal(b, s, me, total / 8, ev); }
   if (alive(me) && has(me, 'battery')) { msg(ev, `${josa(me.name, '은/는')} 번개 배터리에 찌릿했다!`); hurt(b, s, me, me.maxHp / 10, ev); } // 자판봇: 아군에게 과자
@@ -1220,7 +1220,7 @@ function smartMoves(species, enemyTypes) {
 function botItem(species, level = 2) {
   const b = MONSTERS[species].base, phys = b.atk >= b.spa;
   const pool = level >= 3 ? (phys ? ['band', 'battery', 'sash'] : ['specs', 'battery', 'sash']) // 지옥: 센 도구
-    : (phys ? ['gloves', 'charm', 'leftover', 'onigiri', 'padding'] : ['book', 'charm', 'leftover', 'onigiri', 'padding']);
+    : (phys ? ['gloves', 'insure', 'leftover', 'onigiri', 'padding'] : ['book', 'insure', 'leftover', 'onigiri', 'padding']);
   return pool[Math.floor(Math.random() * pool.length)];
 }
 function botTeam(level, size, enemy = []) {
