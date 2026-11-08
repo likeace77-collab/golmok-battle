@@ -1,5 +1,5 @@
 // 배틀 엔진. 서버에서만 돌고, 모든 판정은 여기서 결정됩니다.
-const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP, BANNED, TIERS, FORMS } = require('./data');
+const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP, BANNED, TIERS, FORMS, ITEMS } = require('./data');
 
 const LEVEL = 50;
 // 요괴가 너무 빨리 쓰러지지 않도록 모든 요괴의 체력을 1.3배로 (훈련장 더미 1000은 그대로)
@@ -40,14 +40,14 @@ function makeMon(spec) {
   return {
     species: spec.species, name: sp.n, types: sp.types, stats, mega: false,
     hp: stats.hp, maxHp: stats.hp,
-    status: null, statusTurns: 0,
+    status: null, statusTurns: 0, item: ITEMS[spec.item] ? spec.item : null, itemUsed: false,
     moves: spec.moves.map((id) => ({ id, pp: MOVES[id].pp })),
     ...freshVolatile(),
   };
 }
 const freshVolatile = () => ({
   stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0 },
-  seeded: false, flinched: false, protecting: false, protectStreak: 0, reflecting: null, distracted: false, disabled: null, fieldTurns: 0,
+  seeded: false, flinched: false, protecting: false, protectStreak: 0, reflecting: null, distracted: false, disabled: null, fieldTurns: 0, choiceLock: null,
 });
 
 // 훈련장 더미: 타입 없음, 체력 1000. 공격하지 않고, 부서지면 바로 새 더미가 나옵니다.
@@ -107,6 +107,13 @@ const effMon = (moveType, mon, atk) => {
   if (atk?.species === 'kettle' && moveType === 'water') return mon.types.reduce((x, t) => x * (t === 'grass' ? 2 : CHART.water[t] ?? 1), 1);
   return effOf(moveType, mon.types);
 };
+// 도구
+const has = (m, id) => m.item === id && !m.itemUsed;
+const CHOICE = ['band', 'specs', 'scarf'];
+function useItem(b, s, m, ev, text) {
+  ev.push({ t: 'item', side: s, item: m.item, used: !!ITEMS[m.item]?.once, text: `${m.name}의 ${ITEMS[m.item].n}! ${text}` });
+  if (ITEMS[m.item]?.once) m.itemUsed = true;
+}
 // 호롱이 그림자밟기: 상대 자리에 호롱이가 서 있으면 교체할 수 없음
 const trapped = (b, s) => !b.training && foesOf(b, s).some((i) => { const m = activeOf(b, i); return (m.species === 'horong' || m.species === 'meokarak') && alive(m); }); // 그림자밟기, 엉킴
 
@@ -122,7 +129,13 @@ function legalActions(b, s) {
   if (trapped(b, s)) switches.length = 0;
   const moves = activeOf(b, s).moves
     .map((mv, i) => ({ mv, i }))
-    .filter(({ mv }) => mv.pp > 0 && activeOf(b, s).disabled?.id !== mv.id)
+    .filter(({ mv }) => {
+      const me = activeOf(b, s);
+      if (mv.pp <= 0 || me.disabled?.id === mv.id) return false;
+      if (me.choiceLock && CHOICE.some((c) => has(me, c)) && mv.id !== me.choiceLock) return false; // 응원 머리띠·두꺼운 안경·털 목도리
+      if (has(me, 'vest') && MOVES[mv.id].cat === 'x') return false; // 방탄 조끼
+      return true;
+    })
     .map(({ i }) => ({ type: 'move', index: i }));
   return [...(moves.length ? moves : [{ type: 'move', index: -1 }]), ...switches];
 }
@@ -182,6 +195,7 @@ function speedOf(b, s) {
   const m = activeOf(b, s);
   let v = m.stats.spe * stageMul(m.stages.spe) * stripMul(m);
   if (m.species === 'godeuri' && m.hp * 2 <= m.maxHp) v *= 1.5; // 특성 녹아내림
+  if (has(m, 'scarf')) v *= 1.5; // 털 목도리
   if (m.status === 'par') v *= .5;
   return v;
 }
@@ -200,7 +214,9 @@ function runTurn(b, ev) {
     const ride = mon.species === 'bangpae' && mon.hp === mon.maxHp && mv.type === 'wind' ? 1 : 0; // 방패연 바람타기
     const rush = mon.species === 'baedalbot' && chance(b, 30) ? 1 : 0; // 배달봇 배달의민족
     if (rush) msg(ev, `${mon.name}의 배달의민족! 신호등을 건너뛰고 먼저 출발했다!`);
-    return { ...o, pri: mv.pri + ride + rush, spe: speedOf(b, o.s), tie: rand(b) };
+    const quick = has(mon, 'shoes') && chance(b, 20) ? .5 : 0; // 운동화
+    if (quick) useItem(b, o.s, mon, ev, '재빨리 먼저 움직인다!');
+    return { ...o, pri: mv.pri + ride + rush + quick, spe: speedOf(b, o.s), tie: rand(b) };
   });
   movers.sort((x, y) => y.pri - x.pri || y.spe - x.spe || x.tie - y.tie);
 
@@ -277,6 +293,7 @@ function hurt(b, s, m, amount, ev, extra) {
       if (x !== m) faintCheck(b, i, x, ev);
     }
   }
+  if (m.hp > 0 && m.hp * 2 <= m.maxHp && has(m, 'onigiri')) { useItem(b, s, m, ev, '삼각김밥을 먹었다!'); heal(b, s, m, m.maxHp / 3, ev); }
   if (m.species === 'jeonbot' && !m.emergency && m.hp > 0 && m.hp * 2 <= m.maxHp) { // 전봇이 비상전력
     m.emergency = true;
     msg(ev, `${m.name}의 비상전력! 방어를 버리고 출력을 끌어올린다!`);
@@ -371,6 +388,11 @@ function applyStatus(b, s, m, st, ev, quiet) {
     frz: `${josa(m.name, '은/는')} 꽁꽁 얼어붙었다!`,
   }[st];
   ev.push({ t: 'status', side: s, status: st, text });
+  if (has(m, 'ssanghwa')) { // 쌍화탕
+    useItem(b, s, m, ev, '쌍화탕을 마시고 기운을 차렸다!');
+    m.status = null; m.statusTurns = 0;
+    ev.push({ t: 'status', side: s, status: null, text: `${m.name}의 상태이상이 나았다!` });
+  }
   return true;
 }
 
@@ -427,6 +449,9 @@ function damageOf(b, atk, def, mv, crit, roll) {
   if (crit) { as = Math.max(as, 0); ds = Math.min(ds, 0); } // 급소는 불리한 변화 무시
   a *= stageMul(as) * stripMul(atk) * (phys ? tierAtk(atk) : 1) * formMul(atk); d *= stageMul(ds) * tierDef(def) * formMul(def);
   if (def.species === 'daeya' && (mv.type === 'ice' || b.weather === 'snow')) d *= 2; // 특성 김장
+  if (phys) a *= has(atk, 'band') ? 1.5 : has(atk, 'gloves') ? 1.1 : 1; else a *= has(atk, 'specs') ? 1.5 : has(atk, 'book') ? 1.1 : 1;
+  if (phys && has(def, 'padding')) d *= 1.3;
+  if (!phys && has(def, 'vest')) d *= 1.5;
   if (b.weather === 'snow' && phys && def.types.includes('ice')) d *= 1.5; // 눈: 얼음 타입 방어 1.5배
   let dmg = (((2 * LEVEL) / 5 + 2) * mv.pow * a) / d / 50 + 2;
   if (b.weather === 'sun') dmg *= mv.type === 'fire' ? 1.5 : mv.type === 'water' ? .5 : 1;
@@ -435,7 +460,10 @@ function damageOf(b, atk, def, mv, crit, roll) {
   if (crit) dmg *= 1.5;
   dmg *= roll;
   if (atk.types.includes(mv.type)) dmg *= 1.5;
-  dmg *= effMon(mv.type, def, atk);
+  const effX = effMon(mv.type, def, atk);
+  dmg *= effX;
+  if (has(atk, 'battery')) dmg *= 1.3; // 번개 배터리
+  if (has(atk, 'note') && effX > 1) dmg *= 1.25; // 족집게 노트
   if (b.terrain === 'grass' && mv.type === 'grass' && teamOf(b, seats(b).find((i) => activeOf(b, i) === atk) ?? -1) === b.terrainTeam) dmg *= 1.3;
   if (mv.bean && def.types.includes('spirit')) dmg *= 2; // 팥붕: 팥은 귀신에게 두 배 // 그래스필드 (깐 쪽만)
   if (mv.sound && atk.species === 'harmonium') dmg *= 1.3; // 특성 펑크록
@@ -536,6 +564,7 @@ function useMove(b, s, index, ev, want, z = false) {
   if (mv.bath) mv = isHot(b) ? { ...mv, type: 'fire', st: { s: 'brn', ch: 30 } } : { ...mv, type: 'ice', st: { s: 'frz', ch: 30 } };
   if (!canAct(b, s, me, mv, ev)) { me.protectStreak = 0; return; }
   if (slot) slot.pp--;
+  if (slot && !me.choiceLock && CHOICE.some((c) => has(me, c))) me.choiceLock = slot.id; // 고정 도구
   if (z) {
     b.sides[s].zUsed = true;
     if (mv.rainZ && b.weather === 'rain') mv = { ...mv, pow: Math.round(mv.pow * 1.5) };
@@ -598,7 +627,7 @@ function hitOne(b, s, me, o, mv, ev) {
   }
 
   if (mv.acc !== null) {
-    const accuracy = mv.acc * stageMul(me.stages.acc);
+    const accuracy = mv.acc * stageMul(me.stages.acc) * (has(foe, 'smoke') ? .9 : 1); // 연막탄
     if (rand(b) * 100 >= accuracy) {
       ev.push({ t: 'miss', side: o, text: `${me.name}의 공격이 빗나갔다!` });
       return;
@@ -618,7 +647,7 @@ function hitOne(b, s, me, o, mv, ev) {
   const hits = mv.hits ? randInt(b, mv.hits[0], mv.hits[1]) : 1;
   let total = 0, landed = 0;
   for (let i = 0; i < hits && alive(foe); i++) {
-    const crit = (mv.critAll || rand(b) < (mv.crit ? 1 / 8 : 1 / 24)) && foe.species !== 'ppeondegi'; // 뻔데기 단단한 껍질
+    const crit = (mv.critAll || rand(b) < (has(me, 'scope') ? (mv.crit ? 1 / 2 : 1 / 8) : (mv.crit ? 1 / 8 : 1 / 24))) && foe.species !== 'ppeondegi'; // 망원경, 뻔데기 단단한 껍질
     let dmg = damageOf(b, me, foe, mv, crit, .85 + rand(b) * .15);
     if (ref) {
       const full = dmg;
@@ -632,9 +661,16 @@ function hitOne(b, s, me, o, mv, ev) {
     }
     const sturdy = foe.species === 'maetdol' && foe.hp === foe.maxHp && dmg >= foe.hp && foe.hp > 1; // 맷돌이 옹골참
     if (sturdy) dmg = foe.hp - 1;
+    let hold = null;
+    if (!sturdy && dmg >= foe.hp && foe.hp > 1) { // 기합의띠, 행운 부적
+      if (has(foe, 'sash') && foe.hp === foe.maxHp) hold = '기합으로 버텼다!';
+      else if (has(foe, 'charm') && chance(b, 10)) hold = '부적 덕분에 버텼다!';
+      if (hold) dmg = foe.hp - 1;
+    }
     const got = hurt(b, o, foe, dmg, ev, { eff, crit, moveType: mv.type });
     total += got;
     if (sturdy) msg(ev, `${josa(foe.name, '은/는')} 옹골참으로 버텼다!`);
+    if (hold) useItem(b, o, foe, ev, hold);
     if (foe.species === 'bongdari' && mv.cat === 'p') foe.lastPhys = got; // 봉다리 내용물분출용
     landed++;
     if (crit) msg(ev, '급소에 맞았다!');
@@ -692,6 +728,12 @@ function hitOne(b, s, me, o, mv, ev) {
       doSwitch(b, s, bench[Math.floor(rand(b) * bench.length)], ev);
     }
   }
+  // 비상벨: 맞은 쪽이 대기 중인 아군과 교체
+  if (landed && alive(foe) && has(foe, 'bell') && !b.training && b.phase !== 'over') {
+    const side = b.sides[o];
+    const bench = side.mons.map((m, i) => i).filter((i) => i !== side.active && alive(side.mons[i]));
+    if (bench.length) { useItem(b, o, foe, ev, '벨을 누르고 물러났다!'); doSwitch(b, o, bench[Math.floor(rand(b) * bench.length)], ev); }
+  }
 }
 
 // 맞은 뒤에 발동하는 특성들
@@ -715,7 +757,10 @@ function afterHit(b, s, me, o, foe, mv, total, ev) {
     if (foe.species === 'hotteok') { msg(ev, `${foe.name}의 호떡소! 뜨거운 꿀이 끈적하게 달라붙었다!`); changeStage(b, s, me, 'spe', -1, ev); }
     if (foe.species === 'setakbot') { msg(ev, `${foe.name}의 세제거품! 거품이 눈에 들어갔다!`); changeStage(b, s, me, 'acc', -1, ev); }
   }
-  if (foe.species === 'jabanbot' && alive(foe)) snack(b, o, foe, ev); // 자판봇: 아군에게 과자
+  if (foe.species === 'jabanbot' && alive(foe)) snack(b, o, foe, ev);
+  if (phys && alive(me) && has(foe, 'helmet')) { useItem(b, o, foe, ev, `${me.name}에게 가시가 박혔다!`); hurt(b, s, me, me.maxHp / 6, ev); }
+  if (alive(me) && has(me, 'straw') && total > 0 && me.hp < me.maxHp) { useItem(b, s, me, ev, '쭉 빨아 마셨다!'); heal(b, s, me, total / 8, ev); }
+  if (alive(me) && has(me, 'battery')) { msg(ev, `${josa(me.name, '은/는')} 번개 배터리에 찌릿했다!`); hurt(b, s, me, me.maxHp / 10, ev); } // 자판봇: 아군에게 과자
   if (foe.species === 'yeonji' && !alive(foe) && !foe.markDone && alive(me)) { // 연지곤지
     foe.markDone = true; me.yeonjiMark = true;
     msg(ev, `${foe.name}의 연지곤지! ${me.name}에게 붉은 연지 자국이 남았다!`);
@@ -892,10 +937,11 @@ function endOfTurn(b, ev) {
       msg(ev, `${m.name}의 라면사리 추가! 국물이 진해졌다!`);
       changeStage(b, s, m, 'atk', 1, ev); changeStage(b, s, m, 'spa', 1, ev);
     }
-    if (m.species === 'kkangtong' && !m.recycled) { // 리사이클: 다 쓴 기술을 한 판에 한 번 다시 채움
-      const used = m.moves.filter((x) => x.pp <= 0);
-      if (used.length) { m.recycled = true; for (const x of used) x.pp = MOVES[x.id].pp; msg(ev, `${m.name}의 리사이클! 다 쓴 기술을 재활용해 다시 쓸 수 있게 됐다!`); }
+    if (m.species === 'kkangtong' && !m.recycled && m.item && m.itemUsed) { // 리사이클: 써 버린 도구를 한 판에 한 번 되살림
+      m.recycled = true; m.itemUsed = false;
+      ev.push({ t: 'item', side: s, item: m.item, back: true, text: `${m.name}의 리사이클! ${josa(ITEMS[m.item].n, '이/가')} 다시 생겼다!` });
     }
+    if (has(m, 'leftover') && m.hp < m.maxHp) { useItem(b, s, m, ev, '조금 먹고 체력을 회복했다.'); heal(b, s, m, m.maxHp / 16, ev); }
     if (m.yeonjiMark && alive(m)) { msg(ev, `${m.name}의 연지 자국이 화끈거린다!`); hurt(b, s, m, m.maxHp / 4, ev); faintCheck(b, s, m, ev); }
   }
   if (b.terrain && --b.terrainTurns <= 0) { b.terrain = null; ev.push({ t: 'terrain', terrain: null, text: '그래스필드가 사라졌다.' }); }
@@ -965,6 +1011,7 @@ function viewFor(b, s) {
       name: me.name, avatar: me.avatar, style: me.style, deck: me.deck, active: me.active, hazard: me.hazard,
       mons: me.mons.map((m) => ({
         ...publicMon(m), stats: m.stats,
+        item: m.item, itemUsed: m.itemUsed, lock: m.choiceLock,
         moves: m.moves.map((x) => ({ id: x.id, pp: x.pp, off: m.disabled?.id === x.id })),
       })),
     },
@@ -1169,6 +1216,13 @@ function smartMoves(species, enemyTypes) {
   return [...chosen, ...extras, ...attacks.filter((m) => !chosen.includes(m))].slice(0, 4);
 }
 
+// 봇 도구: 공격형이면 공격 도구, 아니면 버티는 도구 중에서 고름
+function botItem(species, level = 2) {
+  const b = MONSTERS[species].base, phys = b.atk >= b.spa;
+  const pool = level >= 3 ? (phys ? ['band', 'battery', 'sash'] : ['specs', 'battery', 'sash']) // 지옥: 센 도구
+    : (phys ? ['gloves', 'charm', 'leftover', 'onigiri', 'padding'] : ['book', 'charm', 'leftover', 'onigiri', 'padding']);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
 function botTeam(level, size, enemy = []) {
   const ids = Object.keys(MONSTERS).filter((id) => !BANNED.includes(id)); // 밴된 요괴는 봇이 안 씀
   const enemyTypes = enemy.map((m) => MONSTERS[m.species].types);
@@ -1182,7 +1236,7 @@ function botTeam(level, size, enemy = []) {
       return { species, moves: [...attacks, ...shuffled(all.filter((m) => !attacks.includes(m)))].slice(0, 4) };
     });
   }
-  if (level === 2) return shuffled(ids).slice(0, size).map((species) => ({ species, moves: smartMoves(species, []) }));
+  if (level === 2) return shuffled(ids).slice(0, size).map((species) => ({ species, moves: smartMoves(species, []), item: botItem(species) }));
   // 지옥: 내 덱의 타입을 보고 상성이 좋은 요괴로 팀을 짭니다.
   const score = (id) => {
     const mon = MONSTERS[id];
@@ -1193,7 +1247,7 @@ function botTeam(level, size, enemy = []) {
     return total + edge + Math.random() * .6;
   };
   return ids.map((id) => [score(id), id]).sort((x, y) => y[0] - x[0]).slice(0, size)
-    .map(([, species]) => ({ species, moves: smartMoves(species, enemyTypes) }));
+    .map(([, species]) => ({ species, moves: smartMoves(species, enemyTypes), item: botItem(species, 3) }));
 }
 
 module.exports = {

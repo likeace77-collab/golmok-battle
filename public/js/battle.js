@@ -194,6 +194,15 @@ const Battle = (() => {
     if (num) num.textContent = `${m.hp} / ${m.maxHp}`;
   }
 
+  // 내 요괴가 든 도구 (상대 도구는 발동해야 보임)
+  function itemBadge(key, m) {
+    const own = key === 'me' && !spectating ? view.me.mons.find((x) => x.species === m.species) : null;
+    const id = m.itemSeen || own?.item;
+    const it = id && G.data.ITEMS?.[id];
+    if (!it) return '';
+    const gone = m.itemGone ?? own?.itemUsed;
+    return `<span class="badge item ${gone ? 'gone' : ''}" title="${it.n}${gone ? ' (사용함)' : ''}">${it.i}</span>`;
+  }
   function drawPlate(key, m) {
     const stages = Object.entries(m.stages || {}).filter(([, v]) => v);
     const lb = { atk: '공', def: '방', spa: '특공', spd: '특방', spe: '속', acc: '명' };
@@ -204,7 +213,7 @@ const Battle = (() => {
       ${m.strip ? `<span class="badge strip">각성${m.strip}</span>` : ''}
       ${G.data.MONSTERS[m.species]?.forms ? `<span class="badge tier rgb${m.mega ? 5 : m.tier || 0}">${G.data.FORMS?.[m.mega ? 5 : m.tier || 0] || ''}</span>` : ''}
       ${G.data.MONSTERS[m.species]?.tiers ? `<span class="badge tier tb${Math.min(m.tier || 0, 4)}${(m.tier || 0) > 4 ? ' tplus' : ''}">${G.data.TIERS?.[m.tier || 0] || ''}</span>` : ''}
-      ${stages.map(([k, v]) => `<span class="badge">${lb[k]}${v > 0 ? '+' : ''}${v}</span>`).join('')}</div>
+      ${stages.map(([k, v]) => `<span class="badge">${lb[k]}${v > 0 ? '+' : ''}${v}</span>`).join('')}${itemBadge(key, m)}</div>
       <div class="bar"><i></i></div><div class="num"></div>`;
     setBar(key, m);
   }
@@ -321,6 +330,14 @@ const Battle = (() => {
         trainer(key)?.play('command');
         await wait(Math.max(760, Fx.play(e.id, key, sideKey(e.target), e)));
         break;
+      case 'item': {
+        const m = dispMon(key);
+        m.itemSeen = e.item; m.itemGone = !!e.used && !e.back;
+        drawPlate(key, m);
+        pop(key, `${G.data.ITEMS?.[e.item]?.i || ''} ${G.data.ITEMS?.[e.item]?.n || ''}`, true);
+        Fx.item?.(key);
+        await wait(800); break;
+      }
       case 'reflectReady': await wait(Fx.reflectReady(key)); break;
       case 'reflect': await wait(Fx.reflect(key, sideKey(e.by), e.counter)); break;
       case 'counter': anim(key, 'lunge', 600); await wait(Fx.counter(key, sideKey(e.target), e.stab)); break;

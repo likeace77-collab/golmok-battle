@@ -644,7 +644,7 @@ const FORMS = {
 };
 Object.assign(MONSTERS.tuhon, { img: true, forms: 4, trait: { n: '광폭화', d: '남은 체력에 따라 폼이 바뀌고, 폼이 오를수록 공격·특공·방어·특방이 오른다. 일반폼(75% 초과) 1배 → 소노폼(50% 초과) 1.1배 → 중노폼(25% 초과) 1.2배 → 대노폼(5% 초과) 1.35배 → 극대노폼(5% 이하) 1.5배 → 메가진화하면 초(超)극대노 1.6배.' } });
 // 특성 3차
-Object.assign(MONSTERS.kkangtong, { trait: { n: '리사이클', d: '다 써 버린 기술의 PP를 턴이 끝날 때 다시 채운다. (한 판에 한 번)' } });
+Object.assign(MONSTERS.kkangtong, { trait: { n: '리사이클', d: '한 번 쓰고 사라진 도구(기합의띠, 삼각김밥 등)를 턴이 끝날 때 다시 되살린다. (한 판에 한 번)' } });
 Object.assign(MONSTERS.manhol, { trait: { n: '악취', d: '싸움에 나오자마자 상대의 명중률을 1단계 떨어뜨린다.' } });
 Object.assign(MONSTERS.batji, { trait: { n: '저수', d: '물 기술에 맞으면 피해 대신 체력을 1/4 회복한다.' } });
 Object.assign(MONSTERS.meokarak, { trait: { n: '엉킴', d: '머카락이 싸우는 동안 상대는 교체할 수 없다. (쓰러져서 바꾸는 것은 가능)' } });
@@ -665,4 +665,27 @@ MONSTERS.hwangsari.trait = { n: '황사 경보', d: '싸움에 나오면 5턴 �
 const BANNED = ['lumina', 'silvia'];
 const DEV_ACCOUNTS = ['PEGADORA'];
 
-module.exports = { FORMS, TIERS, BANNED, DEV_ACCOUNTS, STRIP, TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES };
+// 도구: 덱을 짤 때 요괴마다 하나씩 들 수 있음. once: 한 번 쓰면 사라짐 (깡통이 리사이클로 한 번 되살릴 수 있음)
+const ITEMS = {
+  sash:     { n: '기합의띠', i: '🎗️', once: true, d: '체력이 꽉 찼을 때 한 방에 쓰러질 공격을 맞으면 체력 1을 남기고 버틴다. 한 번 쓰면 사라진다.' },
+  charm:    { n: '행운 부적', i: '🧧', d: '쓰러질 공격을 맞아도 10% 확률로 체력 1을 남기고 버틴다.' },
+  leftover: { n: '먹다 남은 떡볶이', i: '🍢', d: '매 턴이 끝날 때 최대 체력의 1/16을 회복한다.' },
+  onigiri:  { n: '삼각김밥', i: '🍙', once: true, d: '체력이 절반 이하가 되면 바로 먹고 최대 체력의 1/3을 회복한다. 한 번 쓰면 사라진다.' },
+  ssanghwa: { n: '쌍화탕', i: '🍵', once: true, d: '상태이상에 걸리면 바로 마시고 낫는다. 한 번 쓰면 사라진다.' },
+  straw:    { n: '빨대 컵', i: '🥤', d: '공격으로 준 피해의 1/8만큼 체력을 회복한다.' },
+  battery:  { n: '번개 배터리', i: '🔋', d: '공격 기술의 피해가 1.3배가 되는 대신, 공격할 때마다 최대 체력의 1/10을 잃는다.' },
+  band:     { n: '응원 머리띠', i: '📣', d: '공격이 1.5배가 되는 대신, 처음 쓴 기술만 계속 쓸 수 있다. (교체하면 풀림)' },
+  specs:    { n: '두꺼운 안경', i: '👓', d: '특공이 1.5배가 되는 대신, 처음 쓴 기술만 계속 쓸 수 있다. (교체하면 풀림)' },
+  scarf:    { n: '털 목도리', i: '🧣', d: '스피드가 1.5배가 되는 대신, 처음 쓴 기술만 계속 쓸 수 있다. (교체하면 풀림)' },
+  gloves:   { n: '목장갑', i: '🧤', d: '물리 기술의 피해가 1.1배가 된다.' },
+  book:     { n: '참고서', i: '📘', d: '특수 기술의 피해가 1.1배가 된다.' },
+  note:     { n: '족집게 노트', i: '📒', d: '효과가 굉장한(2배 이상) 기술의 피해가 1.25배가 된다.' },
+  scope:    { n: '망원경', i: '🔭', d: '급소에 맞힐 확률이 크게 오른다.' },
+  shoes:    { n: '운동화', i: '👟', d: '20% 확률로 같은 우선도의 상대보다 먼저 움직인다.' },
+  vest:     { n: '방탄 조끼', i: '🦺', d: '특방이 1.5배가 되는 대신, 변화 기술을 쓸 수 없다.' },
+  padding:  { n: '두꺼운 패딩', i: '🧥', d: '방어가 1.3배가 된다.' },
+  helmet:   { n: '가시 헬멧', i: '⛑️', d: '물리(접촉) 공격을 한 상대에게 그 상대 최대 체력의 1/6 피해를 준다.' },
+  smoke:    { n: '연막탄', i: '💨', d: '상대 기술의 명중률이 10% 떨어진다.' },
+  bell:     { n: '비상벨', i: '🚨', once: true, d: '공격에 맞으면 벨을 누르고 대기 중인 아군과 바로 교체한다. 한 번 쓰면 사라진다.' },
+};
+module.exports = { ITEMS, FORMS, TIERS, BANNED, DEV_ACCOUNTS, STRIP, TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES };

@@ -711,9 +711,10 @@ test('특성 3차 15개', () => {
   // 연지곤지: 쓰러뜨린 상대에게 매 턴 1/4
   { const b = battle([{ species: 'maetdol', moves: ['tackle'] }, { species: 'daeya', moves: ['tackle'] }], custom('yeonji', ['wall'])); const x = E.activeOf(b, 0); x.hp = x.maxHp = 1000; E.activeOf(b, 1).hp = 1;
     turn(b, 'tackle', 'wall'); assert.ok(x.yeonjiMark); assert.ok(x.hp <= 750); }
-  // 리사이클: PP가 바닥나면 한 번 다시 채움
-  { const b = battle(custom('kkangtong', ['tackle']), custom('daeya', ['wall'])); E.activeOf(b, 0).moves[0].pp = 1; turn(b, 'tackle', 'wall');
-    assert.equal(E.activeOf(b, 0).moves[0].pp, MOVES.tackle.pp); }
+  // 리사이클: 써 버린 도구(기합의띠)를 한 번 되살림
+  { const b = battle([{ species: 'kkangtong', moves: ['wall'], item: 'sash' }, { species: 'daeya', moves: ['tackle'] }], custom('maetdol', ['quake']));
+    const k = E.activeOf(b, 0); k.stats.def = 1; E.activeOf(b, 1).stats.atk = 999;
+    turn(b, 'wall', 'quake'); assert.equal(k.hp, 1); assert.equal(k.itemUsed, false); }
   // 과자: 맞으면 대기 중인 다친 아군 회복
   { const b = battle([{ species: 'jabanbot', moves: ['wall'] }, { species: 'daeya', moves: ['tackle'] }], custom('maetdol', ['tackle'])); const ally = b.sides[0].mons[1]; ally.hp = 10;
     E.activeOf(b, 0).hp = E.activeOf(b, 0).maxHp = 3000; turn(b, 'wall', 'tackle'); assert.ok(ally.hp > 10); }
@@ -721,4 +722,36 @@ test('특성 3차 15개', () => {
   { let first = 0; for (let seed = 1; seed < 40; seed++) { const b = battle(custom('baedalbot', ['tackle']), custom('daeya', ['tackle']), seed);
       E.activeOf(b, 0).stats.spe = 1; E.activeOf(b, 1).stats.spe = 999; const ev = turn(b, 'tackle', 'tackle'); if (ev.find((e) => e.t === 'move').side === 0) first++; }
     assert.ok(first > 3 && first < 25, String(first)); }
+});
+
+test('도구 20개: 덱에서 들려 주고 전투에서 효과가 난다', () => {
+  const { ITEMS } = require('../server/data');
+  assert.equal(Object.keys(ITEMS).length, 20);
+  const withItem = (sp, moves, item) => [{ species: sp, moves, item }, { species: 'daeya', moves: ['tackle'] }];
+  const turn = (b, m0, m1) => (move(b, 0, m0).events || move(b, 1, m1).events);
+  // 기합의띠: 체력 1로 버티고 사라짐
+  { const b = battle(custom('maetdol', ['quake']), withItem('yeontan', ['wall'], 'sash')); const y = E.activeOf(b, 1); E.activeOf(b, 0).stats.atk = 999; y.stats.def = 1;
+    turn(b, 'quake', 'wall'); assert.equal(y.hp, 1); assert.ok(y.itemUsed); }
+  // 응원 머리띠: 1.5배 + 첫 기술 고정
+  const hit = (item) => { const b = battle(withItem('maetdol', ['tackle', 'rockthrow'], item), custom('daeya', ['wall']), 5); const f = E.activeOf(b, 1); f.hp = f.maxHp = 5000;
+    const ev = turn(b, 'tackle', 'wall'); return { b, d: ev.find((e) => e.t === 'hp' && e.side === 1 && e.dmg).dmg }; };
+  const plain = hit(null), band = hit('band');
+  assert.ok(band.d / plain.d > 1.35, `${band.d}/${plain.d}`);
+  assert.deepEqual(E.legalActions(band.b, 0).filter((a) => a.type === 'move').map((a) => a.index), [0]);
+  // 털 목도리: 스피드 1.5배
+  { const b = battle(withItem('maetdol', ['tackle'], 'scarf'), custom('daeya', ['wall'])); assert.equal(E.speedOf(b, 0), E.activeOf(b, 0).stats.spe * 1.5); }
+  // 방탄 조끼: 변화 기술 못 씀
+  { const b = battle(withItem('maetdol', ['tackle', 'wall'], 'vest'), custom('daeya', ['wall'])); assert.ok(!E.legalActions(b, 0).some((a) => a.type === 'move' && a.index === 1)); }
+  // 먹다 남은 떡볶이: 턴 끝 회복
+  { const b = battle(withItem('maetdol', ['wall'], 'leftover'), custom('daeya', ['wall'])); const m = E.activeOf(b, 0); m.hp = 50; turn(b, 'wall', 'wall'); assert.ok(m.hp > 50); }
+  // 쌍화탕: 독에 걸려도 바로 나음
+  { const b = battle(custom('jangdok', ['fog']), withItem('daeya', ['wall'], 'ssanghwa')); E.activeOf(b, 0).stats.spe = 999; for (let i = 0; i < 5 && !E.activeOf(b, 1).itemUsed; i++) turn(b, 'fog', 'wall'); assert.equal(E.activeOf(b, 1).status, null); assert.ok(E.activeOf(b, 1).itemUsed); }
+  // 가시 헬멧: 물리 공격한 상대가 1/6 피해
+  { const b = battle(custom('maetdol', ['tackle']), withItem('daeya', ['wall'], 'helmet')); const x = E.activeOf(b, 0); x.hp = x.maxHp = 600; turn(b, 'tackle', 'wall'); assert.equal(x.hp, 500); }
+  // 비상벨: 맞으면 교체
+  { const b = battle(custom('maetdol', ['tackle']), withItem('kkaebi', ['wall'], 'bell')); E.activeOf(b, 1).types = ['none']; E.activeOf(b, 1).hp = E.activeOf(b, 1).maxHp = 3000;
+    turn(b, 'tackle', 'wall'); assert.equal(E.activeOf(b, 1).species, 'daeya'); }
+  // 삼각김밥: 절반 아래로 떨어지면 회복
+  { const b = battle(custom('maetdol', ['quake']), withItem('yeontan', ['breeze'], 'onigiri')); const y = E.activeOf(b, 1); y.hp = y.maxHp = 1000; E.activeOf(b, 0).stats.atk = 200;
+    for (let i = 0; i < 9 && !y.itemUsed && y.hp > 0; i++) turn(b, 'quake', 'breeze'); assert.ok(y.itemUsed, String(y.hp)); }
 });

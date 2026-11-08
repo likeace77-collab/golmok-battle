@@ -959,5 +959,6 @@ const Fx = (() => {
   }
   function weather(w) { if (REDUCED || !w) return 700; measure(); return weatherFx(w); }
 
-  return { attach, play, reflectReady, reflect, counter, terrain, rage, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, awaken, entrance, forge, ids: () => Object.keys(MOVE_FX) };
+  function item(key) { if (REDUCED) return; measure(); const at = spot(key); ring(at, { color: '#FFD23F', r0: 10, r1: 70, w: 4, dur: 380 }); burst('sparkle', at, { n: 8, dist: 46, size: 7 }); }
+  return { attach, play, reflectReady, reflect, counter, terrain, rage, item, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, awaken, entrance, forge, ids: () => Object.keys(MOVE_FX) };
 })();

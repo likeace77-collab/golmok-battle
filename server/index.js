@@ -214,7 +214,8 @@ function validTeam(t) {
     if (mv.length < 1 || mv.length > 4 || mv.length !== m.moves.length) return null;
     if (!mv.every((id) => sp.moves.includes(id))) return null;
     seen.add(m.species);
-    out.push({ species: m.species, moves: mv });
+    const item = Data.ITEMS[m.item] ? m.item : undefined; // 도구 (없거나 모르는 도구면 빈손)
+    out.push({ species: m.species, moves: mv, ...(item ? { item } : {}) });
   }
   return out;
 }
@@ -291,7 +292,7 @@ async function api(req, res, url) {
   const route = `${req.method} ${url.pathname}`;
   if (route === 'GET /api/data') {
     const { BANNED, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES } = Data;
-    return json(res, 200, { FORMS: Data.FORMS.names, TIERS: Data.TIERS.names, BANNED, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES, inviteRequired: !!INVITE_CODE });
+    return json(res, 200, { ITEMS: Data.ITEMS, FORMS: Data.FORMS.names, TIERS: Data.TIERS.names, BANNED, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES, inviteRequired: !!INVITE_CODE });
   }
   if (route === 'POST /api/signup' || route === 'POST /api/login') {
     if (limited(req)) return json(res, 429, { error: '시도가 너무 많습니다. 1분 뒤에 다시 해 주세요.' });

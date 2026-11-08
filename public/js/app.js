@@ -502,6 +502,7 @@ function showTeam(index, draft) {
           <button class="inf" data-edit="${i}" style="background:none;border:0;text-align:left;padding:0">
             <div class="nm">${i + 1}. ${sp.n} ${typesOf(m.species)}</div>
             <div class="mvs">${m.moves.map((id) => G.data.MOVES[id].n).join(', ')}</div>
+            <div class="mvs item-line">${m.item && G.data.ITEMS?.[m.item] ? `${G.data.ITEMS[m.item].i} ${G.data.ITEMS[m.item].n}` : '도구 없음'}</div>
           </button>
           <div class="ord">
             <button data-up="${i}" aria-label="${sp.n} 앞으로" ${i ? '' : 'disabled'}>▲</button>
@@ -584,10 +585,22 @@ function editMon(team, i, done) {
       </div>
       <p class="muted" style="margin-bottom:10px">${sp.flavor}</p>
       ${sp.trait ? `<p class="trait"><b>특성 ${sp.trait.n}</b> ${sp.trait.d}</p>` : ''}
+      <h3 style="font-family:var(--ui);font-weight:400;margin-bottom:6px">도구 <small class="muted">${slot.item && G.data.ITEMS[slot.item] ? `${G.data.ITEMS[slot.item].i} ${G.data.ITEMS[slot.item].n}` : '없음'}</small></h3>
+      <div class="items">${Object.entries(G.data.ITEMS || {}).map(([id, it]) => `<button class="itm" data-item="${id}" aria-pressed="${slot.item === id}" title="${esc(it.d)}"><span class="ii">${it.i}</span><b>${it.n}</b></button>`).join('')}</div>
+      <p class="item-desc muted">${slot.item && G.data.ITEMS[slot.item] ? `${G.data.ITEMS[slot.item].n}: ${G.data.ITEMS[slot.item].d}` : '도구를 누르면 들려 주고, 다시 누르면 뺍니다.'}</p>
       <h3 style="font-family:var(--ui);font-weight:400;margin-bottom:6px">기술 ${slot.moves.length}/4</h3>
       ${sp.moves.map((id) => `<button class="mv" data-mv="${id}" aria-pressed="${slot.moves.includes(id)}">
         ${typeChip(G.data.MOVES[id].type)}<b>${G.data.MOVES[id].n}</b>${sigTag(id)}<small>${moveLine(id)}</small></button>`).join('')}`);
     bg.querySelector('[data-x]').onclick = () => { closeSheet(); done(); };
+    bg.querySelectorAll('[data-item]').forEach((b) => {
+      b.onclick = () => {
+        const id = b.dataset.item;
+        if (slot.item === id) delete slot.item; else slot.item = id;
+        const top = sheetRoot.querySelector('.sheet').scrollTop;
+        render();
+        sheetRoot.querySelector('.sheet').scrollTop = top;
+      };
+    });
     bg.querySelectorAll('[data-mv]').forEach((b) => {
       b.onclick = () => {
         const id = b.dataset.mv, at = slot.moves.indexOf(id);
