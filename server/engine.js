@@ -2,6 +2,8 @@
 const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP, BANNED, TIERS } = require('./data');
 
 const LEVEL = 50;
+// 요괴가 너무 빨리 쓰러지지 않도록 모든 요괴의 체력을 1.8배로 (훈련장 더미 1000은 그대로)
+const HP_MUL = 1.8;
 const STATUS_NAME = { brn: '화상', psn: '독', par: '마비', slp: '수면', frz: '얼음' };
 const STAT_NAME = { atk: '공격', def: '방어', spa: '특공', spd: '특방', spe: '스피드', acc: '명중률' };
 const WEATHER_NAME = { sun: '땡볕', rain: '소나기', dust: '황사' };
@@ -27,7 +29,7 @@ const randInt = (b, lo, hi) => lo + Math.floor(rand(b) * (hi - lo + 1));
 function calcStats(base) {
   const other = (v) => Math.floor(((2 * v + 31) * LEVEL) / 100) + 5;
   return {
-    hp: Math.floor(((2 * base.hp + 31) * LEVEL) / 100) + LEVEL + 10,
+    hp: Math.floor((Math.floor(((2 * base.hp + 31) * LEVEL) / 100) + LEVEL + 10) * HP_MUL),
     atk: other(base.atk), def: other(base.def), spa: other(base.spa), spd: other(base.spd), spe: other(base.spe),
   };
 }
