@@ -273,6 +273,7 @@ function renderLobby() {
         <button class="btn paper" id="go-ava">꾸미기</button>
         <button class="btn mint" id="go-dex">도감</button>
         <button class="btn paper" id="go-types">타입 상성표</button>
+        <button class="btn paper" id="go-fields">필드 효과</button>
         <button class="btn paper" id="go-players">플레이어 목록</button>
         <button class="btn paper mailbtn" id="go-mail">우편함${u.mailNew ? `<em class="mailbadge">${u.mailNew}</em>` : ''}</button>
         <button class="btn paper" id="go-settings">설정</button>
@@ -326,6 +327,7 @@ function renderLobby() {
   app.querySelector('#go-ava').onclick = showAvatar;
   app.querySelector('#go-dex').onclick = showDex;
   app.querySelector('#go-types').onclick = showTypeChart;
+  app.querySelector('#go-fields').onclick = showFields;
   app.querySelector('#go-players').onclick = showPlayers;
   app.querySelector('#go-settings').onclick = showSettings;
   app.querySelector('#go-mail').onclick = showMail;
@@ -707,6 +709,54 @@ function showTypeChart() {
     app.querySelectorAll('[data-a]').forEach((td) => { td.onclick = () => { pick = [td.dataset.a, td.dataset.d]; render(); }; });
   };
   render();
+}
+
+// 필드 효과 목록: 날씨 4가지, 그래스필드, 압정. 기술은 게임 데이터에서 찾아 보여 줍니다.
+function showFields() {
+  G.screen = 'fields';
+  const M = G.data.MOVES, MON = G.data.MONSTERS;
+  const byMove = (f) => Object.entries(M).filter(([, m]) => !m.z && f(m)).map(([id]) => id);
+  const learners = (id) => Object.keys(MON).filter((k) => MON[k].moves.includes(id) && !isSecret(k));
+  const moveChip = (id) => `<span class="fe-move" style="--tc:${G.data.TYPES[M[id].type].c}">${M[id].n}</span>`;
+  const monChip = (id) => (isSecret(id) ? '' : `<span class="fe-mon">${monsterSVG(id)}<b>${MON[id].n}</b>${MON[id].trait ? `<small>${MON[id].trait.n}</small>` : ''}</span>`);
+  const moveRow = (ids) => ids.map((id) => `<div class="fe-mrow">${moveChip(id)}<span class="fe-who">${learners(id).map((k) => MON[k].n).join(', ')}</span></div>`).join('');
+  const FIELDS = [
+    { id: 'sun', name: '땡볕', kind: '날씨 · 5턴', bg: 'linear-gradient(#FFB52E, #FFD23F)',
+      fx: ['불 기술 위력 1.5배', '물 기술 위력 절반', '붕빵이가 바삭해짐 (크리스피)'],
+      moves: byMove((m) => m.weather === 'sun'), traits: [], related: ['bungbbang'] },
+    { id: 'rain', name: '소나기', kind: '날씨 · 5턴', bg: 'linear-gradient(#5b6a8a, #6f7f9e)',
+      fx: ['물 기술 위력 1.5배', '불 기술 위력 절반', '역류·우산살 찌르기는 위력 2배', '빗물받이 Z기술 대범람 위력 1.5배', '붕빵이가 눅눅해짐 (크리스피)'],
+      moves: byMove((m) => m.weather === 'rain'), traits: ['usan'], related: ['batji', 'bungbbang'] },
+    { id: 'dust', name: '황사', kind: '날씨 · 5턴', bg: 'linear-gradient(#C9A25A, #D9B66A)',
+      fx: ['매 턴 끝에 땅·쇠 타입이 아닌 요괴는 최대 체력의 1/16 피해'],
+      moves: byMove((m) => m.weather === 'dust'), traits: ['hwangsari'], related: [] },
+    { id: 'snow', name: '눈', kind: '날씨 · 5턴', bg: 'linear-gradient(#9fb4cc, #c3d3e4)',
+      fx: ['얼음 타입 요괴의 방어 1.5배 (물리 공격을 덜 받음)', '대야몽의 방어·특방 2배 (김장)'],
+      moves: byMove((m) => m.weather === 'snow'), traits: ['bingsu'], related: ['daeya'] },
+    { id: 'grass', name: '그래스필드', kind: '땅바닥 · 5턴', bg: 'linear-gradient(#3FA34D, #7ed957)',
+      fx: ['풀 기술 위력 1.3배', '매 턴 끝에 싸우는 요괴 모두 최대 체력의 1/16 회복'],
+      moves: [], traits: ['kongsiru'], trigger: '콩시루가 공격에 맞으면 펼쳐짐', related: [] },
+    { id: 'tack', name: '압정', kind: '상대 쪽 바닥 · 치울 때까지', bg: 'linear-gradient(#5C5A72, #8a8f98)',
+      fx: ['압정이 깔린 쪽으로 새로 나오는 요괴는 최대 체력의 1/8 피해', '바람 타입과 오락이(돈지랄)는 피해 없음'],
+      moves: byMove((m) => m.hazard), traits: [], related: ['orak'],
+      clear: byMove((m) => m.clearHazard) },
+  ];
+  app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>필드 효과</h1></div>
+    <section class="panel">
+      <p class="muted">날씨와 바닥은 한 번에 하나씩만 깔립니다. 새 날씨가 오면 이전 날씨는 사라집니다. 싸리비(정리정돈)가 나오면 날씨, 그래스필드, 압정이 모두 치워집니다.</p>
+      <div class="fe-jump">${FIELDS.map((f) => `<button data-jump="${f.id}" style="background:${f.bg}">${f.name}</button>`).join('')}</div>
+    </section>
+    <div class="fe-list">${FIELDS.map((f) => `<section class="panel fe" id="fe-${f.id}">
+      <div class="fe-head" style="background:${f.bg}"><h2>${f.name}</h2><span>${f.kind}</span></div>
+      <h3>효과</h3><ul>${f.fx.map((x) => `<li>${x}</li>`).join('')}</ul>
+      <h3>일으키는 방법</h3>
+      ${f.moves.length ? moveRow(f.moves) : ''}
+      ${f.traits.map((k) => `<div class="fe-mrow">${monChip(k)}<span class="fe-who">${f.trigger || '싸움에 나오면 자동으로 깔림'}</span></div>`).join('')}
+      ${f.clear ? `<h3>치우는 방법</h3>${moveRow(f.clear)}<div class="fe-mrow">${monChip('ssaribi')}<span class="fe-who">싸움에 나오면 치움</span></div>` : ''}
+      ${f.related.length ? `<h3>영향받는 특성</h3><div class="fe-mons">${f.related.map(monChip).join('')}</div>` : ''}
+    </section>`).join('')}</div>`;
+  app.querySelector('#back').onclick = showLobby;
+  app.querySelectorAll('[data-jump]').forEach((b) => { b.onclick = () => app.querySelector(`#fe-${b.dataset.jump}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 }
 
 function matchups(id) {
