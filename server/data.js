@@ -523,17 +523,13 @@ const STAT_NAMES = {
 // 루미나와 실비아는 사진 그림(public/img/mon)을 씁니다.
 for (const id of ['lumina', 'silvia']) MONSTERS[id].img = true;
 // 맞을 때마다 옷이 바뀌는 그림 수 (img/mon/<id>-s1 ~ sN.webp)
-MONSTERS.lumina.stages = 4;
-MONSTERS.silvia.stages = 4;
 for (const id of ['lumina', 'silvia']) MONSTERS[id].censor = true; // 19세 이하 모자이크
 // 강화 단계 (단조): 그림 img/mon/danjo-t1~t5, 단계마다 체력 +8%, 공격·방어 배율
 MONSTERS.danjo.img = true;
 const TIERS = { names: ['나무', '돌', '철', '금', '다이아몬드', '네더라이트'], atk: [.6, .8, 1, 1.25, 1.55, 1.9], def: [.6, .8, 1, 1.25, 1.55, 1.9], hp: .08 };
 MONSTERS.danjo.tiers = TIERS.names.length - 1;
 MONSTERS.danjo.trait = { n: '강화 용사', d: `강화를 쓰면 ${TIERS.names.join(' → ')} 순서로 100% 강화된다. 나무일 때는 약하지만 단계마다 체력이 ${TIERS.hp * 100}% 늘고 공격·방어가 크게 올라 네더라이트에서는 약 ${TIERS.atk[5]}배가 된다. 교체해도 단계는 유지된다.` };
-// 특성 '의상 각성': 옷이 한 단계 바뀔 때마다 공격·특공·스피드 4%씩 상승, 체력 20 회복
 const STRIP = { boost: .04, heal: 20 };
-for (const id of ['lumina', 'silvia']) MONSTERS[id].trait = { n: '의상 각성', d: `공격에 맞아 옷이 바뀔 때마다 공격, 특공, 스피드가 ${STRIP.boost * 100}%씩 오르고(최대 ${MONSTERS[id].stages}단계) 체력을 ${STRIP.heal} 회복한다.` };
 
 // 잠시 밴: 테스트 중인 요괴는 개발자 계정만 씁니다.
 const BANNED = ['lumina', 'silvia'];
