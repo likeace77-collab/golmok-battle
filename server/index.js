@@ -177,6 +177,11 @@ function migrate() {
       id: 'day1-title', user: name, why: '첫날부터 함께한 플레이어', notice: '우편함에 특별한 선물이 도착했습니다!',
       apply: (u) => sendMail(u, { from: '골목대전 운영팀', title: '첫날부터 함께해 줘서 고마워요', body: '골목대전이 처음 문을 연 날부터 함께한 플레이어에게만 드리는 전용 칭호입니다. 앞으로도 골목을 지켜 주세요!', reward: ['titles:day1'] }),
     })),
+    // 게임을 만드는 데 가장 애쓴 계정: 신급 칭호 LEGENDARY LABORER
+    ...['suho', 'PEGADORA', '티키티키펑크'].map((name) => ({
+      id: 'laborer-title', user: name, why: '게임 제작에 가장 힘쓴 플레이어', notice: '우편함에 신급 칭호가 도착했습니다!',
+      apply: (u) => sendMail(u, { from: '골목대전 운영팀', title: '골목대전을 함께 만든 당신에게', body: '골목대전을 만드는 데 누구보다 애쓰고 열심히 해 준 분께만 드리는 신급 칭호입니다. 전설보다 높은 단 하나의 등급, LEGENDARY LABORER. 고생 많았어요!', reward: ['titles:laborer'] }),
+    })),
   ];
   for (const g of GRANTS) {
     const u = db.users[keyOf(g.user)];

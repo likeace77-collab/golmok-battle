@@ -677,6 +677,29 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .tt-7 i { overflow: visible; font-weight: 900; letter-spacing: .08em; background: linear-gradient(90deg, #b8860b, #fff7c2, #FFD23F, #fff, #ff9a3c, #b8860b) 0 0 / 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: ttFlow 2.6s linear infinite; filter: drop-shadow(0 0 4px #FFD23F88); }
 .tt-7 u { position: relative; z-index: 2; text-decoration: none; font: 700 .55em/1 ui-monospace, Menlo, monospace; letter-spacing: .18em; color: #0a0703; background: linear-gradient(90deg, #FFD23F, #fff7c2, #FFD23F); padding: 2px 4px 1px; border-radius: 3px; }
 
+/* 8 신 LEGENDARY LABORER: 검정 바탕 보랏빛 네온 + 무지개 RGB 회전 테두리 + RGB 글리치 글씨 + 스캔라인 + GOD */
+.tt-8 { --g: #b026ff; gap: 5px; align-items: center; padding: 4px 11px 3px; color: #fff; background: radial-gradient(ellipse at 50% 0, #2a0a4a, #07020f 65%, #000); border-radius: 8px;
+  box-shadow: 0 0 8px #b026ff, 0 0 20px #b026ffaa, 0 0 38px #ff2bd655, inset 0 0 12px #b026ff66; animation: ttFloat 2.4s ease-in-out infinite, godGlow 1.8s ease-in-out infinite, godJolt 3.4s steps(1) infinite; }
+@keyframes godGlow { 50% { box-shadow: 0 0 12px #d06bff, 0 0 30px #b026ffdd, 0 0 54px #ff2bd688, inset 0 0 18px #d06bff88; } }
+@keyframes godJolt { 0%, 93%, 100% { transform: none; filter: none; } 94% { transform: translate(-2px, 0) skewX(-10deg); filter: hue-rotate(90deg) saturate(2); } 95% { transform: translate(2px, -1px) skewX(8deg); filter: hue-rotate(-120deg); } 96% { transform: translate(-1px, 1px); filter: invert(.15) hue-rotate(200deg); } }
+.tt-8::before { content: ''; position: absolute; inset: 0; z-index: 0; border-radius: 8px; padding: 2px; pointer-events: none;
+  background: conic-gradient(from var(--ta, 0deg), #ff004c, #ff8a00, #ffe600, #2bff88, #00e5ff, #4d5bff, #b026ff, #ff2bd6, #ff004c);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: ttSpin 1.4s linear infinite; filter: drop-shadow(0 0 3px #fff); }
+.tt-8::after { content: ''; position: absolute; z-index: 3; left: 0; right: 0; height: 22%; top: -30%; pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(90deg, #ff004c, #ffe600, #2bff88, #00e5ff, #b026ff, #ff2bd6); opacity: .0; animation: godBar 2.2s steps(12) infinite; }
+@keyframes godBar { 0%, 60% { top: -30%; opacity: 0; } 62% { opacity: .75; } 100% { top: 120%; opacity: .75; } }
+.tt-8 s { inset: 2px; border-radius: 6px; background: repeating-linear-gradient(#ffffff12 0 1px, transparent 1px 3px), radial-gradient(circle, #d06bff 0 1px, transparent 1.6px) 0 0 / 10px 8px, radial-gradient(circle, #ff2bd6 0 .8px, transparent 1.3px) 5px 4px / 10px 8px; animation: ttRise 1s linear infinite; opacity: .8; }
+.tt-8 .tt-god { position: relative; z-index: 2; font: 900 1.05em/1 serif; color: #fff; text-shadow: -1px 0 #ff004c, 1px 0 #00e5ff, 0 0 6px #d06bff, 0 0 12px #b026ff; animation: godHammer 1.2s ease-in-out infinite; }
+@keyframes godHammer { 0%, 100% { transform: rotate(-12deg); } 45% { transform: rotate(18deg) translateY(1px); } 55% { transform: rotate(10deg); } }
+.tt-8 i { overflow: visible; font-weight: 900; letter-spacing: .1em; background: linear-gradient(90deg, #d06bff, #fff, #ff2bd6, #fff, #00e5ff, #b026ff, #d06bff) 0 0 / 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: ttFlow 2s linear infinite; filter: drop-shadow(0 0 3px #b026ff) drop-shadow(0 0 7px #b026ffaa); }
+.tt-8 i::before, .tt-8 i::after { content: attr(data-t); position: absolute; inset: 0; -webkit-text-fill-color: currentColor; background: none; pointer-events: none; mix-blend-mode: screen; }
+.tt-8 i::before { color: #ff004c; animation: ttGlitchA 1.9s steps(1) infinite; }
+.tt-8 i::after { color: #00e5ff; animation: ttGlitchB 1.9s steps(1) infinite; }
+.tt-8 u { position: relative; z-index: 2; text-decoration: none; font: 900 .55em/1 ui-monospace, Menlo, monospace; letter-spacing: .2em; color: #000; padding: 2px 4px 1px; border-radius: 3px;
+  background: linear-gradient(90deg, #ff004c, #ffe600, #2bff88, #00e5ff, #b026ff, #ff2bd6, #ff004c) 0 0 / 300% 100%; animation: ttFlow 1.6s linear infinite; box-shadow: 0 0 6px #fff8; }
+@media (prefers-reduced-motion: reduce) { .tt-8, .tt-8::before, .tt-8::after, .tt-8 s, .tt-8 i, .tt-8 i::before, .tt-8 i::after, .tt-8 .tt-god, .tt-8 u { animation: none; } }
+
 /* 우편함 */
 .mailbtn { position: relative; }
 .mailbadge { position: absolute; top: -8px; right: -8px; min-width: 24px; height: 24px; padding: 0 6px; display: grid; place-items: center; font: 400 14px/1 var(--ui); font-style: normal; color: #fff; background: #E8402C; border: 2px solid var(--ink); border-radius: 999px; animation: soonPulse 1.2s ease-in-out infinite; }

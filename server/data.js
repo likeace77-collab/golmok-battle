@@ -511,6 +511,7 @@ const COSMETICS = {
     C('developer', '개발자', ['dev', 1], { tier: 6 }),
     // 우편 보상 전용
     C('day1', 'Day 1', ['gift', 'titles:day1'], { tier: 7 }),
+    C('laborer', 'LEGENDARY LABORER', ['gift', 'titles:laborer'], { tier: 8 }),
   ],
   cards: [
     C('basic', '기본 딱지', null), C('blue', '망점 블루', null, { dark: true }), C('red', '집중선 레드', null, { dark: true }),
