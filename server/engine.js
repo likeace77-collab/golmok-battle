@@ -47,7 +47,7 @@ function makeMon(spec) {
 }
 const freshVolatile = () => ({
   stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0 },
-  seeded: false, flinched: false, protecting: false, protectStreak: 0, reflecting: null, distracted: false, disabled: null,
+  seeded: false, flinched: false, protecting: false, protectStreak: 0, reflecting: null, distracted: false, disabled: null, fieldTurns: 0,
 });
 
 // 훈련장 더미: 타입 없음, 체력 1000. 공격하지 않고, 부서지면 바로 새 더미가 나옵니다.
@@ -108,7 +108,7 @@ const effMon = (moveType, mon, atk) => {
   return effOf(moveType, mon.types);
 };
 // 호롱이 그림자밟기: 상대 자리에 호롱이가 서 있으면 교체할 수 없음
-const trapped = (b, s) => !b.training && foesOf(b, s).some((i) => { const m = activeOf(b, i); return m.species === 'horong' && alive(m); });
+const trapped = (b, s) => !b.training && foesOf(b, s).some((i) => { const m = activeOf(b, i); return (m.species === 'horong' || m.species === 'meokarak') && alive(m); }); // 그림자밟기, 엉킴
 
 function legalActions(b, s) {
   const side = b.sides[s];
@@ -198,7 +198,9 @@ function runTurn(b, ev) {
     const mon = activeOf(b, o.s);
     const mv = o.a.z ? MOVES[MONSTERS[mon.species].z] : o.a.index === -1 ? STRUGGLE : MOVES[mon.moves[o.a.index].id];
     const ride = mon.species === 'bangpae' && mon.hp === mon.maxHp && mv.type === 'wind' ? 1 : 0; // 방패연 바람타기
-    return { ...o, pri: mv.pri + ride, spe: speedOf(b, o.s), tie: rand(b) };
+    const rush = mon.species === 'baedalbot' && chance(b, 30) ? 1 : 0; // 배달봇 배달의민족
+    if (rush) msg(ev, `${mon.name}의 배달의민족! 신호등을 건너뛰고 먼저 출발했다!`);
+    return { ...o, pri: mv.pri + ride + rush, spe: speedOf(b, o.s), tie: rand(b) };
   });
   movers.sort((x, y) => y.pri - x.pri || y.spe - x.spe || x.tie - y.tie);
 
@@ -265,6 +267,16 @@ function hurt(b, s, m, amount, ev, extra) {
   if (extra?.moveType) m.hits = (m.hits || 0) + 1; // 공격에 맞은 횟수 (옷이 바뀌는 요괴용)
   hpEvent(b, s, m, ev, { dmg, ...extra, ...(extra?.moveType ? { hits: m.hits } : {}) });
   formCheck(b, s, m, form0, ev);
+  if (m.species === 'sundae' && !m.exploded && m.hp > 0 && m.hp * 4 <= m.maxHp && !b.training) { // 순대장 창자버스터
+    m.exploded = true;
+    ev.push({ t: 'msg', text: `${m.name}의 창자버스터! 몸이 터지며 순대 속이 사방으로 날아갔다!` });
+    for (const i of seats(b)) {
+      const x = activeOf(b, i);
+      if (!alive(x)) continue;
+      hurt(b, i, x, 100, ev, { blast: 1 });
+      if (x !== m) faintCheck(b, i, x, ev);
+    }
+  }
   if (m.species === 'jeonbot' && !m.emergency && m.hp > 0 && m.hp * 2 <= m.maxHp) { // 전봇이 비상전력
     m.emergency = true;
     msg(ev, `${m.name}의 비상전력! 방어를 버리고 출력을 끌어올린다!`);
@@ -301,6 +313,11 @@ function faintCheck(b, s, m, ev) {
     m.faintedShown = true;
     m.status = null;
     ev.push({ t: 'faint', side: s, text: `${josa(m.name, '은/는')} 쓰러졌다!` });
+    if (m.species === 'yeonji' && !m.markDone) { // 연지곤지: 공격 말고 다른 이유로 쓰러져도 상대에게 자국
+      m.markDone = true;
+      const o = foesOf(b, s).find((i) => alive(activeOf(b, i)));
+      if (o !== undefined) { activeOf(b, o).yeonjiMark = true; msg(ev, `${m.name}의 연지곤지! ${activeOf(b, o).name}에게 붉은 연지 자국이 남았다!`); }
+    }
     return true;
   }
   return false;
@@ -453,7 +470,7 @@ function onEntry(b, s, m, ev) {
     b.weather = sky[0]; b.weatherTurns = 5;
     ev.push({ t: 'weather', weather: sky[0], trait: true, text: `${m.name}의 ${sky[1]}! ${sky[2]}` });
   }
-  const drop = { jangdok: ['acc', '발효'], jangseung: ['atk', '위협'] }[m.species];
+  const drop = { jangdok: ['acc', '발효'], jangseung: ['atk', '위협'], manhol: ['acc', '악취'] }[m.species];
   if (drop) {
     msg(ev, `${m.name}의 ${drop[1]}!`);
     for (const o of foesOf(b, s)) {
@@ -477,6 +494,29 @@ function onEntry(b, s, m, ev) {
     }
   }
   if (m.species === 'horong') msg(ev, `${m.name}의 그림자밟기! 상대는 교체할 수 없다.`);
+  if (m.species === 'meokarak') msg(ev, `${m.name}의 엉킴! 머리카락이 엉겨 상대는 교체할 수 없다.`);
+  if (m.species === 'ppeong' || m.species === 'neonna') { // 뚫어뻥 뻥뚫림 / 네온나 아이찡 댄스
+    const full = m.species === 'ppeong';
+    msg(ev, full ? `${m.name}의 뻥뚫림! 막힌 것을 전부 뚫어 버린다!` : `${m.name}의 아이찡 댄스! 신나는 춤에 필드가 날아간다!`);
+    clearField(b, ev, full);
+    if (full) for (const i of seats(b)) {
+      const x = activeOf(b, i);
+      if (alive(x) && x.status) { x.status = null; x.statusTurns = 0; ev.push({ t: 'status', side: i, status: null, text: `${x.name}의 상태이상이 나았다!` }); }
+      if (alive(x) && x.seeded) { x.seeded = false; msg(ev, `${x.name}에게 붙은 것이 떨어졌다!`); }
+    }
+  }
+}
+// 날씨, 그래스필드 (all이면 압정까지) 모두 치움
+function clearField(b, ev, all) {
+  if (b.weather) { ev.push({ t: 'weather', weather: null, text: `${josa(WEATHER_NAME[b.weather], '이/가')} 깨끗이 걷혔다!` }); b.weather = null; b.weatherTurns = 0; }
+  if (b.terrain) { b.terrain = null; b.terrainTurns = 0; ev.push({ t: 'terrain', terrain: null, text: '그래스필드가 사라졌다!' }); }
+  if (all) for (const t of [0, 1]) {
+    const team = seats(b).filter((i) => teamOf(b, i) === t);
+    if (team.some((i) => b.sides[i].hazard)) {
+      team.forEach((i) => { b.sides[i].hazard = false; });
+      ev.push({ t: 'hazard', side: team[0], on: false, text: `${teamName(b, t)} 쪽 압정이 말끔히 치워졌다!` });
+    }
+  }
 }
 
 function useMove(b, s, index, ev, want, z = false) {
@@ -567,13 +607,18 @@ function hitOne(b, s, me, o, mv, ev) {
 
   if (mv.cat === 'x') return statusMove(b, s, me, o, foe, mv, ev);
 
+  if (foe.species === 'batji' && mv.type === 'water') { // 빗물받이 저수
+    msg(ev, `${foe.name}의 저수! 물을 받아 마셨다!`);
+    if (!heal(b, o, foe, foe.maxHp / 4, ev)) msg(ev, `${josa(foe.name, '은/는')} 이미 배가 부르다.`);
+    return;
+  }
   const eff = effMon(mv.type, foe, me);
   if (eff === 0) { msg(ev, `${foe.name}에게는 효과가 없는 것 같다...`); return; }
 
   const hits = mv.hits ? randInt(b, mv.hits[0], mv.hits[1]) : 1;
   let total = 0, landed = 0;
   for (let i = 0; i < hits && alive(foe); i++) {
-    const crit = mv.critAll || rand(b) < (mv.crit ? 1 / 8 : 1 / 24);
+    const crit = (mv.critAll || rand(b) < (mv.crit ? 1 / 8 : 1 / 24)) && foe.species !== 'ppeondegi'; // 뻔데기 단단한 껍질
     let dmg = damageOf(b, me, foe, mv, crit, .85 + rand(b) * .15);
     if (ref) {
       const full = dmg;
@@ -666,6 +711,15 @@ function afterHit(b, s, me, o, foe, mv, total, ev) {
     }
     if (alive(foe)) { if (mv.type === 'water') crisp(b, o, foe, 'soggy', ev); else if (mv.type === 'fire') crisp(b, o, foe, 'crispy', ev); }
   }
+  if (phys && alive(me)) {
+    if (foe.species === 'hotteok') { msg(ev, `${foe.name}의 호떡소! 뜨거운 꿀이 끈적하게 달라붙었다!`); changeStage(b, s, me, 'spe', -1, ev); }
+    if (foe.species === 'setakbot') { msg(ev, `${foe.name}의 세제거품! 거품이 눈에 들어갔다!`); changeStage(b, s, me, 'acc', -1, ev); }
+  }
+  if (foe.species === 'jabanbot' && alive(foe)) snack(b, o, foe, ev); // 자판봇: 아군에게 과자
+  if (foe.species === 'yeonji' && !alive(foe) && !foe.markDone && alive(me)) { // 연지곤지
+    foe.markDone = true; me.yeonjiMark = true;
+    msg(ev, `${foe.name}의 연지곤지! ${me.name}에게 붉은 연지 자국이 남았다!`);
+  }
   if (foe.species === 'bongdari' && !alive(foe) && foe.lastPhys && alive(me)) { // 봉다리 내용물분출
     msg(ev, `${foe.name}의 내용물분출! 봉지 속 내용물이 쏟아졌다!`);
     hurt(b, s, me, foe.lastPhys, ev);
@@ -683,6 +737,21 @@ function afterHit(b, s, me, o, foe, mv, total, ev) {
     ev.push({ t: 'terrain', terrain: 'grass', side: o, text: `${foe.name}의 넘치는콩! ${teamName(b, teamOf(b, o))} 쪽 발밑에 그래스필드가 펼쳐졌다!` });
   }
   faintCheck(b, s, me, ev);
+}
+// 자판봇: 과자를 뱉어 아군 한 마리의 체력을 절반 회복 (태그는 옆 아군, 혼자면 대기 중인 가장 다친 아군)
+function snack(b, s, me, ev) {
+  const mate = matesOf(b, s).find((i) => i !== s && alive(activeOf(b, i)) && activeOf(b, i).hp < activeOf(b, i).maxHp);
+  if (mate !== undefined) {
+    const x = activeOf(b, mate);
+    msg(ev, `${me.name}의 과자나 뱉어내 이련아! ${x.name}에게 과자가 날아갔다!`);
+    heal(b, mate, x, x.maxHp / 2, ev);
+    return;
+  }
+  const side = b.sides[s];
+  const bench = side.mons.filter((x, i) => i !== side.active && alive(x) && x.hp < x.maxHp).sort((p, q) => p.hp / p.maxHp - q.hp / q.maxHp)[0];
+  if (!bench) return;
+  bench.hp = Math.min(bench.maxHp, bench.hp + Math.floor(bench.maxHp / 2));
+  msg(ev, `${me.name}의 과자나 뱉어내 이련아! 대기 중인 ${josa(bench.name, '이/가')} 과자를 먹고 체력을 회복했다!`);
 }
 // 붕빵이: 눅눅(스피드 하락) ↔ 바삭(물리 공격한 상대에게 1/4 반격)
 function crisp(b, s, m, state, ev) {
@@ -813,6 +882,21 @@ function endOfTurn(b, ev) {
     if (b.weather === 'rain') crisp(b, s, m, 'soggy', ev); else if (b.weather === 'sun') crisp(b, s, m, 'crispy', ev);
     if (b.terrain === 'grass' && teamOf(b, s) === b.terrainTeam && m.hp < m.maxHp) { msg(ev, `${josa(m.name, '은/는')} 그래스필드에서 회복했다!`); heal(b, s, m, m.maxHp / 16, ev); }
     if (m.disabled && --m.disabled.turns <= 0) { m.disabled = null; msg(ev, `${m.name}의 기술 봉인이 풀렸다!`); }
+  }
+  for (const s of seats(b)) {
+    const m = activeOf(b, s);
+    if (!alive(m) || b.phase === 'over') continue;
+    if (m.species === 'eomuk' && b.weather === 'rain' && m.hp < m.maxHp) { msg(ev, `${m.name}의 촉촉바디! 빗물에 국물이 불었다.`); heal(b, s, m, m.maxHp / 8, ev); }
+    if (m.species === 'eomuk' && b.weather === 'sun') { msg(ev, `${m.name}의 촉촉바디! 땡볕에 국물이 졸아든다...`); hurt(b, s, m, m.maxHp / 16, ev); faintCheck(b, s, m, ev); }
+    if (m.species === 'tteokppo' && ++m.fieldTurns === 2) { // 라면사리 추가
+      msg(ev, `${m.name}의 라면사리 추가! 국물이 진해졌다!`);
+      changeStage(b, s, m, 'atk', 1, ev); changeStage(b, s, m, 'spa', 1, ev);
+    }
+    if (m.species === 'kkangtong' && !m.recycled) { // 리사이클: 다 쓴 기술을 한 판에 한 번 다시 채움
+      const used = m.moves.filter((x) => x.pp <= 0);
+      if (used.length) { m.recycled = true; for (const x of used) x.pp = MOVES[x.id].pp; msg(ev, `${m.name}의 리사이클! 다 쓴 기술을 재활용해 다시 쓸 수 있게 됐다!`); }
+    }
+    if (m.yeonjiMark && alive(m)) { msg(ev, `${m.name}의 연지 자국이 화끈거린다!`); hurt(b, s, m, m.maxHp / 4, ev); faintCheck(b, s, m, ev); }
   }
   if (b.terrain && --b.terrainTurns <= 0) { b.terrain = null; ev.push({ t: 'terrain', terrain: null, text: '그래스필드가 사라졌다.' }); }
   if (b.weather && --b.weatherTurns <= 0) {

@@ -84,9 +84,8 @@ test('역류는 소나기에서 2배, 뻥 뚫기는 막기를 뚫고 압정을 �
 
 test('엉겨붙기는 풀 타입에도 걸리고, 씨앗 심기는 안 걸린다', () => {
   const b = battle(custom('meokarak', ['tangle']), custom('kongsiru', ['guard']), 9);
-  for (let i = 0; i < 12 && !E.activeOf(b, 1).seeded; i++) {
-    E.choose(b, 0, { type: 'move', index: 0 }); E.choose(b, 1, { type: 'switch', index: 1 });
-    E.choose(b, 0, { type: 'move', index: 0 }); E.choose(b, 1, { type: 'switch', index: 0 });
+  for (let i = 0; i < 12 && !E.activeOf(b, 1).seeded; i++) { // 머카락 엉킴 때문에 교체는 못 함
+    E.choose(b, 0, { type: 'move', index: 0 }); E.choose(b, 1, { type: 'move', index: 0 });
   }
   const anySeeded = b.sides[1].mons.some((m) => m.seeded === 'hair');
   assert.ok(anySeeded);
@@ -675,4 +674,51 @@ test('붕빵이 반갈쭉: 팥붕·슈붕·피붕, 콩시루 그래스필드는 
   move(g, 0, 'squirt'); move(g, 1, 'breeze');
   assert.equal(g.terrain, 'grass');
   assert.equal(atk.hp, atk.maxHp - 50); // 상대(대야몽)는 회복 안 됨
+});
+
+test('특성 3차 15개', () => {
+  const lead = (a, b, seed = 3) => {
+    const bt = E.createBattle([{ name: '가', team: a }, { name: '나', team: b }], seed, { preview: true });
+    E.choose(bt, 0, { type: 'lead', index: 0 }); E.choose(bt, 1, { type: 'lead', index: 0 });
+    return bt;
+  };
+  const turn = (b, m0, m1) => (move(b, 0, m0).events || move(b, 1, m1).events);
+  // 악취
+  assert.equal(E.activeOf(lead(custom('manhol', ['tackle']), custom('daeya', ['tackle'])), 1).stages.acc, -1);
+  // 엉킴
+  assert.ok(!E.legalActions(battle(custom('daeya', ['tackle']), custom('meokarak', ['tackle'])), 0).some((a) => a.type === 'switch'));
+  // 뻥뚫림: 비 걷힘
+  assert.equal(lead(custom('usan', ['tackle']), custom('ppeong', ['tackle'])).weather, null);
+  // 아이찡 댄스
+  assert.equal(lead(custom('bingsu', ['tackle']), custom('neonna', ['tackle'])).weather, null);
+  // 저수
+  { const b = battle(custom('daeya', ['squirt']), custom('batji', ['wall'])); const y = E.activeOf(b, 1); y.hp = 50;
+    turn(b, 'squirt', 'wall'); assert.ok(y.hp > 50); }
+  // 단단한 껍질: 질풍 같은 확정 급소도 안 맞음
+  { const b = battle(custom('silvia', ['winksnipe']), custom('ppeondegi', ['wall'])); let crit = false;
+    for (let i = 0; i < 8; i++) { const ev = turn(b, 'winksnipe', 'wall'); if (ev.some((e) => e.crit)) crit = true; } assert.ok(!crit); }
+  // 호떡소, 세제거품
+  { const b = battle(custom('maetdol', ['tackle']), custom('hotteok', ['wall'])); turn(b, 'tackle', 'wall'); assert.equal(E.activeOf(b, 0).stages.spe, -1); }
+  { const b = battle(custom('maetdol', ['tackle']), custom('setakbot', ['wall'])); turn(b, 'tackle', 'wall'); assert.equal(E.activeOf(b, 0).stages.acc, -1); }
+  // 라면사리 추가: 2턴 뒤 공격·특공 상승
+  { const b = battle(custom('tteokppo', ['wall']), custom('daeya', ['wall'])); turn(b, 'wall', 'wall'); turn(b, 'wall', 'wall');
+    assert.equal(E.activeOf(b, 0).stages.atk, 1); assert.equal(E.activeOf(b, 0).stages.spa, 1); }
+  // 촉촉바디: 비에 회복
+  { const b = battle(custom('eomuk', ['rainy']), custom('daeya', ['wall'])); const m = E.activeOf(b, 0); m.hp = 50; turn(b, 'rainy', 'wall'); assert.ok(m.hp > 50); }
+  // 창자버스터: 1/4 이하가 되면 모두에게 100
+  { const b = battle(custom('maetdol', ['tackle']), custom('sundae', ['wall'])); const x = E.activeOf(b, 0), y = E.activeOf(b, 1);
+    x.hp = x.maxHp = 3000; y.hp = Math.floor(y.maxHp / 4) + 5; turn(b, 'tackle', 'wall'); assert.ok(x.hp <= 2900, String(x.hp)); }
+  // 연지곤지: 쓰러뜨린 상대에게 매 턴 1/4
+  { const b = battle([{ species: 'maetdol', moves: ['tackle'] }, { species: 'daeya', moves: ['tackle'] }], custom('yeonji', ['wall'])); const x = E.activeOf(b, 0); x.hp = x.maxHp = 1000; E.activeOf(b, 1).hp = 1;
+    turn(b, 'tackle', 'wall'); assert.ok(x.yeonjiMark); assert.ok(x.hp <= 750); }
+  // 리사이클: PP가 바닥나면 한 번 다시 채움
+  { const b = battle(custom('kkangtong', ['tackle']), custom('daeya', ['wall'])); E.activeOf(b, 0).moves[0].pp = 1; turn(b, 'tackle', 'wall');
+    assert.equal(E.activeOf(b, 0).moves[0].pp, MOVES.tackle.pp); }
+  // 과자: 맞으면 대기 중인 다친 아군 회복
+  { const b = battle([{ species: 'jabanbot', moves: ['wall'] }, { species: 'daeya', moves: ['tackle'] }], custom('maetdol', ['tackle'])); const ally = b.sides[0].mons[1]; ally.hp = 10;
+    E.activeOf(b, 0).hp = E.activeOf(b, 0).maxHp = 3000; turn(b, 'wall', 'tackle'); assert.ok(ally.hp > 10); }
+  // 배달의민족: 가끔 먼저
+  { let first = 0; for (let seed = 1; seed < 40; seed++) { const b = battle(custom('baedalbot', ['tackle']), custom('daeya', ['tackle']), seed);
+      E.activeOf(b, 0).stats.spe = 1; E.activeOf(b, 1).stats.spe = 999; const ev = turn(b, 'tackle', 'tackle'); if (ev.find((e) => e.t === 'move').side === 0) first++; }
+    assert.ok(first > 3 && first < 25, String(first)); }
 });

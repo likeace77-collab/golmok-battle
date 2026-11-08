@@ -643,6 +643,22 @@ const FORMS = {
   mul: [1, 1.1, 1.2, 1.35, 1.5, 1.6], // 공격·특공·방어·특방 배율 (마지막은 메가진화)
 };
 Object.assign(MONSTERS.tuhon, { img: true, forms: 4, trait: { n: '광폭화', d: '남은 체력에 따라 폼이 바뀌고, 폼이 오를수록 공격·특공·방어·특방이 오른다. 일반폼(75% 초과) 1배 → 소노폼(50% 초과) 1.1배 → 중노폼(25% 초과) 1.2배 → 대노폼(5% 초과) 1.35배 → 극대노폼(5% 이하) 1.5배 → 메가진화하면 초(超)극대노 1.6배.' } });
+// 특성 3차
+Object.assign(MONSTERS.kkangtong, { trait: { n: '리사이클', d: '다 써 버린 기술의 PP를 턴이 끝날 때 다시 채운다. (한 판에 한 번)' } });
+Object.assign(MONSTERS.manhol, { trait: { n: '악취', d: '싸움에 나오자마자 상대의 명중률을 1단계 떨어뜨린다.' } });
+Object.assign(MONSTERS.batji, { trait: { n: '저수', d: '물 기술에 맞으면 피해 대신 체력을 1/4 회복한다.' } });
+Object.assign(MONSTERS.meokarak, { trait: { n: '엉킴', d: '머카락이 싸우는 동안 상대는 교체할 수 없다. (쓰러져서 바꾸는 것은 가능)' } });
+Object.assign(MONSTERS.ppeong, { trait: { n: '뻥뚫림', d: '싸움에 나오면 모든 요괴의 상태이상과 날씨, 그래스필드, 양쪽 압정을 전부 없앤다.' } });
+Object.assign(MONSTERS.tteokppo, { trait: { n: '라면사리 추가', d: '싸움에 나와 2턴이 지나면 공격과 특공이 1단계씩 오른다.' } });
+Object.assign(MONSTERS.sundae, { trait: { n: '창자버스터', d: '체력이 1/4 이하가 되면 몸이 터져 싸우는 모든 요괴(자신 포함)에게 100 피해를 준다. (한 번만)' } });
+Object.assign(MONSTERS.eomuk, { trait: { n: '촉촉바디', d: '비가 오면 매 턴 체력을 1/8 회복하고, 땡볕이면 매 턴 체력을 1/16 잃는다.' } });
+Object.assign(MONSTERS.hotteok, { trait: { n: '호떡소', d: '물리(접촉) 공격을 한 상대는 뜨거운 꿀이 붙어 스피드가 1단계 떨어진다.' } });
+Object.assign(MONSTERS.ppeondegi, { trait: { n: '단단한 껍질', d: '급소에 맞지 않는다.' } });
+Object.assign(MONSTERS.neonna, { trait: { n: '아이찡 댄스', d: '싸움에 나오면 춤을 춰서 날씨와 그래스필드를 없앤다.' } });
+Object.assign(MONSTERS.yeonji, { trait: { n: '연지곤지', d: '쓰러지면 쓰러뜨린 상대에게 연지 자국을 남긴다. 자국이 남은 요괴는 매 턴 최대 체력의 1/4을 잃는다.' } });
+Object.assign(MONSTERS.jabanbot, { trait: { n: '과자나 뱉어내 이련아', d: '공격에 맞으면 과자를 뱉어 아군 한 마리의 체력을 절반 회복시킨다. (태그 배틀은 옆 아군, 아니면 대기 중인 가장 다친 아군)' } });
+Object.assign(MONSTERS.baedalbot, { trait: { n: '배달의민족', d: '신호등을 건너뛰고 30% 확률로 먼저 공격한다.' } });
+Object.assign(MONSTERS.setakbot, { trait: { n: '세제거품', d: '물리(접촉) 공격을 한 상대의 명중률을 1단계 떨어뜨린다.' } });
 MONSTERS.hwangsari.trait = { n: '황사 경보', d: '싸움에 나오면 5턴 동안 황사가 분다.' };
 
 // 잠시 밴: 테스트 중인 요괴는 개발자 계정만 씁니다.
