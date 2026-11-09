@@ -1039,3 +1039,12 @@ svg.tplus { filter: drop-shadow(0 0 calc(3px + var(--plus) * 1px) #b026ff) drop-
   -webkit-text-stroke: 3px #000; text-shadow: 0 0 18px rgba(212,21,43,.6), 4px 4px 0 #000; transform: scale(1.4); animation: wastedTxt .55s cubic-bezier(.2,1.5,.4,1) forwards .25s; }
 @keyframes wastedIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes wastedTxt { from { transform: scale(2.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* 등신 주사위 */
+.dice-pop { position: absolute; left: 50%; top: 42%; z-index: 25; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 4px; pointer-events: none; }
+.dice-pop .die { width: clamp(64px, 20vw, 96px); aspect-ratio: 1; animation: dieRoll calc(.8s * var(--sp, 1)) cubic-bezier(.3,.7,.4,1) both; filter: drop-shadow(4px 4px 0 var(--ink)); }
+.dice-pop .die svg { width: 100%; height: 100%; display: block; }
+.dice-pop.done .die { animation: diePop calc(.35s * var(--sp, 1)) ease-out both; filter: drop-shadow(4px 4px 0 var(--ink)) drop-shadow(0 0 14px var(--c)); }
+.dice-pop b { font-family: var(--display); font-weight: 400; font-size: clamp(24px, 7vw, 36px); color: var(--c, #fff); -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; text-shadow: 3px 3px 0 var(--ink); min-height: 1.2em; }
+@keyframes dieRoll { 0% { transform: translate(-120%, 60%) rotate(-540deg) scale(.4); opacity: 0; } 15% { opacity: 1; } 55% { transform: translate(20%, -40%) rotate(-120deg) scale(1); } 80% { transform: translate(-5%, 6%) rotate(20deg); } 100% { transform: none; } }
+@keyframes diePop { 0% { transform: scale(1); } 45% { transform: scale(1.35); } 100% { transform: scale(1.1); } }

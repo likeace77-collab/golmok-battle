@@ -1243,31 +1243,33 @@ const Fx = (() => {
     },
   });
   // 등신 상태 연출
-  function drawDie(x, y, size, n, rot) {
-    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
-    const h = size / 2, r = size * .18;
-    ctx.beginPath(); ctx.moveTo(-h + r, -h); ctx.arcTo(h, -h, h, h, r); ctx.arcTo(h, h, -h, h, r); ctx.arcTo(-h, h, -h, -h, r); ctx.arcTo(-h, -h, h, -h, r); ctx.closePath();
-    ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = size * .07; ctx.stroke();
-    const P = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] }[n];
-    ctx.fillStyle = n === 1 ? '#E8402C' : INK;
-    for (const [px, py] of P) { ctx.beginPath(); ctx.arc(px * h * .5, py * h * .5, size * (n === 1 ? .13 : .09), 0, 7); ctx.fill(); }
-    ctx.restore();
-  }
+  // 주사위: 이름표에 가리지 않게 화면 맨 위(DOM)에 크게 띄웁니다.
+  const PIPS = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] };
+  const dieSVG = (n) => `<svg viewBox="-50 -50 100 100"><rect x="-44" y="-44" width="88" height="88" rx="16" fill="#fff" stroke="${INK}" stroke-width="6"/>${PIPS[n].map(([x, y]) => `<circle cx="${x * 22}" cy="${y * 22}" r="${n === 1 ? 13 : 9}" fill="${n === 1 ? '#E8402C' : INK}"/>`).join('')}</svg>`;
   function dice(key, n) {
     if (REDUCED) return 900;
-    measure(); const at = spot(key), top = above(at, 120);
-    add(1500, (p) => {
-      const roll = Math.min(1, p / .55), face = roll < 1 ? 1 + Math.floor(p * 40) % 6 : n;
-      const y = roll < 1 ? lerp(at.y, top.y, Math.sin(roll * Math.PI)) - 20 * u : top.y + 10 * u;
-      const s = (roll < 1 ? 34 : 34 + 12 * Math.sin(Math.min(1, (p - .55) / .15) * Math.PI)) * u;
-      ctx.globalAlpha = fade(p, .15);
-      drawDie(at.x + (roll < 1 ? (1 - roll) * 30 * u : 0), y, s, face, roll < 1 ? p * 22 : 0);
-    });
+    measure();
+    const box = document.createElement('div');
+    box.className = 'dice-pop';
+    box.style.setProperty('--sp', SPEED);
+    box.innerHTML = `<div class="die">${dieSVG(1)}</div><b></b>`;
+    scene.appendChild(box);
+    const die = box.querySelector('.die');
+    let f = 1;
+    const spin = setInterval(() => { f = (f % 6) + 1; die.innerHTML = dieSVG(f); }, 70 * SPEED);
     const c = ['', '#E8402C', '#4CD964', '#FF6A2B', '#4CD964', '#FF8CCB', '#FFD23F'][n];
-    UNDER = true; glow(top, c, { delay: 820, r: 90, dur: 500 }); ring(top, { delay: 820, color: c, r1: 100, w: 6 }); UNDER = false;
-    bang({ x: top.x, y: top.y - 40 * u }, n === 1 ? '1... 즉사!' : n === 6 ? '6! 대박!' : `${n}!`, { delay: 840, color: c, size: 30 });
-    if (n === 6) burst('sparkle', top, { delay: 840, n: 18, dist: 120, size: 11 });
-    return 1500;
+    setTimeout(() => {
+      clearInterval(spin);
+      die.innerHTML = dieSVG(n);
+      box.classList.add('done');
+      box.style.setProperty('--c', c);
+      box.querySelector('b').textContent = n === 1 ? '1... 즉사!' : n === 6 ? '6! 대박!' : `${n}!`;
+      const at = { x: W / 2, y: H * .42, r: 40 * u, foot: H * .5 };
+      glow(at, c, { r: 110, dur: 500 }); ring(at, { color: c, r1: 120, w: 6 });
+      if (n === 6) burst('sparkle', at, { n: 18, dist: 130, size: 11 });
+    }, 800 * SPEED);
+    setTimeout(() => box.remove(), 1700 * SPEED);
+    return 1700;
   }
   function splash(key, foeKey) {
     if (REDUCED) return 600;
