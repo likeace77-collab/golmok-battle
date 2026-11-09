@@ -1019,3 +1019,23 @@ svg.tplus { filter: drop-shadow(0 0 calc(3px + var(--plus) * 1px) #b026ff) drop-
 .item-line { color: #6b6480; }
 .badge.item { background: #fff; padding: 0 3px; }
 .badge.item.gone { opacity: .35; text-decoration: line-through; }
+
+/* 등신: 갈증 게이지와 WASTED */
+.thirst { position: relative; height: 15px; margin-top: 3px; background: #2a2f45; border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; }
+.thirst i { display: block; height: 100%; background: linear-gradient(90deg, #2F7DE1, #6fd3ff); transition: width .5s ease-out; }
+.thirst.low i { background: linear-gradient(90deg, #E8402C, #ff9a3c); }
+.thirst span { position: absolute; inset: 0; font-family: var(--ui); font-size: 10px; line-height: 11px; color: #fff; text-align: center; text-shadow: 0 0 2px var(--ink), 0 0 2px var(--ink); }
+.thirst.sip { animation: sip .4s; }
+.thirst.fill { animation: fillup .7s; }
+@keyframes sip { 30% { transform: translateX(-3px); } 60% { transform: translateX(3px); } }
+@keyframes fillup { 0% { box-shadow: 0 0 0 0 #6fd3ff; } 50% { box-shadow: 0 0 14px 4px #6fd3ff; } }
+.mon.wasted { animation: wastedFlip 1.4s cubic-bezier(.3,1.6,.5,1) forwards; }
+.mon.wasted svg { filter: grayscale(1) contrast(1.1) brightness(.9); transition: filter .25s; }
+@keyframes wastedFlip { 0% { transform: none; } 25% { transform: translateY(-14%) rotate(-8deg); } 55% { transform: scaleY(-1) translateY(-4%); } 100% { transform: scaleY(-1) translateY(-8%); } }
+.scene.wasted-scene > :not(.wasted-tag) { filter: saturate(.2); transition: filter .4s; }
+.wasted-tag { position: absolute; left: 0; right: 0; top: 38%; z-index: 30; display: grid; place-items: center; pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.72) 25%, rgba(0,0,0,.72) 75%, transparent); padding: 14px 0; animation: wastedIn .5s ease-out both .25s; }
+.wasted-tag b { font-family: 'Anton', Impact, var(--display); font-weight: 400; font-size: clamp(44px, 14vw, 92px); letter-spacing: .02em; color: #d4152b;
+  -webkit-text-stroke: 3px #000; text-shadow: 0 0 18px rgba(212,21,43,.6), 4px 4px 0 #000; transform: scale(1.4); animation: wastedTxt .55s cubic-bezier(.2,1.5,.4,1) forwards .25s; }
+@keyframes wastedIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes wastedTxt { from { transform: scale(2.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }

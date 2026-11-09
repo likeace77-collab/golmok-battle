@@ -49,7 +49,7 @@ test('2배 상성은 1배보다 약 2배 피해를 주고, 절반 상성은 약 
 
 test('모든 요괴에게 그림이 있고 스킬이 겹치지 않는다', () => {
   const read = (f) => require('fs').readFileSync(require('path').join(__dirname, '../public/js', f), 'utf8');
-  const art = read('art.js'), mega = read('mega-art.js'), newArt = read('new-art.js') + read('new-art2.js');
+  const art = read('art.js'), mega = read('mega-art.js'), newArt = read('new-art.js') + read('new-art2.js') + read('new-art3.js');
   for (const [id, m] of Object.entries(MONSTERS)) {
     if (m.img) { // 사진 그림
       for (const f of [id, `${id}-mega`, ...Array.from({ length: m.stages || 0 }, (_, i) => `${id}-s${i + 1}`), ...Array.from({ length: m.tierImgs ?? m.tiers ?? 0 }, (_, i) => `${id}-t${i + 1}`), ...Array.from({ length: m.forms || 0 }, (_, i) => `${id}-f${i + 1}`)]) assert.ok(require('fs').existsSync(require('path').join(__dirname, `../public/img/mon/${f}.webp`)), f);
@@ -60,7 +60,7 @@ test('모든 요괴에게 그림이 있고 스킬이 겹치지 않는다', () =>
     assert.match(mega + newArt, new RegExp(`\\b${id}: (L\\(|")`), `메가 ${id}`);
     assert.equal(new Set(m.moves).size, m.moves.length, id);
   }
-  assert.equal(Object.keys(MONSTERS).length, 56);
+  assert.equal(Object.keys(MONSTERS).length, 57);
 });
 
 test('역류는 소나기에서 2배, 뻥 뚫기는 막기를 뚫고 압정을 치운다', () => {
@@ -144,7 +144,7 @@ test('모든 요괴에게 전용기가 있고 다른 요괴는 배울 수 없다
     owner[m.sig] = (owner[m.sig] || 0) + 1;
     assert.equal(Object.values(m.mega.boost).reduce((a, c) => a + c), 100, id);
   }
-  assert.equal(Object.keys(owner).length, 56);
+  assert.equal(Object.keys(owner).length, 57);
   // 전용기는 한 요괴만 배운다 (단조처럼 전용기가 여럿일 수는 있음)
   const who = {};
   for (const [id, m] of Object.entries(MONSTERS)) for (const mv of m.moves) if (MOVES[mv].sig) (who[mv] ||= new Set()).add(id);
@@ -173,8 +173,9 @@ test('메가진화: 행동을 쓰지 않고, 능력치가 오르며, 한 판에 
 
 test('모든 요괴의 배울 수 있는 기술은 10개다', () => {
   for (const [id, m] of Object.entries(MONSTERS)) {
-    assert.equal(m.moves.length, 10, id);
-    assert.equal(new Set(m.moves).size, 10, id);
+    const n = id === 'deungsin' ? 6 : 10; // 등신은 전용기 6개뿐
+    assert.equal(m.moves.length, n, id);
+    assert.equal(new Set(m.moves).size, n, id);
   }
 });
 
@@ -394,7 +395,7 @@ test('훈련장: 모든 요괴와 기술 10개, 더미는 1000 체력에 안 끝
   const b = E.createTraining({ name: '철수', avatar: {}, style: {}, deck: '모든 요괴' }, 7);
   const v = E.viewFor(b, 0);
   assert.strictEqual(v.me.mons.length, Object.keys(MONSTERS).length);
-  assert.ok(v.me.mons.every((m) => m.moves.length === 10));
+  assert.ok(v.me.mons.every((m) => m.moves.length === (m.species === 'deungsin' ? 6 : 10)));
   assert.strictEqual(v.opp.active.maxHp, 1000);
   assert.deepStrictEqual(v.opp.active.types, []);
   let total = 0;
@@ -709,8 +710,8 @@ test('특성 3차 15개', () => {
   { const b = battle(custom('maetdol', ['tackle']), custom('sundae', ['wall'])); const x = E.activeOf(b, 0), y = E.activeOf(b, 1);
     x.hp = x.maxHp = 3000; y.hp = Math.floor(y.maxHp / 4) + 5; turn(b, 'tackle', 'wall'); assert.ok(x.hp <= 2900, String(x.hp)); }
   // 연지곤지: 쓰러뜨린 상대에게 매 턴 1/4
-  { const b = battle([{ species: 'maetdol', moves: ['tackle'] }, { species: 'daeya', moves: ['tackle'] }], custom('yeonji', ['wall'])); const x = E.activeOf(b, 0); x.hp = x.maxHp = 1000; E.activeOf(b, 1).hp = 1;
-    turn(b, 'tackle', 'wall'); assert.ok(x.yeonjiMark); assert.ok(x.hp <= 750); }
+  { const b = battle([{ species: 'maetdol', moves: ['vinewhip'] }, { species: 'daeya', moves: ['tackle'] }], custom('yeonji', ['wall'])); const x = E.activeOf(b, 0); x.hp = x.maxHp = 1000; E.activeOf(b, 1).hp = 1;
+    turn(b, 'vinewhip', 'wall'); assert.ok(x.yeonjiMark); assert.ok(x.hp <= 750); }
   // 리사이클: 써 버린 도구(기합의띠)를 한 번 되살림
   { const b = battle([{ species: 'kkangtong', moves: ['wall'], item: 'sash' }, { species: 'daeya', moves: ['tackle'] }], custom('maetdol', ['quake']));
     const k = E.activeOf(b, 0); k.stats.def = 1; E.activeOf(b, 1).stats.atk = 999;
@@ -757,4 +758,40 @@ test('도구 20개: 덱에서 들려 주고 전투에서 효과가 난다', () =
   // 삼각김밥: 절반 아래로 떨어지면 회복
   { const b = battle(custom('maetdol', ['quake']), withItem('yeontan', ['breeze'], 'onigiri')); const y = E.activeOf(b, 1); y.hp = y.maxHp = 1000; E.activeOf(b, 0).stats.atk = 200;
     for (let i = 0; i < 9 && !y.itemUsed && y.hp > 0; i++) turn(b, 'quake', 'breeze'); assert.ok(y.itemUsed, String(y.hp)); }
+});
+
+test('등신: 돌연사·갈증, 기술 6개', () => {
+  const turn = (b, m0, m1) => (move(b, 0, m0).events || move(b, 1, m1).events);
+  const D = MONSTERS.deungsin;
+  assert.deepEqual(D.types, ['water', 'normal']);
+  assert.equal(Object.values(D.base).reduce((a, c) => a + c), 600);
+  // 노말 타입: 혼에게 안 맞고, 혼 기술도 노말에게 안 맞음
+  assert.equal(E.effOf ? E.effOf('normal', ['spirit']) : 0, 0);
+  // 들이박기: 상대와 함께 쓰러짐
+  let rammed = 0;
+  for (let seed = 1; seed < 20; seed++) {
+    const b = battle(custom('deungsin', ['ramdeath']), custom('maetdol', ['tackle']), seed); const x = E.activeOf(b, 0), y = E.activeOf(b, 1);
+    x.stats.spe = 999; y.hp = y.maxHp = 5000;
+    const ev = turn(b, 'ramdeath', 'tackle');
+    if (ev.some((e) => e.text?.includes('들이박았다'))) { rammed++; assert.equal(y.hp, 0); assert.equal(x.hp, 0); }
+  }
+  assert.ok(rammed > 5);
+  // 수분보충: 갈증 100으로 (또는 플라스틱으로 즉사)
+  for (let seed = 1; seed < 30; seed++) {
+    const b = battle(custom('deungsin', ['hydrate']), custom('maetdol', ['wall']), seed); const x = E.activeOf(b, 0);
+    x.thirst = 40; turn(b, 'hydrate', 'wall');
+    assert.ok(x.hp === 0 || x.thirst >= 90, `thirst ${x.thirst}`); // 턴 끝 5% 소모
+  }
+  // 갈증이 0이 되면 즉사
+  { const b = battle(custom('deungsin', ['ignite']), custom('maetdol', ['wall'])); const x = E.activeOf(b, 0); x.thirst = 10;
+    turn(b, 'ignite', 'wall'); assert.equal(x.hp, 0); }
+  // 가시복: 물리 공격을 막고 상대를 찌른다
+  { const b = battle(custom('deungsin', ['pufferspike']), custom('maetdol', ['rockthrow'])); const x = E.activeOf(b, 0), y = E.activeOf(b, 1);
+    const hp0 = x.hp, yh = y.hp; const ev = turn(b, 'pufferspike', 'rockthrow');
+    if (x.hp > 0) { assert.ok(ev.some((e) => e.t === 'spiky' && e.hit) || ev.some((e) => e.t === 'miss')); assert.ok(y.hp < yh || ev.some((e) => e.t === 'miss')); }
+  }
+  // 돌연사가 실제로 일어난다 (여러 판 중 일부)
+  let died = 0;
+  for (let seed = 1; seed < 60; seed++) { const b = battle(custom('deungsin', ['hydrate']), custom('maetdol', ['wall']), seed); turn(b, 'hydrate', 'wall'); if (E.activeOf(b, 0).hp === 0) died++; }
+  assert.ok(died > 3 && died < 50, String(died));
 });

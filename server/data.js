@@ -13,7 +13,8 @@ const TYPES = {
   steel:  { n: '쇠',   c: '#7C8798' },
   spirit: { n: '혼',   c: '#4B3F9E' },
   fairy:  { n: '페어리', c: '#F27FA5' },
-  none:   { n: '보통', c: '#B9AE9A' },
+  normal: { n: '노말', c: '#A8A77A' },
+  none:   { n: '타입 없음', c: '#B9AE9A' },
 };
 
 // 공격 타입 → 방어 타입 배율. 적혀 있지 않으면 1배.
@@ -26,9 +27,10 @@ const CHART = {
   earth:  { fire: 2, elec: 2, poison: 2, steel: 2, grass: .5, wind: 0 },
   wind:   { grass: 2, spirit: 2, elec: .5, steel: .5, earth: .5 },
   poison: { grass: 2, water: 2, fairy: 2, poison: .5, earth: .5, spirit: .5, steel: 0 },
-  steel:  { ice: 2, spirit: 2, fairy: 2, fire: .5, water: .5, elec: .5, steel: .5 },
-  spirit: { spirit: 2, poison: 2, steel: .5, fairy: .5 },
+  steel:  { ice: 2, spirit: 2, fairy: 2, normal: 2, fire: .5, water: .5, elec: .5, steel: .5 },
+  spirit: { spirit: 2, poison: 2, steel: .5, fairy: .5, normal: 0 },
   fairy:  { spirit: 2, earth: 2, fire: .5, poison: .5, steel: .5 },
+  normal: { steel: .5, spirit: 0 },
   none:   {},
 };
 
@@ -150,18 +152,18 @@ const MOVES = {
   elemblade: M('특성검술', 'steel', 'p', 100, 100, 10, { elem: true, d: '무작위 속성을 검에 실어 벤다. 화염: 화상 60% / 파도: 상대 스피드 2단계↓ / 신록: 피해 절반 흡수 / 뇌광: 마비 50% / 빙결: 얼림 35% / 대지: 상대 방어 2단계↓ / 질풍: 반드시 급소 / 맹독: 독 80% / 혼백: 풀죽음 50%·상대 특방↓ / 성광: 상대 공격 2단계↓ / 강철: 위력 130. 상대에게 효과가 없는 속성은 나오지 않는다' }),
   reflector: M('리플렉터', 'steel', 'x', 0, null, 10, { reflect: true, pri: 4, d: '스피드와 상관없이 먼저 방패를 든다. 이번 턴 공격을 받으면 피해를 반씩 나눠, 단조는 50%만 받고 나머지 50%를 검으로 찔러 돌려준다. 상대가 공격하지 않으면 그냥 찌른다. 연속으로 쓰면 실패하기 쉽다' }),
   shieldbash: M('방패 밀치기', 'steel', 'p', 60, 100, 15, { fl: 30, d: '30% 확률로 풀죽음' }),
-  lionroar:  M('사자후', 'none', 'x', 0, 100, 10, { foe: { atk: -1, def: -1 }, d: '방패의 사자가 포효한다. 상대 공격과 방어 하락' }),
+  lionroar:  M('사자후', 'normal', 'x', 0, 100, 10, { foe: { atk: -1, def: -1 }, d: '방패의 사자가 포효한다. 상대 공격과 방어 하락' }),
   // 루미나 (견습 마법사)
   crystalbolt: M('크리스탈 마탄', 'fairy', 's', 90, 100, 10, { st: { s: 'par', ch: 20 }, d: '지팡이의 수정이 빛을 쏜다. 20% 확률로 마비' }),
   focusmana: M('마력 집중', 'fairy', 'x', 0, null, 10, { self: { spa: 2 }, self_: true, d: '특공 2단계 상승' }),
-  potion:    M('물약 한 모금', 'none', 'x', 0, null, 5, { heal: .5, cure: true, self_: true, d: '허리춤 물약을 마신다. 체력 절반 회복, 상태이상 치료' }),
+  potion:    M('물약 한 모금', 'normal', 'x', 0, null, 5, { heal: .5, cure: true, self_: true, d: '허리춤 물약을 마신다. 체력 절반 회복, 상태이상 치료' }),
   sparkcircle: M('번개 마법진', 'elec', 's', 70, 100, 15, { foe: { spd: -1 }, sc: 30, d: '손바닥 마법진에서 전기가 튄다. 30% 확률로 상대 특방 하락' }),
   // 실비아 (궁수)
   winksnipe: M('윙크 저격', 'fairy', 'p', 90, 100, 10, { crit: true, d: '한쪽 눈을 감고 쏜다. 급소에 잘 맞음' }),
   arrowrain: M('화살 연사', 'wind', 'p', 25, 95, 15, { hits: [2, 5], d: '2~5번 연속 공격' }),
   snarearrow: M('올가미 화살', 'wind', 'p', 55, 100, 15, { foe: { spe: -1 }, d: '상대 스피드 1단계 하락' }),
   throwknife: M('단검 투척', 'steel', 'p', 50, 100, 20, { pri: 1, d: '허벅지 단검을 던진다. 선제 공격' }),
-  hawkeye:   M('매의 눈', 'none', 'x', 0, null, 10, { self: { atk: 1, acc: 1 }, self_: true, d: '공격과 명중률 1단계 상승' }),
+  hawkeye:   M('매의 눈', 'normal', 'x', 0, null, 10, { self: { atk: 1, acc: 1 }, self_: true, d: '공격과 명중률 1단계 상승' }),
   canburst:  M('캔 연사', 'steel', 'p', 25, 100, 15, { hits: [2, 5], d: '2~5번 연속 공격' }),
   bulletdash:M('총알 배달', 'wind', 'p', 65, 100, 15, { pri: 1, d: '선제 공격' }),
   spincycle: M('탈수 회전', 'water', 's', 85, 100, 10, { foe: { spe: -1 }, d: '상대 스피드 1단계 하락' }),
@@ -184,11 +186,18 @@ const MOVES = {
   flutter:   M('푸드덕', 'wind', 'p', 80, 100, 10, { foe: { acc: -1 }, sc: 30, d: '깃털과 빵가루를 날린다. 30% 확률로 상대 명중률 하락' }),
   nyanpunch: M('냥냥펀치', 'fairy', 'p', 22, 100, 15, { hits: [3, 5], d: '앞발로 3~5번 연속 펀치' }),
   roachrush: M('바선생 등장', 'poison', 'p', 85, 100, 10, { fl: 30, d: '갑자기 나타나 모두를 얼어붙게 한다. 30% 확률로 풀죽음' }),
+  // 등신 (개복치)
+  glasscannon: M('유리대포', 'elec', 's', 200, 100, 5, { glass: true, d: '200 위력의 전기 대포. 2번 연속으로 쓰면 25% 확률로 즉사' }),
+  ramdeath:  M('돌연사-들이박기', 'normal', 'p', 0, 100, 5, { kamikaze: true, d: '상대를 들이박아 상대와 함께 사망한다 (막히면 혼자 사망)' }),
+  vinyl:     M('돌연사-비닐봉지 섭취', 'normal', 'x', 0, null, 5, { vinyl: true, self_: true, d: '비닐봉지를 먹는다. 35% 확률로 즉사, 65% 확률로 체력이 가득 참' }),
+  pufferspike: M('가시복', 'poison', 'x', 0, null, 10, { spiky: true, pri: 3, self_: true, d: '가시를 세운다. 이번 턴 상대의 물리 공격을 막고 가시로 찌른다. 물리 공격을 안 받으면 자기 가시에 찔린다' }),
+  hydrate:   M('수분보충', 'water', 'x', 0, null, 5, { hydrate: true, self_: true, d: '물을 마셔 갈증 게이지를 100%로 채운다. 25% 확률로 플라스틱 조각을 삼켜 즉사' }),
+  ignite:    M('불타올라라', 'fire', 'x', 0, null, 5, { ignite: true, self_: true, d: '온몸이 불타오른다. 20% 확률로 타 죽음. 상대는 50% 확률로 공포에 질려 다음 공격을 못 하고, 이후 쓰는 기술 4개에 화상(50%)과 피해 1.5배가 붙는다' }),
   // 보통
-  tackle:    M('몸통 박치기', 'none', 'p', 50, 100, 30, { d: '기본 공격' }),
-  guard:     M('막기', 'none', 'x', 0, null, 10, { protect: true, pri: 3, self_: true, d: '이번 턴 공격을 막음 (연속 사용 시 실패하기 쉬움)' }),
-  nap:       M('낮잠', 'none', 'x', 0, null, 5, { nap: true, self_: true, d: '체력을 모두 회복하고 2턴 잠듦' }),
-  spirit_up: M('기합 넣기', 'none', 'x', 0, null, 15, { self: { atk: 1, spe: 1 }, self_: true, d: '공격과 스피드 1단계 상승' }),
+  tackle:    M('몸통 박치기', 'normal', 'p', 50, 100, 30, { d: '기본 공격' }),
+  guard:     M('막기', 'normal', 'x', 0, null, 10, { protect: true, pri: 3, self_: true, d: '이번 턴 공격을 막음 (연속 사용 시 실패하기 쉬움)' }),
+  nap:       M('낮잠', 'normal', 'x', 0, null, 5, { nap: true, self_: true, d: '체력을 모두 회복하고 2턴 잠듦' }),
+  spirit_up: M('기합 넣기', 'normal', 'x', 0, null, 15, { self: { atk: 1, spe: 1 }, self_: true, d: '공격과 스피드 1단계 상승' }),
 };
 
 // 공격 안 되는 상황 전용 기술. 팀에는 넣을 수 없음.
@@ -376,6 +385,9 @@ const MONSTERS = {
   basaeng:  X('바선생', ['poison'], 80, 95, 95, 50, 80, 95,
     ['roachrush', 'sting', 'ambush', 'scrap', 'rockthrow', 'tacks', 'stench', 'fog', 'spirit_up', 'guard'],
     '넥타이를 맨 바퀴벌레 선생님. 절대 죽지 않는다. 오늘도 자습이다.'),
+  deungsin: X('등신', ['water', 'normal'], 110, 120, 70, 130, 70, 100,
+    ['glasscannon', 'ramdeath', 'vinyl', 'pufferspike', 'hydrate', 'ignite'],
+    '바다의 개복치. 햇빛을 봐도, 물살이 세도, 깜짝 놀라도 죽는다. 그래도 능력치만큼은 최강이다.'),
 };
 
 // 캐릭터별 전용기와 메가진화: [전용기, 메가 이름, 소개, [체력, 공격, 방어, 특공, 특방, 스피드 상승값]]
@@ -438,6 +450,7 @@ Object.assign(SIGNATURE, {
   dakdulgi: ['flutter', '광장왕 닭둘기', '비행 고글과 빨간 스카프를 둘렀다. 날개를 펼치면 거대하고, 부하 비둘기를 거느린다.', [15, 40, 15, 0, 10, 20]],
   chijeu: ['nyanpunch', '사미 치즈냥', '꼬리가 네 갈래 핑크 불꽃이 되고 보석 방울 목걸이를 찼다. 귀 끝에도 불꽃이 핀다.', [0, 40, 10, 10, 10, 30]],
   basaeng: ['roachrush', '교장 바선생', '학사모를 쓰고 날개를 펼쳤다. 날아오르는 순간 모두가 비명을 지른다.', [10, 35, 25, 0, 20, 10]],
+  deungsin: ['glasscannon', '해탈 등신', '죽음을 너무 많이 겪어 해탈했다. 머리 위에 천사 링, 몸에는 뽁뽁이를 칭칭 감았다. 그래도 죽는다.', [10, 20, 20, 20, 20, 10]],
   hwangsari: ['yellowgust', '대황사 황사리', '방독면과 고글을 쓴 거대 모래폭풍. 아래는 토네이도가 되었고 주변에 돌덩이가 돈다.', [10, 40, 25, 0, 15, 10]],
 });
 
@@ -508,6 +521,7 @@ const ZMOVES = {
   dakdulgi: ['광장 대습격', 'wind', 180, '광장 비둘기가 한꺼번에 날아오른다. 상대 명중률 하락', { foe: { acc: -1 } }],
   chijeu: ['츄르 각성 냥펀치', 'fairy', 180, '츄르를 먹고 각성한 펀치. 사용 후 자신의 스피드 상승', { self: { spe: 1 }, selfAfter: true }],
   basaeng: ['전교생 집합', 'poison', 180, '바퀴벌레 전교생이 몰려온다. 반드시 독', { st: { s: 'psn', ch: 100 } }],
+  deungsin: ['WASTED', 'water', 190, '등신이 온몸으로 바다를 끌고 와 덮친다. 쓰고 나면 등신도 50% 확률로 즉사', { wasted: true }],
   hwangsari: ['누런 하늘', 'earth', 180, '하늘이 누렇게 덮인다. 상대 명중률 하락', { foe: { acc: -1 } }],
 };
 for (const [id, [n, type, pow, d, extra = {}]] of Object.entries(ZMOVES)) {
@@ -526,7 +540,7 @@ for (const [id, [sig, n, d, boost]] of Object.entries(SIGNATURE)) {
   mon.mega = { n, d, boost: Object.fromEntries(STAT_KEYS.map((k, i) => [k, boost[i]])) };
 }
 // 전용기가 여럿인 요괴: 단조는 강화·강화 베기·특성검술·리플렉터가 모두 전용기
-for (const id of ['tierslash', 'elemblade', 'reflector', 'bangalzzuk']) MOVES[id].sig = true;
+for (const id of ['tierslash', 'elemblade', 'reflector', 'bangalzzuk', 'ramdeath', 'vinyl', 'pufferspike', 'hydrate', 'ignite']) MOVES[id].sig = true;
 MONSTERS.bungbbang.moves = MONSTERS.bungbbang.moves.map((m) => (m === 'ember' ? 'bangalzzuk' : m));
 
 const AVATAR_OPTIONS = {
@@ -673,6 +687,7 @@ Object.assign(MONSTERS.maemmaem, { trait: { n: '떼창', d: '소리 기술의 �
 Object.assign(MONSTERS.wengweng, { trait: { n: '파리채 내성', d: '전기 기술에 맞으면 피해를 받지 않고 특공이 1단계 올라간다.' } });
 Object.assign(MONSTERS.dakdulgi, { trait: { n: '빵 줍기', d: '체력이 절반 이하가 되면(한 번만) 바닥의 빵을 주워 먹고 체력을 1/3 회복한다.' } });
 Object.assign(MONSTERS.chijeu, { trait: { n: '그루밍', d: '턴이 끝날 때 상태이상이 있으면 50% 확률로 털을 핥아 낫는다.' } });
+Object.assign(MONSTERS.deungsin, { trait: { n: '돌연사 · 갈증', d: '돌연사: 턴이 시작될 때, 턴이 끝날 때, 공격할 때, 공격받을 때마다 10% 확률로 즉사한다. 갈증: 체력바 아래 갈증 게이지(100%에서 시작)가 기술을 쓰면 15%, 턴이 끝나면 5%, 공격받으면 5% 줄고, 0%가 되면 즉사한다.' } });
 Object.assign(MONSTERS.basaeng, { trait: { n: '불사신', d: '한 방에 쓰러질 공격을 맞아도 30% 확률로 체력 1을 남기고 버틴다.' } });
 // 하위권 상향: 기본 능력치에 더하는 값 [체력, 공격, 방어, 특공, 특방, 스피드]
 const BUFFS = {

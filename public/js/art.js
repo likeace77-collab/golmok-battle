@@ -271,6 +271,7 @@ function monsterSVG(id, cls = '', mega = false, hits = 0, tier = 0) {
     return `<svg class="${cls}" viewBox="0 0 200 200" aria-hidden="true"><image href="img/mon/${id}${mega ? '-mega' : stage ? `-s${stage}` : ''}${mosaic ? '-m' : ''}.webp" width="200" height="200"/></svg>`;
   }
   if (mega) return `<svg class="${cls}" viewBox="-6 -6 212 212" aria-hidden="true">${MEGA_ART[id]}</svg>`;
+  if (tier && NEW_ART[`${id}_fire`]) return `<svg class="${cls}" viewBox="-4 -6 208 212" aria-hidden="true">${NEW_ART[`${id}_fire`]}</svg>`; // 등신 불타올라라
   if (NEW_ART[id]) return `<svg class="${cls}" viewBox="-4 -6 208 212" aria-hidden="true">${NEW_ART[id]}</svg>`;
   return `<svg class="${cls}" viewBox="0 0 120 120" aria-hidden="true">${ART[id] || ''}</svg>`;
 }

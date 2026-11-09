@@ -42,13 +42,37 @@ function makeMon(spec) {
     hp: stats.hp, maxHp: stats.hp,
     status: null, statusTurns: 0, item: ITEMS[spec.item] ? spec.item : null, itemUsed: false,
     moves: spec.moves.map((id) => ({ id, pp: MOVES[id].pp })),
+    ...(spec.species === DS ? { thirst: 100, blaze: 0 } : {}),
     ...freshVolatile(),
   };
 }
 const freshVolatile = () => ({
   stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0 },
-  seeded: false, flinched: false, protecting: false, protectStreak: 0, reflecting: null, distracted: false, disabled: null, fieldTurns: 0, choiceLock: null,
+  seeded: false, flinched: false, protecting: false, spiky: null, feared: false, lastMove: null, protectStreak: 0, reflecting: null, distracted: false, disabled: null, fieldTurns: 0, choiceLock: null,
 });
+
+// ===== 등신 (개복치): 돌연사와 갈증 =====
+const DS = 'deungsin';
+function suddenDeath(b, s, m, ev, text) {
+  if (!alive(m) || b.training) return false;
+  ev.push({ t: 'msg', text });
+  hurt(b, s, m, m.hp, ev, { sudden: true });
+  faintCheck(b, s, m, ev);
+  return true;
+}
+const DEATH = ['갑자기 햇빛이 너무 눈부셨다', '물살이 너무 셌다', '깜짝 놀랐다', '지나가던 물고기와 눈이 마주쳤다', '스트레스를 받았다', '자기가 등신이라는 걸 깨달았다', '바닷물이 너무 짰다', '물방울이 눈에 들어갔다', '옆 개복치가 죽는 걸 보고 충격받았다'];
+function rollDeath(b, s, m, ev) { // 돌연사 10%
+  if (m.species !== DS || !alive(m) || b.training || !chance(b, 10)) return false;
+  const why = DEATH[Math.floor(rand(b) * DEATH.length)];
+  return suddenDeath(b, s, m, ev, `${m.name}의 돌연사! ${why}...`);
+}
+function thirst(b, s, m, amount, ev) {
+  if (m.species !== DS || !alive(m) || b.training) return false;
+  m.thirst = Math.max(0, Math.min(100, (m.thirst ?? 100) - amount));
+  ev.push({ t: 'thirst', side: s, v: m.thirst });
+  if (m.thirst > 0) return false;
+  return suddenDeath(b, s, m, ev, `${josa(m.name, '은/는')} 목이 말라 바싹 말라 버렸다...`);
+}
 
 // 훈련장 더미: 타입 없음, 체력 1000. 공격하지 않고, 부서지면 바로 새 더미가 나옵니다.
 const DUMMY_HP = 1000;
@@ -208,6 +232,8 @@ function runTurn(b, ev) {
   // 교체가 먼저
   for (const { s, a } of acts) if (a.type === 'switch') doSwitch(b, s, a.index, ev);
 
+  for (const s of seats(b)) rollDeath(b, s, activeOf(b, s), ev); // 등신: 턴 시작 돌연사
+  if (checkOver(b, ev)) { b.turn++; return; }
   const movers = acts.filter(({ a }) => a.type === 'move').map((o) => {
     const mon = activeOf(b, o.s);
     const mv = o.a.z ? MOVES[MONSTERS[mon.species].z] : o.a.index === -1 ? STRUGGLE : MOVES[mon.moves[o.a.index].id];
@@ -348,7 +374,7 @@ function faintCheck(b, s, m, ev) {
 function publicMon(m) {
   return {
     species: m.species, name: m.name, types: m.types,
-    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega, hits: m.hits || 0, strip: stripOf(m), tier: tierOf(m) || formOf(m),
+    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega, thirst: m.thirst, blaze: m.blaze || 0, hits: m.hits || 0, strip: stripOf(m), tier: tierOf(m) || formOf(m) || (m.blaze > 0 ? 1 : 0),
   };
 }
 
@@ -421,6 +447,11 @@ function canAct(b, s, m, mv, ev) {
     msg(ev, `${josa(m.name, '은/는')} 떨어진 돈을 줍느라 공격하지 못했다!`);
     return false;
   }
+  if (m.feared) { // 등신 불타올라라
+    m.feared = false;
+    msg(ev, `${josa(m.name, '은/는')} 불타는 개복치가 무서워서 공격하지 못했다!`);
+    return false;
+  }
   if (m.flinched) {
     m.flinched = false;
     msg(ev, `${josa(m.name, '은/는')} 풀이 죽어 움직이지 못했다!`);
@@ -476,6 +507,7 @@ function damageOf(b, atk, def, mv, crit, roll) {
   if (phys && def.species === 'malrang') dmg *= .75; // 특성 말랑말랑
   if (def.species === 'seonggeom' && def.hp === def.maxHp) dmg *= .5; // 특성 천년의 잠
   if (!phys && atk.species === 'madoseo' && def.status) dmg *= 1.3; // 특성 금서
+  if (atk.blaze > 0) dmg *= 1.5; // 등신 불타올라라
   if (mv.sound && def.species === 'harmonium') dmg *= .5;
   if (atk.species === 'yangmeori' && mv.type === (isHot(b) ? 'fire' : 'ice')) dmg *= 1.3; // 특성 온탕냉탕
   if (phys && atk.status === 'brn') dmg *= .5;
@@ -557,6 +589,26 @@ function clearField(b, ev, all) {
 }
 
 function useMove(b, s, index, ev, want, z = false) {
+  const me = activeOf(b, s);
+  if (me.species !== DS) return useMoveCore(b, s, index, ev, want, z);
+  const before = ev.length;
+  useMoveCore(b, s, index, ev, want, z);
+  const e = ev.slice(before).find((x) => x.t === 'move' && x.side === s);
+  if (!e) return; // 움직이지 못함
+  const mv = MOVES[e.id] || STRUGGLE;
+  if (alive(me)) {
+    if (mv.glass && me.lastMove === 'glasscannon' && chance(b, 25)) suddenDeath(b, s, me, ev, `유리대포를 연달아 쏜 반동으로 ${josa(me.name, '이/가')} 산산조각 났다!`);
+    if (mv.wasted && chance(b, 50)) suddenDeath(b, s, me, ev, `${josa(me.name, '은/는')} 온 힘을 다 써 버렸다...`);
+    if (mv.cat !== 'x') rollDeath(b, s, me, ev); // 공격할 때 돌연사
+    if (!mv.hydrate) thirst(b, s, me, 15, ev); // 기술 쓰면 갈증 15%
+  }
+  me.lastMove = e.id;
+  if (me.blaze > 0 && !mv.ignite) {
+    me.blaze--;
+    if (me.blaze === 0 && alive(me)) ev.push({ t: 'blaze', side: s, on: false, mon: publicMon(me), text: `${me.name}의 불길이 사그라들었다.` });
+  }
+}
+function useMoveCore(b, s, index, ev, want, z = false) {
   const o = targetOf(b, s, want);
   const me = activeOf(b, s);
   const slot = z || index === -1 ? null : me.moves[index];
@@ -573,6 +625,7 @@ function useMove(b, s, index, ev, want, z = false) {
   if (mv.bath) mv = isHot(b) ? { ...mv, type: 'fire', st: { s: 'brn', ch: 30 } } : { ...mv, type: 'ice', st: { s: 'frz', ch: 30 } };
   if (!canAct(b, s, me, mv, ev)) { me.protectStreak = 0; return; }
   if (slot) slot.pp--;
+  if (me.blaze > 0 && mv.cat !== 'x') mv = { ...mv, st: { s: 'brn', ch: Math.max(50, mv.st?.ch || 0) } }; // 불타오르는 중: 화상 50%
   if (slot && !me.choiceLock && CHOICE.some((c) => has(me, c))) me.choiceLock = slot.id; // 고정 도구
   if (z) {
     b.sides[s].zUsed = true;
@@ -604,6 +657,11 @@ function useMove(b, s, index, ev, want, z = false) {
     } else { me.protectStreak = 0; msg(ev, '그러나 실패했다!'); }
     return;
   }
+  if (mv.spiky) { // 가시복
+    me.spiky = { used: false };
+    ev.push({ t: 'spiky', side: s, on: true, text: `${josa(me.name, '은/는')} 온몸의 가시를 바짝 세웠다!` });
+    return;
+  }
   if (mv.reflect) {
     const ok = chance(b, 100 / 2 ** me.protectStreak);
     if (ok) {
@@ -628,6 +686,11 @@ function hitOne(b, s, me, o, mv, ev) {
   if (ref) ref.used = true;
   let counter = 0;
   if (!alive(foe)) { msg(ev, '그러나 맞힐 상대가 없었다!'); return; }
+  if (foe.protecting && mv.kamikaze) { // 돌연사-들이박기가 막힘
+    msg(ev, `${me.name}, ${foe.name}의 막기에 정면으로 들이박았다!`);
+    suddenDeath(b, s, me, ev, `${josa(me.name, '은/는')} 혼자 죽었다...`);
+    return;
+  }
   if (foe.protecting) {
     if (mv.sound && me.species === 'maemmaem') mv = { ...mv, breakGuard: true }; // 특성 떼창
     if (mv.z && !mv.breakGuard) {
@@ -645,6 +708,14 @@ function hitOne(b, s, me, o, mv, ev) {
   }
 
   if (mv.cat === 'x') return statusMove(b, s, me, o, foe, mv, ev);
+  if (foe.spiky && mv.cat === 'p' && !mv.z) { // 가시복: 물리 공격을 막고 찌름
+    foe.spiky.used = true;
+    ev.push({ t: 'spiky', side: o, target: s, hit: true, text: `${foe.name}의 가시복! 가시에 막혔다!` });
+    hurt(b, s, me, me.maxHp / 4, ev);
+    msg(ev, `${josa(me.name, '은/는')} 가시에 푹 찔렸다!`);
+    faintCheck(b, s, me, ev);
+    return;
+  }
 
   if (foe.species === 'wengweng' && mv.type === 'elec') { // 특성 파리채 내성
     msg(ev, `${foe.name}의 파리채 내성! 전기를 흡수했다!`);
@@ -659,6 +730,13 @@ function hitOne(b, s, me, o, mv, ev) {
   const eff = effMon(mv.type, foe, me);
   if (eff === 0) { msg(ev, `${foe.name}에게는 효과가 없는 것 같다...`); return; }
 
+  if (mv.kamikaze) { // 돌연사-들이박기: 상대와 함께 사망
+    msg(ev, `${josa(me.name, '은/는')} 온몸을 던져 ${foe.name}에게 들이박았다!`);
+    hurt(b, o, foe, foe.hp, ev, { eff: 1, moveType: mv.type, kamikaze: 1 });
+    faintCheck(b, o, foe, ev);
+    suddenDeath(b, s, me, ev, `${josa(me.name, '은/는')} 충격을 이기지 못하고 함께 쓰러졌다!`);
+    return;
+  }
   const hits = mv.hits ? randInt(b, mv.hits[0], mv.hits[1]) : 1;
   let total = 0, landed = 0;
   for (let i = 0; i < hits && alive(foe); i++) {
@@ -693,6 +771,7 @@ function hitOne(b, s, me, o, mv, ev) {
     if (crit) msg(ev, '급소에 맞았다!');
   }
   if (hits > 1) msg(ev, `${landed}번 맞았다!`);
+  if (landed && foe.species === DS && alive(foe)) { thirst(b, o, foe, 5, ev); rollDeath(b, o, foe, ev); } // 등신: 맞으면 갈증 5%, 돌연사
   if (counter > 0 && alive(me) && alive(foe)) {
     ev.push({ t: 'counter', side: o, target: s, text: `${josa(foe.name, '이/가')} 검으로 찔러 피해를 돌려줬다!` });
     hurt(b, s, me, counter, ev, { counter: 1 });
@@ -827,6 +906,28 @@ function crisp(b, s, m, state, ev) {
 }
 
 function selfMove(b, s, me, mv, ev) {
+  if (mv.vinyl) {
+    msg(ev, `${josa(me.name, '은/는')} 비닐봉지를 해파리인 줄 알고 꿀꺽 삼켰다!`);
+    if (chance(b, 35) && suddenDeath(b, s, me, ev, '비닐봉지가 목에 걸렸다...')) return;
+    msg(ev, '...의외로 맛있었다! 체력이 가득 찼다!');
+    if (me.hp < me.maxHp) heal(b, s, me, me.maxHp, ev);
+    return;
+  }
+  if (mv.hydrate) {
+    msg(ev, `${josa(me.name, '은/는')} 물을 벌컥벌컥 마셨다!`);
+    if (chance(b, 25) && suddenDeath(b, s, me, ev, '물속에 섞여 있던 플라스틱 조각을 삼켰다...')) return;
+    me.thirst = 100;
+    ev.push({ t: 'thirst', side: s, v: 100, text: '갈증 게이지가 100%로 가득 찼다!' });
+    return;
+  }
+  if (mv.ignite) {
+    if (chance(b, 20) && suddenDeath(b, s, me, ev, `${josa(me.name, '은/는')} 너무 불타올라서 그대로 타 버렸다...`)) return;
+    me.blaze = 4;
+    ev.push({ t: 'blaze', side: s, on: true, mon: publicMon(me), text: `${josa(me.name, '은/는')} 눈이 시뻘게지며 온몸이 불타올랐다!` });
+    const o = foesOf(b, s).find((i) => alive(activeOf(b, i)));
+    if (o !== undefined && chance(b, 50)) { activeOf(b, o).feared = true; msg(ev, `${josa(activeOf(b, o).name, '은/는')} 공포에 질렸다!`); }
+    return;
+  }
   if (mv.forge) {
     const max = MONSTERS[me.species]?.tiers || 0, t = tierOf(me);
     if (t >= max) { msg(ev, max ? `${josa(me.name, '은/는')} 이미 ${TIERS.names[t]} 단계다! 더는 강화할 수 없다.` : '그러나 아무 일도 일어나지 않았다!'); return; }
@@ -887,6 +988,22 @@ function statusMove(b, s, me, o, foe, mv, ev) {
 }
 
 function endOfTurn(b, ev) {
+  // 가시복: 물리 공격을 안 받았으면 자기 가시에 찔림
+  for (const s of seats(b)) {
+    const m = activeOf(b, s), sp = m.spiky;
+    if (!sp) continue;
+    m.spiky = null;
+    if (sp.used || !alive(m)) continue;
+    ev.push({ t: 'spiky', side: s, self: true, text: `아무도 안 건드리자 ${josa(m.name, '은/는')} 자기 가시에 찔렸다!` });
+    hurt(b, s, m, m.maxHp / 8, ev);
+    faintCheck(b, s, m, ev);
+  }
+  // 등신: 턴 끝 갈증 5%, 돌연사
+  for (const s of seats(b)) {
+    const m = activeOf(b, s);
+    if (m.species !== DS || !alive(m)) continue;
+    if (!thirst(b, s, m, 5, ev)) rollDeath(b, s, m, ev);
+  }
   // 리플렉터: 상대가 공격하지 않았으면 그냥 찌른다
   for (const s of seats(b)) {
     const m = activeOf(b, s), r = m.reflecting;

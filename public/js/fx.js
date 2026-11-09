@@ -3,7 +3,7 @@ const Fx = (() => {
   const INK = '#1a1433';
   const SPEED = Number(new URLSearchParams(location.search).get('speed') ?? 1);
   const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let scene, cv, ctx, W = 1, H = 1, u = 1, raf = 0, items = [];
+  let scene, cv, ctx, W = 1, H = 1, u = 1, raf = 0, items = [], OFF = 0, UNDER = false; // OFF: 전용기 컷인 동안 본 연출을 미루는 시간
 
   const rnd = (a, b) => a + Math.random() * (b - a);
   const lerp = (a, b, p) => a + (b - a) * p;
@@ -32,7 +32,8 @@ const Fx = (() => {
   }
 
   function add(dur, draw, delay = 0) {
-    items.push({ t0: performance.now() + delay * SPEED, dur: dur * SPEED, draw });
+    const it = { t0: performance.now() + (delay + OFF) * SPEED, dur: dur * SPEED, draw };
+    if (UNDER) items.unshift(it); else items.push(it); // UNDER: 다른 그림 밑에 깔기
     if (!raf) raf = requestAnimationFrame(loop);
   }
 
@@ -118,6 +119,11 @@ const Fx = (() => {
     bean() { ctx.beginPath(); ctx.moveTo(0, 12); ctx.quadraticCurveTo(-3, 0, 3, -6); ctx.strokeStyle = '#E9E2B5'; ctx.lineWidth = 3; ctx.stroke(); ctx.beginPath(); ctx.ellipse(4, -8, 5, 3.5, .4, 0, 7); paint('#F2D64B', .9); },
     bread() { ctx.beginPath(); ctx.ellipse(0, 0, 13, 8, 0, 0, 7); paint('#E7A84B'); ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(19, -6); ctx.lineTo(19, 6); ctx.closePath(); paint('#D9903A'); },
     paddle() { ctx.beginPath(); ctx.rect(-2, 2, 4, 16); paint('#A9713A'); ctx.beginPath(); ctx.rect(-6, -16, 12, 18); paint('#C9924F'); },
+    slime() { ctx.beginPath(); ctx.moveTo(-10, 6); ctx.quadraticCurveTo(-11, -9, 0, -9); ctx.quadraticCurveTo(11, -9, 10, 6); ctx.quadraticCurveTo(0, 10, -10, 6); paint('#6be3a4'); ctx.beginPath(); ctx.arc(-4, -4, 2, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); },
+    page() { ctx.beginPath(); ctx.rect(-8, -10, 16, 20); paint('#fff6de'); ctx.beginPath(); ctx.moveTo(-5, -5); ctx.lineTo(5, -5); ctx.moveTo(-5, 0); ctx.lineTo(4, 0); ctx.moveTo(-5, 5); ctx.lineTo(3, 5); ctx.strokeStyle = '#c9603a'; ctx.lineWidth = 1; ctx.stroke(); },
+    sword() { ctx.beginPath(); ctx.moveTo(-2.5, -16); ctx.lineTo(0, -20); ctx.lineTo(2.5, -16); ctx.lineTo(2.5, 10); ctx.lineTo(-2.5, 10); ctx.closePath(); paint('#eaf6ff'); ctx.beginPath(); ctx.rect(-8, 10, 16, 3.4); paint('#FFD23F'); ctx.beginPath(); ctx.rect(-1.8, 13, 3.6, 7); paint('#3d7bff'); },
+    feather() { ctx.beginPath(); ctx.moveTo(-12, 2); ctx.quadraticCurveTo(0, -8, 12, -2); ctx.quadraticCurveTo(0, 6, -12, 2); paint('#d4d8e2', .9); ctx.beginPath(); ctx.moveTo(-12, 2); ctx.lineTo(10, -1); ctx.stroke(); },
+    vinyl() { ctx.globalAlpha *= .85; ctx.beginPath(); ctx.moveTo(-11, -6); ctx.lineTo(-13, -14); ctx.lineTo(-6, -8); ctx.quadraticCurveTo(0, -5, 6, -8); ctx.lineTo(13, -14); ctx.lineTo(11, -6); ctx.quadraticCurveTo(15, 12, 0, 13); ctx.quadraticCurveTo(-15, 12, -11, -6); paint('#f4f6fb'); },
   };
 
   function sprite(kind, x, y, size, rot = 0, alpha = 1) {
@@ -130,6 +136,7 @@ const Fx = (() => {
 
   /* ---------- 기본 동작 ---------- */
   function act(key, name, ms) {
+    if (OFF) { const o = OFF; OFF = 0; setTimeout(() => act(key, name, ms), o * SPEED); OFF = o; return; }
     const el = document.getElementById(`m-${key}`);
     if (!el) return;
     el.style.setProperty('--d', `${ms * SPEED}ms`);
@@ -140,6 +147,7 @@ const Fx = (() => {
     setTimeout(() => el.classList.remove(`act-${name}`), ms * SPEED);
   }
   function tint(key, name, ms, delay = 0) {
+    delay += OFF;
     setTimeout(() => {
       const el = document.getElementById(`m-${key}`);
       if (!el) return;
@@ -153,7 +161,7 @@ const Fx = (() => {
       const m = mag * u * (1 - p);
       scene.style.transform = p > .96 ? '' : `translate(${rnd(-m, m)}px,${rnd(-m, m)}px)`;
     }, delay);
-    setTimeout(() => { scene.style.transform = ''; }, (dur + delay + 60) * SPEED);
+    setTimeout(() => { scene.style.transform = ''; }, (dur + delay + OFF + 60) * SPEED);
   }
   const flash = (color, dur, delay = 0, a = .55) => add(dur, (p) => { ctx.globalAlpha = a * (1 - p); ctx.fillStyle = color; ctx.fillRect(0, 0, W, H); }, delay);
 
@@ -322,6 +330,225 @@ const Fx = (() => {
         ctx.beginPath(); ctx.moveTo(at.x, at.foot); ctx.lineTo(at.x + dx * len * .5 + 6 * u, at.foot + dy * len * .5); ctx.lineTo(at.x + dx * len, at.foot + dy * len); ctx.stroke();
       });
     }, delay);
+  }
+
+
+  /* ---------- 화려한 연출용 도구 ---------- */
+  const TYPE_C = { fire: '#FF6A2B', water: '#3A9BFF', grass: '#4CD964', elec: '#FFE45C', ice: '#8FEFFF', earth: '#D9A066', wind: '#9FF5D8', poison: '#C77DFF', steel: '#E3E8EF', spirit: '#8C7CFF', fairy: '#FF8CCB', normal: '#F5EBD0', none: '#ffffff' };
+  const TYPE_P = { fire: 'flame', water: 'drop', grass: 'leaf', elec: 'spark', ice: 'shard', earth: 'rock', wind: 'crescent', poison: 'glob', steel: 'scrap', spirit: 'wisp', fairy: 'sparkle', normal: 'sparkle', none: 'sparkle' };
+  const CLEAR = 'rgba(0,0,0,0)';
+  const later = (fn, ms) => { const o = OFF; setTimeout(fn, (ms + o) * SPEED); };
+  // 빛 번짐 (더하기 합성)
+  function glow(at, color, { r = 90, dur = 400, delay = 0, a = .9, grow = .3 } = {}) {
+    add(dur, (p) => {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = a * Math.sin(Math.min(1, p) * Math.PI);
+      const R = r * u * (1 + grow * p);
+      const g = ctx.createRadialGradient(at.x, at.y, 0, at.x, at.y, R);
+      g.addColorStop(0, '#fff'); g.addColorStop(.25, color); g.addColorStop(1, CLEAR);
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(at.x, at.y, R, 0, 7); ctx.fill();
+    }, delay);
+    return delay + dur;
+  }
+  // 만화식 집중선
+  function speedLines(T, { color = '#fff', dur = 380, delay = 0, n = 28, inner = 70 } = {}) {
+    const rays = Array.from({ length: n }, () => [rnd(0, 6.283), rnd(.6, 1.3), rnd(1.5, 4.5)]);
+    add(dur, (p) => {
+      ctx.globalAlpha = .8 * fade(p, .5); ctx.strokeStyle = color; ctx.lineCap = 'round';
+      const R = Math.hypot(W, H);
+      rays.forEach(([a, k, w]) => {
+        const r0 = (inner + 50 * (1 - p)) * u * k;
+        ctx.lineWidth = w * u;
+        ctx.beginPath(); ctx.moveTo(T.x + Math.cos(a) * r0, T.y + Math.sin(a) * r0); ctx.lineTo(T.x + Math.cos(a) * R, T.y + Math.sin(a) * R); ctx.stroke();
+      });
+    }, delay);
+    return delay + dur;
+  }
+  // 터지는 별 모양
+  function starburst(at, { color = '#fff', r = 70, dur = 260, delay = 0, n = 12 } = {}) {
+    const ks = Array.from({ length: n * 2 }, (_, i) => (i % 2 ? rnd(.32, .48) : rnd(.85, 1.2)));
+    add(dur, (p) => {
+      const R = r * u * out(Math.min(1, p * 1.6));
+      ctx.globalAlpha = fade(p, .45);
+      ctx.beginPath();
+      ks.forEach((k, i) => { const a = (i / ks.length) * 6.283; ctx.lineTo(at.x + Math.cos(a) * R * k, at.y + Math.sin(a) * R * k); });
+      ctx.closePath(); ctx.fillStyle = color; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 3 * u; ctx.lineJoin = 'round'; ctx.stroke();
+    }, delay);
+    return delay + dur;
+  }
+  // 맞는 순간: 별, 빛, 고리, 파편
+  function impact(T, color, { delay = 0, big = 1, kind = 'sparkle' } = {}) {
+    starburst(T, { color: '#fff', r: 64 * big, dur: 230, delay });
+    starburst(T, { color, r: 42 * big, dur: 210, delay: delay + 30 });
+    glow(T, color, { r: 120 * big, dur: 380, delay });
+    ring(T, { color: '#fff', r0: 16, r1: 130 * big, dur: 380, w: 6, delay });
+    ring(T, { color, r0: 10, r1: 96 * big, dur: 440, w: 4, delay: delay + 60 });
+    burst(kind, T, { delay, n: Math.round(12 * big), dist: 90 * big, size: 9, dur: 520 });
+    shake(5 * big, 240, delay);
+  }
+  // 하늘에서 내려오는 빛기둥
+  function pillar(at, color, { w = 56, dur = 700, delay = 0, top = -10 } = {}) {
+    add(dur, (p) => {
+      const k = Math.sin(Math.min(1, p) * Math.PI) ** .6, ww = w * u * k * (1 + Math.sin(p * 50) * .06);
+      ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createLinearGradient(at.x - ww, 0, at.x + ww, 0);
+      g.addColorStop(0, CLEAR); g.addColorStop(.28, color); g.addColorStop(.5, '#fff'); g.addColorStop(.72, color); g.addColorStop(1, CLEAR);
+      ctx.globalAlpha = .9; ctx.fillStyle = g; ctx.fillRect(at.x - ww, top, ww * 2, at.foot - top);
+    }, delay);
+    ring(ground(at), { color, r0: 10, r1: 120, squash: .3, dur: dur * .6, delay, w: 7 });
+    return delay + dur;
+  }
+  // 땅을 따라 퍼지는 충격파
+  function shockwave(at, color = '#fff', { delay = 0, r = 170 } = {}) {
+    ring(ground(at), { color: INK, r0: 10, r1: r, squash: .28, dur: 520, w: 14, delay });
+    ring(ground(at), { color, r0: 10, r1: r, squash: .28, dur: 520, w: 8, delay });
+    burst('dust', ground(at), { delay, n: 14, dist: r * .7, size: 12 });
+    return delay + 520;
+  }
+  const RUNES = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ';
+  // 세운 마법진 (빙글 돌며 열림). squash로 비스듬히 보이게.
+  function magicCircle(at, { color = '#FF6A2B', glow: gc = '#FFD23F', r = 70, dur = 1000, delay = 0, spin = 1.2, squash = .5, star = 6, tilt = 0 } = {}) {
+    add(dur, (p) => {
+      const R = r * u * out(Math.min(1, p * 3.2));
+      ctx.save(); ctx.translate(at.x, at.y); ctx.rotate(tilt); ctx.scale(squash, 1);
+      ctx.globalAlpha = fade(p, .2);
+      ctx.shadowColor = color; ctx.shadowBlur = 18 * u;
+      ctx.strokeStyle = color; ctx.lineWidth = 5 * u;
+      ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.stroke();
+      ctx.lineWidth = 2 * u;
+      ctx.beginPath(); ctx.arc(0, 0, R * .8, 0, 7); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, R * .3, 0, 7); ctx.stroke();
+      ctx.save(); ctx.rotate(p * spin * 6.283);
+      ctx.strokeStyle = gc; ctx.lineWidth = 2.6 * u; ctx.beginPath();
+      const v = (i) => [Math.cos((i / star) * 6.283) * R * .8, Math.sin((i / star) * 6.283) * R * .8];
+      for (let i = 0; i < star; i++) { ctx.moveTo(...v(i)); ctx.lineTo(...v(i + 2)); }
+      ctx.stroke();
+      ctx.restore();
+      ctx.save(); ctx.rotate(-p * spin * 4);
+      ctx.font = `${11 * u}px serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = gc;
+      for (let i = 0; i < 16; i++) { ctx.save(); ctx.rotate((i / 16) * 6.283); ctx.fillText(RUNES[i % RUNES.length], 0, -R * .9); ctx.restore(); }
+      ctx.restore();
+      ctx.globalCompositeOperation = 'lighter'; ctx.shadowBlur = 0;
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, R * .55); g.addColorStop(0, '#fff'); g.addColorStop(.5, color); g.addColorStop(1, CLEAR);
+      ctx.globalAlpha = .55 * fade(p, .2) * (.7 + Math.sin(p * 30) * .3); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R * .55, 0, 7); ctx.fill();
+      ctx.restore();
+    }, delay);
+    return delay + dur;
+  }
+  // 빛나는 구슬이 꼬리를 끌며 날아감
+  function comet(a, b, { color = '#fff', size = 14, dur = 360, delay = 0, arc = 0, trail = 9 } = {}) {
+    add(dur, (p) => {
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = trail; i >= 0; i--) {
+        const q = Math.max(0, out(p) - i * .035);
+        const x = lerp(a.x, b.x, q), y = lerp(a.y, b.y, q) - Math.sin(q * Math.PI) * arc * u;
+        const r = size * u * (1 - i / (trail + 1)) * 1.7;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, '#fff'); g.addColorStop(.4, color); g.addColorStop(1, CLEAR);
+        ctx.globalAlpha = (1 - i / (trail + 1)) * fade(p, .08);
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+      }
+    }, delay);
+    return delay + dur;
+  }
+  // 빛나는 광선
+  function laser(a, b, { color = '#fff', w = 22, dur = 520, delay = 0 } = {}) {
+    add(dur, (p) => {
+      const on = Math.min(1, p * 6), k = Math.sin(Math.min(1, p * 1.1) * Math.PI) ** .4, ww = w * u * k * (1 + Math.sin(p * 60) * .1);
+      const x = lerp(a.x, b.x, on), y = lerp(a.y, b.y, on);
+      ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      [[ww * 2.4, .22, color], [ww, .85, color], [ww * .38, 1, '#fff']].forEach(([lw, al, c]) => { ctx.globalAlpha = al; ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(x, y); ctx.stroke(); });
+    }, delay);
+    glow(b, color, { r: w * 4, dur, delay: delay + dur * .15 });
+    return delay + dur;
+  }
+  // 만화 효과음 글자
+  function bang(at, str, { color = '#FFD23F', size = 30, dur = 720, delay = 0, rot = -.14 } = {}) {
+    add(dur, (p) => {
+      const s = p < .18 ? out(p / .18) * 1.3 : 1.3 - .3 * Math.min(1, (p - .18) / .2);
+      ctx.save(); ctx.translate(at.x, at.y - 12 * u * p); ctx.rotate(rot); ctx.scale(s, s);
+      ctx.globalAlpha = fade(p, .25);
+      ctx.font = `${size * u}px 'Black Han Sans', sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+      ctx.lineWidth = 8 * u; ctx.strokeStyle = INK; ctx.strokeText(str, 0, 0);
+      ctx.lineWidth = 3 * u; ctx.strokeStyle = '#fff'; ctx.strokeText(str, 0, 0);
+      ctx.fillStyle = color; ctx.fillText(str, 0, 0);
+      ctx.restore();
+    }, delay);
+    return delay + dur;
+  }
+  // 임팩트 프레임 (검은 화면 → 흰 화면)
+  const frame = (delay = 0) => { flash('#05060c', 80, delay, .85); flash('#ffffff', 130, delay + 80, .8); };
+  // 빛 알갱이가 소용돌이치며 모여듦
+  function gather(at, color, { n = 20, r = 130, dur = 520, delay = 0 } = {}) {
+    for (let i = 0; i < n; i++) {
+      const a0 = rnd(0, 6.283), rr = rnd(.6, 1) * r * u, d = rnd(0, dur * .4);
+      add(dur * .6, (p) => {
+        const q = out(p), a = a0 + q * 2.4, R = rr * (1 - q);
+        const x = at.x + Math.cos(a) * R, y = at.y + Math.sin(a) * R;
+        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .4 + q * .6;
+        ctx.strokeStyle = color; ctx.lineWidth = 3 * u; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(at.x + Math.cos(a - .35) * (R + 18 * u), at.y + Math.sin(a - .35) * (R + 18 * u)); ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 2.4 * u, 0, 7); ctx.fill();
+      }, delay + d);
+    }
+    glow(at, color, { r: 70, dur, delay, a: .7 });
+    return delay + dur;
+  }
+  // 빛나는 초승달 베기
+  function swoosh(at, { color = '#fff', r = 70, a0 = -2.4, a1 = .7, w = 14, dur = 280, delay = 0, flip = 1, tilt = 0 } = {}) {
+    add(dur, (p) => {
+      const h = out(Math.min(1, p * 1.7)), t = Math.max(0, (p - .35) / .65);
+      const s = lerp(a0, a1, t), e = lerp(a0, a1, h);
+      if (e - s < .01) return;
+      ctx.save(); ctx.translate(at.x, at.y); ctx.rotate(tilt); ctx.scale(flip, 1);
+      ctx.lineCap = 'round'; ctx.globalCompositeOperation = 'lighter';
+      [[w * 2.2, .28, color], [w, .9, color], [w * .35, 1, '#fff']].forEach(([lw, al, c]) => { ctx.globalAlpha = al * fade(p, .3); ctx.strokeStyle = c; ctx.lineWidth = lw * u; ctx.beginPath(); ctx.arc(0, 0, r * u, s, e); ctx.stroke(); });
+      ctx.restore();
+    }, delay);
+    return delay + dur;
+  }
+  // 소리 파동이 날아감
+  function soundWaves(A, T, { color = '#FFE45C', n = 6, gap = 90, dur = 520, delay = 0 } = {}) {
+    const d = { a: Math.atan2(T.y - A.y, T.x - A.x) };
+    for (let i = 0; i < n; i++) {
+      add(dur, (p) => {
+        const x = lerp(A.x, T.x, p), y = lerp(A.y, T.y, p), R = (20 + p * 40) * u;
+        ctx.save(); ctx.translate(x, y); ctx.rotate(d.a);
+        ctx.globalAlpha = fade(p, .3); ctx.lineCap = 'round';
+        ctx.strokeStyle = INK; ctx.lineWidth = 8 * u; ctx.beginPath(); ctx.arc(0, 0, R, -1, 1); ctx.stroke();
+        ctx.strokeStyle = color; ctx.lineWidth = 4.5 * u; ctx.stroke();
+        ctx.restore();
+      }, delay + i * gap);
+    }
+    return delay + (n - 1) * gap + dur;
+  }
+  // 이름이 화면을 가로지르는 컷인 (전용기)
+  function cutIn(name, color, mine, { dur = 640, delay = 0 } = {}) {
+    add(dur, (p) => {
+      const inn = out(Math.min(1, p * 4)), go = Math.max(0, (p - .72) / .28) ** 2;
+      const h = 50 * u, side = mine ? -1 : 1;
+      ctx.save(); ctx.translate(W / 2 + side * W * (1 - inn) - side * W * go * 1.3, H * .48); ctx.rotate(-.1);
+      ctx.fillStyle = INK; ctx.fillRect(-W, -h / 2 - 6 * u, W * 2, h + 12 * u);
+      const g = ctx.createLinearGradient(-W * .6, 0, W * .6, 0); g.addColorStop(0, color); g.addColorStop(.5, '#fff8e0'); g.addColorStop(1, color);
+      ctx.fillStyle = g; ctx.fillRect(-W, -h / 2, W * 2, h);
+      ctx.globalAlpha = .3; ctx.fillStyle = INK;
+      for (let i = 0; i < 9; i++) ctx.fillRect(-W + ((p * 1400 + i * 173) * u % (W * 2)), -h / 2 + (i + .5) * h / 9, 70 * u, 1.6 * u);
+      ctx.globalAlpha = 1; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+      ctx.font = `${12 * u}px 'Do Hyeon', sans-serif`; ctx.fillStyle = INK; ctx.fillText('전용기', -W * .3, -h * .32);
+      ctx.font = `${30 * u}px 'Black Han Sans', sans-serif`;
+      ctx.lineWidth = 7 * u; ctx.strokeStyle = INK; ctx.strokeText(name, 0, 4 * u); ctx.fillStyle = '#fff'; ctx.fillText(name, 0, 4 * u);
+      ctx.restore();
+    }, delay);
+    return delay + dur;
+  }
+  function sigIntro(A, key, name, color) {
+    darken(820, .5);
+    act(key, 'charge', 560);
+    glow(A, color, { r: 120, dur: 640, a: .8 });
+    ring(A, { color, r0: 150, r1: 12, dur: 380, w: 6 });
+    ring(A, { color: '#fff', r0: 120, r1: 10, dur: 380, w: 3, delay: 140 });
+    cutIn(name, color, key === 'me' || key === 'ally');
+    return 560;
   }
 
   /* ---------- 스킬별 연출: 값은 총 재생 시간(ms) ---------- */
@@ -517,7 +744,7 @@ const Fx = (() => {
       const d = open - 300;
       if (e?.fill === 'cream') { rise('heart', A, { delay: d, n: 8, dur: 600, size: 9 }); burst('bubble', A, { delay: d, n: 10, dist: 50, size: 8 }); return open + 500; }
       if (e?.fill === 'pizza') { rise('arrowUp', A, { delay: d, n: 6, dur: 520, size: 10 }); burst('spark', A, { delay: d, n: 14, dist: 70, size: 8 }); ring(A, { delay: d, color: '#E8402C', r1: 110, w: 6 }); return open + 500; }
-      setTimeout(() => act(k, 'throw', 420), d * SPEED);
+      later(() => act(k, 'throw', 420), d);
       spray('redbean', A, T, { delay: d, n: 16, gap: 24, dur: 300, size: 9, spread: 22, spin: 8 });
       burst('redbean', T, { delay: d + 340, n: 14, dist: 80, size: 8 }); ring(T, { delay: d + 340, color: '#5a1f2a', r1: 120, w: 7 });
       shake(10, 360, d + 340); tint(t, 'burn', 400, d + 360);
@@ -566,6 +793,450 @@ const Fx = (() => {
     molt(A, T, k) { act(k, 'charge', 760); [0, 150, 300].forEach((d) => ring(A, { delay: d, color: '#E7C98A', r0: A.r, r1: A.r * 1.7 / u, dur: 480, w: 5 })); burst('seed', A, { delay: 380, n: 12, dist: 84, size: 8 }); rise('sparkle', A, { delay: 380, n: 7, dur: 460, size: 8 }); return 1120; },
   };
 
+
+  /* ---------- 전용기 연출 (전부 새로) ---------- */
+  // 값은 맞는 순간까지의 시간. 맞는 순간의 타입 임팩트는 play()가 덧붙입니다.
+  const mid = (A, T, k = .5) => ({ x: lerp(A.x, T.x, k), y: lerp(A.y, T.y, k), foot: lerp(A.foot, T.foot, k), r: A.r });
+  Object.assign(MOVE_FX, {
+    gugong(A, T, k, t) {
+      act(k, 'charge', 560); gather(A, '#FF6A2B', { dur: 520 });
+      for (let i = 0; i < 9; i++) { const a = -1.57 + (i - 4) * .22; spray('flame', A, { x: A.x + Math.cos(a) * 90 * u, y: A.y + Math.sin(a) * 90 * u }, { delay: 300 + i * 20, n: 2, dur: 320, size: 10 }); }
+      later(() => act(k, 'dash', 520), 520);
+      comet(A, T, { delay: 560, color: '#FF6A2B', size: 22, dur: 280 });
+      frame(830); glow(T, '#FF6A2B', { r: 170, delay: 840, dur: 600 });
+      for (let i = 0; i < 3; i++) ring(T, { delay: 840 + i * 70, color: ['#fff', '#FFD23F', '#FF6A2B'][i], r1: 160, w: 9 - i * 2, dur: 480 });
+      burst('flame', T, { delay: 840, n: 30, dist: 150, size: 13, dur: 620 }); cracks(T, { delay: 860 });
+      bang(above(T, 70), '퍼펑!', { delay: 860, color: '#FF6A2B' }); shake(14, 420, 840);
+      return 860;
+    },
+    headfirst(A, T, k, t) {
+      speedLines(T, { color: '#FFE3B0', dur: 420 }); act(k, 'dash', 420);
+      prop('bread', { from: A, to: T, dur: 240, size: 46, rot1: 12 });
+      bang(above(T, 60), '와앙!', { delay: 220, color: '#E7A84B' }); burst('redbean', T, { delay: 240, n: 16, dist: 90, size: 9 });
+      return 250;
+    },
+    rekindle(A, T, k, t) {
+      darken(1200, .55, 0, '#050a24'); act(k, 'cast', 900);
+      orbit('wisp', A, { n: 10, r: 60, dur: 700, size: 11, turns: 1.5, rising: 30 });
+      for (let i = 0; i < 8; i++) spray('wisp', { x: A.x + rnd(-40, 40) * u, y: A.y - 40 * u }, T, { delay: 500 + i * 50, n: 1, dur: 380, size: 14, arc: rnd(40, 120) });
+      pillar(T, '#4B6BFF', { delay: 900, dur: 700, w: 60 }); rise('wisp', T, { delay: 940, n: 12, gap: 30, dur: 600, size: 12, spread: 50 });
+      tint(t, 'hex', 600, 900);
+      return 940;
+    },
+    boil(A, T, k, t) {
+      act(k, 'cast', 760); cloud(A, ['#ffffff', '#e8f2ff', '#cfe4ff'], { n: 10, dur: 700, size: 22, spread: 34 });
+      gather(A, '#9fd8ff', { dur: 420 }); laser(A, T, { delay: 380, color: '#7fc8ff', w: 26, dur: 520 });
+      cloud(T, ['#ffffff', '#e8f2ff'], { delay: 600, n: 14, dur: 800, size: 30, spread: 60 }); rise('bubble', T, { delay: 600, n: 10, gap: 30, dur: 520, size: 9 });
+      bang(above(T, 70), '치이익!', { delay: 620, color: '#9fd8ff' }); tint(t, 'burn', 500, 620);
+      return 620;
+    },
+    kimjang(A, T, k, t) {
+      act(k, 'jump', 600);
+      spray('broth', A, T, { n: 16, gap: 16, dur: 360, size: 11, arc: 60, spread: 26 });
+      prop('bucket', { from: above(T, 230), to: T, delay: 300, dur: 260, size: 64, rot1: 3.1 });
+      frame(560); shockwave(T, '#E8402C', { delay: 570 }); burst('broth', T, { delay: 570, n: 24, dist: 130, size: 11 });
+      bang(above(T, 70), '김장 펀치!', { delay: 580, color: '#E8402C', size: 26 });
+      return 580;
+    },
+    umbrellastab(A, T, k, t) {
+      act(k, 'dash', 620); windLines(A, T, { n: 10, gap: 26, spread: 30 });
+      const a = Math.atan2(T.y - A.y, T.x - A.x);
+      for (let i = 0; i < 6; i++) { slash({ x: T.x + rnd(-14, 14) * u, y: T.y + rnd(-18, 18) * u }, { delay: 260 + i * 55, angle: a, len: 150, color: i % 2 ? '#9FF5D8' : '#fff', w: 6, dur: 180 }); }
+      fall('drop', T, { delay: 200, n: 16, gap: 20, dur: 360, spread: 80 });
+      bang(above(T, 70), '푹푹푹!', { delay: 420, color: '#9FF5D8' });
+      return 600;
+    },
+    sprout(A, T, k) {
+      act(k, 'lift', 900); pillar(A, '#7ED957', { dur: 900, w: 50 });
+      rise('bean', A, { n: 16, gap: 35, dur: 620, size: 12, spread: 50, height: 110 });
+      orbit('leaf', A, { n: 10, r: 70, dur: 900, size: 10, turns: 1.6, rising: 40 });
+      bang(above(A, 90), '쑥쑥!', { delay: 400, color: '#7ED957' });
+      return 900;
+    },
+    sweep(A, T, k, t) {
+      act(k, 'spin', 760); tornado(A, { dur: 500, color: '#E6FFF4' });
+      windLines(A, T, { delay: 300, n: 14, gap: 18, spread: 50 });
+      for (let i = 0; i < 3; i++) swoosh(T, { delay: 420 + i * 90, color: '#9FF5D8', r: 70 + i * 10, flip: i % 2 ? -1 : 1, a0: 2.6, a1: .2 });
+      burst('dust', T, { delay: 460, n: 20, dist: 120, size: 12 }); burst('tack', T, { delay: 500, n: 6, dist: 140, size: 9 });
+      bang(above(T, 70), '싹-!', { delay: 520, color: '#9FF5D8' });
+      return 640;
+    },
+    cheongyang(A, T, k, t) {
+      flash('#ff2a1f', 400, 0, .3); act(k, 'charge', 520); gather(A, '#ff2a1f', { dur: 500 });
+      comet(A, T, { delay: 480, color: '#ff2a1f', size: 20, dur: 260, arc: 30 });
+      pillar(T, '#ff3b1f', { delay: 740, dur: 720, w: 64 }); burst('flame', T, { delay: 740, n: 28, dist: 130, size: 13 });
+      bang(above(T, 80), '맵다!!', { delay: 760, color: '#ff3b1f', size: 34 }); tint(t, 'burn', 700, 760); shake(9, 360, 740);
+      return 760;
+    },
+    wirewrap(A, T, k, t) {
+      act(k, 'cast', 760);
+      for (let i = 0; i < 4; i++) whip(A, { x: T.x + rnd(-20, 20) * u, y: T.y + rnd(-30, 30) * u }, { delay: i * 70, color: '#2b2b38', curve: rnd(-80, 80), dur: 520, w: 5 });
+      for (let i = 0; i < 6; i++) bolt({ x: T.x + rnd(-60, 60) * u, y: T.y + rnd(-60, 60) * u }, { x: T.x + rnd(-20, 20) * u, y: T.y + rnd(-20, 20) * u }, { delay: 380 + i * 60, dur: 220, w: 5, wob: 14 });
+      flash('#FFF7C2', 160, 400, .5); flash('#FFF7C2', 160, 560, .4); orbit('spark', T, { delay: 380, n: 10, r: 56, dur: 500, size: 10 });
+      bang(above(T, 70), '지지직!', { delay: 420, color: '#FFE45C' }); tint(t, 'zap', 500, 420);
+      return 460;
+    },
+    mash(A, T, k, t) {
+      act(k, 'sway', 900);
+      const keys = ['A!', 'B!', '→', 'A!', '↑', 'B!', 'A!'];
+      keys.forEach((s, i) => { comet(A, T, { delay: i * 85, color: i % 2 ? '#FF5FB0' : '#4DE1FF', size: 10, dur: 200 }); bang({ x: T.x + rnd(-50, 50) * u, y: T.y + rnd(-60, 10) * u }, s, { delay: 180 + i * 85, size: 20, dur: 380, color: i % 2 ? '#FF5FB0' : '#4DE1FF' }); });
+      return 760;
+    },
+    kitefight(A, T, k, t) {
+      act(k, 'lift', 760);
+      whip(A, { x: T.x - 30 * u, y: T.y - 80 * u }, { color: '#fff', curve: 90, dur: 520, w: 2 });
+      whip(T, { x: T.x - 30 * u, y: T.y - 80 * u }, { delay: 100, color: '#fff', curve: -60, dur: 420, w: 2 });
+      windLines(A, T, { n: 12, gap: 24, spread: 50 }); spray('crescent', A, T, { delay: 200, n: 10, gap: 26, dur: 300, size: 14, aim: true });
+      for (let i = 0; i < 2; i++) swoosh(T, { delay: 380 + i * 110, color: '#9FF5D8', r: 64, flip: i ? -1 : 1 });
+      bang(above(T, 70), '끊어라!', { delay: 420, color: '#9FF5D8' });
+      return 520;
+    },
+    patmix(A, T, k, t) {
+      act(k, 'cast', 900); cloud(T, ['#ffffff', '#e6f6ff'], { n: 10, dur: 900, size: 26, spread: 50 });
+      orbit('snow', T, { n: 12, r: 70, dur: 800, size: 10, turns: 3, squash: .5 }); orbit('redbean', T, { n: 8, r: 46, dur: 800, size: 9, turns: -3, squash: .5 });
+      burst('shard', T, { delay: 700, n: 20, dist: 120, size: 11 }); bang(above(T, 70), '사각사각', { delay: 300, color: '#bfefff', size: 24 }); tint(t, 'cold', 600, 700);
+      return 720;
+    },
+    icepack(A, T, k, t) {
+      act(k, 'jump', 560); gather(A, '#8FEFFF', { dur: 380 });
+      prop('plate', { from: above(T, 220), to: T, delay: 300, dur: 240, size: 52 });
+      frame(540); for (let i = 0; i < 2; i++) ring(T, { delay: 540 + i * 80, color: i ? '#8FEFFF' : '#fff', r1: 150, w: 8 }); burst('shard', T, { delay: 540, n: 26, dist: 140, size: 12 });
+      bang(above(T, 70), '쩌억!', { delay: 560, color: '#8FEFFF' }); tint(t, 'cold', 600, 560);
+      return 560;
+    },
+    aged(A, T, k, t) {
+      darken(1100, .5, 0, '#1a0a12'); act(k, 'cast', 760);
+      cloud(A, ['#6a3a1c', '#4a2a3a', '#8a5a2a'], { n: 10, dur: 700, size: 24, spread: 40 });
+      comet(A, T, { delay: 380, color: '#9A4FB8', size: 22, dur: 360, arc: 70 });
+      cloud(T, ['#9A4FB8', '#6c3a86', '#4a2a3a', '#8a5a2a'], { delay: 720, n: 18, dur: 900, size: 34, spread: 80 }); rise('bubble', T, { delay: 740, n: 12, gap: 30, dur: 600, size: 10 });
+      bang(above(T, 80), '삼 년 묵은 맛', { delay: 760, color: '#C77DFF', size: 22 }); tint(t, 'poison', 700, 740);
+      return 740;
+    },
+    eoi(A, T, k, t) {
+      act(k, 'charge', 600); gather(A, '#D9A066', { dur: 560 }); bang(above(A, 80), '어이!', { delay: 100, color: '#D9A066' });
+      later(() => act(k, 'dash', 520), 560);
+      prop('lid', { from: A, to: T, delay: 560, dur: 300, size: 70, rot1: 14 });
+      frame(860); shockwave(T, '#D9A066', { delay: 860, r: 200 }); cracks(T, { delay: 860 }); cracks(T, { delay: 880 });
+      burst('rock', T, { delay: 860, n: 24, dist: 150, size: 12 }); shake(16, 460, 860);
+      return 870;
+    },
+    glare(A, T, k, t) {
+      darken(1000, .6, 0, '#140505'); act(k, 'charge', 700);
+      const eyes = [{ x: A.x - 10 * u, y: A.y - 14 * u }, { x: A.x + 10 * u, y: A.y - 14 * u }];
+      eyes.forEach((e, i) => { glow(e, '#ff2a2a', { r: 26, dur: 900 }); laser(e, { x: T.x + (i ? 8 : -8) * u, y: T.y - 10 * u }, { delay: 400, color: '#ff2a2a', w: 6, dur: 420 }); });
+      speedLines(T, { color: '#ff9a9a', delay: 420, dur: 420 }); bang(above(T, 70), '!!', { delay: 460, color: '#ff2a2a', size: 40 });
+      later(() => act(t, 'sway', 400), 460); tint(t, 'hex', 500, 460);
+      return 820;
+    },
+    turbo(A, T, k, t) {
+      act(k, 'spin', 1000); tornado(A, { dur: 800, color: '#CFEDE1' }); orbit('crescent', A, { n: 10, r: 66, dur: 700, size: 12, turns: 3 });
+      windLines(A, T, { delay: 380, n: 22, gap: 14, spread: 60 }); tornado(T, { delay: 560, dur: 700, color: '#9FF5D8' });
+      later(() => act(t, 'lift', 700), 560); bang(above(T, 90), '위이잉!', { delay: 600, color: '#9FF5D8' });
+      return 700;
+    },
+    wrestle(A, T, k, t) {
+      act(k, 'dash', 520); darken(900, .4, 0, '#0a0620'); orbit('wisp', T, { n: 8, r: 50, dur: 600, size: 10 });
+      swoosh(ground(T), { delay: 260, color: '#8C7CFF', r: 50, a0: 3, a1: 0, w: 12 });
+      later(() => act(t, 'lift', 500), 300); frame(640); shockwave(T, '#8C7CFF', { delay: 650 });
+      bang(above(T, 70), '으라차!', { delay: 660, color: '#8C7CFF' });
+      return 660;
+    },
+    kick(A, T, k, t) {
+      act(k, 'dash', 440); prop('can', { from: A, to: T, delay: 220, dur: 220, size: 34, rot1: 20 }); comet(A, T, { delay: 220, color: '#E3E8EF', size: 10, dur: 220 });
+      bang(above(T, 60), '깡!', { delay: 440, color: '#E3E8EF', size: 40 }); burst('scrap', T, { delay: 440, n: 14, dist: 100, size: 10 });
+      return 440;
+    },
+    bagged(A, T, k, t) {
+      act(k, 'throw', 520); windLines(A, T, { n: 8, gap: 30, spread: 40 });
+      prop('bag', { from: above(T, 200), to: T, delay: 200, dur: 360, size: 66, hold: 500 });
+      bang(above(T, 70), '부스럭', { delay: 560, color: '#E6E6E6', size: 24 }); tint(t, 'hex', 600, 560);
+      return 760;
+    },
+    lid(A, T, k, t) {
+      act(k, 'throw', 520); gather(A, '#E3E8EF', { dur: 300 });
+      prop('lid', { from: A, to: T, delay: 260, dur: 260, size: 50, rot1: 18 }); comet(A, T, { delay: 260, color: '#9aa3b5', size: 12, dur: 260 });
+      frame(520); burst('spark', T, { delay: 520, n: 18, dist: 120, size: 10 }); bang(above(T, 70), '쾅!', { delay: 530, color: '#E3E8EF', size: 40 });
+      return 530;
+    },
+    gnaw(A, T, k, t) {
+      act(k, 'vanish', 520); speedLines(T, { color: '#C77DFF', dur: 360 });
+      prop('teeth', { from: above(T, 50), to: { x: T.x, y: T.y - 6 * u }, delay: 200, dur: 140, size: 38 });
+      prop('teeth', { from: { x: T.x, y: T.y + 50 * u }, to: { x: T.x, y: T.y + 6 * u }, delay: 200, dur: 140, size: 38, rot0: 3.14, rot1: 3.14 });
+      burst('glob', T, { delay: 340, n: 12, dist: 80, size: 9 }); bang(above(T, 60), '갉!', { delay: 340, color: '#C77DFF' });
+      return 350;
+    },
+    backflow(A, T, k, t) {
+      act(k, 'cast', 760); ring(ground(T), { color: '#3A9BFF', r0: 10, r1: 90, squash: .3, dur: 400, w: 6 });
+      pillar(T, '#3A9BFF', { delay: 300, dur: 700, w: 54 }); rise('drop', T, { delay: 300, n: 22, gap: 16, dur: 520, size: 11, spread: 40, height: 150 });
+      bang(above(T, 90), '콸콸콸!', { delay: 340, color: '#3A9BFF' });
+      return 380;
+    },
+    tangle(A, T, k, t) {
+      darken(1000, .5, 0, '#0a0614'); act(k, 'cast', 760);
+      spray('hair', A, T, { n: 22, gap: 18, dur: 360, size: 16, spread: 30, spin: 6 });
+      orbit('hair', T, { delay: 360, n: 14, r: 50, dur: 700, size: 16, turns: 2.4, squash: .6 });
+      tint(t, 'hex', 700, 400); bang(above(T, 70), '스멀스멀', { delay: 420, color: '#8C7CFF', size: 22 });
+      return 800;
+    },
+    plunge(A, T, k, t) {
+      act(k, 'dash', 520); prop('plunger', { from: A, to: T, dur: 260, size: 48, rot0: 1.57, rot1: 1.57 });
+      frame(270); ring(T, { delay: 270, color: '#D52C2C', r1: 140, w: 10 }); burst('dirt', T, { delay: 280, n: 20, dist: 130, size: 10 }); cracks(T, { delay: 280 });
+      bang(above(T, 70), '뻥!!', { delay: 280, color: '#D52C2C', size: 42 });
+      return 290;
+    },
+    broth(A, T, k, t) {
+      act(k, 'throw', 520); spray('broth', A, T, { n: 26, gap: 12, dur: 360, size: 12, arc: 70, spread: 30, grow: .4 });
+      cloud(T, ['#ffffff', '#ffe0d0'], { delay: 400, n: 12, dur: 700, size: 26, spread: 50 });
+      bang(above(T, 70), '앗뜨!', { delay: 440, color: '#E8402C' }); tint(t, 'burn', 600, 440);
+      return 460;
+    },
+    mustard(A, T, k, t) {
+      act(k, 'dash', 520); spray('mustard', A, T, { n: 10, gap: 20, dur: 260, size: 11, spread: 20 });
+      slash(T, { delay: 260, angle: 1.2, len: 120, color: '#E7A020', w: 9 }); slash(T, { delay: 320, angle: -1.2, len: 120, color: '#E7A020', w: 9 });
+      bang(above(T, 70), '푹 찍!', { delay: 320, color: '#E7A020' });
+      return 340;
+    },
+    refill(A, T, k) {
+      act(k, 'lift', 900); pillar(A, '#ffb27a', { dur: 800, w: 40 }); fall('broth', A, { n: 16, gap: 30, dur: 360, spread: 40 });
+      cloud(A, ['#ffffff', '#ffe0d0'], { delay: 300, n: 10, dur: 700, size: 22, spread: 40 }); rise('heart', A, { delay: 400, n: 8, gap: 50, dur: 520, size: 9 });
+      bang(above(A, 90), '리필!', { delay: 300, color: '#ffb27a' });
+      return 900;
+    },
+    honeybomb(A, T, k, t) {
+      act(k, 'charge', 520); gather(A, '#E7A020', { dur: 480 });
+      later(() => act(k, 'throw', 420), 480); prop('honey', { from: A, to: T, delay: 480, dur: 320, size: 34 }); comet(A, T, { delay: 480, color: '#E7A020', size: 16, dur: 320, arc: 60 });
+      frame(800); glow(T, '#FFB02E', { delay: 800, r: 170, dur: 600 }); burst('honey', T, { delay: 800, n: 26, dist: 150, size: 12 }); burst('flame', T, { delay: 820, n: 16, dist: 120, size: 11 });
+      bang(above(T, 80), '꿀폭탄!', { delay: 820, color: '#FFB02E' }); shake(14, 420, 800);
+      return 820;
+    },
+    molt(A, T, k) {
+      act(k, 'sway', 600); flash('#ffffff', 220, 560, .7);
+      burst('leaf', A, { delay: 580, n: 20, dist: 120, size: 13 }); burst('scrap', A, { delay: 580, n: 10, dist: 100, size: 10 });
+      glow(A, '#4CD964', { delay: 560, r: 140, dur: 600 }); ring(A, { delay: 580, color: '#4CD964', r1: 140, w: 8 }); rise('arrowUp', A, { delay: 700, n: 5, gap: 70, dur: 460, size: 10 });
+      bang(above(A, 90), '탈피!', { delay: 600, color: '#4CD964' });
+      return 1100;
+    },
+    neonwink(A, T, k, t) {
+      darken(1000, .65, 0, '#07021a'); act(k, 'cast', 600);
+      bang(above(A, 70), '찡긋♥', { color: '#FF5FB0', size: 24 });
+      laser(A, T, { delay: 300, color: '#FF5FB0', w: 10, dur: 380 }); laser(A, T, { delay: 360, color: '#4DE1FF', w: 6, dur: 320 });
+      burst('pheart', T, { delay: 600, n: 18, dist: 120, size: 12 });
+      return 620;
+    },
+    lipmark(A, T, k, t) {
+      act(k, 'dash', 520); prop('lips', { from: A, to: T, dur: 300, size: 56 });
+      frame(300); bang(above(T, 70), '쪽♥', { delay: 310, color: '#E0123E', size: 40 }); burst('pheart', T, { delay: 310, n: 20, dist: 130, size: 12 });
+      return 320;
+    },
+    crystalbolt(A, T, k, t) {
+      act(k, 'cast', 760); magicCircle(mid(A, T, .22), { color: '#37E0FF', glow: '#FF7FD0', r: 54, dur: 900, star: 5 });
+      laser(mid(A, T, .22), T, { delay: 380, color: '#7fe0ff', w: 20, dur: 460 }); bolt(A, T, { delay: 420, dur: 300, w: 3, wob: 14 });
+      burst('shard', T, { delay: 700, n: 18, dist: 120, size: 11 }); tint(t, 'zap', 400, 700);
+      return 720;
+    },
+    winksnipe(A, T, k, t) {
+      act(k, 'cast', 600); darken(800, .45);
+      add(380, (p) => { // 조준경
+        ctx.globalAlpha = fade(p, .2); ctx.strokeStyle = '#6CF2C2'; ctx.lineWidth = 2.5 * u; const R = (60 - p * 30) * u;
+        ctx.beginPath(); ctx.arc(T.x, T.y, R, 0, 7); ctx.moveTo(T.x - R * 1.4, T.y); ctx.lineTo(T.x + R * 1.4, T.y); ctx.moveTo(T.x, T.y - R * 1.4); ctx.lineTo(T.x, T.y + R * 1.4); ctx.stroke();
+      }, 0);
+      laser(A, T, { delay: 400, color: '#6CF2C2', w: 6, dur: 220 }); frame(560);
+      return 580;
+    },
+    canburst(A, T, k, t) {
+      act(k, 'sway', 900);
+      for (let i = 0; i < 8; i++) { prop('can', { from: A, to: { x: T.x + rnd(-24, 24) * u, y: T.y + rnd(-24, 24) * u }, delay: i * 70, dur: 200, size: 24, rot1: 12 }); burst('spark', T, { delay: 200 + i * 70, n: 4, dist: 50, size: 8 }); }
+      bang(above(T, 70), '철컹철컹!', { delay: 300, color: '#E3E8EF', size: 24 });
+      return 760;
+    },
+    bulletdash(A, T, k, t) {
+      speedLines(T, { color: '#fff', dur: 360 }); act(k, 'dash', 360); comet(A, T, { color: '#9FF5D8', size: 20, dur: 180, trail: 14 });
+      windLines(A, T, { n: 8, gap: 12, spread: 30, dur: 240 }); bang(above(T, 70), '배달 왔습니다!', { delay: 200, color: '#9FF5D8', size: 20 });
+      return 200;
+    },
+    spincycle(A, T, k, t) {
+      act(k, 'spin', 900);
+      add(900, (p) => { // 물 소용돌이
+        ctx.globalAlpha = fade(p, .25); ctx.lineCap = 'round';
+        for (let i = 0; i < 5; i++) { const R = (30 + i * 14) * u, a = p * 18 + i; ctx.strokeStyle = i % 2 ? '#3A9BFF' : '#bfe8ff'; ctx.lineWidth = 5 * u; ctx.beginPath(); ctx.ellipse(T.x, T.y, R, R * .6, 0, a, a + 2.4); ctx.stroke(); }
+      }, 100);
+      orbit('bubble', T, { delay: 100, n: 12, r: 70, dur: 800, size: 9, turns: 4, squash: .6 });
+      bang(above(T, 80), '탈탈탈!', { delay: 300, color: '#3A9BFF' }); later(() => act(t, 'spin', 600), 200);
+      return 860;
+    },
+    icicledrop(A, T, k, t) {
+      act(k, 'cast', 600); add(500, (p) => { ctx.globalAlpha = .5 * Math.sin(p * 3.14); ctx.fillStyle = '#bfefff'; ctx.fillRect(0, 0, W, 24 * u); });
+      for (let i = 0; i < 3; i++) prop('shard', { from: { x: T.x + (i - 1) * 40 * u, y: -60 * u }, to: { x: T.x + (i - 1) * 20 * u, y: T.y }, delay: 300 + i * 90, dur: 260, size: 50 - i * 8 });
+      frame(560); burst('shard', T, { delay: 570, n: 24, dist: 130, size: 11 }); ring(T, { delay: 570, color: '#8FEFFF', r1: 150, w: 8 }); tint(t, 'cold', 600, 580);
+      return 580;
+    },
+    stoneegg(A, T, k, t, e) {
+      const hot = e?.type !== 'ice', c = hot ? '#FF6A2B' : '#8FEFFF';
+      act(k, 'throw', 520); glow(A, c, { r: 80, dur: 400 });
+      prop('rock', { from: A, to: T, delay: 200, dur: 320, size: 26, rot1: 10 }); comet(A, T, { delay: 200, color: c, size: 14, dur: 320, arc: 90 });
+      burst(hot ? 'flame' : 'snow', T, { delay: 520, n: 22, dist: 120, size: 11 }); cloud(T, hot ? ['#ffffff', '#ffd0b0'] : ['#ffffff', '#d0f4ff'], { delay: 520, n: 8, dur: 600, size: 24, spread: 40 });
+      bang(above(T, 70), hot ? '앗 뜨거!' : '앗 차가!', { delay: 540, color: c });
+      return 540;
+    },
+    vineshock(A, T, k, t) {
+      act(k, 'cast', 800);
+      for (let i = 0; i < 3; i++) { const to = { x: T.x + (i - 1) * 18 * u, y: T.y + (i - 1) * 14 * u }; whip(A, to, { delay: i * 70, color: '#4CD964', curve: (i - 1) * 70, dur: 600, w: 8 }); bolt(A, to, { delay: 260 + i * 70, dur: 300, w: 4, wob: 12 }); }
+      flash('#FFF7C2', 160, 420, .45); orbit('spark', T, { delay: 400, n: 8, r: 50, dur: 400, size: 9 }); tint(t, 'zap', 500, 440);
+      bang(above(T, 70), '찌릿!', { delay: 440, color: '#FFE45C' });
+      return 460;
+    },
+    scrub(A, T, k, t) {
+      act(k, 'dash', 900);
+      for (let i = 0; i < 6; i++) swoosh(T, { delay: 200 + i * 80, color: '#5fd36a', r: 40, flip: i % 2 ? -1 : 1, a0: -.4, a1: .9, w: 10, dur: 160 });
+      burst('bubble', T, { delay: 300, n: 18, dist: 90, size: 9 }); burst('dust', T, { delay: 500, n: 10, dist: 80, size: 8 });
+      bang(above(T, 70), '박박박!', { delay: 300, color: '#5fd36a' });
+      return 720;
+    },
+    yellowgust(A, T, k, t) {
+      add(1000, (p) => { ctx.globalAlpha = .45 * Math.sin(p * 3.14); ctx.fillStyle = '#C9A24A'; ctx.fillRect(0, 0, W, H); });
+      act(k, 'cast', 800); spray('dust', { x: A.x, y: A.y }, T, { n: 40, gap: 12, dur: 420, size: 16, spread: 60 });
+      windLines(A, T, { n: 14, gap: 30, spread: 70, color: '#F2D49B' }); burst('rock', T, { delay: 500, n: 16, dist: 110, size: 10 });
+      bang(above(T, 80), '황사 경보!', { delay: 400, color: '#F2D49B', size: 24 });
+      return 700;
+    },
+    metalnoise(A, T, k, t) {
+      act(k, 'sway', 800); soundWaves(A, T, { color: '#E3E8EF', n: 7, gap: 70, dur: 420 });
+      speedLines(T, { color: '#E3E8EF', delay: 300, dur: 500 }); burst('spark', T, { delay: 400, n: 14, dist: 90, size: 9 });
+      bang(above(T, 80), '끼이이익!!', { delay: 300, color: '#E3E8EF', size: 26 }); later(() => act(t, 'sway', 500), 300);
+      return 720;
+    },
+    trucksudden(A, T, k, t) {
+      [A, { x: A.x + 26 * u, y: A.y }].forEach((h) => glow(h, '#FFF7B0', { r: 60, dur: 260 }));
+      flash('#ffffff', 160, 80, .6); speedLines(T, { color: '#ffffff', delay: 60, dur: 360 }); act(k, 'dash', 420);
+      comet(A, T, { delay: 120, color: '#FFF7B0', size: 30, dur: 200, trail: 14 });
+      frame(320); magicCircle(T, { delay: 330, color: '#8ff6ff', glow: '#5b5bff', r: 80, dur: 700, squash: .9, star: 5 });
+      bang(above(T, 80), '빵빵!!', { delay: 330, color: '#FFE14D', size: 38 });
+      return 340;
+    },
+    jellypress(A, T, k, t) {
+      act(k, 'jump', 700); prop('slime', { from: above(A, 30), to: T, delay: 120, dur: 380, size: 60 });
+      frame(500); burst('slime', T, { delay: 500, n: 22, dist: 120, size: 11 }); shockwave(T, '#6be3a4', { delay: 500 });
+      bang(above(T, 70), '말랑!', { delay: 510, color: '#6be3a4', size: 36 });
+      return 510;
+    },
+    holysword(A, T, k, t) {
+      darken(1200, .5, 0, '#0a0820'); act(k, 'charge', 700); pillar(A, '#FFE46B', { dur: 600, w: 34 });
+      prop('sword', { from: above(T, 260), to: { x: T.x, y: T.y - 10 * u }, delay: 520, dur: 220, size: 76 });
+      pillar(T, '#FFE46B', { delay: 700, dur: 700, w: 70 }); frame(740);
+      for (let i = 0; i < 3; i++) ring(T, { delay: 740 + i * 80, color: ['#fff', '#FFE46B', '#FF8CCB'][i], r1: 170, w: 9 - i * 2 });
+      burst('sparkle', T, { delay: 740, n: 26, dist: 150, size: 12 }); bang(above(T, 90), '성검 강림!', { delay: 760, color: '#FFE46B', size: 28 });
+      return 760;
+    },
+    forbidpage(A, T, k, t) {
+      // 마도서 앞에 마법진이 열리고, 진 안에서 불꽃 광선과 불덩이가 쏟아진다
+      darken(1700, .6, 0, '#12020a'); act(k, 'cast', 1400);
+      orbit('page', A, { n: 8, r: 64, dur: 1300, size: 13, turns: 1.8, squash: .55 });
+      const C = mid(A, T, .3);
+      magicCircle(C, { color: '#FF6A2B', glow: '#FFD23F', r: 74, dur: 1500, spin: 1.4, squash: .45, star: 6 });
+      magicCircle(C, { color: '#C77DFF', glow: '#fff', r: 46, dur: 1400, delay: 120, spin: -2, squash: .45, star: 5 });
+      for (let i = 0; i < 5; i++) comet({ x: C.x + rnd(-10, 10) * u, y: C.y + rnd(-40, 40) * u }, { x: T.x + rnd(-20, 20) * u, y: T.y + rnd(-20, 20) * u }, { delay: 520 + i * 90, color: '#FF6A2B', size: 16, dur: 260 });
+      laser(C, T, { delay: 820, color: '#FF6A2B', w: 30, dur: 520 });
+      pillar(T, '#FF4A1F', { delay: 900, dur: 600, w: 60 }); burst('flame', T, { delay: 900, n: 30, dist: 150, size: 13 });
+      bang(above(T, 90), '금지된 주문!', { delay: 920, color: '#FF6A2B', size: 26 }); tint(t, 'burn', 600, 920);
+      return 940;
+    },
+    chomp(A, T, k, t) {
+      darken(900, .55, 0, '#14061c'); act(k, 'dash', 520); burst('coin', A, { n: 10, dist: 60, size: 10 });
+      prop('teeth', { from: above(T, 90), to: { x: T.x, y: T.y - 10 * u }, delay: 280, dur: 160, size: 70 });
+      prop('teeth', { from: { x: T.x, y: T.y + 90 * u }, to: { x: T.x, y: T.y + 10 * u }, delay: 280, dur: 160, size: 70, rot0: 3.14, rot1: 3.14 });
+      frame(440); bang(above(T, 80), '덥석!!', { delay: 450, color: '#FF5C8A', size: 40 }); burst('wisp', T, { delay: 450, n: 12, dist: 90, size: 10 });
+      return 460;
+    },
+    cicadacry(A, T, k, t) {
+      act(k, 'sway', 1000); for (let i = 0; i < 4; i++) ring(A, { delay: i * 120, color: i % 2 ? '#FFE45C' : '#7ED957', r0: 20, r1: 200, w: 6, dur: 500 });
+      soundWaves(A, T, { color: '#7ED957', n: 7, gap: 60, delay: 200 }); speedLines(T, { color: '#FFE45C', delay: 400, dur: 520 });
+      bang(above(T, 80), '맴맴맴!!', { delay: 400, color: '#FFE45C', size: 30 }); later(() => act(t, 'sway', 500), 400);
+      return 760;
+    },
+    bloodsuck(A, T, k, t) {
+      act(k, 'dash', 520); speedLines(T, { color: '#B6FF3C', dur: 300 });
+      laser(A, T, { delay: 160, color: '#B6FF3C', w: 5, dur: 260 }); bang(above(T, 60), '쪼옥', { delay: 260, color: '#ff4d6d' });
+      spray('broth', T, A, { delay: 420, n: 10, gap: 30, dur: 340, size: 9, arc: 30 }); glow(A, '#ff4d6d', { delay: 600, r: 80 });
+      return 400;
+    },
+    flutter(A, T, k, t) {
+      act(k, 'lift', 700); spray('feather', A, T, { n: 18, gap: 18, dur: 420, size: 13, spread: 50, spin: 6 });
+      spray('seed', A, T, { delay: 100, n: 12, gap: 20, dur: 380, size: 7, spread: 40 }); windLines(A, T, { n: 12, gap: 24, spread: 60 });
+      burst('feather', T, { delay: 460, n: 14, dist: 110, size: 11 }); bang(above(T, 70), '푸드덕!', { delay: 460, color: '#E6E6F2' });
+      return 480;
+    },
+    nyanpunch(A, T, k, t) {
+      act(k, 'dash', 900);
+      for (let i = 0; i < 5; i++) { const at = { x: T.x + rnd(-30, 30) * u, y: T.y + rnd(-30, 20) * u }; prop('fist', { from: A, to: at, delay: i * 100, dur: 120, size: 28 }); starburst(at, { delay: 120 + i * 100, color: '#FF8CCB', r: 34 }); bang({ x: at.x, y: at.y - 30 * u }, '냥!', { delay: 120 + i * 100, size: 20, dur: 360, color: '#FF8CCB' }); }
+      burst('flame', T, { delay: 600, n: 10, dist: 70, size: 9 });
+      return 640;
+    },
+    roachrush(A, T, k, t) {
+      darken(1000, .8, 0, '#000000'); act(k, 'vanish', 600);
+      speedLines(T, { color: '#c8743a', delay: 300, dur: 420 }); frame(300);
+      bang({ x: W / 2, y: H * .4 }, '바선생이다!!!', { delay: 320, color: '#c8743a', size: 34, rot: -.08 });
+      later(() => act(t, 'sway', 600), 340); tint(t, 'poison', 600, 400);
+      return 480;
+    },
+    // ===== 등신 =====
+    glasscannon(A, T, k, t) {
+      darken(1500, .6, 0, '#05060c'); act(k, 'charge', 900);
+      gather(A, '#FFE45C', { dur: 800, n: 30, r: 160 }); orbit('shard', A, { n: 10, r: 60, dur: 900, size: 11, turns: 2 });
+      bang(above(A, 90), '유리대포!!', { delay: 200, color: '#FFE45C', size: 30 });
+      laser(A, T, { delay: 900, color: '#FFE45C', w: 44, dur: 600 }); bolt(A, T, { delay: 920, dur: 400, w: 6, wob: 26 });
+      frame(1000); glow(T, '#FFE45C', { delay: 1000, r: 220, dur: 700 });
+      for (let i = 0; i < 4; i++) ring(T, { delay: 1000 + i * 70, color: ['#fff', '#FFE45C', '#fff', '#3A9BFF'][i], r1: 220, w: 12 - i * 2 });
+      burst('shard', A, { delay: 1100, n: 14, dist: 70, size: 9 }); shake(18, 600, 1000);
+      return 1020;
+    },
+    ramdeath(A, T, k, t) {
+      darken(1200, .55, 0, '#1a0000'); act(k, 'charge', 500); bang(above(A, 80), '돌연사-들이박기', { color: '#ff2a2a', size: 22 });
+      later(() => act(k, 'dash', 500), 500); speedLines(T, { color: '#ff6a6a', delay: 480, dur: 400 });
+      comet(A, T, { delay: 500, color: '#ff2a2a', size: 30, dur: 220, trail: 14 });
+      frame(720); glow(mid(A, T, .7), '#ff2a2a', { delay: 720, r: 240, dur: 800 });
+      for (let i = 0; i < 3; i++) ring(T, { delay: 720 + i * 80, color: ['#fff', '#ff2a2a', '#000'][i], r1: 240, w: 14 - i * 3 });
+      burst('scrap', T, { delay: 720, n: 24, dist: 180, size: 12 }); bang({ x: W / 2, y: H * .35 }, '💀 쾅!! 💀', { delay: 740, color: '#ff2a2a', size: 36 }); shake(22, 700, 720);
+      return 740;
+    },
+    vinyl(A, T, k) {
+      act(k, 'jump', 700); prop('vinyl', { from: { x: A.x + 120 * u, y: A.y - 120 * u }, to: A, dur: 600, size: 40, rot1: 2 });
+      bang(above(A, 70), '꿀꺽...', { delay: 600, color: '#ffffff' }); bang(above(A, 110), '?', { delay: 1000, color: '#FFD23F', size: 40 });
+      return 1300;
+    },
+    pufferspike(A, T, k) {
+      act(k, 'charge', 600); glow(A, '#C77DFF', { r: 110, dur: 600 });
+      for (let i = 0; i < 16; i++) { const a = (i / 16) * 6.283; add(500, (p) => sprite('needle', A.x + Math.cos(a) * (40 + 30 * out(p)) * u, A.y + Math.sin(a) * (40 + 30 * out(p)) * u, 14, a, fade(p, .2)), 120); }
+      bang(above(A, 90), '뾰족!', { delay: 200, color: '#C77DFF', size: 34 });
+      return 700;
+    },
+    hydrate(A, T, k) {
+      act(k, 'lift', 800); pillar(A, '#3A9BFF', { dur: 700, w: 40 }); fall('drop', A, { n: 18, gap: 25, dur: 360, spread: 40 });
+      rise('bubble', A, { delay: 300, n: 10, gap: 40, dur: 500, size: 9 }); bang(above(A, 90), '벌컥벌컥', { delay: 200, color: '#3A9BFF', size: 26 });
+      return 900;
+    },
+    ignite(A, T, k) {
+      darken(1200, .55, 0, '#1a0000'); act(k, 'charge', 900); flash('#ff2a1f', 300, 500, .5);
+      pillar(A, '#ff3b1f', { delay: 300, dur: 900, w: 80 }); rise('flame', A, { delay: 300, n: 26, gap: 20, dur: 620, size: 14, spread: 60, height: 130 });
+      bang({ x: W / 2, y: H * .38 }, '불타올라라!!', { delay: 450, color: '#ff3b1f', size: 36 }); shake(10, 500, 500);
+      return 1100;
+    },
+  });
+  // 등신 상태 연출
+  function ignite(key, on) {
+    if (REDUCED) return 600;
+    measure(); const at = spot(key);
+    if (on) { glow(at, '#ff3b1f', { r: 160, dur: 700 }); burst('flame', at, { n: 30, dist: 140, size: 13, dur: 600 }); ring(at, { color: '#ff3b1f', r1: 160, w: 10 }); shake(8, 300); return 900; }
+    cloud(at, ['#5a5560', '#8a8590', '#3a3540'], { n: 10, dur: 700, size: 24, spread: 40 }); return 700;
+  }
+  function spiky(key, foeKey, e) {
+    if (REDUCED) return 600;
+    measure(); const at = spot(key);
+    if (e?.on) { burst('needle', at, { n: 14, dist: 70, size: 13, spin: 0 }); glow(at, '#C77DFF', { r: 100 }); return 650; }
+    if (foeKey) { const T = spot(foeKey); spray('needle', at, T, { n: 12, gap: 20, dur: 220, size: 14, aim: true }); starburst(T, { delay: 240, color: '#C77DFF', r: 50 }); bang(above(T, 60), '푹!', { delay: 250, color: '#C77DFF', size: 34 }); shake(8, 260, 240); return 820; }
+    bang(above(at, 60), '아야!', { color: '#C77DFF', size: 30 }); burst('needle', at, { n: 10, dist: 40, size: 11 }); tint(key, 'poison', 400); return 800;
+  }
+  function hydrate(key) { if (REDUCED) return; measure(); const at = spot(key); rise('drop', at, { n: 8, gap: 40, dur: 500, size: 9 }); glow(at, '#3A9BFF', { r: 90, dur: 500 }); }
+
   function weatherFx(w) {
     if (w === 'sun') {
       const c = { x: W * .72, y: H * .2 };
@@ -600,12 +1271,28 @@ const Fx = (() => {
   }
 
   /* ---------- 바깥에서 부르는 함수 ---------- */
+  // 모든 기술: 타입 색 기 모으기 + 맞는 순간 임팩트. 전용기는 이름 컷인이 먼저 나옵니다.
+  const NO_CUT = new Set(['bangalzzuk', 'forge', 'reflector']);
   function play(id, key, target, e) {
     const foe = target || (key === 'me' ? 'opp' : 'me');
     const run = MOVE_FX[id] || MOVE_FX.tackle;
     if (REDUCED) return 500;
     measure();
-    return (run(spot(key), spot(foe), key, foe, e) || 700);
+    const mv = typeof G !== 'undefined' ? G.data?.MOVES?.[id] : null;
+    const type = e?.type || mv?.type || 'none', col = TYPE_C[type] || '#fff';
+    const A = spot(key), T = spot(foe);
+    const pre = mv?.sig && !NO_CUT.has(id) ? sigIntro(A, key, e?.move || mv.n, col) : 0;
+    OFF = pre;
+    let d;
+    try {
+      glow(A, col, { r: 70, dur: 320, a: .6 });
+      d = run(spot(key), spot(foe), key, foe, e) || 700;
+      UNDER = true;
+      if ((e?.cat || mv?.cat) === 'p' && !mv?.sig) speedLines(T, { delay: Math.max(0, d - 120), dur: 260, n: 20, color: col });
+      if ((e?.cat || mv?.cat) !== 'x' && id !== 'ramdeath') impact(T, col, { delay: Math.max(0, d - 40), big: mv?.sig ? 1.25 : .85, kind: TYPE_P[type] || 'sparkle' });
+      else ring(A, { color: col, r0: 20, r1: 110, w: 5, dur: 480 });
+    } finally { OFF = 0; UNDER = false; }
+    return pre + d + (mv?.sig ? 260 : 160);
   }
   function status(key, s) {
     if (REDUCED || !s) return;
@@ -666,6 +1353,7 @@ const Fx = (() => {
     spirit(A, T) { add(1200, (p) => { ctx.globalAlpha = .75 * Math.sin(p * 3.14); ctx.fillStyle = '#1a0a3a'; ctx.fillRect(0, 0, W, H); }, 880); for (let i = 0; i < 8; i++) { const a = (i / 8) * 6.28; spray('wisp', { x: T.x + Math.cos(a) * 200 * u, y: T.y + Math.sin(a) * 140 * u }, T, { n: 1, delay: 900 + i * 60, dur: 420, size: 18, spread: 0 }); } ring(T, { delay: 1300, color: '#7A6BE0', r1: 200, w: 14 }); return 1300; },
     fairy(A, T) { for (let i = 0; i < 3; i++) ring(T, { delay: 880 + i * 120, color: ['#F27FA5', '#fff', '#37e0ff'][i], r0: 220, r1: 10, dur: 400, w: 10 }); burst('pheart', T, { delay: 1300, n: 30, dist: 200, size: 13 }); burst('sparkle', T, { delay: 1300, n: 30, dist: 230, size: 12 }); return 1300; },
     none(A, T) { act(A.key, 'dash', 700); return 1100; },
+    normal(A, T) { act(A.key, 'dash', 700); speedLines(T, { delay: 760, dur: 500 }); for (let i = 0; i < 3; i++) starburst(T, { delay: 900 + i * 110, color: ['#fff', '#F5EBD0', '#FFD23F'][i], r: 120 - i * 20 }); frame(880); return 1200; },
   };
   // 루미나·실비아 Z 마무리: 필드에 직접 떨어지는 전용 피니시
   function zFinish(species, A, T) {
@@ -699,7 +1387,7 @@ const Fx = (() => {
     const foe = target || (key === 'me' ? 'opp' : 'me');
     const A = { ...spot(key), key }, T = { ...spot(foe), key: foe };
     if (species === 'lumina' || species === 'silvia') return zFinish(species, A, T) + 200;
-    const color = { fire: '#F2622E', water: '#2F7DE1', grass: '#3FA34D', elec: '#FFE45C', ice: '#7fe0f0', earth: '#C98F5E', wind: '#CFEDE1', poison: '#B86BE0', steel: '#D7DDE5', spirit: '#7A6BE0', fairy: '#F27FA5' }[type] || '#fff';
+    const color = { fire: '#F2622E', water: '#2F7DE1', grass: '#3FA34D', elec: '#FFE45C', ice: '#7fe0f0', earth: '#C98F5E', wind: '#CFEDE1', poison: '#B86BE0', steel: '#D7DDE5', spirit: '#7A6BE0', fairy: '#F27FA5', normal: '#F5EBD0' }[type] || '#fff';
     zAura(A, color);
     beam(A, T, { delay: 760, color, core: '#fff', w: 36, dur: 520 });
     const hit = (Z_FX[type] || Z_FX.none)(A, T);
@@ -970,5 +1658,5 @@ const Fx = (() => {
   function weather(w) { if (REDUCED || !w) return 700; measure(); return weatherFx(w); }
 
   function item(key) { if (REDUCED) return; measure(); const at = spot(key); ring(at, { color: '#FFD23F', r0: 10, r1: 70, w: 4, dur: 380 }); burst('sparkle', at, { n: 8, dist: 46, size: 7 }); }
-  return { attach, play, reflectReady, reflect, counter, terrain, rage, item, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, awaken, entrance, forge, ids: () => Object.keys(MOVE_FX) };
+  return { attach, play, ignite, spiky, hydrate, reflectReady, reflect, counter, terrain, rage, item, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, awaken, entrance, forge, ids: () => Object.keys(MOVE_FX) };
 })();

@@ -214,7 +214,7 @@ const Battle = (() => {
       ${G.data.MONSTERS[m.species]?.forms ? `<span class="badge tier rgb${m.mega ? 5 : m.tier || 0}">${G.data.FORMS?.[m.mega ? 5 : m.tier || 0] || ''}</span>` : ''}
       ${G.data.MONSTERS[m.species]?.tiers ? `<span class="badge tier tb${Math.min(m.tier || 0, 4)}${(m.tier || 0) > 4 ? ' tplus' : ''}">${G.data.TIERS?.[m.tier || 0] || ''}</span>` : ''}
       ${stages.map(([k, v]) => `<span class="badge">${lb[k]}${v > 0 ? '+' : ''}${v}</span>`).join('')}${itemBadge(key, m)}</div>
-      <div class="bar"><i></i></div><div class="num"></div>`;
+      <div class="bar"><i></i></div><div class="num"></div>${m.thirst != null ? `<div class="thirst${m.thirst <= 30 ? ' low' : ''}"><i style="width:${m.thirst}%"></i><span>💧 갈증 ${m.thirst}%</span></div>` : ''}`;
     setBar(key, m);
   }
 
@@ -249,6 +249,25 @@ const Battle = (() => {
     await wait(560);
     if (box) { box.innerHTML = monsterSVG(m.species, '', m.mega, m.hits, m.tier); box.className = `mon ${key}${m.mega ? ' mega' : ''}${auraClass(m)} swapfx`; setTimeout(() => box.classList.remove('swapfx'), 500); }
     await wait(Math.max(0, ms - 560));
+  }
+
+  // 등신이 죽으면: 뒤집히고 흑백, WASTED
+  async function wasted(key) {
+    const box = $(`#m-${key}`);
+    box.classList.remove('hit', 'lunge', 'enter');
+    box.classList.add('wasted');
+    trainer(key)?.play('sad');
+    const r = rosterEntry(key, dispMon(key).species);
+    if (r) { r.out = true; drawPips(); }
+    const scene = $('#scene');
+    const tag = document.createElement('div');
+    tag.className = 'wasted-tag';
+    tag.innerHTML = '<b>wasted!!</b>';
+    scene?.classList.add('wasted-scene');
+    scene?.appendChild(tag);
+    await wait(2300);
+    tag.remove(); scene?.classList.remove('wasted-scene');
+    box.classList.remove('wasted'); box.classList.add('hide');
   }
 
   function drawMon(key, m) {
@@ -373,6 +392,7 @@ const Battle = (() => {
       }
       case 'faint': {
         const box = $(`#m-${key}`);
+        if (dispMon(key).species === 'deungsin') { await wasted(key); break; }
         box.classList.remove('hit', 'lunge', 'enter');
         box.classList.add('faint');
         trainer(key)?.play('sad');
@@ -471,6 +491,26 @@ const Battle = (() => {
         break;
       }
       case 'over': await wait(1200); break;
+      case 'thirst': {
+        const m = dispMon(key);
+        const drop = (m.thirst ?? 100) > e.v;
+        m.thirst = e.v; drawPlate(key, m);
+        const t = $(`#p-${key} .thirst`);
+        if (t) { t.classList.add(drop ? 'sip' : 'fill'); }
+        if (!drop) Fx.hydrate?.(key);
+        await wait(e.text ? 800 : 380); break;
+      }
+      case 'blaze': {
+        const m = dispMon(key);
+        Object.assign(m, { blaze: e.mon.blaze, tier: e.mon.tier });
+        const ms = Fx.ignite?.(key, e.on) || 600;
+        await wait(e.on ? 520 : 200);
+        drawMon(key, m); drawPlate(key, m);
+        const box = $(`#m-${key}`);
+        if (box) { box.classList.add('swapfx'); setTimeout(() => box.classList.remove('swapfx'), 700); }
+        await wait(Math.max(400, ms - 400)); break;
+      }
+      case 'spiky': await wait(Fx.spiky?.(key, e.hit ? sideKey(e.target) : null, e) || 700); break;
       default:
     }
   }
