@@ -61,14 +61,15 @@ function suddenDeath(b, s, m, ev, text) {
   return true;
 }
 const DEATH = ['갑자기 햇빛이 너무 눈부셨다', '물살이 너무 셌다', '깜짝 놀랐다', '지나가던 물고기와 눈이 마주쳤다', '스트레스를 받았다', '자기가 등신이라는 걸 깨달았다', '바닷물이 너무 짰다', '물방울이 눈에 들어갔다', '옆 개복치가 죽는 걸 보고 충격받았다'];
+const dp = (m, pct) => (m.mega ? pct / 2 : pct); // 바다의 왕: 죽을 확률 절반
 function rollDeath(b, s, m, ev) { // 돌연사 10%
-  if (m.species !== DS || !alive(m) || b.training || !chance(b, 10)) return false;
+  if (m.species !== DS || !alive(m) || b.training || !chance(b, dp(m, 10))) return false;
   const why = DEATH[Math.floor(rand(b) * DEATH.length)];
   return suddenDeath(b, s, m, ev, `${m.name}의 돌연사! ${why}...`);
 }
 function thirst(b, s, m, amount, ev) {
-  if (m.species !== DS || !alive(m) || b.training) return false;
-  m.thirst = Math.max(0, Math.min(100, (m.thirst ?? 100) - amount));
+  if (m.species !== DS || !alive(m) || b.training || m.thirst == null) return false; // 갈증 극복·바다의 왕이면 게이지 없음
+  m.thirst = Math.max(0, Math.min(100, m.thirst - amount));
   ev.push({ t: 'thirst', side: s, v: m.thirst });
   if (m.thirst > 0) return false;
   return suddenDeath(b, s, m, ev, `${josa(m.name, '은/는')} 목이 말라 바싹 말라 버렸다...`);
@@ -178,6 +179,7 @@ function doMega(b, s, ev) {
   m.name = sp.mega.n; m.mega = true;
   b.sides[s].megaUsed = true;
   ev.push({ t: 'mega', side: s, mon: publicMon(m), text: `${josa(oldName, '이/가')} 메가진화했다! ${m.name}!` });
+  if (m.species === DS && m.thirst != null) { m.thirst = null; ev.push({ t: 'thirst', side: s, v: null, text: '바다의 왕이 되어 더는 목마르지 않다! 죽을 확률도 절반이 되었다!' }); }
 }
 
 // Z기술도 한 판에 한 번. 메가진화와는 따로 셉니다.
@@ -597,8 +599,8 @@ function useMove(b, s, index, ev, want, z = false) {
   if (!e) return; // 움직이지 못함
   const mv = MOVES[e.id] || STRUGGLE;
   if (alive(me)) {
-    if (mv.glass && me.lastMove === 'glasscannon' && chance(b, 25)) suddenDeath(b, s, me, ev, `유리대포를 연달아 쏜 반동으로 ${josa(me.name, '이/가')} 산산조각 났다!`);
-    if (mv.wasted && chance(b, 50)) suddenDeath(b, s, me, ev, `${josa(me.name, '은/는')} 온 힘을 다 써 버렸다...`);
+    if (mv.glass && me.lastMove === 'glasscannon' && chance(b, dp(me, 25))) suddenDeath(b, s, me, ev, `유리대포를 연달아 쏜 반동으로 ${josa(me.name, '이/가')} 산산조각 났다!`);
+    if (mv.ironTail && chance(b, dp(me, 33))) suddenDeath(b, s, me, ev, `강철 꼬리가 너무 무거워서 ${josa(me.name, '은/는')} 그대로 가라앉았다...`);
     if (mv.cat !== 'x') rollDeath(b, s, me, ev); // 공격할 때 돌연사
     if (!mv.hydrate) thirst(b, s, me, 15, ev); // 기술 쓰면 갈증 15%
   }
@@ -672,6 +674,8 @@ function useMoveCore(b, s, index, ev, want, z = false) {
   }
   me.protectStreak = 0;
 
+  if (mv.overcome) return overcome(b, s, me, o, ev);
+  if (mv.dice) return rollDice(b, s, me, o, ev);
   if (mv.self_) return selfMove(b, s, me, mv, ev);
 
   // 광역기: 태그 배틀에서는 살아 있는 상대 모두를 공격 (위력 3/4)
@@ -801,6 +805,7 @@ function hitOne(b, s, me, o, mv, ev) {
   if (!foeDown) {
     if (mv.st && chance(b, mv.st.ch)) applyStatus(b, o, foe, mv.st.s, ev, true);
     if (mv.fl && chance(b, mv.fl)) foe.flinched = true;
+    if (mv.fear && alive(foe)) { foe.feared = true; msg(ev, `${josa(foe.name, '은/는')} 3억 마리 새끼 개복치에 공포에 질렸다!`); }
     if (mv.clearFoe) {
       const ups = Object.entries(foe.stages).filter(([, v]) => v > 0);
       for (const [k] of ups) {
@@ -905,23 +910,68 @@ function crisp(b, s, m, state, ev) {
   if (state === 'soggy') { msg(ev, `${josa(m.name, '이/가')} 눅눅해졌다!`); changeStage(b, s, m, 'spe', -1, ev); } else msg(ev, `${josa(m.name, '이/가')} 바삭해졌다! 물리 공격을 하면 껍질에 찔린다.`);
 }
 
+// 등신 갈증 극복: 물 밖으로 나가 보기
+function overcome(b, s, me, o, ev) {
+  msg(ev, `${josa(me.name, '은/는')} 슬쩍 물 밖으로 나가 봤다...`);
+  if (!chance(b, 75)) {
+    msg(ev, '실패! 숨이 막혀 허겁지겁 물속으로 돌아왔다!');
+    hurt(b, s, me, me.maxHp / 2, ev); faintCheck(b, s, me, ev);
+    return;
+  }
+  if (me.thirst != null) { me.thirst = null; ev.push({ t: 'thirst', side: s, v: null, text: '성공! 갈증을 극복했다! 이제 목마르지 않다!' }); } else msg(ev, '성공!');
+  const foe = activeOf(b, o);
+  if (!alive(foe)) return;
+  if (foe.protecting) { msg(ev, `${josa(foe.name, '은/는')} 물을 막아냈다!`); return; }
+  ev.push({ t: 'splash', side: s, target: o, text: `${josa(me.name, '은/는')} ${foe.name}에게 물을 힘껏 날렸다!` });
+  hurt(b, o, foe, 70, ev, { eff: 1, moveType: 'water' });
+  faintCheck(b, o, foe, ev);
+  if (foe.species === DS && alive(foe)) { thirst(b, o, foe, 5, ev); rollDeath(b, o, foe, ev); }
+}
+// 등신 주사위 굴리기
+const STAT6 = ['atk', 'def', 'spa', 'spd', 'spe', 'acc'];
+function rollDice(b, s, me, o, ev) {
+  const n = randInt(b, 1, 6);
+  ev.push({ t: 'dice', side: s, n, text: `${josa(me.name, '은/는')} 주사위를 굴렸다... ${n}!` });
+  if (n === 1) {
+    if (me.mega && chance(b, 50)) { msg(ev, '1이 나왔지만 바다의 왕의 가호로 겨우 살아남았다!'); return; }
+    suddenDeath(b, s, me, ev, '1이 나왔다! 등신은 그대로 숨을 거뒀다...');
+    return;
+  }
+  if (n === 2 || n === 4) {
+    const pool = [...STAT6];
+    for (let i = 0; i < n; i++) changeStage(b, s, me, pool.splice(Math.floor(rand(b) * pool.length), 1)[0], 1, ev);
+    return;
+  }
+  if (n === 3) {
+    const foe = activeOf(b, o);
+    if (!alive(foe)) return;
+    const d = randInt(b, 1, 200);
+    msg(ev, `주사위가 ${foe.name}에게 날아갔다! ${d}의 피해!`);
+    hurt(b, o, foe, d, ev, { eff: 1 }); faintCheck(b, o, foe, ev);
+    return;
+  }
+  if (n === 5) { if (me.hp < me.maxHp) heal(b, s, me, me.maxHp, ev); else msg(ev, '체력이 이미 가득하다!'); return; }
+  for (const k of STAT6) changeStage(b, s, me, k, 1, ev);
+}
+
 function selfMove(b, s, me, mv, ev) {
   if (mv.vinyl) {
     msg(ev, `${josa(me.name, '은/는')} 비닐봉지를 해파리인 줄 알고 꿀꺽 삼켰다!`);
-    if (chance(b, 35) && suddenDeath(b, s, me, ev, '비닐봉지가 목에 걸렸다...')) return;
+    if (chance(b, dp(me, 35)) && suddenDeath(b, s, me, ev, '비닐봉지가 목에 걸렸다...')) return;
     msg(ev, '...의외로 맛있었다! 체력이 가득 찼다!');
     if (me.hp < me.maxHp) heal(b, s, me, me.maxHp, ev);
     return;
   }
   if (mv.hydrate) {
     msg(ev, `${josa(me.name, '은/는')} 물을 벌컥벌컥 마셨다!`);
-    if (chance(b, 25) && suddenDeath(b, s, me, ev, '물속에 섞여 있던 플라스틱 조각을 삼켰다...')) return;
+    if (chance(b, dp(me, 25)) && suddenDeath(b, s, me, ev, '물속에 섞여 있던 플라스틱 조각을 삼켰다...')) return;
+    if (me.thirst == null) { msg(ev, '이미 목마르지 않다. 그냥 시원했다!'); return; }
     me.thirst = 100;
     ev.push({ t: 'thirst', side: s, v: 100, text: '갈증 게이지가 100%로 가득 찼다!' });
     return;
   }
   if (mv.ignite) {
-    if (chance(b, 20) && suddenDeath(b, s, me, ev, `${josa(me.name, '은/는')} 너무 불타올라서 그대로 타 버렸다...`)) return;
+    if (chance(b, dp(me, 20)) && suddenDeath(b, s, me, ev, `${josa(me.name, '은/는')} 너무 불타올라서 그대로 타 버렸다...`)) return;
     me.blaze = 4;
     ev.push({ t: 'blaze', side: s, on: true, mon: publicMon(me), text: `${josa(me.name, '은/는')} 눈이 시뻘게지며 온몸이 불타올랐다!` });
     const o = foesOf(b, s).find((i) => alive(activeOf(b, i)));
@@ -984,7 +1034,11 @@ function statusMove(b, s, me, o, foe, mv, ev) {
     ev.push({ t: 'seed', side: o, kind: foe.seeded, text: hair ? `머리카락이 ${foe.name}에게 엉겨붙었다!` : `${foe.name}에게 씨앗을 심었다!` });
     return;
   }
-  if (mv.foe) for (const [k, v] of Object.entries(mv.foe)) changeStage(b, o, foe, k, v, ev);
+  if (mv.foe) {
+    if (mv.sc && !chance(b, mv.sc)) { msg(ev, `${josa(foe.name, '은/는')} 도발에 넘어가지 않았다!`); return; }
+    if (mv.sc) msg(ev, `${josa(foe.name, '은/는')} 도발에 걸려들었다!`);
+    for (const [k, v] of Object.entries(mv.foe)) changeStage(b, o, foe, k, v, ev);
+  }
 }
 
 function endOfTurn(b, ev) {

@@ -193,6 +193,10 @@ const MOVES = {
   pufferspike: M('가시복', 'poison', 'x', 0, null, 10, { spiky: true, pri: 3, self_: true, d: '가시를 세운다. 이번 턴 상대의 물리 공격을 막고 가시로 찌른다. 물리 공격을 안 받으면 자기 가시에 찔린다' }),
   hydrate:   M('수분보충', 'water', 'x', 0, null, 5, { hydrate: true, self_: true, d: '물을 마셔 갈증 게이지를 100%로 채운다. 25% 확률로 플라스틱 조각을 삼켜 즉사' }),
   ignite:    M('불타올라라', 'fire', 'x', 0, null, 5, { ignite: true, self_: true, d: '온몸이 불타오른다. 20% 확률로 타 죽음. 상대는 50% 확률로 공포에 질려 다음 공격을 못 하고, 이후 쓰는 기술 4개에 화상(50%)과 피해 1.5배가 붙는다' }),
+  overcome:  M('갈증 극복', 'water', 's', 70, null, 5, { overcome: true, d: '슬쩍 물 밖으로 나가 본다. 75% 성공: 갈증 게이지가 사라지고 상대에게 물을 날려 70 피해. 25% 실패: 최대 체력의 절반을 잃고 물속으로 돌아옴' }),
+  dice:      M('주사위 굴리기', 'wind', 'x', 0, null, 10, { dice: true, d: '주사위 눈에 따라: 1 즉사 / 2 능력치 2개 상승 / 3 상대에게 1~200 피해 / 4 능력치 4개 상승 / 5 체력 모두 회복 / 6 모든 능력치 상승' }),
+  mockspit:  M('침뱉기', 'water', 'x', 0, 100, 15, { foe: { acc: -1, def: -1, spd: -1 }, sc: 70, d: '침을 뱉어 도발한다. 70% 확률로 도발에 걸려 상대의 명중률·방어·특방이 떨어짐' }),
+  irontail:  M('아이언테일', 'steel', 'p', 150, 100, 5, { ironTail: true, d: '꼬리를 강철로 바꿔 내려친다. 33% 확률로 꼬리가 무거워 돌연사' }),
   // 보통
   tackle:    M('몸통 박치기', 'normal', 'p', 50, 100, 30, { d: '기본 공격' }),
   guard:     M('막기', 'normal', 'x', 0, null, 10, { protect: true, pri: 3, self_: true, d: '이번 턴 공격을 막음 (연속 사용 시 실패하기 쉬움)' }),
@@ -386,7 +390,7 @@ const MONSTERS = {
     ['roachrush', 'sting', 'ambush', 'scrap', 'rockthrow', 'tacks', 'stench', 'fog', 'spirit_up', 'guard'],
     '넥타이를 맨 바퀴벌레 선생님. 절대 죽지 않는다. 오늘도 자습이다.'),
   deungsin: X('등신', ['water', 'normal'], 110, 120, 70, 130, 70, 100,
-    ['glasscannon', 'ramdeath', 'vinyl', 'pufferspike', 'hydrate', 'ignite'],
+    ['glasscannon', 'ramdeath', 'vinyl', 'pufferspike', 'hydrate', 'ignite', 'overcome', 'dice', 'mockspit', 'irontail'],
     '바다의 개복치. 햇빛을 봐도, 물살이 세도, 깜짝 놀라도 죽는다. 그래도 능력치만큼은 최강이다.'),
 };
 
@@ -450,7 +454,7 @@ Object.assign(SIGNATURE, {
   dakdulgi: ['flutter', '광장왕 닭둘기', '비행 고글과 빨간 스카프를 둘렀다. 날개를 펼치면 거대하고, 부하 비둘기를 거느린다.', [15, 40, 15, 0, 10, 20]],
   chijeu: ['nyanpunch', '사미 치즈냥', '꼬리가 네 갈래 핑크 불꽃이 되고 보석 방울 목걸이를 찼다. 귀 끝에도 불꽃이 핀다.', [0, 40, 10, 10, 10, 30]],
   basaeng: ['roachrush', '교장 바선생', '학사모를 쓰고 날개를 펼쳤다. 날아오르는 순간 모두가 비명을 지른다.', [10, 35, 25, 0, 20, 10]],
-  deungsin: ['glasscannon', '해탈 등신', '죽음을 너무 많이 겪어 해탈했다. 머리 위에 천사 링, 몸에는 뽁뽁이를 칭칭 감았다. 그래도 죽는다.', [10, 20, 20, 20, 20, 10]],
+  deungsin: ['glasscannon', '바다의 왕', '수많은 죽음을 넘어 바다의 왕이 되었다. 왕관과 삼지창, 망토를 둘렀다. 갈증 게이지가 사라지고, 돌연사와 다른 모든 죽을 확률이 절반이 된다.', [10, 20, 20, 20, 20, 10]],
   hwangsari: ['yellowgust', '대황사 황사리', '방독면과 고글을 쓴 거대 모래폭풍. 아래는 토네이도가 되었고 주변에 돌덩이가 돈다.', [10, 40, 25, 0, 15, 10]],
 });
 
@@ -521,7 +525,7 @@ const ZMOVES = {
   dakdulgi: ['광장 대습격', 'wind', 180, '광장 비둘기가 한꺼번에 날아오른다. 상대 명중률 하락', { foe: { acc: -1 } }],
   chijeu: ['츄르 각성 냥펀치', 'fairy', 180, '츄르를 먹고 각성한 펀치. 사용 후 자신의 스피드 상승', { self: { spe: 1 }, selfAfter: true }],
   basaeng: ['전교생 집합', 'poison', 180, '바퀴벌레 전교생이 몰려온다. 반드시 독', { st: { s: 'psn', ch: 100 } }],
-  deungsin: ['WASTED', 'water', 190, '등신이 온몸으로 바다를 끌고 와 덮친다. 쓰고 나면 등신도 50% 확률로 즉사', { wasted: true }],
+  deungsin: ['3억 개의 알', 'normal', 230, '개복치가 평생 낳는 3억 개의 알이 한꺼번에 부화해 상대를 덮친다. 맞은 상대는 공포에 질려 다음 행동을 못 한다', { fear: true }],
   hwangsari: ['누런 하늘', 'earth', 180, '하늘이 누렇게 덮인다. 상대 명중률 하락', { foe: { acc: -1 } }],
 };
 for (const [id, [n, type, pow, d, extra = {}]] of Object.entries(ZMOVES)) {
@@ -540,7 +544,7 @@ for (const [id, [sig, n, d, boost]] of Object.entries(SIGNATURE)) {
   mon.mega = { n, d, boost: Object.fromEntries(STAT_KEYS.map((k, i) => [k, boost[i]])) };
 }
 // 전용기가 여럿인 요괴: 단조는 강화·강화 베기·특성검술·리플렉터가 모두 전용기
-for (const id of ['tierslash', 'elemblade', 'reflector', 'bangalzzuk', 'ramdeath', 'vinyl', 'pufferspike', 'hydrate', 'ignite']) MOVES[id].sig = true;
+for (const id of ['tierslash', 'elemblade', 'reflector', 'bangalzzuk', 'ramdeath', 'vinyl', 'pufferspike', 'hydrate', 'ignite', 'overcome', 'dice', 'mockspit', 'irontail']) MOVES[id].sig = true;
 MONSTERS.bungbbang.moves = MONSTERS.bungbbang.moves.map((m) => (m === 'ember' ? 'bangalzzuk' : m));
 
 const AVATAR_OPTIONS = {
@@ -687,7 +691,7 @@ Object.assign(MONSTERS.maemmaem, { trait: { n: '떼창', d: '소리 기술의 �
 Object.assign(MONSTERS.wengweng, { trait: { n: '파리채 내성', d: '전기 기술에 맞으면 피해를 받지 않고 특공이 1단계 올라간다.' } });
 Object.assign(MONSTERS.dakdulgi, { trait: { n: '빵 줍기', d: '체력이 절반 이하가 되면(한 번만) 바닥의 빵을 주워 먹고 체력을 1/3 회복한다.' } });
 Object.assign(MONSTERS.chijeu, { trait: { n: '그루밍', d: '턴이 끝날 때 상태이상이 있으면 50% 확률로 털을 핥아 낫는다.' } });
-Object.assign(MONSTERS.deungsin, { trait: { n: '돌연사 · 갈증', d: '돌연사: 턴이 시작될 때, 턴이 끝날 때, 공격할 때, 공격받을 때마다 10% 확률로 즉사한다. 갈증: 체력바 아래 갈증 게이지(100%에서 시작)가 기술을 쓰면 15%, 턴이 끝나면 5%, 공격받으면 5% 줄고, 0%가 되면 즉사한다.' } });
+Object.assign(MONSTERS.deungsin, { trait: { n: '돌연사 · 갈증', d: '돌연사: 턴이 시작될 때, 턴이 끝날 때, 공격할 때, 공격받을 때마다 10% 확률로 즉사한다. 갈증: 체력바 아래 갈증 게이지(100%에서 시작)가 기술을 쓰면 15%, 턴이 끝나면 5%, 공격받으면 5% 줄고, 0%가 되면 즉사한다. 메가진화(바다의 왕)하면 갈증 게이지가 사라지고 모든 죽을 확률이 절반이 된다.' } });
 Object.assign(MONSTERS.basaeng, { trait: { n: '불사신', d: '한 방에 쓰러질 공격을 맞아도 30% 확률로 체력 1을 남기고 버틴다.' } });
 // 하위권 상향: 기본 능력치에 더하는 값 [체력, 공격, 방어, 특공, 특방, 스피드]
 const BUFFS = {

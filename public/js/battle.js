@@ -510,6 +510,8 @@ const Battle = (() => {
         if (box) { box.classList.add('swapfx'); setTimeout(() => box.classList.remove('swapfx'), 700); }
         await wait(Math.max(400, ms - 400)); break;
       }
+      case 'dice': await wait(Fx.dice?.(key, e.n) || 900); break;
+      case 'splash': await wait(Fx.splash?.(key, sideKey(e.target)) || 700); break;
       case 'spiky': await wait(Fx.spiky?.(key, e.hit ? sideKey(e.target) : null, e) || 700); break;
       default:
     }

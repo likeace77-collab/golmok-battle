@@ -173,9 +173,8 @@ test('메가진화: 행동을 쓰지 않고, 능력치가 오르며, 한 판에 
 
 test('모든 요괴의 배울 수 있는 기술은 10개다', () => {
   for (const [id, m] of Object.entries(MONSTERS)) {
-    const n = id === 'deungsin' ? 6 : 10; // 등신은 전용기 6개뿐
-    assert.equal(m.moves.length, n, id);
-    assert.equal(new Set(m.moves).size, n, id);
+    assert.equal(m.moves.length, 10, id);
+    assert.equal(new Set(m.moves).size, 10, id);
   }
 });
 
@@ -395,7 +394,7 @@ test('훈련장: 모든 요괴와 기술 10개, 더미는 1000 체력에 안 끝
   const b = E.createTraining({ name: '철수', avatar: {}, style: {}, deck: '모든 요괴' }, 7);
   const v = E.viewFor(b, 0);
   assert.strictEqual(v.me.mons.length, Object.keys(MONSTERS).length);
-  assert.ok(v.me.mons.every((m) => m.moves.length === (m.species === 'deungsin' ? 6 : 10)));
+  assert.ok(v.me.mons.every((m) => m.moves.length === 10));
   assert.strictEqual(v.opp.active.maxHp, 1000);
   assert.deepStrictEqual(v.opp.active.types, []);
   let total = 0;
@@ -760,7 +759,7 @@ test('도구 20개: 덱에서 들려 주고 전투에서 효과가 난다', () =
     for (let i = 0; i < 9 && !y.itemUsed && y.hp > 0; i++) turn(b, 'quake', 'breeze'); assert.ok(y.itemUsed, String(y.hp)); }
 });
 
-test('등신: 돌연사·갈증, 기술 6개', () => {
+test('등신: 돌연사·갈증, 전용기 10개', () => {
   const turn = (b, m0, m1) => (move(b, 0, m0).events || move(b, 1, m1).events);
   const D = MONSTERS.deungsin;
   assert.deepEqual(D.types, ['water', 'normal']);
@@ -794,4 +793,14 @@ test('등신: 돌연사·갈증, 기술 6개', () => {
   let died = 0;
   for (let seed = 1; seed < 60; seed++) { const b = battle(custom('deungsin', ['hydrate']), custom('maetdol', ['wall']), seed); turn(b, 'hydrate', 'wall'); if (E.activeOf(b, 0).hp === 0) died++; }
   assert.ok(died > 3 && died < 50, String(died));
+  // 주사위: 1~6 모두 나오고, 메가진화하면 갈증 게이지가 사라짐
+  const faces = new Set();
+  for (let seed = 1; seed < 80; seed++) { const b = battle(custom('deungsin', ['dice']), custom('maetdol', ['wall']), seed); const ev = turn(b, 'dice', 'wall'); for (const e of ev) if (e.t === 'dice') faces.add(e.n); }
+  assert.equal(faces.size, 6);
+  { const b = battle(custom('deungsin', ['irontail']), custom('maetdol', ['wall'])); const r = E.choose(b, 0, { type: 'move', index: 0, mega: true }); E.choose(b, 1, { type: 'move', index: 0 });
+    const x = E.activeOf(b, 0); assert.ok(x.mega); assert.equal(x.thirst, null); }
+  // 갈증 극복 성공하면 게이지가 없어짐
+  let freed = 0;
+  for (let seed = 1; seed < 30; seed++) { const b = battle(custom('deungsin', ['overcome']), custom('maetdol', ['wall']), seed); turn(b, 'overcome', 'wall'); const x = E.activeOf(b, 0); if (x.hp > 0 && x.thirst === null) freed++; }
+  assert.ok(freed > 5, String(freed));
 });

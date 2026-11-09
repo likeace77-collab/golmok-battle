@@ -1179,6 +1179,27 @@ const Fx = (() => {
       return 480;
     },
     // ===== 등신 =====
+    overcome(A, T, k) {
+      act(k, 'jump', 700); ring(ground(A), { color: '#3A9BFF', r0: 20, r1: 120, squash: .3, w: 6, dur: 600 });
+      burst('drop', ground(A), { n: 14, dist: 70, size: 9 }); bang(above(A, 90), '슬쩍...', { delay: 200, color: '#bfe8ff', size: 26 });
+      return 800;
+    },
+    dice(A, T, k) { act(k, 'throw', 500); return 500; },
+    mockspit(A, T, k, t) {
+      act(k, 'cast', 600); bang(above(A, 80), '퉤!', { color: '#bfe8ff', size: 34 });
+      spray('drop', A, T, { delay: 200, n: 5, gap: 40, dur: 300, size: 8, arc: 50 });
+      bang(above(T, 80), '메롱~', { delay: 560, color: '#FF8CCB', size: 26 }); later(() => act(t, 'sway', 500), 560);
+      return 900;
+    },
+    irontail(A, T, k, t) {
+      act(k, 'charge', 560); glow(A, '#E3E8EF', { r: 110, dur: 560 }); orbit('spark', A, { n: 8, r: 54, dur: 520, size: 9 });
+      bang(above(A, 90), '강철화!', { delay: 100, color: '#E3E8EF', size: 26 });
+      later(() => act(k, 'dash', 520), 520);
+      swoosh(T, { delay: 620, color: '#c7cdd6', r: 90, a0: -2.8, a1: .4, w: 18, dur: 260 });
+      frame(860); shockwave(T, '#E3E8EF', { delay: 860, r: 190 }); cracks(T, { delay: 870 });
+      bang(above(T, 90), '철컹!!', { delay: 880, color: '#E3E8EF', size: 38 }); shake(14, 420, 860);
+      return 880;
+    },
     glasscannon(A, T, k, t) {
       darken(1500, .6, 0, '#05060c'); act(k, 'charge', 900);
       gather(A, '#FFE45C', { dur: 800, n: 30, r: 160 }); orbit('shard', A, { n: 10, r: 60, dur: 900, size: 11, turns: 2 });
@@ -1222,6 +1243,39 @@ const Fx = (() => {
     },
   });
   // 등신 상태 연출
+  function drawDie(x, y, size, n, rot) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    const h = size / 2, r = size * .18;
+    ctx.beginPath(); ctx.moveTo(-h + r, -h); ctx.arcTo(h, -h, h, h, r); ctx.arcTo(h, h, -h, h, r); ctx.arcTo(-h, h, -h, -h, r); ctx.arcTo(-h, -h, h, -h, r); ctx.closePath();
+    ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = size * .07; ctx.stroke();
+    const P = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] }[n];
+    ctx.fillStyle = n === 1 ? '#E8402C' : INK;
+    for (const [px, py] of P) { ctx.beginPath(); ctx.arc(px * h * .5, py * h * .5, size * (n === 1 ? .13 : .09), 0, 7); ctx.fill(); }
+    ctx.restore();
+  }
+  function dice(key, n) {
+    if (REDUCED) return 900;
+    measure(); const at = spot(key), top = above(at, 120);
+    add(1500, (p) => {
+      const roll = Math.min(1, p / .55), face = roll < 1 ? 1 + Math.floor(p * 40) % 6 : n;
+      const y = roll < 1 ? lerp(at.y, top.y, Math.sin(roll * Math.PI)) - 20 * u : top.y + 10 * u;
+      const s = (roll < 1 ? 34 : 34 + 12 * Math.sin(Math.min(1, (p - .55) / .15) * Math.PI)) * u;
+      ctx.globalAlpha = fade(p, .15);
+      drawDie(at.x + (roll < 1 ? (1 - roll) * 30 * u : 0), y, s, face, roll < 1 ? p * 22 : 0);
+    });
+    const c = ['', '#E8402C', '#4CD964', '#FF6A2B', '#4CD964', '#FF8CCB', '#FFD23F'][n];
+    UNDER = true; glow(top, c, { delay: 820, r: 90, dur: 500 }); ring(top, { delay: 820, color: c, r1: 100, w: 6 }); UNDER = false;
+    bang({ x: top.x, y: top.y - 40 * u }, n === 1 ? '1... 즉사!' : n === 6 ? '6! 대박!' : `${n}!`, { delay: 840, color: c, size: 30 });
+    if (n === 6) burst('sparkle', top, { delay: 840, n: 18, dist: 120, size: 11 });
+    return 1500;
+  }
+  function splash(key, foeKey) {
+    if (REDUCED) return 600;
+    measure(); const A = spot(key), T = spot(foeKey);
+    act(key, 'throw', 420); comet(A, T, { color: '#3A9BFF', size: 18, dur: 300, arc: 60 }); spray('drop', A, T, { n: 12, gap: 14, dur: 300, size: 9, arc: 60, spread: 20 });
+    impact(T, '#3A9BFF', { delay: 300, kind: 'drop' }); bang(above(T, 70), '촤악!', { delay: 320, color: '#3A9BFF', size: 34 });
+    return 900;
+  }
   function ignite(key, on) {
     if (REDUCED) return 600;
     measure(); const at = spot(key);
@@ -1289,7 +1343,7 @@ const Fx = (() => {
       d = run(spot(key), spot(foe), key, foe, e) || 700;
       UNDER = true;
       if ((e?.cat || mv?.cat) === 'p' && !mv?.sig) speedLines(T, { delay: Math.max(0, d - 120), dur: 260, n: 20, color: col });
-      if ((e?.cat || mv?.cat) !== 'x' && id !== 'ramdeath') impact(T, col, { delay: Math.max(0, d - 40), big: mv?.sig ? 1.25 : .85, kind: TYPE_P[type] || 'sparkle' });
+      if ((e?.cat || mv?.cat) !== 'x' && id !== 'ramdeath' && id !== 'overcome') impact(T, col, { delay: Math.max(0, d - 40), big: mv?.sig ? 1.25 : .85, kind: TYPE_P[type] || 'sparkle' });
       else ring(A, { color: col, r0: 20, r1: 110, w: 5, dur: 480 });
     } finally { OFF = 0; UNDER = false; }
     return pre + d + (mv?.sig ? 260 : 160);
@@ -1658,5 +1712,5 @@ const Fx = (() => {
   function weather(w) { if (REDUCED || !w) return 700; measure(); return weatherFx(w); }
 
   function item(key) { if (REDUCED) return; measure(); const at = spot(key); ring(at, { color: '#FFD23F', r0: 10, r1: 70, w: 4, dur: 380 }); burst('sparkle', at, { n: 8, dist: 46, size: 7 }); }
-  return { attach, play, ignite, spiky, hydrate, reflectReady, reflect, counter, terrain, rage, item, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, awaken, entrance, forge, ids: () => Object.keys(MOVE_FX) };
+  return { attach, play, ignite, spiky, hydrate, dice, splash, reflectReady, reflect, counter, terrain, rage, item, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, awaken, entrance, forge, ids: () => Object.keys(MOVE_FX) };
 })();
