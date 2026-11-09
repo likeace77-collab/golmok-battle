@@ -216,6 +216,16 @@ const Battle = (() => {
       ${stages.map(([k, v]) => `<span class="badge">${lb[k]}${v > 0 ? '+' : ''}${v}</span>`).join('')}${itemBadge(key, m)}</div>
       <div class="bar"><i></i></div><div class="num"></div>${m.thirst != null ? `<div class="thirst${m.thirst <= 30 ? ' low' : ''}"><i style="width:${m.thirst}%"></i><span>💧 갈증 ${m.thirst}%</span></div>` : ''}`;
     setBar(key, m);
+    stackPlates();
+  }
+  // 태그전: 이름표가 커져도 서로 겹치지 않게 위아래로 쌓음
+  function stackPlates() {
+    if (!view?.doubles) return;
+    const sc = $('#scene'), op = $('#p-opp'), op2 = $('#p-opp2'), me = $('#p-me'), al = $('#p-ally');
+    if (!sc) return;
+    const H = sc.clientHeight, gap = 4;
+    if (op && op2) op2.style.top = `${Math.max(H * .21, op.offsetTop + op.offsetHeight + gap)}px`;
+    if (me && al) al.style.bottom = `${Math.max(H * .25, H - me.offsetTop + gap)}px`;
   }
 
   // 루미나·실비아: 각성 단계 오라

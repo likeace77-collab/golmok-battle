@@ -415,7 +415,10 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .title.small { font-size: clamp(34px, 10vw, 54px); }
 .owner { font-size: 11px; line-height: 1; color: #5f5870; font-family: var(--ui); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .scene.dbl .plate { width: 41%; padding: 2px 6px 4px; box-shadow: 2px 2px 0 var(--ink); }
-.scene.dbl .plate .nm { font-size: clamp(12px, 3.4vw, 15px); }
+.scene.dbl .plate .nm { font-size: clamp(12px, 3.4vw, 15px); flex-wrap: nowrap; overflow: hidden; white-space: nowrap; }
+.scene.dbl .plate .nm .badge { font-size: 10px; padding: 1px 3px; flex: none; }
+.scene.dbl .plate .thirst { height: 11px; margin-top: 1px; }
+.scene.dbl .plate .thirst span { font-size: 8px; line-height: 8px; }
 .scene.dbl .plate .bar { height: 8px; margin-top: 1px; }
 .scene.dbl .plate .num { font-size: 11px; margin-top: 0; }
 .scene.dbl .plate.opp { top: 2%; left: 1%; }
