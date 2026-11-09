@@ -294,6 +294,11 @@ function hurt(b, s, m, amount, ev, extra) {
     }
   }
   if (m.hp > 0 && m.hp * 2 <= m.maxHp && has(m, 'onigiri')) { useItem(b, s, m, ev, '삼각김밥을 먹었다!'); heal(b, s, m, m.maxHp / 3, ev); }
+  if (m.species === 'dakdulgi' && !m.ateBread && m.hp > 0 && m.hp * 2 <= m.maxHp) { // 닭둘기 빵 줍기
+    m.ateBread = true;
+    msg(ev, `${josa(m.name, '은/는')} 바닥의 빵을 주워 먹었다!`);
+    heal(b, s, m, m.maxHp / 3, ev);
+  }
   if (m.species === 'jeonbot' && !m.emergency && m.hp > 0 && m.hp * 2 <= m.maxHp) { // 전봇이 비상전력
     m.emergency = true;
     msg(ev, `${m.name}의 비상전력! 방어를 버리고 출력을 끌어올린다!`);
@@ -467,6 +472,10 @@ function damageOf(b, atk, def, mv, crit, roll) {
   if (b.terrain === 'grass' && mv.type === 'grass' && teamOf(b, seats(b).find((i) => activeOf(b, i) === atk) ?? -1) === b.terrainTeam) dmg *= 1.3;
   if (mv.bean && def.types.includes('spirit')) dmg *= 2; // 팥붕: 팥은 귀신에게 두 배 // 그래스필드 (깐 쪽만)
   if (mv.sound && atk.species === 'harmonium') dmg *= 1.3; // 특성 펑크록
+  if (mv.sound && atk.species === 'maemmaem') dmg *= 1.3; // 특성 떼창
+  if (phys && def.species === 'malrang') dmg *= .75; // 특성 말랑말랑
+  if (def.species === 'seonggeom' && def.hp === def.maxHp) dmg *= .5; // 특성 천년의 잠
+  if (!phys && atk.species === 'madoseo' && def.status) dmg *= 1.3; // 특성 금서
   if (mv.sound && def.species === 'harmonium') dmg *= .5;
   if (atk.species === 'yangmeori' && mv.type === (isHot(b) ? 'fire' : 'ice')) dmg *= 1.3; // 특성 온탕냉탕
   if (phys && atk.status === 'brn') dmg *= .5;
@@ -498,7 +507,7 @@ function onEntry(b, s, m, ev) {
     b.weather = sky[0]; b.weatherTurns = 5;
     ev.push({ t: 'weather', weather: sky[0], trait: true, text: `${m.name}의 ${sky[1]}! ${sky[2]}` });
   }
-  const drop = { jangdok: ['acc', '발효'], jangseung: ['atk', '위협'], manhol: ['acc', '악취'] }[m.species];
+  const drop = { jangdok: ['acc', '발효'], jangseung: ['atk', '위협'], manhol: ['acc', '악취'], mimik: ['spe', '보물 미끼'] }[m.species];
   if (drop) {
     msg(ev, `${m.name}의 ${drop[1]}!`);
     for (const o of foesOf(b, s)) {
@@ -620,6 +629,7 @@ function hitOne(b, s, me, o, mv, ev) {
   let counter = 0;
   if (!alive(foe)) { msg(ev, '그러나 맞힐 상대가 없었다!'); return; }
   if (foe.protecting) {
+    if (mv.sound && me.species === 'maemmaem') mv = { ...mv, breakGuard: true }; // 특성 떼창
     if (mv.z && !mv.breakGuard) {
       msg(ev, `${foe.name}의 막기를 뚫었다! 하지만 위력이 줄었다.`);
       mv = { ...mv, pow: Math.round(mv.pow / 4) };
@@ -636,6 +646,11 @@ function hitOne(b, s, me, o, mv, ev) {
 
   if (mv.cat === 'x') return statusMove(b, s, me, o, foe, mv, ev);
 
+  if (foe.species === 'wengweng' && mv.type === 'elec') { // 특성 파리채 내성
+    msg(ev, `${foe.name}의 파리채 내성! 전기를 흡수했다!`);
+    changeStage(b, o, foe, 'spa', 1, ev);
+    return;
+  }
   if (foe.species === 'batji' && mv.type === 'water') { // 빗물받이 저수
     msg(ev, `${foe.name}의 저수! 물을 받아 마셨다!`);
     if (!heal(b, o, foe, foe.maxHp / 4, ev)) msg(ev, `${josa(foe.name, '은/는')} 이미 배가 부르다.`);
@@ -661,11 +676,17 @@ function hitOne(b, s, me, o, mv, ev) {
     }
     const sturdy = foe.species === 'maetdol' && foe.hp === foe.maxHp && dmg >= foe.hp && foe.hp > 1; // 맷돌이 옹골참
     if (sturdy) dmg = foe.hp - 1;
+    const roach = !sturdy && foe.species === 'basaeng' && dmg >= foe.hp && foe.hp > 1 && chance(b, 30); // 바선생 불사신
+    if (roach) dmg = foe.hp - 1;
+    const reborn = !sturdy && !roach && foe.species === 'hwansaeng' && !foe.reborn && dmg >= foe.hp && !b.training; // 환생트럭 이세계 환생
+    if (reborn) { foe.reborn = true; dmg = foe.hp; }
     let hold = null;
-    if (!sturdy && dmg >= foe.hp && foe.hp > 1 && has(foe, 'sash')) { hold = '기합으로 버텼다!'; dmg = foe.hp - 1; } // 기합의띠
+    if (!sturdy && !roach && !reborn && dmg >= foe.hp && foe.hp > 1 && has(foe, 'sash')) { hold = '기합으로 버텼다!'; dmg = foe.hp - 1; } // 기합의띠
     const got = hurt(b, o, foe, dmg, ev, { eff, crit, moveType: mv.type });
     total += got;
     if (sturdy) msg(ev, `${josa(foe.name, '은/는')} 옹골참으로 버텼다!`);
+    if (roach) msg(ev, `${josa(foe.name, '은/는')} 불사신이다! 체력 1로 버텼다!`);
+    if (reborn) { msg(ev, `${josa(foe.name, '은/는')} 이세계에서 환생해 돌아왔다!`); heal(b, o, foe, foe.maxHp / 4, ev); }
     if (hold) useItem(b, o, foe, ev, hold);
     if (foe.species === 'bongdari' && mv.cat === 'p') foe.lastPhys = got; // 봉다리 내용물분출용
     landed++;
@@ -918,6 +939,10 @@ function endOfTurn(b, ev) {
     if (m.species === 'damjaengjeon' && m.hp < m.maxHp) { // 특성 광합성 충전
       msg(ev, `${josa(m.name, '은/는')} 광합성으로 충전했다!`);
       heal(b, s, m, m.maxHp / 16, ev);
+    }
+    if (m.species === 'chijeu' && m.status && chance(b, 50)) { // 치즈냥 그루밍
+      m.status = null; m.statusTurns = 0;
+      ev.push({ t: 'status', side: s, status: null, text: `${josa(m.name, '은/는')} 털을 핥아 상태이상이 나았다!` });
     }
     if (m.species === 'yangmeori') msg(ev, isHot(b) ? `${josa(m.name, '은/는')} 냉탕으로 옮겼다! 얼음 기술이 강해진다.` : `${josa(m.name, '은/는')} 온탕으로 옮겼다! 불 기술이 강해진다.`);
   }

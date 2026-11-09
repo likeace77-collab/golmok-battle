@@ -49,18 +49,18 @@ test('2배 상성은 1배보다 약 2배 피해를 주고, 절반 상성은 약 
 
 test('모든 요괴에게 그림이 있고 스킬이 겹치지 않는다', () => {
   const read = (f) => require('fs').readFileSync(require('path').join(__dirname, '../public/js', f), 'utf8');
-  const art = read('art.js'), mega = read('mega-art.js'), newArt = read('new-art.js');
+  const art = read('art.js'), mega = read('mega-art.js'), newArt = read('new-art.js') + read('new-art2.js');
   for (const [id, m] of Object.entries(MONSTERS)) {
     if (m.img) { // 사진 그림
       for (const f of [id, `${id}-mega`, ...Array.from({ length: m.stages || 0 }, (_, i) => `${id}-s${i + 1}`), ...Array.from({ length: m.tierImgs ?? m.tiers ?? 0 }, (_, i) => `${id}-t${i + 1}`), ...Array.from({ length: m.forms || 0 }, (_, i) => `${id}-f${i + 1}`)]) assert.ok(require('fs').existsSync(require('path').join(__dirname, `../public/img/mon/${f}.webp`)), f);
       assert.equal(new Set(m.moves).size, m.moves.length, id);
       continue;
     }
-    assert.match(art + newArt, new RegExp(`\\b${id}: (wrap|L)\\(`), id);
-    assert.match(mega + newArt, new RegExp(`\\b${id}: L\\(`), `메가 ${id}`);
+    assert.match(art + newArt, new RegExp(`\\b${id}: (wrap|L\\(|")`), id);
+    assert.match(mega + newArt, new RegExp(`\\b${id}: (L\\(|")`), `메가 ${id}`);
     assert.equal(new Set(m.moves).size, m.moves.length, id);
   }
-  assert.equal(Object.keys(MONSTERS).length, 46);
+  assert.equal(Object.keys(MONSTERS).length, 56);
 });
 
 test('역류는 소나기에서 2배, 뻥 뚫기는 막기를 뚫고 압정을 치운다', () => {
@@ -144,7 +144,7 @@ test('모든 요괴에게 전용기가 있고 다른 요괴는 배울 수 없다
     owner[m.sig] = (owner[m.sig] || 0) + 1;
     assert.equal(Object.values(m.mega.boost).reduce((a, c) => a + c), 100, id);
   }
-  assert.equal(Object.keys(owner).length, 46);
+  assert.equal(Object.keys(owner).length, 56);
   // 전용기는 한 요괴만 배운다 (단조처럼 전용기가 여럿일 수는 있음)
   const who = {};
   for (const [id, m] of Object.entries(MONSTERS)) for (const mv of m.moves) if (MOVES[mv].sig) (who[mv] ||= new Set()).add(id);

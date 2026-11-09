@@ -523,6 +523,16 @@ const Fx = (() => {
       shake(10, 360, d + 340); tint(t, 'burn', 400, d + 360);
       return open + 700;
     },
+    trucksudden(A, T, k, t) { flash('#fff7b0', 120, 0, .5); act(k, 'dash', 520); ring(A, { color: '#8ff6ff', r1: 70, w: 5, squash: .35 }); burst('sparkle', T, { delay: 260, n: 10, dist: 60 }); burst('scrap', T, { delay: 260, n: 8, dist: 70 }); shake(10, 320, 260); return 820; },
+    jellypress(A, T, k, t) { act(k, 'dash', 560); burst('glob', T, { delay: 300, n: 14, dist: 64, size: 10 }); burst('drop', T, { delay: 320, n: 8, dist: 40 }); ring(T, { color: '#6be3a4', delay: 300, r1: 90, w: 8, squash: .5 }); burst('leaf', A, { delay: 620, n: 6, dist: 30 }); return 980; },
+    holysword(A, T, k, t) { act(k, 'charge', 420); ring(A, { color: '#ffe46b', r1: 60, w: 6 }); prop('shard', { from: above(T, 170), to: T, delay: 380, dur: 200, size: 46 }); slash(T, { delay: 560, angle: -1.5, len: 130, color: '#fff6c2', w: 10 }); burst('sparkle', T, { delay: 580, n: 14, dist: 70 }); flash('#fff6c2', 200, 560, .45); shake(8, 300, 580); return 1100; },
+    forbidpage(A, T, k, t) { act(k, 'cast', 760); orbit('flame', A, { n: 6, r: 44, dur: 420, size: 8 }); spray('flame', A, T, { n: 18, gap: 24, dur: 320, size: 11, spread: 22, delay: 380 }); burst('wisp', T, { delay: 700, n: 8, dist: 50 }); tint(t, 'burn', 500, 700); return 1200; },
+    chomp(A, T, k, t) { act(k, 'dash', 520); burst('coin', A, { n: 8, dist: 40 }); slash(T, { delay: 300, angle: .6, len: 90, color: '#ff5c8a' }); slash(T, { delay: 360, angle: -.6, len: 90, color: '#ff5c8a' }); burst('wisp', T, { delay: 380, n: 8, dist: 50 }); shake(7, 260, 360); return 860; },
+    cicadacry(A, T, k, t) { act(k, 'cast', 900); for (let i = 0; i < 5; i++) ring(A, { delay: i * 120, color: ['#ffe14d', '#7ed957'][i % 2], r0: 20, r1: 170, w: 5, dur: 420 }); burst('leaf', T, { delay: 500, n: 10, dist: 60 }); shake(9, 600, 300); return 1150; },
+    bloodsuck(A, T, k, t) { act(k, 'dash', 480); bolt(A, T, { dur: 300, w: 2, color: '#b6ff3c' }); burst('drop', T, { delay: 300, n: 8, dist: 40 }); burst('glob', A, { delay: 620, n: 6, dist: 30 }); tint(t, 'poison', 400, 320); return 980; },
+    flutter(A, T, k, t) { act(k, 'dash', 560); burst('crescent', T, { delay: 280, n: 12, dist: 80 }); burst('seed', T, { delay: 320, n: 10, dist: 60 }); burst('dust', T, { delay: 320, n: 8, dist: 50 }); return 900; },
+    nyanpunch(A, T, k, t) { act(k, 'dash', 700); for (let i = 0; i < 4; i++) { prop('fist', { from: A, to: T, delay: i * 110, dur: 140, size: 26 }); burst('pheart', T, { delay: 140 + i * 110, n: 3, dist: 30 }); } burst('flame', T, { delay: 560, n: 6, dist: 36 }); return 1000; },
+    roachrush(A, T, k, t) { act(k, 'dash', 420); flash('#2a1006', 160, 0, .55); burst('wisp', T, { delay: 220, n: 10, dist: 60 }); burst('dust', T, { delay: 220, n: 8, dist: 50 }); shake(12, 360, 220); tint(t, 'poison', 380, 260); return 820; },
     rageaxe(A, T, k, t) { return rageAxe(A, T, k, t); },
     elemblade(A, T, k, t, e) { return elemBlade(A, T, k, t, e?.type); },
     reflector(A, T, k) { act(k, 'cast', 400); return 500; },

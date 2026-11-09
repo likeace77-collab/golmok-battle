@@ -173,6 +173,17 @@ const MOVES = {
   bangalzzuk:M('반갈쭉', 'fire', 'p', 100, 100, 10, { split: true, d: '몸을 세로로 반 갈라 속을 확인한다. 팥붕: 팥을 던져 강하게 공격(혼 타입에게 2배) / 슈붕: 체력 절반 회복 / 피붕: 공격·방어·스피드 1단계 상승' }),
   rageaxe:   M('분노의 도끼', 'fire', 'p', 70, 100, 10, { rage: true, d: '잃은 체력이 많을수록 강해진다. 위력 70~150' }),
   yellowgust:M('황사 경보', 'earth', 'p', 25, 95, 15, { hits: [2, 5], d: '모래 알갱이가 2~5번 연속으로 때린다' }),
+  // 신캐 10종
+  trucksudden:M('갑툭튀 트럭', 'steel', 'p', 80, 100, 10, { pri: 1, d: '트럭은 언제나 갑자기 나타난다. 우선도 +1' }),
+  jellypress:M('말랑 덮치기', 'water', 's', 80, 100, 10, { drain: .5, d: '말랑한 몸으로 덮친다. 준 피해의 절반을 회복' }),
+  holysword: M('성검 내려치기', 'fairy', 'p', 90, 100, 10, { crit: true, d: '반쯤 뽑힌 성검으로 내려친다. 급소에 잘 맞음' }),
+  forbidpage:M('금지된 페이지', 'fire', 's', 95, 95, 10, { st: { s: 'brn', ch: 20 }, d: '읽으면 안 되는 주문을 읽는다. 20% 확률로 화상' }),
+  chomp:     M('덥석', 'spirit', 'p', 85, 100, 10, { fl: 30, d: '보물인 줄 알고 다가온 상대를 문다. 30% 확률로 풀죽음' }),
+  cicadacry: M('7년의 울음', 'grass', 's', 85, 100, 10, { sound: true, foe: { spd: -1 }, sc: 30, d: '[소리] 땅속에서 7년을 참은 울음. 30% 확률로 상대 특방 하락' }),
+  bloodsuck: M('흡혈 침', 'poison', 's', 75, 100, 10, { drain: .5, d: '피를 쪽쪽 빤다. 준 피해의 절반을 회복' }),
+  flutter:   M('푸드덕', 'wind', 'p', 80, 100, 10, { foe: { acc: -1 }, sc: 30, d: '깃털과 빵가루를 날린다. 30% 확률로 상대 명중률 하락' }),
+  nyanpunch: M('냥냥펀치', 'fairy', 'p', 22, 100, 15, { hits: [3, 5], d: '앞발로 3~5번 연속 펀치' }),
+  roachrush: M('바선생 등장', 'poison', 'p', 85, 100, 10, { fl: 30, d: '갑자기 나타나 모두를 얼어붙게 한다. 30% 확률로 풀죽음' }),
   // 보통
   tackle:    M('몸통 박치기', 'none', 'p', 50, 100, 30, { d: '기본 공격' }),
   guard:     M('막기', 'none', 'x', 0, null, 10, { protect: true, pri: 3, self_: true, d: '이번 턴 공격을 막음 (연속 사용 시 실패하기 쉬움)' }),
@@ -333,6 +344,38 @@ const MONSTERS = {
   harmonium:X('하르모니움', ['steel', 'spirit'], 90, 50, 110, 115, 85, 50,
     ['metalnoise', 'magnet', 'highvolt', 'scold', 'nightmare', 'charge', 'armor', 'shock', 'lionroar', 'guard'],
     '철골 아치 무대가 요괴가 되었다. 양쪽 스피커는 몸이고, 가운데 매달린 유선 마이크가 뇌다. 선이 뽑히면 아무 말도 못 한다.'),
+  // 이세계
+  hwansaeng:X('환생트럭', ['steel', 'fairy'], 90, 95, 90, 50, 70, 70,
+    ['trucksudden', 'ironhead', 'hammer', 'pixiedust', 'quake', 'rockthrow', 'shieldbash', 'charm', 'armor', 'guard'],
+    '치이면 이세계로 보내 준다는 전설의 트럭. 천사 링을 달고 다니며, 바닥에는 늘 전송 마법진이 돈다.'),
+  malrang:  X('말랑왕', ['water', 'grass'], 120, 50, 85, 95, 95, 45,
+    ['jellypress', 'bucket', 'hose', 'sapdrain', 'pollen', 'squirt', 'seed', 'rainy', 'potion', 'guard'],
+    '이세계에서 처음 만나는 몬스터, 슬라임들의 왕. 왕관은 용사가 떨어뜨린 것을 주웠다.'),
+  seonggeom:X('성검바위', ['earth', 'fairy'], 95, 105, 130, 40, 85, 35,
+    ['holysword', 'quake', 'rockthrow', 'grind', 'pixiedust', 'ironhead', 'wall', 'charm', 'nap', 'guard'],
+    '용사만 뽑을 수 있는 성검이 박힌 바위. 천 년째 졸려서 아무도 못 뽑게 버티는 중이다.'),
+  madoseo:  X('마도서', ['fire', 'wind'], 70, 40, 65, 125, 85, 105,
+    ['forbidpage', 'flame', 'blaze', 'twister', 'gust', 'ember', 'focusmana', 'heatwave', 'breeze', 'guard'],
+    '금지된 마법서. 책장을 펄럭이며 날아다니고, 끝까지 읽으려는 독자를 이빨로 문다.'),
+  mimik:    X('미믹', ['grass', 'spirit'], 95, 125, 95, 45, 80, 80,
+    ['chomp', 'club', 'vinewhip', 'ambush', 'leafcut', 'soulrush', 'rockthrow', 'seed', 'nightmare', 'guard'],
+    '이끼 낀 보물상자인 척하는 함정. 뚜껑을 열면 금화보다 혀가 먼저 나온다.'),
+  // 벌레·동물
+  maemmaem: X('맴맴이', ['grass', 'steel'], 85, 60, 100, 105, 80, 65,
+    ['cicadacry', 'pollen', 'sapdrain', 'magnet', 'scold', 'lionroar', 'ironhead', 'armor', 'sunbathe', 'guard'],
+    '여름 골목 최강의 소음원. 강철 같은 껍질을 두른 매미로, 땅속에서 7년을 참았다.'),
+  wengweng: X('왱왱이', ['elec', 'poison'], 65, 50, 55, 110, 70, 135,
+    ['bloodsuck', 'highvolt', 'bolt', 'sludge', 'spit', 'gust', 'shock', 'fog', 'charge', 'guard'],
+    '전기 파리채에 맞고도 살아남아 감전 능력을 얻은 모기. 불 끄면 귓가에서 운다.'),
+  dakdulgi: X('닭둘기', ['wind'], 115, 95, 80, 45, 70, 85,
+    ['flutter', 'razorwind', 'windcut', 'tackle', 'rockthrow', 'grind', 'nap', 'breeze', 'spirit_up', 'guard'],
+    '너무 많이 주워 먹어서 잘 날지 못하는 광장 비둘기. 목 깃털만은 무지갯빛으로 빛난다.'),
+  chijeu:   X('치즈냥', ['fire', 'fairy'], 80, 110, 70, 80, 75, 110,
+    ['nyanpunch', 'coalhead', 'firerush', 'pixiedust', 'flame', 'ambush', 'charm', 'fairydance', 'spirit_up', 'guard'],
+    '골목의 치즈 길고양이. 꼬리 끝에 불꽃이 붙어 있고, 츄르를 보면 눈이 반짝인다.'),
+  basaeng:  X('바선생', ['poison'], 80, 95, 95, 50, 80, 95,
+    ['roachrush', 'sting', 'ambush', 'scrap', 'rockthrow', 'tacks', 'stench', 'fog', 'spirit_up', 'guard'],
+    '넥타이를 맨 바퀴벌레 선생님. 절대 죽지 않는다. 오늘도 자습이다.'),
 };
 
 // 캐릭터별 전용기와 메가진화: [전용기, 메가 이름, 소개, [체력, 공격, 방어, 특공, 특방, 스피드 상승값]]
@@ -385,6 +428,16 @@ Object.assign(SIGNATURE, {
   ppogeuri: ['scrub', '거품여왕 뽀글이', '방울 왕관과 나비 날개, 거품 드레스. 이태리타월 리본이 길게 휘날린다.', [15, 0, 20, 30, 25, 10]],
   tuhon: ['rageaxe', '초(超)극대노 투혼', '분노가 갑옷까지 녹여 온몸이 용암처럼 붉게 달아올랐다. 등 뒤의 룬 방패가 불타고, 도끼에서 쇳물이 흘러내린다.', [0, 30, 25, 15, 20, 10]],
   harmonium: ['metalnoise', '월드투어 하르모니움', '아치가 두 겹으로 늘고 LED 화면과 레이저가 달렸다. 마이크는 황금 무선 마이크로 업그레이드.', [10, 0, 20, 40, 20, 10]],
+  hwansaeng: ['trucksudden', '신의 환생트럭', '링이 세 겹, 날개가 여섯 장으로 늘었다. 황금 그릴과 경광등을 달고 하늘에서 전송 광선과 함께 내려온다.', [0, 35, 30, 0, 20, 15]],
+  malrang: ['jellypress', '킹 말랑왕', '진짜 왕관과 망토, 보석 홀까지 갖춘 슬라임 대왕. 꼬마 슬라임 신하들을 거느린다.', [20, 0, 25, 30, 25, 0]],
+  seonggeom: ['holysword', '각성 성검바위', '천 년 만에 눈을 뜬 바위 골렘. 금 간 틈으로 빛이 새고 수정이 돋았다. 성검이 반쯤 뽑혔다.', [10, 40, 30, 0, 20, 0]],
+  madoseo: ['forbidpage', '금단의 대마도서', '봉인 사슬이 끊기고 책장이 박쥐 날개처럼 펼쳐졌다. 제3의 눈이 뜨고 보랏빛 불꽃이 탄다.', [0, 0, 0, 45, 15, 40]],
+  mimik: ['chomp', '탐욕왕 미믹', '뿔 달린 황금 왕관 상자. 이빨이 두 줄, 혀가 세 개가 되었고 금화가 쏟아진다.', [10, 40, 25, 0, 15, 10]],
+  maemmaem: ['cicadacry', '확성기 맴맴이', '날개에 스피커가 달린 강철 매미. 음파 고리가 사방으로 퍼진다.', [10, 0, 20, 40, 20, 10]],
+  wengweng: ['bloodsuck', '고압 왱왱이', '날개가 전기 파리채 그물로 변했다. 침은 번개 창이 되었다.', [10, 0, 15, 40, 15, 20]],
+  dakdulgi: ['flutter', '광장왕 닭둘기', '비행 고글과 빨간 스카프를 둘렀다. 날개를 펼치면 거대하고, 부하 비둘기를 거느린다.', [15, 40, 15, 0, 10, 20]],
+  chijeu: ['nyanpunch', '사미 치즈냥', '꼬리가 네 갈래 핑크 불꽃이 되고 보석 방울 목걸이를 찼다. 귀 끝에도 불꽃이 핀다.', [0, 40, 10, 10, 10, 30]],
+  basaeng: ['roachrush', '교장 바선생', '학사모를 쓰고 날개를 펼쳤다. 날아오르는 순간 모두가 비명을 지른다.', [10, 35, 25, 0, 20, 10]],
   hwangsari: ['yellowgust', '대황사 황사리', '방독면과 고글을 쓴 거대 모래폭풍. 아래는 토네이도가 되었고 주변에 돌덩이가 돈다.', [10, 40, 25, 0, 15, 10]],
 });
 
@@ -445,6 +498,16 @@ const ZMOVES = {
   ppogeuri: ['목욕탕 대방출', 'water', 175, '거대한 비눗방울에 가둬 터뜨린다. 준 피해의 1/3을 회복', { drain: 1 / 3 }],
   tuhon: ['분노 대폭발', 'fire', 180, '쌓인 분노를 도끼에 실어 땅째로 내리찍는다. 체력이 적을수록 위력 증가 (최대 1.5배)', { rage: true }],
   harmonium: ['오버드라이브', 'steel', 175, '앰프 출력을 한계까지 올린다. 태그 배틀에서는 상대 모두를 공격', { spread: true }],
+  hwansaeng: ['이세계 직행', 'steel', 180, '트럭이 차원을 뚫고 돌진한다. 상대는 다음 생을 기약한다'],
+  malrang: ['슬라임 대해일', 'water', 175, '슬라임 군단이 덮친다. 준 피해의 1/3을 회복', { drain: 1 / 3 }],
+  seonggeom: ['엑스칼리바위', 'fairy', 180, '천 년 만에 성검이 뽑힌다. 급소에 잘 맞음', { crit: true }],
+  madoseo: ['금단의 최종장', 'fire', 180, '마지막 장을 펼친다. 50% 확률로 화상', { st: { s: 'brn', ch: 50 } }],
+  mimik: ['보물상자 대식사', 'spirit', 180, '상자가 상대를 통째로 삼킨다'],
+  maemmaem: ['한여름 대합창', 'grass', 175, '골목 매미가 한꺼번에 운다. 상대 특방 하락', { foe: { spd: -1 }, sound: true }],
+  wengweng: ['한밤의 흡혈', 'poison', 175, '귓가의 왱 소리와 함께 찾아온다. 준 피해의 절반을 회복', { drain: .5 }],
+  dakdulgi: ['광장 대습격', 'wind', 180, '광장 비둘기가 한꺼번에 날아오른다. 상대 명중률 하락', { foe: { acc: -1 } }],
+  chijeu: ['츄르 각성 냥펀치', 'fairy', 180, '츄르를 먹고 각성한 펀치. 사용 후 자신의 스피드 상승', { self: { spe: 1 }, selfAfter: true }],
+  basaeng: ['전교생 집합', 'poison', 180, '바퀴벌레 전교생이 몰려온다. 반드시 독', { st: { s: 'psn', ch: 100 } }],
   hwangsari: ['누런 하늘', 'earth', 180, '하늘이 누렇게 덮인다. 상대 명중률 하락', { foe: { acc: -1 } }],
 };
 for (const [id, [n, type, pow, d, extra = {}]] of Object.entries(ZMOVES)) {
@@ -599,7 +662,18 @@ MONSTERS.ppogeuri.trait = { n: '거품막', d: '전투에서 처음 맞는 공�
 // 소리 기술: 하르모니움 특성 펑크록이 영향을 줌
 for (const id of ['metalnoise', 'scold', 'lionroar']) { MOVES[id].sound = true; MOVES[id].d = `[소리] ${MOVES[id].d}`; }
 MOVES.z_harmonium.sound = true;
-MONSTERS.harmonium.trait = { n: '펑크록', d: '소리 기술(금속음, 혼쭐내기, 사자후, 오버드라이브)의 위력이 1.3배가 되고, 상대의 소리 기술은 피해를 절반만 받는다.' };
+MONSTERS.harmonium.trait = { n: '펑크록', d: '소리 기술(금속음, 혼쭐내기, 사자후, 오버드라이브, 7년의 울음, 한여름 대합창)의 위력이 1.3배가 되고, 상대의 소리 기술은 피해를 절반만 받는다.' };
+// 신캐 10종 특성
+Object.assign(MONSTERS.hwansaeng, { trait: { n: '이세계 환생', d: '공격을 맞고 쓰러질 때 한 번, 이세계에서 환생해 체력 1/4로 돌아온다.' } });
+Object.assign(MONSTERS.malrang, { trait: { n: '말랑말랑', d: '물리 공격의 피해를 0.75배로 받는다.' } });
+Object.assign(MONSTERS.seonggeom, { trait: { n: '천년의 잠', d: '체력이 꽉 차 있을 때 받는 피해가 절반이 된다.' } });
+Object.assign(MONSTERS.madoseo, { trait: { n: '금서', d: '상대가 상태이상(화상·독·마비·얼음·잠)이면 특수 기술의 위력이 1.3배가 된다.' } });
+Object.assign(MONSTERS.mimik, { trait: { n: '보물 미끼', d: '싸움에 나오자마자 상대가 보물에 정신이 팔려 스피드가 1단계 떨어진다.' } });
+Object.assign(MONSTERS.maemmaem, { trait: { n: '떼창', d: '소리 기술의 위력이 1.3배가 되고, 소리 기술은 상대의 막기를 뚫는다.' } });
+Object.assign(MONSTERS.wengweng, { trait: { n: '파리채 내성', d: '전기 기술에 맞으면 피해를 받지 않고 특공이 1단계 올라간다.' } });
+Object.assign(MONSTERS.dakdulgi, { trait: { n: '빵 줍기', d: '체력이 절반 이하가 되면(한 번만) 바닥의 빵을 주워 먹고 체력을 1/3 회복한다.' } });
+Object.assign(MONSTERS.chijeu, { trait: { n: '그루밍', d: '턴이 끝날 때 상태이상이 있으면 50% 확률로 털을 핥아 낫는다.' } });
+Object.assign(MONSTERS.basaeng, { trait: { n: '불사신', d: '한 방에 쓰러질 공격을 맞아도 30% 확률로 체력 1을 남기고 버틴다.' } });
 // 하위권 상향: 기본 능력치에 더하는 값 [체력, 공격, 방어, 특공, 특방, 스피드]
 const BUFFS = {
   danjo: [15, 15, 10, 0, 10, 10], ssaribi: [20, 10, 10, 0, 5, 0], yeonji: [10, 0, 5, 15, 0, 5],
