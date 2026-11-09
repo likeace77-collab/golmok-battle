@@ -100,7 +100,7 @@ const randomAvatar = (any = false) => Object.fromEntries(
 );
 const pick = (list) => list[crypto.randomInt(list.length)].id;
 const randomStyle = () => ({ title: pick(Data.COSMETICS.titles), card: pick(Data.COSMETICS.cards), pins: [pick(Data.COSMETICS.pins), pick(Data.COSMETICS.pins)] });
-const newStats = () => ({ games: 0, streak: 0, streakBest: 0, p0: 0, p1: 0, p2: 0, p3: 0, tagGames: 0, tagWins: 0, megas: 0, zmoves: 0, botWins: 0, dummyDmg: 0, dummyBest: 0 });
+const newStats = () => ({ games: 0, streak: 0, streakBest: 0, p0: 0, p1: 0, p2: 0, p3: 0, tagGames: 0, tagWins: 0, megas: 0, zmoves: 0, botWins: 0, dummyDmg: 0, dummyBest: 0, flawless: 0 });
 const defaultStyle = () => ({ title: 'rookie', card: 'basic', pins: [] });
 const statOf = (u, k) => (k === 'wins' || k === 'losses' || k === 'draws' ? u[k] || 0 : u.stats?.[k] || 0);
 // 개발자 계정은 모든 꾸미기를 씁니다. 'dev' 조건은 개발자 계정 전용, 'gift'는 우편 보상으로 받은 것만.
@@ -659,6 +659,8 @@ function finish(room) {
     if (room.b.sides[s].megaUsed) st.megas++;
     if (room.b.sides[s].zUsed) st.zmoves++;
     const won = winner !== null && E.teamOf(room.b, s) === winner;
+    // ez: 기권승이 아니고, 내 요괴가 한 마리도 쓰러지지 않은 승리
+    if (won && !room.b.forfeited && room.b.sides[s].mons.every((m) => m.hp > 0)) st.flawless++;
     if (room.tag) { st.tagGames++; if (won) st.tagWins++; }
     else if (!pvp && won) { st[`p${room.botLevel}`]++; st.botWins++; }
   }

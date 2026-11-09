@@ -511,6 +511,7 @@ const COSMETICS = {
     C('developer', '개발자', ['dev', 1], { tier: 6 }),
     // 우편 보상 전용
     C('day1', 'Day 1', ['gift', 'titles:day1'], { tier: 7 }),
+    C('ez', 'ez', ['flawless', 1], { tier: 4, glow: '#39FF6A' }),
     C('laborer', 'LEGENDARY LABORER', ['gift', 'titles:laborer'], { tier: 8 }),
   ],
   cards: [
@@ -570,7 +571,7 @@ const STAT_NAMES = {
   p0: '골목대장(쉬움) 승리', p1: '골목대장(보통) 승리', p2: '골목대장(어려움) 승리', p3: '골목대장(지옥) 승리',
   tagGames: '태그 대전', tagWins: '태그 승리', megas: '메가진화 사용',
   dev: '개발자 계정', gift: '우편 보상', dummyDmg: '훈련장 누적 피해', dummyBest: '훈련장 한 턴 최고 피해',
-  zmoves: 'Z기술 사용', botWins: '골목대장 승리(난이도 무관)', draws: '1대1 무승부',
+  zmoves: 'Z기술 사용', botWins: '골목대장 승리(난이도 무관)', draws: '1대1 무승부', flawless: '한 마리도 안 쓰러지고 승리',
 };
 
 // 루미나와 실비아는 사진 그림(public/img/mon)을 씁니다.

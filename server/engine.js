@@ -976,7 +976,7 @@ function updatePhase(b, ev) {
 
 function forfeit(b, s, left = false) {
   const lost = teamOf(b, s);
-  b.phase = 'over'; b.winner = 1 - lost; b.needs = b.needs.map(() => false); b.pending = b.pending.map(() => null);
+  b.phase = 'over'; b.winner = 1 - lost; b.forfeited = true; b.needs = b.needs.map(() => false); b.pending = b.pending.map(() => null);
   const how = left ? '게임을 나갔다' : '기권했다';
   return [{ t: 'over', winner: b.winner, text: `${josa(b.sides[s].name, '이/가')} ${how}. ${josa(teamName(b, b.winner), '이/가')} 이겼다!` }];
 }
