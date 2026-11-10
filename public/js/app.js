@@ -758,11 +758,12 @@ function entryCard(e, { dev = false, mine = false, closed = false } = {}) {
     ${e.winner ? '<em class="ct-win">🏆 우승</em>' : ''}
     <button class="ct-open" data-open="${e.id}">${e.image ? `<img src="${e.image}" alt="${esc(e.name)} 디자인">` : '<div class="ct-noimg">그림 없음</div>'}</button>
     <div class="ct-body"><h3>${esc(e.name)} ${typeChips(e.types)}</h3>
-      <small>${esc(e.user)} · ${new Date(e.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</small>
+      <small>${esc(e.user)} · ${new Date(e.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}${e.editedAt ? ' (수정함)' : ''}</small>
       <p class="ct-desc">${esc(e.desc)}</p>
       <div class="row ct-acts">
         <button class="btn small" data-open="${e.id}">📖 도감처럼 보기</button>
         ${dev ? `<button class="btn small ${e.winner ? 'paper' : ''}" data-win="${e.id}">${e.winner ? '우승 취소' : '🏆 우승으로 뽑기'}</button>` : ''}
+        ${mine && !closed ? `<button class="btn small paper" data-edit="${e.id}">✏️ 수정하기</button>` : ''}
         ${dev || (mine && !closed) ? `<button class="btn small paper" data-del="${e.id}">지우기</button>` : ''}
       </div></div></article>`;
 }
@@ -833,6 +834,7 @@ async function showContest(tab = 'info') {
     app.querySelector('#ct-new')?.addEventListener('click', () => showContestForm());
     app.querySelectorAll('[data-del]').forEach((b) => { b.onclick = async () => { if (!confirm('이 출품작을 지울까요?')) return; try { v = await api('POST', '/api/contest/delete', { id: b.dataset.del }); render(); toast('지웠어요.'); } catch (e) { toast(e.message); } }; });
     const every = [...v.mine, ...(v.all || [])];
+    app.querySelectorAll('[data-edit]').forEach((b) => { b.onclick = () => { const e = v.mine.find((x) => x.id === b.dataset.edit); if (e) showContestForm(e); }; });
     app.querySelectorAll('[data-open]').forEach((b) => { b.onclick = () => { const e = every.find((x) => x.id === b.dataset.open); if (e) openContestDex(e); }; });
     app.querySelectorAll('[data-win]').forEach((b) => { b.onclick = async () => { try { v = await api('POST', '/api/contest/winner', { id: b.dataset.win }); render(); } catch (e) { toast(e.message); } }; });
   };
@@ -886,10 +888,11 @@ function drawPad(root) {
       toast('사진을 넣었어요. 위에 덧그려도 돼요!');
     } catch (e) { toast(e.message); }
   };
-  return { used: () => used, data: () => { for (const q of [.85, .7, .55]) { const d = cv.toDataURL('image/jpeg', q); if (d.length < 380000) return d; } return cv.toDataURL('image/jpeg', .4); } };
+  const load = (src) => new Promise((ok) => { const img = new Image(); img.onload = () => { ctx.drawImage(img, 0, 0, N, N); used = true; ok(); }; img.onerror = ok; img.src = src; });
+  return { load, used: () => used, data: () => { for (const q of [.85, .7, .55]) { const d = cv.toDataURL('image/jpeg', q); if (d.length < 380000) return d; } return cv.toDataURL('image/jpeg', .4); } };
 }
 
-function showContestForm() {
+function showContestForm(edit = null) {
   G.screen = 'contest-form';
   const types = Object.entries(G.data.TYPES).filter(([k]) => k !== 'none');
   const COLS = ['#1a1433', '#ffffff', '#E8402C', '#FF8A00', '#FFD23F', '#4CD964', '#2F7DE1', '#7FB8A4', '#9A4FB8', '#F27FA5', '#A9713A', '#7C8798'];
@@ -909,7 +912,7 @@ function showContestForm() {
         <label class="m-sigl"><input class="m-sig" type="checkbox"> 전용기</label></div>
       <div class="ct-mv-nums"><label>위력<input class="m-pow" type="number" inputmode="numeric" min="0" max="300" placeholder="80"></label><label>명중<input class="m-acc" type="number" inputmode="numeric" min="0" max="100" placeholder="100"></label><label>PP<input class="m-pp" type="number" inputmode="numeric" min="1" max="40" placeholder="10"></label></div>
       <input class="m-d" maxlength="120" placeholder="효과 (예: 30% 확률로 화상)"></div>`;
-  app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>신캐 만들기</h1></div>
+  app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>${edit ? '출품작 수정' : '신캐 만들기'}</h1></div>
     <p class="ct-tip">도감과 같은 모양으로 만들어요. <b>이름과 설명</b>만 꼭 쓰면 되고, 나머지는 생각해 둔 만큼만 채워 주세요.</p>
     <section class="panel ct-form">
       <label class="fl">이름 <small>12자까지</small><input id="ct-name" maxlength="12" placeholder="예: 등신"></label>
@@ -934,7 +937,7 @@ function showContestForm() {
       <h3 class="dex-h">배울 수 있는 스킬 <small>10개까지 · 이름을 쓴 칸만 들어가요</small></h3>
       <div id="ct-moves">${[0, 1, 2, 3].map(moveRow).join('')}</div>
       <button type="button" class="btn small paper" id="ct-addmv">+ 기술 칸 추가</button>
-      <button class="btn wide" id="ct-send">공모전에 내기</button>
+      <button class="btn wide" id="ct-send">${edit ? '수정한 내용 저장' : '공모전에 내기'}</button>
     </section>`;
   app.querySelector('#back').onclick = () => showContest();
   const pad = drawPad(app.querySelector('#pad-base')), mpad = drawPad(app.querySelector('#pad-mega'));
@@ -961,6 +964,28 @@ function showContestForm() {
     if (n + 1 >= 10) ev.currentTarget.disabled = true;
   };
   const num = (el) => (el && el.value !== '' ? Math.round(+el.value) : 0);
+  // 수정: 예전에 낸 내용 채우기
+  if (edit) {
+    const set = (sel, v) => { const el = app.querySelector(sel); if (el && v != null) el.value = v; };
+    set('#ct-name', edit.name); set('#ct-desc', edit.desc);
+    (edit.types || []).forEach((t) => app.querySelector(`[data-type="${t}"]`)?.click());
+    for (const k of CT_STATS) { if (edit.base?.[k]) set(`.ct-b[data-k=${k}]`, edit.base[k]); if (edit.mega?.boost?.[k]) set(`.ct-m[data-k=${k}]`, edit.mega.boost[k]); }
+    const tr = typeof edit.trait === 'string' ? { n: '', d: edit.trait } : edit.trait || {};
+    set('#ct-tn', tr.n); set('#ct-td', tr.d);
+    set('#ct-mn', edit.mega?.n); set('#ct-md', edit.mega?.d);
+    set('#ct-zn', edit.z?.n); set('.z-type', edit.z?.type || ''); set('.z-cat', edit.z?.cat || 'p'); if (edit.z?.pow) set('.z-pow', edit.z.pow); set('#ct-zd', edit.z?.d);
+    const list = Array.isArray(edit.moves) ? edit.moves : typeof edit.moves === 'string' && edit.moves ? [{ n: '기술셋', cat: 'x', d: edit.moves.slice(0, 120) }] : [];
+    while (app.querySelectorAll('.ct-mv').length < Math.min(10, list.length)) app.querySelector('#ct-addmv').click();
+    const rows = app.querySelectorAll('.ct-mv');
+    list.slice(0, 10).forEach((m, i) => {
+      const r = rows[i], put = (c, v) => { const el = r.querySelector(c); if (el && v) el.value = v; };
+      put('.m-n', m.n); put('.m-type', m.type); put('.m-cat', m.cat); put('.m-pow', m.pow); put('.m-acc', m.acc); put('.m-pp', m.pp); put('.m-d', m.d);
+      r.querySelector('.m-sig').checked = !!m.sig;
+    });
+    sums();
+    if (edit.image) pad.load(edit.image);
+    if (edit.mega?.image) mpad.load(edit.mega.image);
+  }
   app.querySelector('#ct-send').onclick = async (ev) => {
     const val = (id) => app.querySelector(id).value.trim();
     if (!val('#ct-name')) return toast('골목몬 이름을 넣어 주세요.');
@@ -979,10 +1004,11 @@ function showContestForm() {
     };
     const btn = ev.currentTarget; btn.disabled = true; btn.textContent = '보내는 중...';
     try {
+      if (edit) body.id = edit.id;
       await api('POST', '/api/contest', body);
-      toast('공모전에 냈어요! 행운을 빌어요 🍀');
+      toast(edit ? '수정했어요!' : '공모전에 냈어요! 행운을 빌어요 🍀');
       showContest();
-    } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = '공모전에 내기'; }
+    } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = edit ? '수정한 내용 저장' : '공모전에 내기'; }
   };
 }
 

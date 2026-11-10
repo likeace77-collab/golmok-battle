@@ -439,7 +439,7 @@ async function api(req, res, url) {
 const CONTEST = { title: '신캐 만들기 공모전', ends: Date.parse(process.env.CONTEST_ENDS || '2026-11-13T23:59:59+09:00') };
 const PER_USER = 3, MAX_ENTRIES = 200, MAX_IMAGE = 400000;
 const cut = (v, n) => [...String(v ?? '').trim()].slice(0, n).join('');
-const entryView = (e, full) => ({ id: e.id, user: e.user, at: e.at, name: e.name, types: e.types, desc: e.desc, base: e.base, trait: e.trait, mega: e.mega, z: e.z, moves: e.moves, image: full ? e.image : undefined, hasImage: !!e.image, winner: !!e.winner });
+const entryView = (e, full) => ({ id: e.id, user: e.user, at: e.at, editedAt: e.editedAt, name: e.name, types: e.types, desc: e.desc, base: e.base, trait: e.trait, mega: e.mega, z: e.z, moves: e.moves, image: full ? e.image : undefined, hasImage: !!e.image, winner: !!e.winner });
 const CT_STATS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
 const okType = (t) => (Data.TYPES[t] && t !== 'none' ? t : '');
 const intIn = (v, lo, hi) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : 0; };
@@ -462,8 +462,10 @@ async function contestApi(req, res, route, auth, user) {
   const body = await readBody(req);
   if (route === 'POST /api/contest') {
     if (closed) return json(res, 403, { error: '공모전 접수가 마감되었습니다.' });
-    if (contest.entries.filter(mine).length >= PER_USER) return json(res, 400, { error: `한 사람당 ${PER_USER}개까지 낼 수 있어요. 기존 작품을 지우고 다시 내 주세요.` });
-    if (contest.entries.length >= MAX_ENTRIES) return json(res, 400, { error: '출품작이 너무 많아 더 받을 수 없습니다.' });
+    const old = body.id ? contest.entries.find((x) => x.id === String(body.id)) : null; // 수정
+    if (body.id && !(old && mine(old))) return json(res, 403, { error: '내 출품작만 고칠 수 있어요.' });
+    if (!old && contest.entries.filter(mine).length >= PER_USER) return json(res, 400, { error: `한 사람당 ${PER_USER}개까지 낼 수 있어요. 기존 작품을 지우고 다시 내 주세요.` });
+    if (!old && contest.entries.length >= MAX_ENTRIES) return json(res, 400, { error: '출품작이 너무 많아 더 받을 수 없습니다.' });
     const name = cut(body.name, 12), desc = cut(body.desc, 1000);
     if (!name) return json(res, 400, { error: '골목몬 이름을 넣어 주세요.' });
     if (!desc) return json(res, 400, { error: '골목몬 설명을 넣어 주세요.' });
@@ -475,14 +477,16 @@ async function contestApi(req, res, route, auth, user) {
       n: cut(x?.n, 16), type: okType(x?.type), cat: ['p', 's', 'x'].includes(x?.cat) ? x.cat : 'p',
       pow: intIn(x?.pow, 0, 300), acc: intIn(x?.acc, 0, 100), pp: intIn(x?.pp, 0, 40), d: cut(x?.d, 120), sig: !!x?.sig,
     })).filter((x) => x.n);
-    contest.entries.push({
-      id: crypto.randomBytes(6).toString('hex'), key: auth.key, user: user.name, at: Date.now(), name, types, desc, image,
+    const fields = {
+      name, types, desc, image,
       base: statsIn(body.base, 255),
       trait: typeof body.trait === 'string' ? { n: '', d: cut(body.trait, 300) } : { n: cut(body.trait?.n, 12), d: cut(body.trait?.d, 300) },
       mega: { n: cut(m.n, 16), d: cut(m.d, 400), boost: statsIn(m.boost, 100), image: mimage },
       z: { n: cut(z.n, 16), type: okType(z.type), cat: z.cat === 's' ? 's' : 'p', pow: intIn(z.pow, 0, 400), d: cut(z.d, 160) },
       moves,
-    });
+    };
+    if (old) Object.assign(old, fields, { editedAt: Date.now() });
+    else contest.entries.push({ id: crypto.randomBytes(6).toString('hex'), key: auth.key, user: user.name, at: Date.now(), ...fields });
     saveContest();
     return json(res, 200, view());
   }
