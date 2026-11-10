@@ -199,6 +199,9 @@ function migrate() {
     // 신화 칭호 등신
     { id: 'deungsin-title', user: 'suho', why: '신화 칭호 등신', notice: '우편함에 신화 등급 칭호가 도착했습니다!',
       apply: (u) => sendMail(u, { from: '골목대전 운영팀', title: '신화가 된 당신에게', body: '전설도, 신도 넘어선 단 하나의 등급, 신화. 오직 당신만을 위한 칭호 "등신"을 드립니다. 바다의 왕처럼 당당하게 달고 다니세요!', reward: ['titles:deungsin'] }) },
+    // 신화 칭호 소음공해죄: 하르모니움을 만들어 준 고마움
+    { id: 'noisecrime-title', user: '티키티키펑크', why: '하르모니움 제작', notice: '우편함에 신화 등급 칭호가 도착했습니다!',
+      apply: (u) => sendMail(u, { from: '골목대전 운영팀', title: '하르모니움을 만들어 주셔서 감사합니다', body: '하르모니움을 만들어 주셔서 감사합니다. 골목에 울려 퍼진 그 금속음에 경의를 표하며, 신화 등급 칭호 "소음공해죄"를 드립니다!', reward: ['titles:noisecrime'] }) },
   ];
   for (const g of GRANTS) {
     const u = db.users[keyOf(g.user)];

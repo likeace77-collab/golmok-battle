@@ -595,6 +595,7 @@ const COSMETICS = {
     C('ez', 'ez', ['flawless', 1], { tier: 4, glow: '#39FF6A' }),
     C('laborer', 'LEGENDARY LABORER', ['gift', 'titles:laborer'], { tier: 8 }),
     C('deungsin', '등신', ['gift', 'titles:deungsin'], { tier: 9 }),
+    C('noisecrime', '소음공해죄', ['gift', 'titles:noisecrime'], { tier: 9, icon: '♬' }),
   ],
   cards: [
     C('basic', '기본 딱지', null), C('blue', '망점 블루', null, { dark: true }), C('red', '집중선 레드', null, { dark: true }),
