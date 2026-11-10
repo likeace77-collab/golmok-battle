@@ -1086,3 +1086,18 @@ svg.tplus { filter: drop-shadow(0 0 calc(3px + var(--plus) * 1px) #b026ff) drop-
 .tt-9 u { position: relative; z-index: 2; text-decoration: none; font: 900 .52em/1 ui-monospace, Menlo, monospace; letter-spacing: .2em; color: #fff; padding: 2px 5px 1px; border-radius: 3px;
   background: linear-gradient(90deg, #ff1a3c, #fff, #ff1a3c, #ff004c) 0 0 / 300% 100%; -webkit-text-stroke: .3px #000; text-shadow: 0 0 3px #000; animation: ttFlow 1.2s linear infinite; box-shadow: 0 0 6px #fff, 0 0 10px #ff1a3c; }
 @media (prefers-reduced-motion: reduce) { .tt-9, .tt-9::before, .tt-9::after, .tt-9 em, .tt-9 s, .tt-9 i, .tt-9 i::before, .tt-9 i::after, .tt-9 .tt-myth, .tt-9 u { animation: none; } }
+
+/* 로비 EVENT 탭 */
+.evtab { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin: 0 0 14px; padding: 14px 18px; border: 3px solid var(--ink); border-radius: 14px; cursor: pointer; overflow: hidden; isolation: isolate;
+  color: #fff; background: linear-gradient(100deg, #ff3b5c, #ff8a00 30%, #ffd23f 50%, #ff2bd6 75%, #7a2cff) 0 0 / 220% 100%; box-shadow: 4px 4px 0 var(--ink); animation: ttFlow 4s linear infinite; }
+.evtab s { position: absolute; inset: 0; z-index: -1; background: linear-gradient(105deg, transparent 35%, #ffffffaa 50%, transparent 65%) -150% 0 / 250% 100% no-repeat; animation: mythSweep 2.8s ease-in-out infinite; }
+.evtab b { font-family: var(--display); font-weight: 400; font-size: clamp(26px, 8vw, 34px); letter-spacing: .12em; color: #fff; -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; text-shadow: 3px 3px 0 var(--ink); }
+.evtab b::before { content: '['; margin-right: 2px; } .evtab b::after { content: ']'; margin-left: 2px; }
+.evtab small { font-family: var(--ui); font-size: 14px; color: var(--ink); background: #fff8e0; border: 2px solid var(--ink); border-radius: 99px; padding: 3px 10px; }
+.evtab:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
+.ev-empty { text-align: center; padding: 34px 10px; }
+.ev-empty b { display: block; font-size: 52px; line-height: 1; margin-bottom: 10px; }
+.ev-empty h2 { margin: 0 0 6px; } .ev-empty p { margin: 0; color: #6b6380; }
+.ev-card { border: 3px solid var(--ink); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; background: #fff8e0; box-shadow: 3px 3px 0 var(--ink); }
+.ev-card h2 { margin: 0 0 4px; } .ev-card small { color: #6b6380; } .ev-card p { margin: 6px 0 0; }
+@media (prefers-reduced-motion: reduce) { .evtab, .evtab s { animation: none; } }

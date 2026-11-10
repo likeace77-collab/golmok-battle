@@ -1,3 +1,5 @@
+// 이벤트: 여기에 { title, period, desc } 를 넣으면 이벤트 탭에 나옵니다.
+const EVENTS = [];
 // 화면 전환, 로그인, 로비, 아바타, 팀 편성
 const app = document.getElementById('app');
 const sheetRoot = document.getElementById('sheet-root');
@@ -279,6 +281,7 @@ function renderLobby() {
         <button class="btn paper" id="go-settings">설정</button>
       </div>
     </section>
+    <button class="evtab" id="go-event" aria-label="이벤트"><s aria-hidden="true"></s><b>EVENT</b><small>${EVENTS.length ? `진행 중 ${EVENTS.length}개` : '준비 중'}</small></button>
     <section class="panel">
       <div class="row" style="justify-content:space-between;margin-bottom:8px">
         <h2 style="margin:0">대전 인원</h2>
@@ -331,6 +334,7 @@ function renderLobby() {
   app.querySelector('#go-players').onclick = showPlayers;
   app.querySelector('#go-settings').onclick = showSettings;
   app.querySelector('#go-mail').onclick = showMail;
+  app.querySelector('#go-event').onclick = showEvents;
   app.querySelector('#go-bot').onclick = () => wsSend({ t: 'practice', size: G.size, level: G.botLevel });
   app.querySelector('#go-train').onclick = () => wsSend({ t: 'training' });
   app.querySelectorAll('[data-level]').forEach((b) => {
@@ -725,6 +729,16 @@ function showTypeChart() {
 }
 
 // 필드 효과 목록: 날씨 4가지, 그래스필드, 압정. 기술은 게임 데이터에서 찾아 보여 줍니다.
+function showEvents() {
+  G.screen = 'events';
+  app.className = '';
+  app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>EVENT</h1></div>
+    <section class="panel ev-list">${EVENTS.length
+    ? EVENTS.map((e) => `<article class="ev-card"><h2>${esc(e.title)}</h2>${e.period ? `<small>${esc(e.period)}</small>` : ''}<p>${esc(e.desc || '')}</p></article>`).join('')
+    : '<div class="ev-empty"><b>🎪</b><h2>진행 중인 이벤트가 없어요</h2><p>새 이벤트가 열리면 여기에서 알려 드릴게요!</p></div>'}</section>`;
+  app.querySelector('#back').onclick = showLobby;
+}
+
 function showFields() {
   G.screen = 'fields';
   const M = G.data.MOVES, MON = G.data.MONSTERS;
