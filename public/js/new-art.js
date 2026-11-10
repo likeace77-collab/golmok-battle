@@ -294,7 +294,7 @@ const MEGA = {
  godeuri: L(`<g stroke-width="3.2">
  
  <circle cx="100" cy="104" r="98" fill="url(#mAura)" stroke="none"/>
- ${[[-1],[1]].map(([d])=>`<path d="M${100+d*40} 70L${100+d*92} 40 ${100+d*78} 66 ${100+d*98} 78 ${100+d*72} 90 ${100+d*86} 112 ${100+d*54} 104z" fill="url(#mIce)" stroke-width="2.6"/><path d="M${100+d*54} 116q${d*30} 6 ${d*36} 34l${-d*8}-4-4 10-6-12-8 4q0-18-${d*18}-26z" fill="url(#mIce)" stroke-width="2.4"/>`).join('')}
+ ${[[-1],[1]].map(([d])=>`<path d="M${100+d*40} 70L${100+d*92} 40 ${100+d*78} 66 ${100+d*98} 78 ${100+d*72} 90 ${100+d*86} 112 ${100+d*54} 104z" fill="url(#mIce)" stroke-width="2.6"/><path d="M${100+d*54} 116q${d*30} 6 ${d*36} 34l${-d*8}-4-4 10-6-12-8 4q0-18 ${-d*18}-26z" fill="url(#mIce)" stroke-width="2.4"/>`).join('')}
  <path d="M54 44Q40 120 100 198Q160 120 146 44z" fill="url(#mIce)"/>
  <path d="M66 58Q58 112 94 176" fill="none" stroke="#fff" stroke-width="5" stroke-opacity=".85"/>
  <path d="M100 98c20 14 28 30 18 48-6 12-32 14-38 0-7-14 0-20 3-30 5 8 10 8 11 2 1-8-3-12 6-20z" fill="url(#mFl)" stroke="#3a1fd1" stroke-width="2.2"/>
@@ -321,7 +321,7 @@ const MEGA = {
  <path d="M52 74q-2-50 48-52 50 2 48 52-48-26-96 0z" fill="#fff"/>
  <path d="M58 60q42-22 84 0" fill="none" stroke="#ffd34d" stroke-width="6"/>
  <path d="M100 20l-6 12h12z" fill="#ffd34d"/>
- ${[[-1,46],[1,154]].map(([d,x])=>`<path d="M${x} 60c${d*20}-4 ${d*26} 18 ${d*14} 30-${d*4} 4 ${d*2} 14 ${d*10} 10" fill="none" stroke-width="10"/><path d="M${x} 60c${d*20}-4 ${d*26} 18 ${d*14} 30-${d*4} 4 ${d*2} 14 ${d*10} 10" fill="none" stroke="${d<0?'#ffb36b':'#bfeaff'}" stroke-width="5"/><circle cx="${x}" cy="62" r="17" fill="#fff"/><path d="M${x} 62m-10 0a10 10 0 1 1 10 10a6 6 0 1 1-6-6" fill="none" stroke-width="2.4"/>`).join('')}
+ ${[[-1,46],[1,154]].map(([d,x])=>`<path d="M${x} 60c${d*20}-4 ${d*26} 18 ${d*14} 30 ${-d*4} 4 ${d*2} 14 ${d*10} 10" fill="none" stroke-width="10"/><path d="M${x} 60c${d*20}-4 ${d*26} 18 ${d*14} 30 ${-d*4} 4 ${d*2} 14 ${d*10} 10" fill="none" stroke="${d<0?'#ffb36b':'#bfeaff'}" stroke-width="5"/><circle cx="${x}" cy="62" r="17" fill="#fff"/><path d="M${x} 62m-10 0a10 10 0 1 1 10 10a6 6 0 1 1-6-6" fill="none" stroke-width="2.4"/>`).join('')}
  <path d="M70 102q-6-14 4-22 2 8 8 8 0-8 6-12 4 16-4 28z" fill="#ff6a2b" fill-opacity=".8" stroke-width="1.6"/>
  <path d="M122 92l12 12M134 92l-12 12M128 88v20" stroke="#4fb6ff" stroke-width="2.4"/>
  ${glowN(84,84,8,'#ff4d1a')}${glowN(116,84,8,'#1e9bff',-1)}

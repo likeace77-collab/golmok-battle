@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 const Data = require('./data');
 const E = require('./engine');
+const P = require('./progress');
 
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -13,14 +14,19 @@ const INVITE_CODE = process.env.INVITE_CODE || '';
 const TURN_SECONDS = Number(process.env.TURN_SECONDS) || 90;
 const LEAVE_GRACE_SECONDS = Number(process.env.LEAVE_GRACE_SECONDS) || 15; // 끊긴 뒤 패배까지 기다리는 시간
 const PUBLIC = path.join(__dirname, '..', 'public');
-const DB_FILE = path.join(DATA_DIR, 'db.json');
+// 새 게임(v2)은 다른 파일에 저장합니다. 예전 게임(db.json)은 건드리지 않고 그대로 남겨 둡니다.
+const OLD_DB_FILE = path.join(DATA_DIR, 'db.json');
+const DB_FILE = path.join(DATA_DIR, 'db2.json');
 const SESSION_DAYS = 30;
 
 /* ---------- 저장소 ---------- */
 fs.mkdirSync(DATA_DIR, { recursive: true });
-const db = fs.existsSync(DB_FILE)
-  ? JSON.parse(fs.readFileSync(DB_FILE, 'utf8'))
-  : { users: {}, sessions: {} };
+const db = { users: {}, sessions: {} };
+function loadLocal() { // 아래에서 쓰는 함수들이 다 정의된 뒤에 부릅니다.
+  if (fs.existsSync(DB_FILE)) replaceDb(JSON.parse(fs.readFileSync(DB_FILE, 'utf8')));
+  else if (fs.existsSync(OLD_DB_FILE)) { replaceDb(fromOldGame(JSON.parse(fs.readFileSync(OLD_DB_FILE, 'utf8')))); save(); }
+}
+function replaceDb(next) { for (const k of Object.keys(db)) delete db[k]; Object.assign(db, next); }
 
 // 재시작하면 파일이 지워지는 무료 호스팅용: GIST_ID와 GIST_TOKEN을 넣으면 비밀 Gist에도 저장합니다.
 const GIST_ID = process.env.GIST_ID || '';
@@ -28,6 +34,7 @@ const GIST_TOKEN = process.env.GIST_TOKEN || '';
 const GIST_API = process.env.GIST_API || 'https://api.github.com';
 // 버전마다 같은 Gist 안의 다른 파일에 저장합니다 (예: db-lumina.json).
 const GIST_FILE = process.env.GIST_FILE || 'db.json';
+const GIST_FILE2 = GIST_FILE.replace(/\.json$/, '') + '-v2.json'; // 새 게임 저장 파일
 const gistHeaders = {
   Authorization: `Bearer ${GIST_TOKEN}`, Accept: 'application/vnd.github+json',
   'Content-Type': 'application/json', 'User-Agent': 'golmok-battle',
@@ -44,9 +51,8 @@ async function loadGist() {
   const files = (await r.json()).files || {};
   const read = async (f) => (f.truncated ? (await fetch(f.raw_url, { headers: gistHeaders })).text() : f.content);
   if (files[GIST_CONTEST]) Object.assign(contest, JSON.parse(await read(files[GIST_CONTEST])));
-  const file = files[GIST_FILE];
-  if (!file) return; // 처음 실행
-  Object.assign(db, JSON.parse(await read(file)));
+  if (files[GIST_FILE2]) return replaceDb(JSON.parse(await read(files[GIST_FILE2])));
+  if (files[GIST_FILE]) { replaceDb(fromOldGame(JSON.parse(await read(files[GIST_FILE])))); queueGist(); } // 처음 새 게임으로 넘어올 때
 }
 
 let gistDirty = false, contestDirty = false, gistBusy = false, gistTimer = null;
@@ -54,7 +60,7 @@ async function pushGist() {
   if (gistBusy || (!gistDirty && !contestDirty)) return;
   gistBusy = true;
   const files = {}, was = [gistDirty, contestDirty];
-  if (gistDirty) files[GIST_FILE] = { content: JSON.stringify(db) };
+  if (gistDirty) files[GIST_FILE2] = { content: JSON.stringify(db) };
   if (contestDirty) files[GIST_CONTEST] = { content: JSON.stringify(contest) };
   gistDirty = contestDirty = false;
   try {
@@ -96,18 +102,6 @@ const hashPw = (pw, salt) => crypto.scryptSync(pw, salt, 32).toString('hex');
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const keyOf = (name) => name.toLowerCase();
 
-const defaultTeam = () => ['yeontan', 'kettle', 'kongsiru', 'orak', 'maetdol', 'kkaebi'].map((species) => {
-  const moves = {
-    yeontan: ['coalhead', 'quake', 'firerush', 'guard'],
-    kettle: ['bucket', 'magnet', 'flame', 'nap'],
-    kongsiru: ['sapdrain', 'pollen', 'seed', 'sunbathe'],
-    orak: ['highvolt', 'scold', 'shock', 'charge'],
-    maetdol: ['quake', 'rockthrow', 'ironhead', 'wall'],
-    kkaebi: ['club', 'ambush', 'ttukttak', 'wisp'],
-  }[species];
-  return { species, moves };
-});
-
 const NONE_FIRST = ['hat', 'glasses', 'face', 'brow', 'gloves', 'neck', 'back', 'hand', 'aura', 'pose', 'body'];
 const randomAvatar = (any = false) => Object.fromEntries(
   Object.entries(Data.AVATAR_OPTIONS).map(([k, n]) => [k, !any && NONE_FIRST.includes(k) ? 0 : crypto.randomInt(n)])
@@ -119,7 +113,25 @@ const defaultStyle = () => ({ title: 'rookie', card: 'basic', pins: [] });
 const statOf = (u, k) => (k === 'wins' || k === 'losses' || k === 'draws' ? u[k] || 0 : u.stats?.[k] || 0);
 // 개발자 계정은 모든 꾸미기를 씁니다. 'dev' 조건은 개발자 계정 전용, 'gift'는 우편 보상으로 받은 것만.
 const owns = (u, ref) => (u.owned || []).includes(ref);
-const isUnlocked = (u, item) => !item.cond || isDev(u) || (item.cond[0] === 'gift' ? owns(u, item.cond[1]) : item.cond[0] !== 'dev' && statOf(u, item.cond[0]) >= item.cond[1]);
+const REF = new Map(Object.entries(Data.COSMETICS).flatMap(([kind, list]) => list.map((x) => [x, `${kind}:${x.id}`])));
+const isUnlocked = (u, item) => !item.cond || isDev(u) || owns(u, REF.get(item)) || (item.cond[0] === 'gift' ? owns(u, item.cond[1]) : item.cond[0] !== 'dev' && statOf(u, item.cond[0]) >= item.cond[1]);
+
+// 예전 게임 계정을 새 게임으로: 아이디·비밀번호·아바타·칭호(연 꾸미기 전부)·우편만 옮기고 나머지는 처음부터.
+function fromOldGame(old) {
+  const users = {};
+  for (const [k, u] of Object.entries(old.users || {})) {
+    const opened = [...REF].filter(([item]) => item.cond && item.cond[0] !== 'dev' && item.cond[0] !== 'gift' && statOf(u, item.cond[0]) >= item.cond[1]).map(([, ref]) => ref);
+    users[k] = {
+      ...P.newProgress(),
+      name: u.name, salt: u.salt, hash: u.hash, avatar: u.avatar, style: u.style, owned: [...new Set([...(u.owned || []), ...opened])],
+      grants: u.grants || [], mail: u.mail || [], birthYear: u.birthYear, settings: u.settings || { mosaic: false },
+      createdAt: u.createdAt, lastSeen: u.lastSeen, notes: u.notes || {}, stats: newStats(), wins: 0, losses: 0, draws: 0, h2h: {},
+      legacy: { wins: u.wins || 0, losses: u.losses || 0 },
+    };
+  }
+  console.log(`예전 게임 계정 ${Object.keys(users).length}개를 새 게임으로 옮겼습니다.`);
+  return { users, sessions: old.sessions || {}, v: 2 };
+}
 
 /* ---------- 우편함 ---------- */
 // reward: ['titles:day1', 'cards:gold', ...] 꾸미기 아이템
@@ -147,18 +159,22 @@ function validAvatar(a) {
   return out;
 }
 
-function validDecks(list) {
-  if (!Array.isArray(list) || list.length < 1) return null;
+function validDecks(u, list) {
+  if (!Array.isArray(list) || list.length < 1 || list.length > 20) return null;
   const out = [];
   for (const d of list) {
     const name = String(d?.name ?? '').trim();
-    const team = validTeam(d?.team);
+    const team = validTeam(u, d?.team);
     if (!team || !name || [...name].length > 12 || /[\u0000-\u001f]/.test(name)) return null;
     out.push({ name, team });
   }
   return out;
 }
-const deckOf = (u) => u.decks[u.active];
+const deckOf = (u) => u.decks[u.active] || { name: '', team: [] };
+const monOf = (u, uid) => u.mons.find((m) => m.uid === uid);
+// 대전에 나갈 팀: 덱의 칸(uid, 도구)을 내 골목몬(종류, 기술)으로 바꿉니다.
+const battleTeam = (u) => deckOf(u).team.map((t) => { const m = monOf(u, t.uid); return m && { species: m.species, moves: m.moves, ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean);
+const deckView = (u) => u.decks.map((d) => ({ name: d.name, team: d.team.map((t) => { const m = monOf(u, t.uid); return m && { uid: m.uid, species: m.species, moves: m.moves, ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean) }));
 
 // 예전의 팀 하나짜리 계정을 덱 구조로 옮깁니다.
 function migrate() {
@@ -168,20 +184,17 @@ function migrate() {
     if (!u.stats) { u.stats = newStats(); changed = true; }
     for (const [k, v0] of Object.entries(newStats())) if (!Number.isInteger(u.stats[k])) { u.stats[k] = v0; changed = true; }
     if (!u.style) { u.style = defaultStyle(); changed = true; }
+    for (const [k, v0] of Object.entries(P.newProgress())) if (u[k] === undefined) { u[k] = v0; changed = true; }
+    for (const [k, v0] of Object.entries(P.newProgress().counts)) if (!Number.isInteger(u.counts[k])) { u.counts[k] = v0; changed = true; }
     // 골목몬 기술이 바뀌었을 때: 더는 못 배우는 기술은 빼고, 비면 앞에서부터 채웁니다.
-    for (const d of u.decks || []) for (const m of d.team || []) {
+    for (const m of u.mons) {
       const sp = Data.MONSTERS[m.species];
       if (!sp) continue;
       const ok = m.moves.filter((id) => sp.moves.includes(id));
-      if (ok.length === m.moves.length) continue;
+      if (ok.length === m.moves.length && ok.length) continue;
       for (const id of sp.moves) if (ok.length < 4 && !ok.includes(id)) ok.push(id);
       m.moves = ok; changed = true;
     }
-    if (u.decks) continue;
-    u.decks = [{ name: '기본 덱', team: u.team || defaultTeam() }];
-    u.active = 0;
-    delete u.team;
-    changed = true;
   }
   // 운영 보상: 버그로 기록이 날아간 계정에 한 번만 지급 (grants에 남겨 다시 주지 않음)
   const GRANTS = [
@@ -224,18 +237,16 @@ const secretIn = (team) => team.filter((m) => Data.BANNED.includes(m.species)).m
 const SECRET_TEXT = '공개 전 골목몬은 다른 사람과의 대전에 데려갈 수 없습니다. 덱에서 빼 주세요.';
 const BAN_TEXT = (names) => `${names.join(', ')}${names.length > 1 ? '는' : '는'} 지금 테스트 중이라 쓸 수 없습니다. 덱에서 빼 주세요.`;
 
-function validTeam(t) {
-  if (!Array.isArray(t) || t.length < 3 || t.length > 6) return null;
-  const seen = new Set(), out = [];
-  for (const m of t) {
-    const sp = Data.MONSTERS[m?.species];
-    if (!sp || seen.has(m.species) || !Array.isArray(m.moves)) return null;
-    const mv = [...new Set(m.moves)];
-    if (mv.length < 1 || mv.length > 4 || mv.length !== m.moves.length) return null;
-    if (!mv.every((id) => sp.moves.includes(id))) return null;
-    seen.add(m.species);
-    const item = Data.ITEMS[m.item] ? m.item : undefined; // 도구 (없거나 모르는 도구면 빈손)
-    out.push({ species: m.species, moves: mv, ...(item ? { item } : {}) });
+// 덱의 칸: 내가 가진 골목몬(uid)과 도구. 한 덱에 같은 종류는 한 마리만.
+function validTeam(u, t) {
+  if (!Array.isArray(t) || t.length < 1 || t.length > 6) return null;
+  const uids = new Set(), species = new Set(), out = [];
+  for (const x of t) {
+    const m = monOf(u, String(x?.uid ?? ''));
+    if (!m || uids.has(m.uid) || species.has(m.species)) return null;
+    uids.add(m.uid); species.add(m.species);
+    const item = Data.ITEMS[x.item] ? x.item : undefined; // 도구 (없거나 모르는 도구면 빈손)
+    out.push({ uid: m.uid, ...(item ? { item } : {}) });
   }
   return out;
 }
@@ -249,8 +260,10 @@ const uncensored = (u) => isAdult(u) && !u.settings?.mosaic;
 
 const publicUser = (u) => ({
   dev: isDev(u), owned: u.owned || [], mailNew: (u.mail || []).filter((m) => !m.read || !m.claimed).length, birthYear: u.birthYear || null, needAge: !u.birthYear, adult: isAdult(u), uncensored: uncensored(u), settings: { mosaic: !!u.settings?.mosaic },
-  name: u.name, avatar: u.avatar, decks: u.decks, active: u.active, stats: u.stats, style: u.style,
+  name: u.name, avatar: u.avatar, decks: deckView(u), active: u.active, stats: u.stats, style: u.style,
   wins: u.wins, losses: u.losses, draws: u.draws, h2h: u.h2h,
+  tutorial: !!u.tutorial, gp: u.gp, tickets: u.tickets, skips: u.skips, stones: u.stones, mons: u.mons,
+  premium: P.passState(u).premium, badges: P.claimable(u), scoutReady: !!P.scoutState(u).cands, surveyDone: !!db.surveys?.[keyOf(u.name)], sunfish: !!u.sunfishDone,
 });
 
 function createSession(res, req, key) {
@@ -334,7 +347,8 @@ async function api(req, res, url) {
     if (!validYear(birthYear)) return json(res, 400, { error: '태어난 해를 정확히 넣어 주세요. (예: 1998)' });
     const salt = crypto.randomBytes(16).toString('hex');
     db.users[key] = {
-      name, salt, hash: hashPw(password, salt), avatar: randomAvatar(), decks: [{ name: '기본 덱', team: defaultTeam() }], active: 0, createdAt: Date.now(), lastSeen: Date.now(), notes: {}, stats: newStats(), style: defaultStyle(),
+      ...P.newProgress(),
+      name, salt, hash: hashPw(password, salt), avatar: randomAvatar(), createdAt: Date.now(), lastSeen: Date.now(), notes: {}, stats: newStats(), style: defaultStyle(),
       wins: 0, losses: 0, draws: 0, h2h: {}, birthYear, settings: { mosaic: false },
     };
     createSession(res, req, key);
@@ -393,9 +407,9 @@ async function api(req, res, url) {
   if (route === 'GET /api/players') {
     const notes = user.notes || {};
     const players = Object.entries(db.users).map(([k, u]) => ({
-      key: k, name: u.name, avatar: u.avatar, style: u.style, wins: u.wins, losses: u.losses, draws: u.draws,
+      key: k, name: u.name, avatar: u.avatar, style: u.style, wins: u.wins, losses: u.losses, draws: u.draws, mons: new Set((u.mons || []).map((m) => m.species)).size,
       online: online.has(k), busy: inBattle.has(k), createdAt: u.createdAt || null, lastSeen: online.has(k) ? Date.now() : u.lastSeen || null,
-      note: notes[k] || '', me: k === auth.key,
+      note: notes[k] || '', me: k === auth.key, premium: (u.premiumSeasons || []).includes(P.seasonOf()),
     })).sort((a, b) => b.online - a.online || (b.lastSeen || 0) - (a.lastSeen || 0));
     return json(res, 200, { players });
   }
@@ -418,12 +432,13 @@ async function api(req, res, url) {
   }
   if (route === 'PUT /api/decks') {
     const body = await readBody(req);
-    const decks = validDecks(body.decks);
-    if (!decks) return json(res, 400, { error: '덱은 1개 이상, 이름은 12자 이내, 골목몬은 서로 다른 3~6마리, 기술은 1~4개여야 합니다.' });
-    const banned = bannedIn(user, decks.flatMap((d) => d.team)).filter((n, i, a) => a.indexOf(n) === i);
+    const decks = validDecks(user, body.decks);
+    if (!decks) return json(res, 400, { error: '덱은 1~20개, 이름은 12자 이내, 골목몬은 내가 가진 서로 다른 종류 1~6마리여야 합니다.' });
+    const sp = (d) => d.team.map((t) => monOf(user, t.uid)).filter(Boolean);
+    const banned = bannedIn(user, decks.flatMap(sp)).filter((n, i, a) => a.indexOf(n) === i);
     if (banned.length) {
       // 예전에 넣어 둔 덱은 그대로 둘 수 있게, 새로 넣은 경우만 막습니다.
-      const had = new Set(bannedIn(user, (user.decks || []).flatMap((d) => d.team)));
+      const had = new Set(bannedIn(user, (user.decks || []).flatMap(sp)));
       const added = banned.filter((n) => !had.has(n));
       if (added.length) return json(res, 400, { error: BAN_TEXT(added) });
     }
@@ -432,8 +447,77 @@ async function api(req, res, url) {
     return json(res, 200, { user: publicUser(user) });
   }
   if (route.endsWith(' /api/contest') || route.startsWith('POST /api/contest/')) return contestApi(req, res, route, auth, user);
+  return progressApi(req, res, route, auth, user);
+}
+
+/* ---------- 새 게임: 튜토리얼, 스카우트, 보상, 패스, 설문, 미니게임 ---------- */
+async function progressApi(req, res, route, auth, user) {
+  const done = (r, extra = {}) => {
+    if (r?.error) return json(res, 400, { error: r.error });
+    save();
+    send(online.get(auth.key), { t: 'me', user: publicUser(user) });
+    return json(res, 200, { ...r, ...extra, user: publicUser(user) });
+  };
+  const body = route.startsWith('GET ') ? {} : await readBody(req);
+  if (route === 'GET /api/starters') return json(res, 200, { starters: P.STARTERS, reward: P.TUTORIAL_REWARD });
+  if (route === 'POST /api/tutorial') return done(P.finishTutorial(user, Number(body.starter)));
+  if (!user.tutorial) return json(res, 403, { error: '튜토리얼을 먼저 끝내 주세요.', needTutorial: true });
+  if (route === 'GET /api/scout') return json(res, 200, { scout: P.scoutState(user), user: publicUser(user) });
+  if (route === 'POST /api/scout/skip') return done(P.scoutSkip(user), { scout: P.scoutState(user) });
+  if (route === 'POST /api/scout/pick') { const r = P.scoutPick(user, String(body.species ?? ''), body.pay === 'ticket' ? 'ticket' : 'gp'); return done(r, { scout: P.scoutState(user) }); }
+  if (route === 'POST /api/mon/move') return done(P.changeMove(user, String(body.uid ?? ''), Number(body.slot), String(body.move ?? '')));
+  if (route === 'POST /api/stone/buy') return done(P.buyStone(user, String(body.species ?? '')));
+  if (route === 'GET /api/rewards') return json(res, 200, rewardsView(user));
+  if (route === 'POST /api/attend') return done(P.attend(user), rewardsView(user));
+  if (route === 'POST /api/quest/claim') return done(P.claimQuest(user, String(body.id ?? '')), rewardsView(user));
+  if (route === 'POST /api/ach/claim') return done(P.claimAch(user, String(body.id ?? '')), rewardsView(user));
+  if (route === 'POST /api/pass/claim') return done(P.claimPass(user, Number(body.lv), body.track === 'prem' ? 'prem' : 'free'), rewardsView(user));
+  if (route === 'POST /api/dev/premium') {
+    if (!isDev(user)) return json(res, 403, { error: '개발자만 줄 수 있어요.' });
+    const t = db.users[keyOf(String(body.name ?? ''))];
+    if (!t) return json(res, 404, { error: '없는 플레이어예요.' });
+    const s = P.seasonOf();
+    t.premiumSeasons ||= [];
+    const on = !t.premiumSeasons.includes(s);
+    if (on) { t.premiumSeasons.push(s); sendMail(t, { from: '골목대전 운영팀', title: `시즌 ${s} 프리미엄 패스 도착!`, body: '운영팀이 보내는 선물이에요. 이번 시즌 패스의 프리미엄 보상을 모두 받을 수 있어요!' }); notices.set(keyOf(t.name), `시즌 ${s} 프리미엄 패스가 생겼어요!`); }
+    else t.premiumSeasons = t.premiumSeasons.filter((x) => x !== s);
+    P.passBook(t); save();
+    send(online.get(keyOf(t.name)), { t: 'me', user: publicUser(t) });
+    return json(res, 200, { name: t.name, premium: on });
+  }
+  if (route === 'GET /api/survey') {
+    const mine = db.surveys?.[auth.key] || null;
+    return json(res, 200, { mine, all: isDev(user) ? Object.values(db.surveys || {}) : undefined });
+  }
+  if (route === 'POST /api/survey') {
+    const pickList = (v, allowed) => (Array.isArray(v) ? v.filter((x) => allowed.includes(x)) : []).filter((x, i, a) => a.indexOf(x) === i);
+    const rate = Math.round(Number(body.rate));
+    if (!(rate >= 1 && rate <= 5)) return json(res, 400, { error: '만족도를 골라 주세요.' });
+    const first = !db.surveys?.[auth.key];
+    (db.surveys ||= {})[auth.key] = {
+      user: user.name, at: Date.now(), rate,
+      fun: pickList(body.fun, SURVEY.fun), want: pickList(body.want, SURVEY.want),
+      wantEtc: cut(body.wantEtc, 200), bad: cut(body.bad, 500), say: cut(body.say, 500),
+    };
+    const got = first ? P.grant(user, { gp: 1000 }) : [];
+    return done({ got });
+  }
+  if (route === 'POST /api/sunfish/start') { user.sunfishRun = Date.now(); save(); return json(res, 200, { ok: true }); }
+  if (route === 'POST /api/sunfish/clear') {
+    const size = Number(body.size);
+    if (!user.sunfishRun || Date.now() - user.sunfishRun < 20000 || !(size >= SUNFISH_GOAL)) return json(res, 400, { error: '기록을 확인할 수 없어요. 다시 해 주세요.' });
+    user.sunfishRun = 0;
+    user.sunfishBest = Math.max(user.sunfishBest || 0, Math.min(999, size));
+    if (user.sunfishDone) return done({ got: [], again: true });
+    user.sunfishDone = true;
+    return done({ got: P.grant(user, { mon: 'deungsin' }) });
+  }
   return json(res, 404, { error: '없는 경로입니다.' });
 }
+
+const rewardsView = (u) => ({ attend: P.attendState(u), quests: P.questState(u), ach: P.achState(u), pass: P.passState(u), badges: P.claimable(u) });
+const SURVEY = { fun: ['대전', '골목몬 디자인', '꾸미기', '스카우트', '이벤트', '훈련장', '태그전', '도감'], want: ['랭킹전', '골목몬 교환', '길드·친구', '스토리 모드', '새 골목몬', '미니게임', '채팅', '레이드(협동 보스전)'] };
+const SUNFISH_GOAL = 300; // 개복치 키우기: 300cm까지 키우면 등신
 
 /* ---------- 신캐 만들기 공모전 ---------- */
 const CONTEST = { title: '신캐 만들기 공모전', ends: Date.parse(process.env.CONTEST_ENDS || '2026-11-13T23:59:59+09:00') };
@@ -620,11 +704,11 @@ function startBattle(keys, size, level = 1, tag = false) {
   const foeDeck = (i) => {
     const mine = tag ? (i < 2 ? 0 : 1) : i;
     const human = keys.find((k, j) => k !== BOT && (tag ? (j < 2 ? 0 : 1) : j) !== mine) ?? keys.find((k) => k !== BOT);
-    return deckOf(db.users[human]).team.slice(0, size);
+    return battleTeam(db.users[human]).slice(0, size);
   };
   const players = keys.map((k, i) => (k === BOT
     ? { name: `골목대장(${BOT_LEVELS[level]})`, avatar: randomAvatar(true), style: randomStyle(), deck: `${BOT_LEVELS[level]} 덱`, team: E.botTeam(level, size, foeDeck(i)) }
-    : { name: db.users[k].name, avatar: db.users[k].avatar, style: db.users[k].style, deck: deckOf(db.users[k]).name, team: deckOf(db.users[k]).team.slice(0, size) }));
+    : { name: db.users[k].name, avatar: db.users[k].avatar, style: db.users[k].style, deck: deckOf(db.users[k]).name, team: battleTeam(db.users[k]).slice(0, size), stones: db.users[k].stones }));
   const room = { id: crypto.randomUUID(), keys, b: E.createBattle(players, undefined, { preview: true }), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: level, tag, spectators: new Set() };
   battles.set(room.id, room);
   keys.forEach((k) => { if (k !== BOT) { inBattle.set(k, room); clearChallenges(k); removeFromTag(k); stopWatching(k); } });
@@ -758,6 +842,8 @@ function finish(room) {
     if (won && !room.b.forfeited && room.b.sides[s].mons.every((m) => m.hp > 0)) st.flawless++;
     if (room.tag) { st.tagGames++; if (won) st.tagWins++; }
     else if (!pvp && won) { st[`p${room.botLevel}`]++; st.botWins++; }
+    const pts = P.afterBattle(db.users[k], room.tag ? 'tag' : pvp ? 'pvp' : 'practice', won, room.b.sides[s]);
+    if (pts) { if (online.has(k)) toast(k, `시즌 패스 포인트 +${pts}`); else notices.set(k, [notices.get(k), `시즌 패스 포인트 +${pts}`].filter(Boolean).join(' · ')); }
   }
   if (pvp) {
     const [a, b] = room.keys.map((k) => db.users[k]);
@@ -778,6 +864,7 @@ function finish(room) {
 
 function onMessage(key, msg) {
   if (!db.users[key].birthYear) return send(online.get(key), { t: 'need_age' });
+  if (!db.users[key].tutorial && ['practice', 'challenge', 'accept', 'tag_create', 'tag_seat', 'tag_start', 'training'].includes(msg?.t)) return toast(key, '튜토리얼을 먼저 끝내 주세요.');
   const room = inBattle.get(key);
   switch (msg?.t) {
     case 'action': {
@@ -833,9 +920,9 @@ function onMessage(key, msg) {
       if (r?.host !== key) return;
       const humans = r.slots.filter(Boolean);
       if (humans.some((k) => inBattle.has(k) || !online.has(k))) return toast(key, '참가자 중 대전 중인 사람이 있습니다.');
-      const short = humans.find((k) => deckOf(db.users[k]).team.length < 3);
+      const short = humans.find((k) => battleTeam(db.users[k]).length < 3);
       if (short) return toast(key, `${db.users[short].name}님의 덱에 골목몬이 3마리 있어야 합니다.`);
-      const bk = humans.find((k) => secretIn(deckOf(db.users[k]).team.slice(0, 3)).length);
+      const bk = humans.find((k) => secretIn(battleTeam(db.users[k]).slice(0, 3)).length);
       if (bk) return toast(key, `${db.users[bk].name}님의 덱에 공개 전 골목몬이 있습니다.`);
       tagRooms.delete(r.id);
       startBattle(r.slots.map((k) => k || BOT), 3, r.level, true);
@@ -849,8 +936,8 @@ function onMessage(key, msg) {
     case 'practice': {
       if (room) return;
       const size = [1, 3, 6].includes(msg.size) ? msg.size : 3;
-      if (deckOf(db.users[key]).team.length < size) return toast(key, `선택한 덱에 골목몬이 ${size}마리 있어야 합니다.`);
-      { const bn = bannedIn(db.users[key], deckOf(db.users[key]).team.slice(0, size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
+      if (battleTeam(db.users[key]).length < size) return toast(key, `선택한 덱에 골목몬이 ${size}마리 있어야 합니다.`);
+      { const bn = bannedIn(db.users[key], battleTeam(db.users[key]).slice(0, size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
       startBattle([key, BOT], size, [0, 1, 2, 3].includes(msg.level) ? msg.level : 1);
       break;
     }
@@ -859,9 +946,9 @@ function onMessage(key, msg) {
       const size = [1, 3, 6].includes(msg.size) ? msg.size : 3;
       if (room || to === key || !online.has(to)) return toast(key, '지금은 신청할 수 없습니다.');
       if (inBattle.has(to)) return toast(key, '상대가 대전 중입니다.');
-      if (deckOf(db.users[key]).team.length < size) return toast(key, `선택한 덱에 골목몬이 ${size}마리 있어야 합니다.`);
-      { const bn = bannedIn(db.users[key], deckOf(db.users[key]).team.slice(0, size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
-      if (secretIn(deckOf(db.users[key]).team.slice(0, size)).length) return toast(key, SECRET_TEXT);
+      if (battleTeam(db.users[key]).length < size) return toast(key, `선택한 덱에 골목몬이 ${size}마리 있어야 합니다.`);
+      { const bn = bannedIn(db.users[key], battleTeam(db.users[key]).slice(0, size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
+      if (secretIn(battleTeam(db.users[key]).slice(0, size)).length) return toast(key, SECRET_TEXT);
       challenges.set(key, { to, size });
       broadcastLobby();
       break;
@@ -880,11 +967,11 @@ function onMessage(key, msg) {
       const from = keyOf(String(msg.from ?? ''));
       const c = challenges.get(from);
       if (!c || c.to !== key || room || !online.has(from) || inBattle.has(from)) return toast(key, '이미 끝난 신청입니다.');
-      if (deckOf(db.users[key]).team.length < c.size) return toast(key, `선택한 덱에 골목몬이 ${c.size}마리 있어야 합니다.`);
-      if (deckOf(db.users[from]).team.length < c.size) return toast(key, '상대의 덱 인원이 모자랍니다.');
-      { const bn = bannedIn(db.users[key], deckOf(db.users[key]).team.slice(0, c.size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
-      if (secretIn(deckOf(db.users[key]).team.slice(0, c.size)).length) return toast(key, SECRET_TEXT);
-      if (bannedIn(db.users[from], deckOf(db.users[from]).team.slice(0, c.size)).length || secretIn(deckOf(db.users[from]).team.slice(0, c.size)).length) return toast(key, '상대 덱에 공개 전 골목몬이 있어 시작할 수 없습니다.');
+      if (battleTeam(db.users[key]).length < c.size) return toast(key, `선택한 덱에 골목몬이 ${c.size}마리 있어야 합니다.`);
+      if (battleTeam(db.users[from]).length < c.size) return toast(key, '상대의 덱 인원이 모자랍니다.');
+      { const bn = bannedIn(db.users[key], battleTeam(db.users[key]).slice(0, c.size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
+      if (secretIn(battleTeam(db.users[key]).slice(0, c.size)).length) return toast(key, SECRET_TEXT);
+      if (bannedIn(db.users[from], battleTeam(db.users[from]).slice(0, c.size)).length || secretIn(battleTeam(db.users[from]).slice(0, c.size)).length) return toast(key, '상대 덱에 공개 전 골목몬이 있어 시작할 수 없습니다.');
       startBattle([from, key], c.size);
       break;
     }
@@ -953,6 +1040,7 @@ setInterval(() => {
 }, 15000).unref();
 
 (async () => {
+  loadLocal();
   if (GIST_ID) {
     // 읽기에 실패한 채로 켜지면 빈 데이터로 덮어쓰게 되므로 아예 시작하지 않습니다.
     try { await loadGist(); }

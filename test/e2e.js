@@ -25,7 +25,18 @@ async function signup(ctx, name) {
   await page.keyboard.type('secret123');
   await page.fill('[name=birthYear]', '1995');
   await page.click('form .btn');
+  // 새 게임: 튜토리얼을 건너뛰고 첫 번째 스타터 덱을 고름
+  await page.waitForSelector('#tu-skip');
+  await page.click('#tu-skip');
+  await page.waitForSelector('[data-st="0"]');
+  await page.click('[data-st="0"]');
+  await page.click('[data-ok]');
+  await page.waitForSelector('.got [data-x]');
+  await page.click('.got [data-x]');
   await page.waitForSelector('#go-team');
+  // 테스트에서 메가진화할 골목몬의 메가스톤 (이미 있으면 그냥 넘어감)
+  await page.evaluate(async () => { for (const species of ['kongsiru', 'maetdol', 'kettle']) await fetch('/api/stone/buy', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ species }) }); });
+  await page.reload(); await page.waitForSelector('#go-team');
   return { page, errors };
 }
 
