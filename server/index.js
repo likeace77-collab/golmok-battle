@@ -33,36 +33,50 @@ const gistHeaders = {
   'Content-Type': 'application/json', 'User-Agent': 'golmok-battle',
 };
 
+// 신캐 공모전 출품작은 그림이 커서 따로 저장합니다 (게임 기록 저장이 무거워지지 않게).
+const CONTEST_FILE = path.join(DATA_DIR, 'contest.json');
+const GIST_CONTEST = GIST_FILE.replace(/\.json$/, '') + '-contest.json';
+const contest = fs.existsSync(CONTEST_FILE) ? JSON.parse(fs.readFileSync(CONTEST_FILE, 'utf8')) : { entries: [] };
+
 async function loadGist() {
   const r = await fetch(`${GIST_API}/gists/${GIST_ID}`, { headers: gistHeaders });
   if (!r.ok) throw new Error(`Gist 읽기 실패: ${r.status}`);
-  const file = (await r.json()).files?.[GIST_FILE];
+  const files = (await r.json()).files || {};
+  const read = async (f) => (f.truncated ? (await fetch(f.raw_url, { headers: gistHeaders })).text() : f.content);
+  if (files[GIST_CONTEST]) Object.assign(contest, JSON.parse(await read(files[GIST_CONTEST])));
+  const file = files[GIST_FILE];
   if (!file) return; // 처음 실행
-  const text = file.truncated ? await (await fetch(file.raw_url, { headers: gistHeaders })).text() : file.content;
-  Object.assign(db, JSON.parse(text));
+  Object.assign(db, JSON.parse(await read(file)));
 }
 
-let gistDirty = false, gistBusy = false, gistTimer = null;
+let gistDirty = false, contestDirty = false, gistBusy = false, gistTimer = null;
 async function pushGist() {
-  if (gistBusy || !gistDirty) return;
-  gistBusy = true; gistDirty = false;
+  if (gistBusy || (!gistDirty && !contestDirty)) return;
+  gistBusy = true;
+  const files = {}, was = [gistDirty, contestDirty];
+  if (gistDirty) files[GIST_FILE] = { content: JSON.stringify(db) };
+  if (contestDirty) files[GIST_CONTEST] = { content: JSON.stringify(contest) };
+  gistDirty = contestDirty = false;
   try {
-    const r = await fetch(`${GIST_API}/gists/${GIST_ID}`, {
-      method: 'PATCH', headers: gistHeaders,
-      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(db) } } }),
-    });
+    const r = await fetch(`${GIST_API}/gists/${GIST_ID}`, { method: 'PATCH', headers: gistHeaders, body: JSON.stringify({ files }) });
     if (!r.ok) throw new Error(String(r.status));
   } catch (e) {
-    gistDirty = true;
+    gistDirty ||= was[0]; contestDirty ||= was[1];
     console.error('Gist 저장 실패, 다음 변경 때 다시 시도합니다:', e.message);
   }
   gistBusy = false;
 }
-function queueGist() {
+function queueGist(kind = 'db') {
   if (!GIST_ID) return;
-  gistDirty = true;
+  if (kind === 'contest') contestDirty = true; else gistDirty = true;
   clearTimeout(gistTimer);
-  gistTimer = setTimeout(async () => { await pushGist(); if (gistDirty) queueGist(); }, 3000);
+  gistTimer = setTimeout(async () => { await pushGist(); if (gistDirty || contestDirty) queueGist(contestDirty ? 'contest' : 'db'); }, 3000);
+}
+function saveContest() {
+  const tmp = `${CONTEST_FILE}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(contest));
+  fs.renameSync(tmp, CONTEST_FILE);
+  queueGist('contest');
 }
 
 let saveTimer = null;
@@ -413,6 +427,59 @@ async function api(req, res, url) {
     const active = Number.isInteger(body.active) && body.active >= 0 && body.active < decks.length ? body.active : 0;
     user.decks = decks; user.active = active; save();
     return json(res, 200, { user: publicUser(user) });
+  }
+  if (route.endsWith(' /api/contest') || route.startsWith('POST /api/contest/')) return contestApi(req, res, route, auth, user);
+  return json(res, 404, { error: '없는 경로입니다.' });
+}
+
+/* ---------- 신캐 만들기 공모전 ---------- */
+const CONTEST = { title: '신캐 만들기 공모전', ends: Date.parse(process.env.CONTEST_ENDS || '2026-11-13T23:59:59+09:00') };
+const PER_USER = 3, MAX_ENTRIES = 200, MAX_IMAGE = 400000;
+const cut = (v, n) => [...String(v ?? '').trim()].slice(0, n).join('');
+const entryView = (e, full) => ({ id: e.id, user: e.user, at: e.at, name: e.name, types: e.types, desc: e.desc, trait: e.trait, moves: e.moves, image: full ? e.image : undefined, hasImage: !!e.image, winner: !!e.winner });
+async function contestApi(req, res, route, auth, user) {
+  const dev = isDev(user), closed = Date.now() > CONTEST.ends;
+  const mine = (e) => e.key === auth.key;
+  const view = () => {
+    const w = contest.entries.find((e) => e.winner);
+    return {
+      info: { ...CONTEST, closed, count: contest.entries.length, perUser: PER_USER },
+      mine: contest.entries.filter(mine).map((e) => entryView(e, true)),
+      all: dev ? contest.entries.map((e) => entryView(e, true)) : undefined,
+      winner: w ? { name: w.name, user: w.user } : null, dev,
+    };
+  };
+  if (route === 'GET /api/contest') return json(res, 200, view());
+  const body = await readBody(req);
+  if (route === 'POST /api/contest') {
+    if (closed) return json(res, 403, { error: '공모전 접수가 마감되었습니다.' });
+    if (contest.entries.filter(mine).length >= PER_USER) return json(res, 400, { error: `한 사람당 ${PER_USER}개까지 낼 수 있어요. 기존 작품을 지우고 다시 내 주세요.` });
+    if (contest.entries.length >= MAX_ENTRIES) return json(res, 400, { error: '출품작이 너무 많아 더 받을 수 없습니다.' });
+    const name = cut(body.name, 12), desc = cut(body.desc, 1000);
+    if (!name) return json(res, 400, { error: '요괴 이름을 넣어 주세요.' });
+    if (!desc) return json(res, 400, { error: '요괴 설명을 넣어 주세요.' });
+    const types = (Array.isArray(body.types) ? body.types : []).filter((t) => Data.TYPES[t] && t !== 'none').filter((t, i, a) => a.indexOf(t) === i).slice(0, 2);
+    const image = typeof body.image === 'string' && body.image ? body.image : '';
+    if (image && (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(image) || image.length > MAX_IMAGE)) return json(res, 400, { error: '그림이 너무 크거나 형식이 맞지 않아요.' });
+    contest.entries.push({ id: crypto.randomBytes(6).toString('hex'), key: auth.key, user: user.name, at: Date.now(), name, types, desc, trait: cut(body.trait, 400), moves: cut(body.moves, 800), image });
+    saveContest();
+    return json(res, 200, view());
+  }
+  const e = contest.entries.find((x) => x.id === String(body.id ?? ''));
+  if (!e) return json(res, 404, { error: '없는 출품작입니다.' });
+  if (route === 'POST /api/contest/delete') {
+    if (!dev && !(mine(e) && !closed)) return json(res, 403, { error: '지울 수 없는 출품작입니다.' });
+    contest.entries = contest.entries.filter((x) => x !== e);
+    saveContest();
+    return json(res, 200, view());
+  }
+  if (route === 'POST /api/contest/winner') {
+    if (!dev) return json(res, 403, { error: '개발자만 뽑을 수 있습니다.' });
+    const on = !e.winner;
+    for (const x of contest.entries) x.winner = false;
+    e.winner = on;
+    saveContest();
+    return json(res, 200, view());
   }
   return json(res, 404, { error: '없는 경로입니다.' });
 }

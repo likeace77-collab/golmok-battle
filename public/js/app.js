@@ -1,5 +1,8 @@
-// 이벤트: 여기에 { title, period, desc } 를 넣으면 이벤트 탭에 나옵니다.
-const EVENTS = [];
+// 이벤트 목록: ends(마감 시각)가 지나면 '진행 중'에서 빠집니다.
+const EVENTS = [
+  { id: 'contest', title: '신캐 만들기 공모전', ends: Date.parse('2026-11-13T23:59:59+09:00'), period: '11월 13일(금)까지' },
+];
+const liveEvents = () => EVENTS.filter((e) => !e.ends || Date.now() <= e.ends);
 // 화면 전환, 로그인, 로비, 아바타, 팀 편성
 const app = document.getElementById('app');
 const sheetRoot = document.getElementById('sheet-root');
@@ -281,7 +284,7 @@ function renderLobby() {
         <button class="btn paper" id="go-settings">설정</button>
       </div>
     </section>
-    <button class="evtab" id="go-event" aria-label="이벤트"><s aria-hidden="true"></s><b>EVENT</b><small>${EVENTS.length ? `진행 중 ${EVENTS.length}개` : '준비 중'}</small></button>
+    <button class="evtab" id="go-event" aria-label="이벤트"><s aria-hidden="true"></s><b>EVENT</b><small>${liveEvents().length ? `진행 중 ${liveEvents().length}개` : '준비 중'}</small></button>
     <section class="panel">
       <div class="row" style="justify-content:space-between;margin-bottom:8px">
         <h2 style="margin:0">대전 인원</h2>
@@ -732,11 +735,145 @@ function showTypeChart() {
 function showEvents() {
   G.screen = 'events';
   app.className = '';
+  const dday = (t) => { if (Date.now() > t) return '마감'; const d = Math.ceil((t - Date.now()) / 86400000) - 1; return d > 0 ? `D-${d}` : 'D-DAY'; }; // 마감일 자정 기준
   app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>EVENT</h1></div>
-    <section class="panel ev-list">${EVENTS.length
-    ? EVENTS.map((e) => `<article class="ev-card"><h2>${esc(e.title)}</h2>${e.period ? `<small>${esc(e.period)}</small>` : ''}<p>${esc(e.desc || '')}</p></article>`).join('')
-    : '<div class="ev-empty"><b>🎪</b><h2>진행 중인 이벤트가 없어요</h2><p>새 이벤트가 열리면 여기에서 알려 드릴게요!</p></div>'}</section>`;
+    ${EVENTS.length ? EVENTS.map((e) => `<button class="ev-card ev-${e.id}" data-ev="${e.id}">
+      <span class="ev-badge ${Date.now() > e.ends ? 'off' : ''}">${dday(e.ends)}</span>
+      <h2>${esc(e.title)}</h2><small>${esc(e.period)}</small>
+      <p>나만의 요괴를 만들어 올려 주세요! 우승작은 실제 게임에 출시되고, 만든 사람에게 그 요괴의 신화 등급 칭호를 드려요.</p>
+      <b class="ev-go">자세히 보기 ›</b></button>`).join('')
+    : '<section class="panel"><div class="ev-empty"><b>🎪</b><h2>진행 중인 이벤트가 없어요</h2><p>새 이벤트가 열리면 여기에서 알려 드릴게요!</p></div></section>'}`;
   app.querySelector('#back').onclick = showLobby;
+  app.querySelectorAll('[data-ev]').forEach((b) => { b.onclick = () => showContest(); });
+}
+
+/* ---------- 신캐 만들기 공모전 ---------- */
+const typeChips = (ts) => (ts || []).map(typeChip).join('');
+function entryCard(e, { dev = false, mine = false, closed = false } = {}) {
+  return `<article class="ct-entry ${e.winner ? 'win' : ''}">
+    ${e.winner ? '<em class="ct-win">🏆 우승</em>' : ''}
+    ${e.image ? `<img src="${e.image}" alt="${esc(e.name)} 디자인">` : '<div class="ct-noimg">그림 없음</div>'}
+    <div class="ct-body"><h3>${esc(e.name)} ${typeChips(e.types)}</h3>
+      <small>${esc(e.user)} · ${new Date(e.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</small>
+      <h4>설명</h4><p>${esc(e.desc)}</p>
+      ${e.trait ? `<h4>특성</h4><p>${esc(e.trait)}</p>` : ''}
+      ${e.moves ? `<h4>기술셋</h4><p>${esc(e.moves)}</p>` : ''}
+      <div class="row ct-acts">
+        ${dev ? `<button class="btn small ${e.winner ? 'paper' : ''}" data-win="${e.id}">${e.winner ? '우승 취소' : '🏆 우승으로 뽑기'}</button>` : ''}
+        ${dev || (mine && !closed) ? `<button class="btn small paper" data-del="${e.id}">지우기</button>` : ''}
+      </div></div></article>`;
+}
+async function showContest(tab = 'info') {
+  G.screen = 'contest';
+  app.className = '';
+  app.innerHTML = '<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>공모전</h1></div><p class="wait">불러오는 중...</p>';
+  app.querySelector('#back').onclick = showEvents;
+  let v;
+  try { v = await api('GET', '/api/contest'); } catch (e) { toast(e.message); return; }
+  const render = () => {
+    if (G.screen !== 'contest') return;
+    const { info } = v, closed = info.closed;
+    const left = Math.max(0, info.ends - Date.now()), days = Math.floor(left / 86400000), hours = Math.floor((left % 86400000) / 3600000);
+    app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>공모전</h1></div>
+      <section class="ct-hero"><s aria-hidden="true"></s><small>EVENT</small><h2>신캐 만들기 공모전</h2>
+        <p class="ct-due">${closed ? '접수 마감' : `11월 13일(금) 자정까지 · ${days}일 ${hours}시간 남음`}</p></section>
+      ${v.winner ? `<section class="panel ct-winner">🏆 우승작: <b>${esc(v.winner.name)}</b> (${esc(v.winner.user)})</section>` : ''}
+      <section class="panel ct-rules">
+        <h3>이렇게 참가해요</h3>
+        <ol><li>새 요괴의 <b>디자인</b>을 직접 그리거나 사진으로 올려요.</li>
+          <li><b>이름</b>, <b>타입</b>, <b>설명</b>을 적어요. 설명은 꼭 넣어 주세요! 어떤 요괴인지, 성격이나 생김새, 사연까지 자세할수록 좋아요.</li>
+          <li><b>특성</b>과 <b>기술셋</b>도 생각해 둔 게 있으면 적어 주세요.</li></ol>
+        <h3>상품</h3>
+        <ul class="ct-prize"><li>🎮 우승한 요괴를 <b>실제 게임에 출시</b></li><li>👑 그 요괴와 관련된 <b>신화 등급 칭호</b> 지급</li></ul>
+        <p class="muted">마감 후 개발자가 출품작 중 하나를 뽑아요. 한 사람당 ${info.perUser}개까지 낼 수 있어요. 지금까지 ${info.count}개가 들어왔어요.</p>
+        ${closed ? '' : `<button class="btn wide" id="ct-new" ${v.mine.length >= info.perUser ? 'disabled' : ''}>${v.mine.length >= info.perUser ? '더 낼 수 없어요 (최대 ' + info.perUser + '개)' : '✏️ 신캐 만들어서 내기'}</button>`}
+      </section>
+      ${v.mine.length ? `<h2 class="ct-sec">내 출품작</h2>${v.mine.map((e) => entryCard(e, { mine: true, closed })).join('')}` : ''}
+      ${v.dev ? `<h2 class="ct-sec">전체 출품작 (${v.all.length}) <small>개발자에게만 보여요</small></h2>${v.all.length ? v.all.map((e) => entryCard(e, { dev: true, closed })).join('') : '<section class="panel"><p class="muted">아직 출품작이 없어요.</p></section>'}` : ''}`;
+    app.querySelector('#back').onclick = showEvents;
+    app.querySelector('#ct-new')?.addEventListener('click', () => showContestForm());
+    app.querySelectorAll('[data-del]').forEach((b) => { b.onclick = async () => { if (!confirm('이 출품작을 지울까요?')) return; try { v = await api('POST', '/api/contest/delete', { id: b.dataset.del }); render(); toast('지웠어요.'); } catch (e) { toast(e.message); } }; });
+    app.querySelectorAll('[data-win]').forEach((b) => { b.onclick = async () => { try { v = await api('POST', '/api/contest/winner', { id: b.dataset.win }); render(); } catch (e) { toast(e.message); } }; });
+  };
+  render();
+}
+
+// 손가락이나 마우스로 그리는 그림판 (사진을 올려 그 위에 그릴 수도 있음)
+function drawPad(root) {
+  const cv = root.querySelector('canvas'), ctx = cv.getContext('2d');
+  const N = 480; cv.width = cv.height = N;
+  const blank = () => { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, N, N); };
+  blank();
+  let color = '#1a1433', size = 6, erase = false, down = false, used = false, last = null;
+  const hist = [];
+  const snap = () => { hist.push(ctx.getImageData(0, 0, N, N)); if (hist.length > 25) hist.shift(); };
+  const pos = (e) => { const r = cv.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * N, y: ((e.clientY - r.top) / r.height) * N }; };
+  const line = (a, b) => { ctx.strokeStyle = erase ? '#fff' : color; ctx.lineWidth = erase ? size * 3 : size; ctx.lineCap = ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); };
+  cv.addEventListener('pointerdown', (e) => { e.preventDefault(); cv.setPointerCapture(e.pointerId); snap(); down = true; used = true; last = pos(e); line(last, { x: last.x + .1, y: last.y }); });
+  cv.addEventListener('pointermove', (e) => { if (!down) return; const p = pos(e); line(last, p); last = p; });
+  const up = () => { down = false; };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  root.querySelectorAll('[data-col]').forEach((b) => { b.onclick = () => { color = b.dataset.col; erase = false; root.querySelectorAll('[data-col],[data-tool]').forEach((x) => x.classList.toggle('on', x === b)); }; });
+  root.querySelectorAll('[data-size]').forEach((b) => { b.onclick = () => { size = +b.dataset.size; root.querySelectorAll('[data-size]').forEach((x) => x.classList.toggle('on', x === b)); }; });
+  root.querySelector('[data-tool=erase]').onclick = (ev) => { erase = true; root.querySelectorAll('[data-col],[data-tool]').forEach((x) => x.classList.toggle('on', x === ev.currentTarget)); };
+  root.querySelector('[data-tool=undo]').onclick = () => { const h = hist.pop(); if (h) ctx.putImageData(h, 0, 0); };
+  root.querySelector('[data-tool=clear]').onclick = () => { snap(); blank(); used = false; };
+  root.querySelector('input[type=file]').onchange = (ev) => {
+    const f = ev.target.files?.[0]; if (!f) return;
+    const img = new Image();
+    img.onload = () => { snap(); blank(); const k = Math.min(N / img.width, N / img.height); const w = img.width * k, h = img.height * k; ctx.drawImage(img, (N - w) / 2, (N - h) / 2, w, h); used = true; URL.revokeObjectURL(img.src); };
+    img.onerror = () => toast('그림 파일을 열 수 없어요.');
+    img.src = URL.createObjectURL(f);
+  };
+  return { used: () => used, data: () => { for (const q of [.85, .7, .55]) { const d = cv.toDataURL('image/jpeg', q); if (d.length < 380000) return d; } return cv.toDataURL('image/jpeg', .4); } };
+}
+
+function showContestForm() {
+  G.screen = 'contest-form';
+  const types = Object.entries(G.data.TYPES).filter(([k]) => k !== 'none');
+  const COLS = ['#1a1433', '#ffffff', '#E8402C', '#FF8A00', '#FFD23F', '#4CD964', '#2F7DE1', '#7FB8A4', '#9A4FB8', '#F27FA5', '#A9713A', '#7C8798'];
+  app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>신캐 만들기</h1></div>
+    <section class="panel ct-form">
+      <h3>디자인 <small>직접 그리거나 사진을 올려요 (사진 위에 그려도 돼요)</small></h3>
+      <div class="pad">
+        <canvas aria-label="그림판"></canvas>
+        <div class="pad-tools">
+          ${COLS.map((c, i) => `<button class="pc ${i ? '' : 'on'}" data-col="${c}" style="--c:${c}" aria-label="색"></button>`).join('')}
+        </div>
+        <div class="pad-tools">
+          ${[3, 6, 12, 22].map((n) => `<button class="ps ${n === 6 ? 'on' : ''}" data-size="${n}" aria-label="굵기 ${n}"><i style="width:${n / 1.4 + 2}px;height:${n / 1.4 + 2}px"></i></button>`).join('')}
+          <button class="pt" data-tool="erase">지우개</button><button class="pt" data-tool="undo">되돌리기</button><button class="pt" data-tool="clear">전부 지우기</button>
+          <label class="pt pfile">📷 사진 올리기<input type="file" accept="image/*" hidden></label>
+        </div>
+      </div>
+      <label class="fl">이름 <small>12자까지</small><input id="ct-name" maxlength="12" placeholder="예: 등신"></label>
+      <div class="fl">타입 <small>2개까지</small><div class="ct-types">${types.map(([k, t]) => `<button type="button" data-type="${k}" style="--tc:${t.c}">${t.n}</button>`).join('')}</div></div>
+      <label class="fl">설명 <small>꼭 써 주세요! 어떤 요괴인지, 생김새·성격·사연 (1000자까지)</small><textarea id="ct-desc" rows="5" maxlength="1000" placeholder="예: 바다의 개복치. 햇빛만 봐도 죽는다..."></textarea></label>
+      <label class="fl">특성 <small>선택</small><textarea id="ct-trait" rows="3" maxlength="400" placeholder="예: 돌연사 - 매 턴 10% 확률로 즉사"></textarea></label>
+      <label class="fl">기술셋 <small>선택 · 기술 이름, 타입, 효과</small><textarea id="ct-moves" rows="5" maxlength="800" placeholder="예: 유리대포(전기) - 위력 200, 연속으로 쓰면 25% 즉사"></textarea></label>
+      <button class="btn wide" id="ct-send">공모전에 내기</button>
+    </section>`;
+  app.querySelector('#back').onclick = () => showContest();
+  const pad = drawPad(app.querySelector('.pad'));
+  const picked = [];
+  app.querySelectorAll('[data-type]').forEach((b) => {
+    b.onclick = () => {
+      const t = b.dataset.type, i = picked.indexOf(t);
+      if (i >= 0) picked.splice(i, 1); else { if (picked.length >= 2) picked.shift(); picked.push(t); }
+      app.querySelectorAll('[data-type]').forEach((x) => x.setAttribute('aria-pressed', picked.includes(x.dataset.type)));
+    };
+  });
+  app.querySelector('#ct-send').onclick = async (ev) => {
+    const val = (id) => app.querySelector(id).value.trim();
+    if (!val('#ct-name')) return toast('요괴 이름을 넣어 주세요.');
+    if (!val('#ct-desc')) return toast('요괴 설명을 넣어 주세요.');
+    ev.currentTarget.disabled = true;
+    try {
+      await api('POST', '/api/contest', { name: val('#ct-name'), types: picked, desc: val('#ct-desc'), trait: val('#ct-trait'), moves: val('#ct-moves'), image: pad.used() ? pad.data() : '' });
+      toast('공모전에 냈어요! 행운을 빌어요 🍀');
+      showContest();
+    } catch (e) { toast(e.message); ev.currentTarget.disabled = false; }
+  };
 }
 
 function showFields() {
