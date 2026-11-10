@@ -1,4 +1,4 @@
-// 요괴와 아바타 그림. 전부 코드로 그린 오리지널 SVG입니다.
+// 골목몬과 아바타 그림. 전부 코드로 그린 오리지널 SVG입니다.
 const K = '#1a1433';
 const wrap = (inner) => `<g stroke="${K}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">${inner}</g>`;
 const eye = (x, y, r = 6) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff"/><circle cx="${x + 1}" cy="${y + 1}" r="${r * .5}" fill="${K}" stroke="none"/>`;
@@ -253,8 +253,8 @@ ART.dummy = wrap(`
   <path d="M52 37q8-4 16 0" fill="none" stroke-width="2.500"/><path d="M56 35v4M60 34v4M64 35v4" stroke-width="1.500"/>
   <path d="M43 18q-6-8 0-12M77 18q6-8 0-12" fill="none" stroke="#a8843e" stroke-width="2.500"/>`);
 
-// 사진 그림을 쓰는 요괴 (루미나, 실비아). 서버 데이터의 img 표시를 따릅니다.
-// hits: 맞은 횟수. stages가 있는 요괴는 맞을 때마다 그림이 다음 단계로 바뀝니다 (메가진화 중에는 메가 그림).
+// 사진 그림을 쓰는 골목몬 (루미나, 실비아). 서버 데이터의 img 표시를 따릅니다.
+// hits: 맞은 횟수. stages가 있는 골목몬은 맞을 때마다 그림이 다음 단계로 바뀝니다 (메가진화 중에는 메가 그림).
 function monsterSVG(id, cls = '', mega = false, hits = 0, tier = 0) {
   const sp = typeof G !== 'undefined' ? G.data?.MONSTERS?.[id] : null;
   if (sp?.img) {

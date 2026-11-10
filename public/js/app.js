@@ -295,7 +295,7 @@ function renderLobby() {
       <h2 style="margin-top:12px">사용할 덱</h2>
       <div class="chips deckpick">${u.decks.map((d, i) => `<button data-deck="${i}" aria-pressed="${i === u.active}">${esc(d.name)}</button>`).join('')}</div>
       <div class="mini big">${u.decks[u.active].team.map((m, i) => `<span class="${i < G.size ? '' : 'off'}">${monsterSVG(m.species)}</span>`).join('')}</div>
-      <p class="muted">덱 앞에서부터 ${G.size}마리가 나갑니다. 대전 전에 상대 덱을 보고 먼저 낼 요괴를 고릅니다.</p>
+      <p class="muted">덱 앞에서부터 ${G.size}마리가 나갑니다. 대전 전에 상대 덱을 보고 먼저 낼 골목몬을 고릅니다.</p>
     </section>
     <section class="panel">
       <h2>접속 중인 친구</h2>
@@ -318,7 +318,7 @@ function renderLobby() {
     </section>
     <section class="panel train-card">
       <h2>훈련장</h2>
-      <p class="muted" style="margin-bottom:10px">체력 1000, 타입 없는 더미를 마음껏 때려 보세요. 모든 요괴로 바꿀 수 있고 기술 10개를 전부 쓸 수 있습니다. 준 피해가 쌓이면 훈련장 칭호, 전투카드, 핀이 열립니다.</p>
+      <p class="muted" style="margin-bottom:10px">체력 1000, 타입 없는 더미를 마음껏 때려 보세요. 모든 골목몬으로 바꿀 수 있고 기술 10개를 전부 쓸 수 있습니다. 준 피해가 쌓이면 훈련장 칭호, 전투카드, 핀이 열립니다.</p>
       <p class="muted" style="margin-bottom:10px">누적 피해 <b>${(u.stats?.dummyDmg || 0).toLocaleString('ko-KR')}</b>, 한 턴 최고 <b>${(u.stats?.dummyBest || 0).toLocaleString('ko-KR')}</b></p>
       <button class="btn wide" id="go-train">훈련장 들어가기</button>
     </section>
@@ -460,7 +460,7 @@ function showDecks() {
   G.screen = 'decks';
   const decks = G.user.decks;
   app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>덱 관리</h1></div>
-    <p style="color:#fff;margin-bottom:12px">덱 ${decks.length}개. 덱을 눌러 이름과 요괴, 기술을 바꿉니다.</p>
+    <p style="color:#fff;margin-bottom:12px">덱 ${decks.length}개. 덱을 눌러 이름과 골목몬, 기술을 바꿉니다.</p>
     ${decks.map((d, i) => `<div class="deck ${i === G.user.active ? 'on' : ''}">
       <button class="deck-main" data-open="${i}">
         <b>${esc(d.name)}</b>${i === G.user.active ? '<em>대전에 사용</em>' : ''}
@@ -516,7 +516,7 @@ function showTeam(index, draft) {
             <button data-rm="${i}" aria-label="${sp.n} 빼기" ${team.length > 3 ? '' : 'disabled'}>✕</button>
           </div></div>`;
       }).join('')}
-      ${team.length < 6 ? '<button class="slot empty" id="add">요괴 추가</button>' : ''}
+      ${team.length < 6 ? '<button class="slot empty" id="add">골목몬 추가</button>' : ''}
       <button class="btn wide" id="save">덱 저장하기</button>`;
     app.querySelector('#deck-name').oninput = (e) => { deck.name = e.target.value; };
     app.querySelector('#back').onclick = showDecks;
@@ -546,13 +546,13 @@ function openSheet(html) {
 }
 function closeSheet() { sheetRoot.innerHTML = ''; }
 
-// 밴된 요괴: 개발자 계정은 쓸 수 있음
+// 밴된 골목몬: 개발자 계정은 쓸 수 있음
 const isBanned = (id) => (G.data.BANNED || []).includes(id) && !G.user?.dev;
 const isSecret = isBanned; // 공개 전: 개발자 말고는 그림·이름·정보를 숨김
 
 function pickMonster(team, done) {
   const used = new Set(team.map((m) => m.species));
-  const bg = openSheet(`<div class="row"><h2>요괴 고르기</h2><button class="btn small paper" data-x>닫기</button></div>
+  const bg = openSheet(`<div class="row"><h2>골목몬 고르기</h2><button class="btn small paper" data-x>닫기</button></div>
     <div class="grid">${Object.entries(G.data.MONSTERS).map(([id, m]) => { const ban = isBanned(id); return ban ? `<button class="card secret" disabled><span class="soon-art" aria-hidden="true">?</span><span>???</span><em class="bantag soon">곧 공개!</em></button>`
       : `<button class="card" data-id="${id}" ${used.has(id) ? 'disabled' : ''}
       style="--tc:${G.data.TYPES[m.types[0]].c}">${monsterSVG(id)}<span>${m.n}</span></button>`; }).join('')}</div>`);
@@ -682,7 +682,7 @@ function showDex() {
     const list = ids.filter((id) => G.dexType === 'all' || G.data.MONSTERS[id].types.includes(G.dexType));
     app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>도감</h1></div>
       <section class="panel">
-        <p class="muted" style="margin-bottom:8px">요괴 ${list.length}마리</p>
+        <p class="muted" style="margin-bottom:8px">골목몬 ${list.length}마리</p>
         <div class="chips">
           <button data-t="all" aria-pressed="${G.dexType === 'all'}">전체</button>
           ${types.map((t) => `<button data-t="${t}" aria-pressed="${G.dexType === t}" style="background:${G.data.TYPES[t].c};color:${['elec', 'ice', 'wind'].includes(t) ? 'var(--ink)' : '#fff'}">${G.data.TYPES[t].n}</button>`).join('')}
@@ -711,7 +711,7 @@ function showTypeChart() {
     const [pa, pd] = pick || [];
     app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>타입 상성표</h1></div>
       <section class="panel">
-        <p class="muted" style="margin-bottom:8px">가로줄이 <b>공격하는 기술의 타입</b>, 세로줄이 <b>맞는 요괴의 타입</b>입니다. 타입이 둘인 요괴는 두 배율을 곱합니다(2×2=4배, 2×½=1배). 칸을 누르면 그 상성을 알려 줍니다.</p>
+        <p class="muted" style="margin-bottom:8px">가로줄이 <b>공격하는 기술의 타입</b>, 세로줄이 <b>맞는 골목몬의 타입</b>입니다. 타입이 둘인 골목몬은 두 배율을 곱합니다(2×2=4배, 2×½=1배). 칸을 누르면 그 상성을 알려 줍니다.</p>
         <div class="tc-legend"><span class="x2">2</span> 효과 굉장 (2배) <span class="xh">½</span> 별로 (절반) <span class="x0">0</span> 효과 없음 <span class="x1"></span> 보통 (1배)</div>
         <div class="tc-wrap"><table class="tchart">
           <thead><tr><th class="tc-corner tc-c0"><small>공격↓<br>방어→</small></th>${types.map((d) => `<th class="${d === pd ? 'on' : ''}">${head(d)}</th>`).join('')}</tr></thead>
@@ -722,7 +722,7 @@ function showTypeChart() {
         </table></div>
         <p class="tc-say" aria-live="polite">${pick ? (() => {
           const e = C[pa][pd] ?? 1;
-          return `${head(pa)} 기술로 ${head(pd)} 요괴를 때리면 <b>${e === 2 ? '2배 (효과가 굉장했다!)' : e === .5 ? '절반 (효과가 별로인 듯하다...)' : e === 0 ? '효과 없음' : '보통 (1배)'}</b>`;
+          return `${head(pa)} 기술로 ${head(pd)} 골목몬을 때리면 <b>${e === 2 ? '2배 (효과가 굉장했다!)' : e === .5 ? '절반 (효과가 별로인 듯하다...)' : e === 0 ? '효과 없음' : '보통 (1배)'}</b>`;
         })() : '칸을 눌러 보세요.'}</p>
       </section>`;
     app.querySelector('#back').onclick = showLobby;
@@ -740,7 +740,7 @@ function showEvents() {
     ${EVENTS.length ? EVENTS.map((e) => `<button class="ev-card ev-${e.id}" data-ev="${e.id}">
       <span class="ev-badge ${Date.now() > e.ends ? 'off' : ''}">${dday(e.ends)}</span>
       <h2>${esc(e.title)}</h2><small>${esc(e.period)}</small>
-      <p>나만의 요괴를 만들어 올려 주세요! 우승작은 실제 게임에 출시되고, 만든 사람에게 그 요괴의 신화 등급 칭호를 드려요.</p>
+      <p>나만의 골목몬을 만들어 올려 주세요! 우승작은 실제 게임에 출시되고, 만든 사람에게 그 골목몬의 신화 등급 칭호를 드려요.</p>
       <b class="ev-go">자세히 보기 ›</b></button>`).join('')
     : '<section class="panel"><div class="ev-empty"><b>🎪</b><h2>진행 중인 이벤트가 없어요</h2><p>새 이벤트가 열리면 여기에서 알려 드릴게요!</p></div></section>'}`;
   app.querySelector('#back').onclick = showLobby;
@@ -780,11 +780,11 @@ async function showContest(tab = 'info') {
       ${v.winner ? `<section class="panel ct-winner">🏆 우승작: <b>${esc(v.winner.name)}</b> (${esc(v.winner.user)})</section>` : ''}
       <section class="panel ct-rules">
         <h3>이렇게 참가해요</h3>
-        <ol><li>새 요괴의 <b>디자인</b>을 직접 그리거나 사진으로 올려요.</li>
-          <li><b>이름</b>, <b>타입</b>, <b>설명</b>을 적어요. 설명은 꼭 넣어 주세요! 어떤 요괴인지, 성격이나 생김새, 사연까지 자세할수록 좋아요.</li>
+        <ol><li>새 골목몬의 <b>디자인</b>을 직접 그리거나 사진으로 올려요.</li>
+          <li><b>이름</b>, <b>타입</b>, <b>설명</b>을 적어요. 설명은 꼭 넣어 주세요! 어떤 골목몬인지, 성격이나 생김새, 사연까지 자세할수록 좋아요.</li>
           <li><b>특성</b>과 <b>기술셋</b>도 생각해 둔 게 있으면 적어 주세요.</li></ol>
         <h3>상품</h3>
-        <ul class="ct-prize"><li>🎮 우승한 요괴를 <b>실제 게임에 출시</b></li><li>👑 그 요괴와 관련된 <b>신화 등급 칭호</b> 지급</li></ul>
+        <ul class="ct-prize"><li>🎮 우승한 골목몬을 <b>실제 게임에 출시</b></li><li>👑 그 골목몬과 관련된 <b>신화 등급 칭호</b> 지급</li></ul>
         <p class="muted">마감 후 개발자가 출품작 중 하나를 뽑아요. 한 사람당 ${info.perUser}개까지 낼 수 있어요. 지금까지 ${info.count}개가 들어왔어요.</p>
         ${closed ? '' : `<button class="btn wide" id="ct-new" ${v.mine.length >= info.perUser ? 'disabled' : ''}>${v.mine.length >= info.perUser ? '더 낼 수 없어요 (최대 ' + info.perUser + '개)' : '✏️ 신캐 만들어서 내기'}</button>`}
       </section>
@@ -848,7 +848,7 @@ function showContestForm() {
       </div>
       <label class="fl">이름 <small>12자까지</small><input id="ct-name" maxlength="12" placeholder="예: 등신"></label>
       <div class="fl">타입 <small>2개까지</small><div class="ct-types">${types.map(([k, t]) => `<button type="button" data-type="${k}" style="--tc:${t.c}">${t.n}</button>`).join('')}</div></div>
-      <label class="fl">설명 <small>꼭 써 주세요! 어떤 요괴인지, 생김새·성격·사연 (1000자까지)</small><textarea id="ct-desc" rows="5" maxlength="1000" placeholder="예: 바다의 개복치. 햇빛만 봐도 죽는다..."></textarea></label>
+      <label class="fl">설명 <small>꼭 써 주세요! 어떤 골목몬인지, 생김새·성격·사연 (1000자까지)</small><textarea id="ct-desc" rows="5" maxlength="1000" placeholder="예: 바다의 개복치. 햇빛만 봐도 죽는다..."></textarea></label>
       <label class="fl">특성 <small>선택</small><textarea id="ct-trait" rows="3" maxlength="400" placeholder="예: 돌연사 - 매 턴 10% 확률로 즉사"></textarea></label>
       <label class="fl">기술셋 <small>선택 · 기술 이름, 타입, 효과</small><textarea id="ct-moves" rows="5" maxlength="800" placeholder="예: 유리대포(전기) - 위력 200, 연속으로 쓰면 25% 즉사"></textarea></label>
       <button class="btn wide" id="ct-send">공모전에 내기</button>
@@ -865,8 +865,8 @@ function showContestForm() {
   });
   app.querySelector('#ct-send').onclick = async (ev) => {
     const val = (id) => app.querySelector(id).value.trim();
-    if (!val('#ct-name')) return toast('요괴 이름을 넣어 주세요.');
-    if (!val('#ct-desc')) return toast('요괴 설명을 넣어 주세요.');
+    if (!val('#ct-name')) return toast('골목몬 이름을 넣어 주세요.');
+    if (!val('#ct-desc')) return toast('골목몬 설명을 넣어 주세요.');
     ev.currentTarget.disabled = true;
     try {
       await api('POST', '/api/contest', { name: val('#ct-name'), types: picked, desc: val('#ct-desc'), trait: val('#ct-trait'), moves: val('#ct-moves'), image: pad.used() ? pad.data() : '' });
@@ -892,16 +892,16 @@ function showFields() {
       fx: ['물 기술 위력 1.5배', '불 기술 위력 절반', '역류·우산살 찌르기는 위력 2배', '빗물받이 Z기술 대범람 위력 1.5배', '붕빵이가 눅눅해짐 (크리스피)'],
       moves: byMove((m) => m.weather === 'rain'), traits: ['usan'], related: ['batji', 'bungbbang'] },
     { id: 'dust', name: '황사', kind: '날씨 · 5턴', bg: 'linear-gradient(#C9A25A, #D9B66A)',
-      fx: ['매 턴 끝에 땅·쇠 타입이 아닌 요괴는 최대 체력의 1/16 피해'],
+      fx: ['매 턴 끝에 땅·쇠 타입이 아닌 골목몬은 최대 체력의 1/16 피해'],
       moves: byMove((m) => m.weather === 'dust'), traits: ['hwangsari'], related: [] },
     { id: 'snow', name: '눈', kind: '날씨 · 5턴', bg: 'linear-gradient(#9fb4cc, #c3d3e4)',
-      fx: ['얼음 타입 요괴의 방어 1.5배 (물리 공격을 덜 받음)', '대야몽의 방어·특방 2배 (김장)'],
+      fx: ['얼음 타입 골목몬의 방어 1.5배 (물리 공격을 덜 받음)', '대야몽의 방어·특방 2배 (김장)'],
       moves: byMove((m) => m.weather === 'snow'), traits: ['bingsu'], related: ['daeya'] },
     { id: 'grass', name: '그래스필드', kind: '깐 쪽 바닥 · 5턴', bg: 'linear-gradient(#3FA34D, #7ed957)',
-      fx: ['깐 쪽(콩시루 편)에만 깔림', '그 편의 풀 기술 위력 1.3배', '매 턴 끝에 그 편 요괴가 최대 체력의 1/16 회복'],
+      fx: ['깐 쪽(콩시루 편)에만 깔림', '그 편의 풀 기술 위력 1.3배', '매 턴 끝에 그 편 골목몬이 최대 체력의 1/16 회복'],
       moves: [], traits: ['kongsiru'], trigger: '콩시루가 공격에 맞으면 펼쳐짐', related: [] },
     { id: 'tack', name: '압정', kind: '상대 쪽 바닥 · 치울 때까지', bg: 'linear-gradient(#5C5A72, #8a8f98)',
-      fx: ['압정이 깔린 쪽으로 새로 나오는 요괴는 최대 체력의 1/8 피해', '바람 타입과 오락이(돈지랄)는 피해 없음'],
+      fx: ['압정이 깔린 쪽으로 새로 나오는 골목몬은 최대 체력의 1/8 피해', '바람 타입과 오락이(돈지랄)는 피해 없음'],
       moves: byMove((m) => m.hazard), traits: [], related: ['orak'],
       clear: byMove((m) => m.clearHazard) },
   ];

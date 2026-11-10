@@ -168,7 +168,7 @@ function migrate() {
     if (!u.stats) { u.stats = newStats(); changed = true; }
     for (const [k, v0] of Object.entries(newStats())) if (!Number.isInteger(u.stats[k])) { u.stats[k] = v0; changed = true; }
     if (!u.style) { u.style = defaultStyle(); changed = true; }
-    // 요괴 기술이 바뀌었을 때: 더는 못 배우는 기술은 빼고, 비면 앞에서부터 채웁니다.
+    // 골목몬 기술이 바뀌었을 때: 더는 못 배우는 기술은 빼고, 비면 앞에서부터 채웁니다.
     for (const d of u.decks || []) for (const m of d.team || []) {
       const sp = Data.MONSTERS[m.species];
       if (!sp) continue;
@@ -216,9 +216,9 @@ function migrate() {
 const isDev = (u) => Data.DEV_ACCOUNTS.includes(u?.name);
 const bannedFor = (u) => (isDev(u) ? [] : Data.BANNED);
 const bannedIn = (u, team) => team.filter((m) => bannedFor(u).includes(m.species)).map((m) => Data.MONSTERS[m.species].n);
-// 공개 전 요괴: 다른 사람과 하는 대전에는 개발자 계정도 못 가지고 나감 (연습전·훈련장만)
+// 공개 전 골목몬: 다른 사람과 하는 대전에는 개발자 계정도 못 가지고 나감 (연습전·훈련장만)
 const secretIn = (team) => team.filter((m) => Data.BANNED.includes(m.species)).map((m) => Data.MONSTERS[m.species].n);
-const SECRET_TEXT = '공개 전 요괴는 다른 사람과의 대전에 데려갈 수 없습니다. 덱에서 빼 주세요.';
+const SECRET_TEXT = '공개 전 골목몬은 다른 사람과의 대전에 데려갈 수 없습니다. 덱에서 빼 주세요.';
 const BAN_TEXT = (names) => `${names.join(', ')}${names.length > 1 ? '는' : '는'} 지금 테스트 중이라 쓸 수 없습니다. 덱에서 빼 주세요.`;
 
 function validTeam(t) {
@@ -416,7 +416,7 @@ async function api(req, res, url) {
   if (route === 'PUT /api/decks') {
     const body = await readBody(req);
     const decks = validDecks(body.decks);
-    if (!decks) return json(res, 400, { error: '덱은 1개 이상, 이름은 12자 이내, 요괴는 서로 다른 3~6마리, 기술은 1~4개여야 합니다.' });
+    if (!decks) return json(res, 400, { error: '덱은 1개 이상, 이름은 12자 이내, 골목몬은 서로 다른 3~6마리, 기술은 1~4개여야 합니다.' });
     const banned = bannedIn(user, decks.flatMap((d) => d.team)).filter((n, i, a) => a.indexOf(n) === i);
     if (banned.length) {
       // 예전에 넣어 둔 덱은 그대로 둘 수 있게, 새로 넣은 경우만 막습니다.
@@ -456,8 +456,8 @@ async function contestApi(req, res, route, auth, user) {
     if (contest.entries.filter(mine).length >= PER_USER) return json(res, 400, { error: `한 사람당 ${PER_USER}개까지 낼 수 있어요. 기존 작품을 지우고 다시 내 주세요.` });
     if (contest.entries.length >= MAX_ENTRIES) return json(res, 400, { error: '출품작이 너무 많아 더 받을 수 없습니다.' });
     const name = cut(body.name, 12), desc = cut(body.desc, 1000);
-    if (!name) return json(res, 400, { error: '요괴 이름을 넣어 주세요.' });
-    if (!desc) return json(res, 400, { error: '요괴 설명을 넣어 주세요.' });
+    if (!name) return json(res, 400, { error: '골목몬 이름을 넣어 주세요.' });
+    if (!desc) return json(res, 400, { error: '골목몬 설명을 넣어 주세요.' });
     const types = (Array.isArray(body.types) ? body.types : []).filter((t) => Data.TYPES[t] && t !== 'none').filter((t, i, a) => a.indexOf(t) === i).slice(0, 2);
     const image = typeof body.image === 'string' && body.image ? body.image : '';
     if (image && (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(image) || image.length > MAX_IMAGE)) return json(res, 400, { error: '그림이 너무 크거나 형식이 맞지 않아요.' });
@@ -569,7 +569,7 @@ const BOT_LEVELS = ['쉬움', '보통', '어려움', '지옥'];
 // 훈련장: 더미와 1대1. 시간 제한, 승패, 기록 없음. 더미에게 준 피해만 쌓입니다.
 function startTraining(key) {
   const u = db.users[key];
-  const room = { id: crypto.randomUUID(), keys: [key, BOT], b: E.createTraining({ name: u.name, avatar: u.avatar, style: u.style, deck: '모든 요괴' }, undefined, bannedFor(u)), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: 0, tag: false, training: true, counted: 0, spectators: new Set() };
+  const room = { id: crypto.randomUUID(), keys: [key, BOT], b: E.createTraining({ name: u.name, avatar: u.avatar, style: u.style, deck: '모든 골목몬' }, undefined, bannedFor(u)), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: 0, tag: false, training: true, counted: 0, spectators: new Set() };
   battles.set(room.id, room);
   inBattle.set(key, room); clearChallenges(key); removeFromTag(key); stopWatching(key);
   syncBattle(room, 0);
@@ -729,7 +729,7 @@ function finish(room) {
     if (room.b.sides[s].megaUsed) st.megas++;
     if (room.b.sides[s].zUsed) st.zmoves++;
     const won = winner !== null && E.teamOf(room.b, s) === winner;
-    // ez: 기권승이 아니고, 내 요괴가 한 마리도 쓰러지지 않은 승리
+    // ez: 기권승이 아니고, 내 골목몬이 한 마리도 쓰러지지 않은 승리
     if (won && !room.b.forfeited && room.b.sides[s].mons.every((m) => m.hp > 0)) st.flawless++;
     if (room.tag) { st.tagGames++; if (won) st.tagWins++; }
     else if (!pvp && won) { st[`p${room.botLevel}`]++; st.botWins++; }
@@ -771,7 +771,7 @@ function onMessage(key, msg) {
     case 'spectate': {
       const target = battles.get(String(msg.id ?? ''));
       if (room || !target || target.ended) return toast(key, '지금은 관전할 수 없습니다.');
-      if (!isDev(db.users[key]) && target.b.sides.some((sd) => sd.mons.some((m) => Data.BANNED.includes(m.species)))) return toast(key, '공개 전 요괴가 나오는 대전이라 관전할 수 없습니다.');
+      if (!isDev(db.users[key]) && target.b.sides.some((sd) => sd.mons.some((m) => Data.BANNED.includes(m.species)))) return toast(key, '공개 전 골목몬이 나오는 대전이라 관전할 수 없습니다.');
       stopWatching(key);
       target.spectators.add(key);
       spectating.set(key, target);
@@ -809,9 +809,9 @@ function onMessage(key, msg) {
       const humans = r.slots.filter(Boolean);
       if (humans.some((k) => inBattle.has(k) || !online.has(k))) return toast(key, '참가자 중 대전 중인 사람이 있습니다.');
       const short = humans.find((k) => deckOf(db.users[k]).team.length < 3);
-      if (short) return toast(key, `${db.users[short].name}님의 덱에 요괴가 3마리 있어야 합니다.`);
+      if (short) return toast(key, `${db.users[short].name}님의 덱에 골목몬이 3마리 있어야 합니다.`);
       const bk = humans.find((k) => secretIn(deckOf(db.users[k]).team.slice(0, 3)).length);
-      if (bk) return toast(key, `${db.users[bk].name}님의 덱에 공개 전 요괴가 있습니다.`);
+      if (bk) return toast(key, `${db.users[bk].name}님의 덱에 공개 전 골목몬이 있습니다.`);
       tagRooms.delete(r.id);
       startBattle(r.slots.map((k) => k || BOT), 3, r.level, true);
       break;
@@ -824,7 +824,7 @@ function onMessage(key, msg) {
     case 'practice': {
       if (room) return;
       const size = msg.size === 6 ? 6 : 3;
-      if (deckOf(db.users[key]).team.length < size) return toast(key, `선택한 덱에 요괴가 ${size}마리 있어야 합니다.`);
+      if (deckOf(db.users[key]).team.length < size) return toast(key, `선택한 덱에 골목몬이 ${size}마리 있어야 합니다.`);
       { const bn = bannedIn(db.users[key], deckOf(db.users[key]).team.slice(0, size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
       startBattle([key, BOT], size, [0, 1, 2, 3].includes(msg.level) ? msg.level : 1);
       break;
@@ -834,7 +834,7 @@ function onMessage(key, msg) {
       const size = msg.size === 6 ? 6 : 3;
       if (room || to === key || !online.has(to)) return toast(key, '지금은 신청할 수 없습니다.');
       if (inBattle.has(to)) return toast(key, '상대가 대전 중입니다.');
-      if (deckOf(db.users[key]).team.length < size) return toast(key, `선택한 덱에 요괴가 ${size}마리 있어야 합니다.`);
+      if (deckOf(db.users[key]).team.length < size) return toast(key, `선택한 덱에 골목몬이 ${size}마리 있어야 합니다.`);
       { const bn = bannedIn(db.users[key], deckOf(db.users[key]).team.slice(0, size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
       if (secretIn(deckOf(db.users[key]).team.slice(0, size)).length) return toast(key, SECRET_TEXT);
       challenges.set(key, { to, size });
@@ -855,11 +855,11 @@ function onMessage(key, msg) {
       const from = keyOf(String(msg.from ?? ''));
       const c = challenges.get(from);
       if (!c || c.to !== key || room || !online.has(from) || inBattle.has(from)) return toast(key, '이미 끝난 신청입니다.');
-      if (deckOf(db.users[key]).team.length < c.size) return toast(key, `선택한 덱에 요괴가 ${c.size}마리 있어야 합니다.`);
+      if (deckOf(db.users[key]).team.length < c.size) return toast(key, `선택한 덱에 골목몬이 ${c.size}마리 있어야 합니다.`);
       if (deckOf(db.users[from]).team.length < c.size) return toast(key, '상대의 덱 인원이 모자랍니다.');
       { const bn = bannedIn(db.users[key], deckOf(db.users[key]).team.slice(0, c.size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
       if (secretIn(deckOf(db.users[key]).team.slice(0, c.size)).length) return toast(key, SECRET_TEXT);
-      if (bannedIn(db.users[from], deckOf(db.users[from]).team.slice(0, c.size)).length || secretIn(deckOf(db.users[from]).team.slice(0, c.size)).length) return toast(key, '상대 덱에 공개 전 요괴가 있어 시작할 수 없습니다.');
+      if (bannedIn(db.users[from], deckOf(db.users[from]).team.slice(0, c.size)).length || secretIn(deckOf(db.users[from]).team.slice(0, c.size)).length) return toast(key, '상대 덱에 공개 전 골목몬이 있어 시작할 수 없습니다.');
       startBattle([from, key], c.size);
       break;
     }

@@ -1,4 +1,4 @@
-// 스킬 연출. 전투 장면 위 캔버스에 그리고, 요괴에게는 동작 클래스를 붙입니다.
+// 스킬 연출. 전투 장면 위 캔버스에 그리고, 골목몬에게는 동작 클래스를 붙입니다.
 const Fx = (() => {
   const INK = '#1a1433';
   const SPEED = Number(new URLSearchParams(location.search).get('speed') ?? 1);
@@ -1633,7 +1633,7 @@ const Fx = (() => {
     shake(4 + form * 2, 420, 240);
     return 1000;
   }
-  // 반갈쭉: 요괴 그림을 두 쪽으로 나눠 벌리고, 가운데에 단면을 보여 줌
+  // 반갈쭉: 골목몬 그림을 두 쪽으로 나눠 벌리고, 가운데에 단면을 보여 줌
   const FILL_FACE = {
     pat: `<ellipse cx="20" cy="50" rx="12" ry="34" fill="#5a1f2a"/>${[[16, 32], [24, 44], [17, 58], [23, 70], [19, 46]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="2.6" ry="1.8" fill="#8a2f3a"/>`).join('')}`,
     cream: `<ellipse cx="20" cy="50" rx="12" ry="34" fill="#FFE39A"/><path d="M14 36q6 6 12 0M13 56q7 6 14 0" fill="none" stroke="#fff6cf" stroke-width="2.4"/>`,

@@ -2,7 +2,7 @@
 const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP, BANNED, TIERS, FORMS, ITEMS } = require('./data');
 
 const LEVEL = 50;
-// 요괴가 너무 빨리 쓰러지지 않도록 모든 요괴의 체력을 1.3배로 (훈련장 더미 1000은 그대로)
+// 골목몬이 너무 빨리 쓰러지지 않도록 모든 골목몬의 체력을 1.3배로 (훈련장 더미 1000은 그대로)
 const HP_MUL = 1.3;
 const STATUS_NAME = { brn: '화상', psn: '독', par: '마비', slp: '수면', frz: '얼음' };
 const STAT_NAME = { atk: '공격', def: '방어', spa: '특공', spd: '특방', spe: '스피드', acc: '명중률' };
@@ -84,7 +84,7 @@ function makeDummy() {
     hp: DUMMY_HP, maxHp: DUMMY_HP, status: null, statusTurns: 0, moves: [], ...freshVolatile(),
   };
 }
-// 훈련장: 모든 요괴가 기술 10개를 다 가진 채로 나옵니다.
+// 훈련장: 모든 골목몬이 기술 10개를 다 가진 채로 나옵니다.
 function createTraining(player, seed, exclude = []) {
   const team = Object.entries(MONSTERS).filter(([species]) => !exclude.includes(species)).map(([species, m]) => ({ species, moves: m.moves }));
   const b = createBattle([{ ...player, team }, { name: '훈련장', avatar: null, style: null, deck: '더미', team: [] }], seed);
@@ -125,7 +125,7 @@ function targetOf(b, s, want) {
 const alive = (m) => m.hp > 0;
 const effOf = (moveType, types) =>
   types.reduce((x, t) => x * (CHART[moveType][t] ?? 1), 1);
-// 요괴 특성까지 따진 상성 (보냉이 아이스박스: 불 기술을 1배로 받음)
+// 골목몬 특성까지 따진 상성 (보냉이 아이스박스: 불 기술을 1배로 받음)
 // 주전이 끓는물: 물 기술이 풀 타입에게도 2배
 const effMon = (moveType, mon, atk) => {
   if (mon.species === 'bonaeng' && moveType === 'fire') return 1;
@@ -259,7 +259,7 @@ function runTurn(b, ev) {
   b.turn++;
 }
 
-// 훈련장에서는 턴이 끝날 때마다 내 요괴가 다 회복되고 PP, 메가진화, Z기술도 다시 쓸 수 있습니다.
+// 훈련장에서는 턴이 끝날 때마다 내 골목몬이 다 회복되고 PP, 메가진화, Z기술도 다시 쓸 수 있습니다.
 function trainingReset(b, ev) {
   const d = b.dummy;
   if (d.turn > d.best) d.best = d.turn;
@@ -281,7 +281,7 @@ function hpEvent(b, s, m, ev, extra = {}) {
   ev.push({ t: 'hp', side: s, hp: m.hp, maxHp: m.maxHp, ...extra });
 }
 
-// 의상 각성 단계 (옷이 바뀌는 요괴만). 단계마다 공격·특공·스피드 배율이 조금씩 오릅니다.
+// 의상 각성 단계 (옷이 바뀌는 골목몬만). 단계마다 공격·특공·스피드 배율이 조금씩 오릅니다.
 const stripOf = (m) => Math.min(m.hits || 0, MONSTERS[m.species]?.stages || 0);
 const stripMul = (m) => 1 + stripOf(m) * STRIP.boost;
 // 강화 단계 (단조): 공격·방어 배율과 늘어난 체력
@@ -308,7 +308,7 @@ function hurt(b, s, m, amount, ev, extra) {
   const form0 = formOf(m);
   m.hp -= dmg;
   const before = stripOf(m);
-  if (extra?.moveType) m.hits = (m.hits || 0) + 1; // 공격에 맞은 횟수 (옷이 바뀌는 요괴용)
+  if (extra?.moveType) m.hits = (m.hits || 0) + 1; // 공격에 맞은 횟수 (옷이 바뀌는 골목몬용)
   hpEvent(b, s, m, ev, { dmg, ...extra, ...(extra?.moveType ? { hits: m.hits } : {}) });
   formCheck(b, s, m, form0, ev);
   if (m.species === 'sundae' && !m.exploded && m.hp > 0 && m.hp * 4 <= m.maxHp && !b.training) { // 순대장 창자버스터
@@ -821,7 +821,7 @@ function hitOne(b, s, me, o, mv, ev) {
   if (!meDown && mv.selfAfter) {
     for (const [k, v] of Object.entries(mv.self)) changeStage(b, s, me, k, v, ev);
   }
-  // 선풍이 돌풍: 공격한 상대를 날려 다른 요괴로 바꿔 버림
+  // 선풍이 돌풍: 공격한 상대를 날려 다른 골목몬으로 바꿔 버림
   if (landed && foe.species === 'fan' && alive(me) && !b.training) {
     const bench = b.sides[s].mons.map((m, i) => i).filter((i) => i !== b.sides[s].active && alive(b.sides[s].mons[i]));
     if (bench.length) {
@@ -1177,7 +1177,7 @@ function forfeit(b, s, left = false) {
   return [{ t: 'over', winner: b.winner, text: `${josa(b.sides[s].name, '이/가')} ${how}. ${josa(teamName(b, b.winner), '이/가')} 이겼다!` }];
 }
 
-// 플레이어별 화면 정보. 상대의 기술과 안 나온 요괴는 숨깁니다.
+// 플레이어별 화면 정보. 상대의 기술과 안 나온 골목몬은 숨깁니다.
 function viewFor(b, s) {
   const me = b.sides[s];
   const lock = b.pending[s] !== null;
@@ -1420,7 +1420,7 @@ function botItem(species, level = 2) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 function botTeam(level, size, enemy = []) {
-  const ids = Object.keys(MONSTERS).filter((id) => !BANNED.includes(id)); // 밴된 요괴는 봇이 안 씀
+  const ids = Object.keys(MONSTERS).filter((id) => !BANNED.includes(id)); // 밴된 골목몬은 봇이 안 씀
   const enemyTypes = enemy.map((m) => MONSTERS[m.species].types);
   if (level === 0) {
     return shuffled(ids).slice(0, size).map((species) => ({ species, moves: shuffled(MONSTERS[species].moves).slice(0, 4) }));
@@ -1433,7 +1433,7 @@ function botTeam(level, size, enemy = []) {
     });
   }
   if (level === 2) return shuffled(ids).slice(0, size).map((species) => ({ species, moves: smartMoves(species, []), item: botItem(species) }));
-  // 지옥: 내 덱의 타입을 보고 상성이 좋은 요괴로 팀을 짭니다.
+  // 지옥: 내 덱의 타입을 보고 상성이 좋은 골목몬으로 팀을 짭니다.
   const score = (id) => {
     const mon = MONSTERS[id];
     const total = Object.values(mon.base).reduce((a, c) => a + c, 0) / 100;

@@ -1,4 +1,4 @@
-// 골목대전 게임 데이터: 타입, 상성, 스킬, 요괴, 아바타 옵션
+// 골목대전 게임 데이터: 타입, 상성, 스킬, 골목몬, 아바타 옵션
 // 밸런스를 바꾸고 싶으면 이 파일만 고치면 됩니다.
 
 const TYPES = {
@@ -356,7 +356,7 @@ const MONSTERS = {
   // 무대
   harmonium:X('하르모니움', ['steel', 'spirit'], 90, 50, 110, 115, 85, 50,
     ['metalnoise', 'magnet', 'highvolt', 'scold', 'nightmare', 'charge', 'armor', 'shock', 'lionroar', 'guard'],
-    '철골 아치 무대가 요괴가 되었다. 양쪽 스피커는 몸이고, 가운데 매달린 유선 마이크가 뇌다. 선이 뽑히면 아무 말도 못 한다.'),
+    '철골 아치 무대가 골목몬이 되었다. 양쪽 스피커는 몸이고, 가운데 매달린 유선 마이크가 뇌다. 선이 뽑히면 아무 말도 못 한다.'),
   // 이세계
   hwansaeng:X('환생트럭', ['steel', 'fairy'], 90, 95, 90, 50, 70, 70,
     ['trucksudden', 'ironhead', 'hammer', 'pixiedust', 'quake', 'rockthrow', 'shieldbash', 'charm', 'armor', 'guard'],
@@ -458,7 +458,7 @@ Object.assign(SIGNATURE, {
   hwangsari: ['yellowgust', '대황사 황사리', '방독면과 고글을 쓴 거대 모래폭풍. 아래는 토네이도가 되었고 주변에 돌덩이가 돈다.', [10, 40, 25, 0, 15, 10]],
 });
 
-// 모든 요괴가 기술 10개가 되도록 채우는 추가 기술
+// 모든 골목몬이 기술 10개가 되도록 채우는 추가 기술
 const EXTRA_MOVES = {
   bungbbang: ['rockthrow'], horong: ['nap'], usan: ['icestorm'], kongsiru: ['vinewhip'], ssaribi: ['tackle'],
   ttaengcho: ['guard'], jeonbot: ['guard'], orak: ['magnet'], bangpae: ['tackle'], bingsu: ['icicle'],
@@ -543,7 +543,7 @@ for (const [id, [sig, n, d, boost]] of Object.entries(SIGNATURE)) {
   mon.moves = [sig, ...mon.moves.filter((m) => m !== sig)];
   mon.mega = { n, d, boost: Object.fromEntries(STAT_KEYS.map((k, i) => [k, boost[i]])) };
 }
-// 전용기가 여럿인 요괴: 단조는 강화·강화 베기·특성검술·리플렉터가 모두 전용기
+// 전용기가 여럿인 골목몬: 단조는 강화·강화 베기·특성검술·리플렉터가 모두 전용기
 for (const id of ['tierslash', 'elemblade', 'reflector', 'bangalzzuk', 'ramdeath', 'vinyl', 'pufferspike', 'hydrate', 'ignite', 'overcome', 'dice', 'mockspit', 'irontail']) MOVES[id].sig = true;
 MONSTERS.bungbbang.moves = MONSTERS.bungbbang.moves.map((m) => (m === 'ember' ? 'bangalzzuk' : m));
 
@@ -559,7 +559,7 @@ const C = (id, n, cond, extra = {}) => ({ id, n, cond, ...extra });
 // 칭호 등급(tier): 0 일반, 1 반짝, 2 별가루, 3 황금, 4 네온, 5 전설. glow는 네온·전설 색
 const COSMETICS = {
   titles: [
-    C('rookie', '골목 새내기', null, { tier: 0 }), C('kid', '동네 꼬마', null, { tier: 0 }), C('wanderer', '떠돌이 요괴꾼', null, { tier: 0 }),
+    C('rookie', '골목 새내기', null, { tier: 0 }), C('kid', '동네 꼬마', null, { tier: 0 }), C('wanderer', '떠돌이 골목몬꾼', null, { tier: 0 }),
     C('first', '첫 승리의 맛', ['wins', 1], { tier: 1 }), C('boss', '골목 짱', ['wins', 10], { tier: 2 }), C('tyrant', '동네 패왕', ['wins', 30], { tier: 3 }),
     C('legend', '전설의 골목대장', ['wins', 100], { tier: 5 }), C('comeback', '칠전팔기', ['losses', 7], { tier: 2 }), C('regular', '골목 단골손님', ['games', 20], { tier: 1 }),
     C('hot', '불붙은 손', ['streakBest', 3], { tier: 2 }), C('unstoppable', '무적 행진', ['streakBest', 7], { tier: 3 }),
@@ -568,10 +568,10 @@ const COSMETICS = {
     C('mega1', '메가 입문자', ['megas', 1], { tier: 1 }), C('mega2', '메가진화 장인', ['megas', 25], { tier: 4, glow: '#2EF2FF' }),
     C('partner', '든든한 파트너', ['tagGames', 1], { tier: 1 }), C('combo', '환상의 콤비', ['tagWins', 5], { tier: 3 }),
     // 추가 칭호
-    C('hungry', '배고픈 요괴꾼', null, { tier: 0 }), C('market', '시장 단골', null, { tier: 0 }), C('sewerx', '하수구 탐험가', null, { tier: 0 }),
+    C('hungry', '배고픈 골목몬꾼', null, { tier: 0 }), C('market', '시장 단골', null, { tier: 0 }), C('sewerx', '하수구 탐험가', null, { tier: 0 }),
     C('parttime', '편의점 알바생', null, { tier: 0 }), C('jobless', '동네 백수', null, { tier: 0 }),
     C('zfirst', 'Z 입문자', ['zmoves', 1], { tier: 1 }), C('trainee', '골목 연습생', ['botWins', 3], { tier: 1 }), C('tie', '팽팽한 승부사', ['draws', 1], { tier: 1 }),
-    C('walker', '골목 산책러', ['games', 5], { tier: 1 }), C('tagmate', '태그 메이트', ['tagGames', 3], { tier: 1 }), C('crybaby', '울보 요괴꾼', ['losses', 3], { tier: 1 }),
+    C('walker', '골목 산책러', ['games', 5], { tier: 1 }), C('tagmate', '태그 메이트', ['tagGames', 3], { tier: 1 }), C('crybaby', '울보 골목몬꾼', ['losses', 3], { tier: 1 }),
     C('fixer', '골목 해결사', ['wins', 5], { tier: 2 }), C('rider', '연승 폭주족', ['streakBest', 5], { tier: 2 }), C('zsense', 'Z 감각파', ['zmoves', 10], { tier: 2 }),
     C('grinder', '연습 벌레', ['botWins', 15], { tier: 2 }), C('megafan', '메가 애호가', ['megas', 10], { tier: 2 }), C('local', '골목 터줏대감', ['games', 50], { tier: 2 }),
     C('collector', '패배 수집가', ['losses', 20], { tier: 2 }), C('tagregular', '태그 단골', ['tagGames', 10], { tier: 2 }), C('drawking', '무승부의 달인', ['draws', 5], { tier: 2 }),
@@ -718,7 +718,7 @@ Object.assign(MONSTERS.bingsu, { trait: { n: '설경', d: '싸움에 나오면 5
 Object.assign(MONSTERS.bonaeng, { trait: { n: '아이스박스', d: '불 기술을 상성과 상관없이 1배로 받는다.' } });
 Object.assign(MONSTERS.jangdok, { trait: { n: '발효', d: '싸움에 나오자마자 상대의 명중률을 1단계 떨어뜨린다.' } });
 Object.assign(MONSTERS.jangseung, { trait: { n: '위협', d: '싸움에 나오자마자 상대의 공격을 1단계 떨어뜨린다.' } });
-Object.assign(MONSTERS.fan, { trait: { n: '돌풍', d: '공격에 맞으면 공격한 상대를 날려서 다른 요괴로 바꿔 버린다.' } });
+Object.assign(MONSTERS.fan, { trait: { n: '돌풍', d: '공격에 맞으면 공격한 상대를 날려서 다른 골목몬으로 바꿔 버린다.' } });
 Object.assign(MONSTERS.ttaengcho, { trait: { n: '하바네로분출', d: '물리 공격(접촉)에 맞으면 공격한 상대가 화상을 입는다.' } });
 Object.assign(MONSTERS.bangpae, { trait: { n: '바람타기', d: '체력이 꽉 차 있을 때 바람 타입 기술이 우선도 +1로 먼저 나간다.' } });
 Object.assign(MONSTERS.ssaribi, { trait: { n: '정리정돈', d: '싸움에 나오면 날씨와 양쪽 압정을 모두 치워 버린다.' } });
@@ -728,7 +728,7 @@ Object.assign(MONSTERS.orak, { trait: { n: '돈지랄', d: '상태이상, 위협
 Object.assign(MONSTERS.maetdol, { trait: { n: '옹골참', d: '체력이 꽉 차 있을 때는 한 방에 쓰러질 공격을 맞아도 체력 1을 남기고 버틴다.' } });
 Object.assign(MONSTERS.kettle, { trait: { n: '끓는물', d: '물 기술이 풀 타입에게도 2배로 들어간다.' } });
 Object.assign(MONSTERS.kkaebi, { trait: { n: '저주받은바디', d: '공격에 맞으면 30% 확률로 그 기술을 4턴 동안 봉인한다.' } });
-Object.assign(MONSTERS.kongsiru, { trait: { n: '넘치는콩', d: '공격에 맞으면 5턴 동안 우리 쪽에만 그래스필드를 펼친다. 우리 편의 풀 기술이 1.3배가 되고, 우리 편 요괴가 매 턴 체력을 1/16 회복한다.' } });
+Object.assign(MONSTERS.kongsiru, { trait: { n: '넘치는콩', d: '공격에 맞으면 5턴 동안 우리 쪽에만 그래스필드를 펼친다. 우리 편의 풀 기술이 1.3배가 되고, 우리 편 골목몬이 매 턴 체력을 1/16 회복한다.' } });
 Object.assign(MONSTERS.bungbbang, { trait: { n: '크리스피', d: '비가 오거나 물 기술에 맞으면 눅눅해져 스피드가 1단계 떨어진다. 땡볕이거나 불 기술에 맞으면 바삭해져, 물리 공격을 한 상대에게 그 피해의 1/4을 돌려준다.' } });
 Object.assign(MONSTERS.jeonbot, { trait: { n: '비상전력', d: '체력이 절반 이하가 되면(한 번만) 방어와 특방이 1단계 떨어지는 대신 특공과 스피드가 2단계 올라간다.' } });
 MONSTERS.ssaribi.trait.d = '싸움에 나오면 날씨와 그래스필드, 우리 쪽 압정을 치워 버린다. (상대 쪽 압정은 그대로 둔다)';
@@ -743,24 +743,24 @@ Object.assign(MONSTERS.kkangtong, { trait: { n: '리사이클', d: '한 번 쓰�
 Object.assign(MONSTERS.manhol, { trait: { n: '악취', d: '싸움에 나오자마자 상대의 명중률을 1단계 떨어뜨린다.' } });
 Object.assign(MONSTERS.batji, { trait: { n: '저수', d: '물 기술에 맞으면 피해 대신 체력을 1/4 회복한다.' } });
 Object.assign(MONSTERS.meokarak, { trait: { n: '엉킴', d: '머카락이 싸우는 동안 상대는 교체할 수 없다. (쓰러져서 바꾸는 것은 가능)' } });
-Object.assign(MONSTERS.ppeong, { trait: { n: '뻥뚫림', d: '싸움에 나오면 모든 요괴의 상태이상과 날씨, 그래스필드, 양쪽 압정을 전부 없앤다.' } });
+Object.assign(MONSTERS.ppeong, { trait: { n: '뻥뚫림', d: '싸움에 나오면 모든 골목몬의 상태이상과 날씨, 그래스필드, 양쪽 압정을 전부 없앤다.' } });
 Object.assign(MONSTERS.tteokppo, { trait: { n: '라면사리 추가', d: '싸움에 나와 2턴이 지나면 공격과 특공이 1단계씩 오른다.' } });
-Object.assign(MONSTERS.sundae, { trait: { n: '창자버스터', d: '체력이 1/4 이하가 되면 몸이 터져 싸우는 모든 요괴(자신 포함)에게 100 피해를 준다. (한 번만)' } });
+Object.assign(MONSTERS.sundae, { trait: { n: '창자버스터', d: '체력이 1/4 이하가 되면 몸이 터져 싸우는 모든 골목몬(자신 포함)에게 100 피해를 준다. (한 번만)' } });
 Object.assign(MONSTERS.eomuk, { trait: { n: '촉촉바디', d: '비가 오면 매 턴 체력을 1/8 회복하고, 땡볕이면 매 턴 체력을 1/16 잃는다.' } });
 Object.assign(MONSTERS.hotteok, { trait: { n: '호떡소', d: '물리(접촉) 공격을 한 상대는 뜨거운 꿀이 붙어 스피드가 1단계 떨어진다.' } });
 Object.assign(MONSTERS.ppeondegi, { trait: { n: '단단한 껍질', d: '급소에 맞지 않는다.' } });
 Object.assign(MONSTERS.neonna, { trait: { n: '아이찡 댄스', d: '싸움에 나오면 춤을 춰서 날씨와 그래스필드를 없앤다.' } });
-Object.assign(MONSTERS.yeonji, { trait: { n: '연지곤지', d: '쓰러지면 쓰러뜨린 상대에게 연지 자국을 남긴다. 자국이 남은 요괴는 매 턴 최대 체력의 1/4을 잃는다.' } });
+Object.assign(MONSTERS.yeonji, { trait: { n: '연지곤지', d: '쓰러지면 쓰러뜨린 상대에게 연지 자국을 남긴다. 자국이 남은 골목몬은 매 턴 최대 체력의 1/4을 잃는다.' } });
 Object.assign(MONSTERS.jabanbot, { trait: { n: '과자나 뱉어내 이련아', d: '공격에 맞으면 과자를 뱉어 아군 한 마리의 체력을 절반 회복시킨다. (태그 배틀은 옆 아군, 아니면 대기 중인 가장 다친 아군)' } });
 Object.assign(MONSTERS.baedalbot, { trait: { n: '배달의민족', d: '신호등을 건너뛰고 30% 확률로 먼저 공격한다.' } });
 Object.assign(MONSTERS.setakbot, { trait: { n: '세제거품', d: '물리(접촉) 공격을 한 상대의 명중률을 1단계 떨어뜨린다.' } });
 MONSTERS.hwangsari.trait = { n: '황사 경보', d: '싸움에 나오면 5턴 동안 황사가 분다.' };
 
-// 잠시 밴: 테스트 중인 요괴는 개발자 계정만 씁니다.
+// 잠시 밴: 테스트 중인 골목몬은 개발자 계정만 씁니다.
 const BANNED = ['lumina', 'silvia'];
 const DEV_ACCOUNTS = ['PEGADORA'];
 
-// 도구: 덱을 짤 때 요괴마다 하나씩 들 수 있음. once: 한 번 쓰면 사라짐 (깡통이 리사이클로 한 번 되살릴 수 있음)
+// 도구: 덱을 짤 때 골목몬마다 하나씩 들 수 있음. once: 한 번 쓰면 사라짐 (깡통이 리사이클로 한 번 되살릴 수 있음)
 const ITEMS = {
   sash:     { n: '기합의띠', i: '🎗️', once: true, d: '쓰러질 공격을 맞으면 체력 1을 남기고 버틴다. 한 번 쓰면 사라진다.' },
   insure:   { n: '실비보험', i: '🧾', once: true, d: '효과가 굉장한 공격에 맞고 버티면 보험금이 나와 공격과 특공이 2단계씩 오른다. 한 번 쓰면 사라진다.' },

@@ -761,7 +761,7 @@ label.field input { display: block; width: 100%; margin-top: 3px; padding: 10px;
 .trait b { display: inline-block; margin-right: 4px; padding: 1px 6px; color: #fff; background: #E0457B; border-radius: 5px; font-family: var(--ui); font-weight: 400; }
 .badge.strip { background: #E0457B; color: #fff; }
 
-/* 밴된 요괴 */
+/* 밴된 골목몬 */
 .card { position: relative; }
 .bantag { position: absolute; top: 4px; right: 4px; padding: 1px 6px; font-family: var(--ui); font-style: normal; font-size: 12px; color: #fff; background: #E8402C; border: 2px solid var(--ink); border-radius: 6px; }
 .card.banned svg { filter: grayscale(.8) brightness(.8); }

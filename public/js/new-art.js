@@ -1,10 +1,10 @@
-// 페어리와 로봇 요괴 그림. 200 크기로 그렸습니다.
+// 페어리와 로봇 골목몬 그림. 200 크기로 그렸습니다.
 const NEW_ART = (() => {
 const L = (s) => `<g stroke="#1a1433" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">${s}</g>`;
 // 골목 사계절 신캐 (고드리·양머리·담쟁전·뽀글이·황사리)
 const eyeN = (x, y, r, iris = '#1a1433') => `<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * 1.15}" fill="#fff"/><circle cx="${x + 1}" cy="${y + 1.5}" r="${r * .58}" fill="${iris}" stroke="none"/><circle cx="${x + 1}" cy="${y + 1.5}" r="${r * .28}" fill="#1a1433" stroke="none"/><circle cx="${x + r * .3}" cy="${y - r * .25}" r="${r * .22}" fill="#fff" stroke="none"/>`;
 const glowN = (x, y, r, c, d = 1) => `<path d="M${x - r * 1.3} ${y + 2}q${r * 1.3}-${r * 1.6} ${r * 2.6} ${d > 0 ? -2 : 2}q-${r * 1.3} ${r * 1.3}-${r * 2.6} 2z" fill="#fff"/><circle cx="${x + 1}" cy="${y}" r="${r * .55}" fill="${c}" stroke="none"/><circle cx="${x + 1}" cy="${y}" r="${r * .22}" fill="#fff" stroke="none"/>`;
-// 그라데이션은 페이지에 한 번만 둡니다 (같은 요괴가 여러 번 그려져도 id가 겹치지 않게).
+// 그라데이션은 페이지에 한 번만 둡니다 (같은 골목몬이 여러 번 그려져도 id가 겹치지 않게).
 if (typeof document !== 'undefined') {
   const put = () => document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="gIce" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eafbff"/><stop offset=".6" stop-color="#a9e6fb"/><stop offset="1" stop-color="#6cc4ef"/></linearGradient>
  <radialGradient id="gFl" cx=".5" cy=".7" r=".6"><stop offset="0" stop-color="#e8fbff"/><stop offset=".45" stop-color="#5fd0ff"/><stop offset="1" stop-color="#2a5cff"/></radialGradient><linearGradient id="gMet" x1="0" x2="1"><stop offset="0" stop-color="#6f7c8a"/><stop offset=".45" stop-color="#b4c0cc"/><stop offset="1" stop-color="#5d6875"/></linearGradient><radialGradient id="gBub" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#dff7ff"/><stop offset=".6" stop-color="#ffd1f1"/><stop offset=".8" stop-color="#c9b8ff"/><stop offset="1" stop-color="#8fe6ff"/></radialGradient>

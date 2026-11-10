@@ -11,7 +11,7 @@ const move = (b, s, id) => {
 };
 const custom = (species, moves) => [{ species, moves }, { species: 'daeya', moves: ['tackle'] }];
 
-test('모든 요괴의 기술과 상성 데이터가 올바르다', () => {
+test('모든 골목몬의 기술과 상성 데이터가 올바르다', () => {
   for (const [id, m] of Object.entries(MONSTERS)) {
     assert.ok(m.moves.length >= 4, id);
     for (const mv of m.moves) assert.ok(MOVES[mv], `${id}: ${mv}`);
@@ -47,7 +47,7 @@ test('2배 상성은 1배보다 약 2배 피해를 주고, 절반 상성은 약 
   assert.ok(Math.abs(weak / neutral - .5) < .1, `${weak}/${neutral}`);
 });
 
-test('모든 요괴에게 그림이 있고 스킬이 겹치지 않는다', () => {
+test('모든 골목몬에게 그림이 있고 스킬이 겹치지 않는다', () => {
   const read = (f) => require('fs').readFileSync(require('path').join(__dirname, '../public/js', f), 'utf8');
   const art = read('art.js'), mega = read('mega-art.js'), newArt = read('new-art.js') + read('new-art2.js') + read('new-art3.js');
   for (const [id, m] of Object.entries(MONSTERS)) {
@@ -108,7 +108,7 @@ test('나가면 나간 쪽이 진다', () => {
   assert.match(ev[0].text, /나갔다/);
 });
 
-test('대전 전: 선봉을 고르기 전까지 숨기고, 고른 요괴가 나온다', () => {
+test('대전 전: 선봉을 고르기 전까지 숨기고, 고른 골목몬이 나온다', () => {
   const players = [{ name: '가', team: teamOf(['kkaebi', 'horong', 'daeya']) }, { name: '나', team: teamOf(['maetdol', 'fan', 'orak']) }];
   const b = E.createBattle(players, 3, { preview: true });
   const v = E.viewFor(b, 0);
@@ -136,7 +136,7 @@ test('모든 스킬에 전용 연출이 있다', () => {
   }
 });
 
-test('모든 요괴에게 전용기가 있고 다른 요괴는 배울 수 없다', () => {
+test('모든 골목몬에게 전용기가 있고 다른 골목몬은 배울 수 없다', () => {
   const owner = {};
   for (const [id, m] of Object.entries(MONSTERS)) {
     assert.ok(m.sig && MOVES[m.sig].sig, id);
@@ -145,7 +145,7 @@ test('모든 요괴에게 전용기가 있고 다른 요괴는 배울 수 없다
     assert.equal(Object.values(m.mega.boost).reduce((a, c) => a + c), 100, id);
   }
   assert.equal(Object.keys(owner).length, 57);
-  // 전용기는 한 요괴만 배운다 (단조처럼 전용기가 여럿일 수는 있음)
+  // 전용기는 한 골목몬만 배운다 (단조처럼 전용기가 여럿일 수는 있음)
   const who = {};
   for (const [id, m] of Object.entries(MONSTERS)) for (const mv of m.moves) if (MOVES[mv].sig) (who[mv] ||= new Set()).add(id);
   for (const [mv, set] of Object.entries(who)) assert.equal(set.size, 1, mv);
@@ -171,7 +171,7 @@ test('메가진화: 행동을 쓰지 않고, 능력치가 오르며, 한 판에 
   assert.equal(E.viewFor(b, 0).me.mons[0].mega, true);
 });
 
-test('모든 요괴의 배울 수 있는 기술은 10개다', () => {
+test('모든 골목몬의 배울 수 있는 기술은 10개다', () => {
   for (const [id, m] of Object.entries(MONSTERS)) {
     assert.equal(m.moves.length, 10, id);
     assert.equal(new Set(m.moves).size, 10, id);
@@ -303,7 +303,7 @@ test('독/쇠 면역과 교체 시 능력치 초기화', () => {
   assert.equal(mon.stages.def, 0);
 });
 
-test('압정은 교체해 들어온 요괴에게 피해를 준다', () => {
+test('압정은 교체해 들어온 골목몬에게 피해를 준다', () => {
   const b = battle(custom('kettle', ['tacks']), custom('daeya', ['tackle']));
   move(b, 0, 'tacks');
   E.choose(b, 1, { type: 'move', index: 0 });
@@ -390,8 +390,8 @@ test('봇끼리 3000판: 항상 끝나고 예외가 없으며, 체력이 범위�
   assert.ok(rate[rate.length - 1][1] > 28, `밸런스 이상: ${rate[rate.length - 1]}`);
 });
 
-test('훈련장: 모든 요괴와 기술 10개, 더미는 1000 체력에 안 끝남', () => {
-  const b = E.createTraining({ name: '철수', avatar: {}, style: {}, deck: '모든 요괴' }, 7);
+test('훈련장: 모든 골목몬과 기술 10개, 더미는 1000 체력에 안 끝남', () => {
+  const b = E.createTraining({ name: '철수', avatar: {}, style: {}, deck: '모든 골목몬' }, 7);
   const v = E.viewFor(b, 0);
   assert.strictEqual(v.me.mons.length, Object.keys(MONSTERS).length);
   assert.ok(v.me.mons.every((m) => m.moves.length === 10));
@@ -561,7 +561,7 @@ test('친구가 정한 특성 11개', () => {
   E.activeOf(hb2, 1).hp = E.activeOf(hb2, 1).maxHp = 3000;
   move(hb2, 0, 'quake'); move(hb2, 1, 'tackle');
   assert.equal(E.activeOf(hb2, 0).status, 'brn');
-  // 돌풍: 공격한 상대가 다른 요괴로 바뀜
+  // 돌풍: 공격한 상대가 다른 골목몬으로 바뀜
   const fn = battle([{ species: 'maetdol', moves: ['quake'] }, { species: 'daeya', moves: ['tackle'] }], custom('fan', ['guard']));
   E.activeOf(fn, 1).hp = E.activeOf(fn, 1).maxHp = 3000; E.activeOf(fn, 1).stats.spe = 1;
   const r = move(fn, 0, 'quake'); E.choose(fn, 1, { type: 'move', index: 0 });

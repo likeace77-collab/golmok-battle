@@ -92,7 +92,7 @@ const Battle = (() => {
       <div class="clock" id="clock"></div>
     </div>`);
 
-  // 대전 전: 상대 덱을 보고 먼저 낼 요괴를 고릅니다.
+  // 대전 전: 상대 덱을 보고 먼저 낼 골목몬을 고릅니다.
   function renderPreview() {
     const waiting = !view.mustAct;
     const rosterHTML = (o) => `<div class="grid pv">${o.roster.map((m) => `<div class="card" style="--tc:${G.data.TYPES[m.types[0]].c}">${monsterSVG(m.species)}<span>${m.name}</span><p>${m.types.map(typeChip).join('')}</p></div>`).join('')}</div>`;
@@ -108,7 +108,7 @@ const Battle = (() => {
       </section>`).join('')}
       ${view.ally ? `<section class="panel"><h2>팀원 ${esc(view.ally.name)} 덱: ${esc(view.ally.deck)}</h2>${rosterHTML(view.ally)}</section>` : ''}
       <section class="panel">
-        <h2>${spectating ? '선봉을 고르는 중입니다' : waiting ? '다른 사람이 고르는 중입니다' : '먼저 내보낼 요괴를 고르세요'}</h2>
+        <h2>${spectating ? '선봉을 고르는 중입니다' : waiting ? '다른 사람이 고르는 중입니다' : '먼저 내보낼 골목몬을 고르세요'}</h2>
         <p class="muted" style="margin-bottom:6px">내 덱: ${esc(view.me.deck)}</p>
         ${view.me.mons.map((m, i) => `<button class="sw pv-lead ${view.lead === i ? 'picked' : ''}" data-lead="${i}" ${waiting ? 'disabled' : ''}>
           ${monsterSVG(m.species)}
@@ -194,7 +194,7 @@ const Battle = (() => {
     if (num) num.textContent = `${m.hp} / ${m.maxHp}`;
   }
 
-  // 내 요괴가 든 도구 (상대 도구는 발동해야 보임)
+  // 내 골목몬이 든 도구 (상대 도구는 발동해야 보임)
   function itemBadge(key, m) {
     const own = key === 'me' && !spectating ? view.me.mons.find((x) => x.species === m.species) : null;
     const id = m.itemSeen || own?.item;
@@ -376,7 +376,7 @@ const Battle = (() => {
         m.hp = e.hp; m.maxHp = e.maxHp;
         setBar(key, m);
         let awoke = false;
-        if (e.hits !== undefined && e.hits !== m.hits) { // 맞은 횟수가 바뀌면 각성 단계 확인 (옷 바뀌는 요괴)
+        if (e.hits !== undefined && e.hits !== m.hits) { // 맞은 횟수가 바뀌면 각성 단계 확인 (옷 바뀌는 골목몬)
           const sp = G.data.MONSTERS[m.species], was = m.strip || 0;
           m.hits = e.hits;
           if (sp?.stages) { m.strip = Math.min(m.hits, sp.stages); awoke = m.strip > was && m.hp > 0; }
@@ -549,7 +549,7 @@ const Battle = (() => {
   }
 
   // Z기술 컷인: 화면을 덮는 컷인 뒤에 타입별 필살 연출
-  // Z기술: 트레이너와 요괴가 같은 안무를 추며 유대를 보여 주는 컷인, 이어서 필살 연출
+  // Z기술: 트레이너와 골목몬이 같은 안무를 추며 유대를 보여 주는 컷인, 이어서 필살 연출
   // 루미나·실비아 전용 Z 연출 (약 3.6초): 등장 → 기 모으기 → 발사
   const ROMAN = ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
   // 얼굴만 잘라 보이는 컷: eyes는 눈매 클로즈업, head는 머리와 어깨
@@ -668,10 +668,10 @@ const Battle = (() => {
     }
     if (!view.mustAct) {
       const out = view.me.mons.every((m) => m.hp <= 0);
-      panel.innerHTML = `<p class="wait">${note || (out ? '내 요괴가 모두 쓰러졌습니다. 팀원을 응원하세요.' : '다른 사람의 선택을 기다리는 중입니다.')}</p>`;
+      panel.innerHTML = `<p class="wait">${note || (out ? '내 골목몬이 모두 쓰러졌습니다. 팀원을 응원하세요.' : '다른 사람의 선택을 기다리는 중입니다.')}</p>`;
       return;
     }
-    if (view.phase === 'switch') { say('다음에 나갈 요괴를 고르세요.'); return renderSwitch(panel, false); }
+    if (view.phase === 'switch') { say('다음에 나갈 골목몬을 고르세요.'); return renderSwitch(panel, false); }
     if (menu === 'switch') return renderSwitch(panel, true);
     if (menu === 'target') return renderTarget(panel);
 
@@ -745,7 +745,7 @@ const Battle = (() => {
 
   function renderSwitch(panel, canBack) {
     if (training) {
-      say('어떤 요괴로 바꿀까요?');
+      say('어떤 골목몬으로 바꿀까요?');
       panel.innerHTML = `<div class="swgrid">${view.me.mons.map((m, i) => `<button data-sw="${i}" ${i === view.me.active ? 'disabled' : ''} aria-label="${m.name}">
         ${monsterSVG(m.species, '', m.mega, m.hits, m.tier)}<span>${m.name}</span></button>`).join('')}</div>
         <button class="btn paper wide" id="sw-back">기술 고르기로 돌아가기</button>`;
