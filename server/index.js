@@ -826,7 +826,7 @@ function onMessage(key, msg) {
     }
     case 'practice': {
       if (room) return;
-      const size = msg.size === 6 ? 6 : 3;
+      const size = [1, 3, 6].includes(msg.size) ? msg.size : 3;
       if (deckOf(db.users[key]).team.length < size) return toast(key, `선택한 덱에 골목몬이 ${size}마리 있어야 합니다.`);
       { const bn = bannedIn(db.users[key], deckOf(db.users[key]).team.slice(0, size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
       startBattle([key, BOT], size, [0, 1, 2, 3].includes(msg.level) ? msg.level : 1);
@@ -834,7 +834,7 @@ function onMessage(key, msg) {
     }
     case 'challenge': {
       const to = keyOf(String(msg.to ?? ''));
-      const size = msg.size === 6 ? 6 : 3;
+      const size = [1, 3, 6].includes(msg.size) ? msg.size : 3;
       if (room || to === key || !online.has(to)) return toast(key, '지금은 신청할 수 없습니다.');
       if (inBattle.has(to)) return toast(key, '상대가 대전 중입니다.');
       if (deckOf(db.users[key]).team.length < size) return toast(key, `선택한 덱에 골목몬이 ${size}마리 있어야 합니다.`);

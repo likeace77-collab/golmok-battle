@@ -1140,3 +1140,4 @@ button.ev-card h2 { margin: 6px 0 2px; font-size: 24px; } button.ev-card p { mar
 .ct-types button { font: 14px var(--ui); padding: 4px 10px; border: 2px solid var(--ink); border-radius: 99px; background: #fff; color: var(--ink); cursor: pointer; }
 .ct-types button[aria-pressed="true"] { background: var(--tc); color: #fff; text-shadow: 0 0 2px var(--ink), 0 0 2px var(--ink); }
 #ct-send { margin-top: 16px; }
+.seg button { white-space: nowrap; }

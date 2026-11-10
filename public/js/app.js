@@ -289,13 +289,13 @@ function renderLobby() {
       <div class="row" style="justify-content:space-between;margin-bottom:8px">
         <h2 style="margin:0">대전 인원</h2>
         <div class="seg">
-          ${[3, 6].map((n) => `<button data-size="${n}" aria-pressed="${G.size === n}">${n}대${n}</button>`).join('')}
+          ${[1, 3, 6].map((n) => `<button data-size="${n}" aria-pressed="${G.size === n}">${n}대${n}</button>`).join('')}
         </div>
       </div>
       <h2 style="margin-top:12px">사용할 덱</h2>
       <div class="chips deckpick">${u.decks.map((d, i) => `<button data-deck="${i}" aria-pressed="${i === u.active}">${esc(d.name)}</button>`).join('')}</div>
       <div class="mini big">${u.decks[u.active].team.map((m, i) => `<span class="${i < G.size ? '' : 'off'}">${monsterSVG(m.species)}</span>`).join('')}</div>
-      <p class="muted">덱 앞에서부터 ${G.size}마리가 나갑니다. 대전 전에 상대 덱을 보고 먼저 낼 골목몬을 고릅니다.</p>
+      <p class="muted">${G.size === 1 ? '덱 맨 앞의 골목몬 1마리끼리 맞붙습니다. 교체 없는 진검승부!' : `덱 앞에서부터 ${G.size}마리가 나갑니다. 대전 전에 상대 덱을 보고 먼저 낼 골목몬을 고릅니다.`}</p>
     </section>
     <section class="panel">
       <h2>접속 중인 친구</h2>
