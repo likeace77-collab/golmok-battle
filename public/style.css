@@ -1051,3 +1051,38 @@ svg.tplus { filter: drop-shadow(0 0 calc(3px + var(--plus) * 1px) #b026ff) drop-
 .dice-pop b { font-family: var(--display); font-weight: 400; font-size: clamp(24px, 7vw, 36px); color: var(--c, #fff); -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; text-shadow: 3px 3px 0 var(--ink); min-height: 1.2em; }
 @keyframes dieRoll { 0% { transform: translate(-120%, 60%) rotate(-540deg) scale(.4); opacity: 0; } 15% { opacity: 1; } 55% { transform: translate(20%, -40%) rotate(-120deg) scale(1); } 80% { transform: translate(-5%, 6%) rotate(20deg); } 100% { transform: none; } }
 @keyframes diePop { 0% { transform: scale(1); } 45% { transform: scale(1.35); } 100% { transform: scale(1.1); } }
+
+/* 9 신화 등신: 흰·빨강 네온 테두리가 번갈아 돌고, 무지갯빛 글씨 + 흰/빨강 글리치 + 빛 훑기 + 반짝이 + 왕관 + MYTHIC */
+.tt-9 { gap: 6px; align-items: center; padding: 5px 12px 4px; color: #fff; border-radius: 9px; isolation: isolate;
+  background: radial-gradient(ellipse at 50% -20%, #5a0010, #12000a 60%, #000);
+  box-shadow: 0 0 6px #fff, 0 0 14px #ff1a3c, 0 0 30px #ff1a3caa, 0 0 52px #ffffff44, inset 0 0 14px #ff1a3c77;
+  animation: ttFloat 2.2s ease-in-out infinite, mythGlow 1.2s ease-in-out infinite, mythJolt 4s steps(1) infinite; }
+@keyframes mythGlow { 0%, 100% { box-shadow: 0 0 6px #fff, 0 0 14px #ff1a3c, 0 0 30px #ff1a3caa, 0 0 52px #ffffff44, inset 0 0 14px #ff1a3c77; }
+  50% { box-shadow: 0 0 10px #ff1a3c, 0 0 22px #fff, 0 0 44px #ff1a3cdd, 0 0 70px #ff1a3c66, inset 0 0 18px #ffffff55; } }
+@keyframes mythJolt { 0%, 94%, 100% { transform: none; filter: none; } 95% { transform: translate(-2px, 0) skewX(-12deg); filter: saturate(2.5) brightness(1.3); } 96% { transform: translate(2px, -1px) skewX(9deg); filter: hue-rotate(160deg); } 97% { transform: translate(-1px, 1px); filter: invert(.2); } }
+/* 흰·빨강 네온 테두리 (두 겹이 반대로 돎) */
+.tt-9::before, .tt-9 em { content: ''; position: absolute; inset: 0; z-index: 0; border-radius: 9px; padding: 2.5px; pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+.tt-9::before { background: conic-gradient(from var(--ta, 0deg), #fff, #ff1a3c, #fff, #ff1a3c, #fff, #ff1a3c, #fff); animation: ttSpin 1.1s linear infinite; filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 6px #ff1a3c); }
+.tt-9 em { inset: 3px; border-radius: 7px; padding: 1.2px; opacity: .8; background: conic-gradient(from var(--ta, 0deg), #ff004c, #ff8a00, #ffe600, #2bff88, #00e5ff, #4d5bff, #b026ff, #ff2bd6, #ff004c); animation: ttSpin 2.4s linear infinite reverse; filter: blur(.4px) drop-shadow(0 0 4px #fff); }
+/* 빛 훑기 */
+.tt-9::after { content: ''; position: absolute; inset: 0; z-index: 3; border-radius: 9px; pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(105deg, transparent 35%, #ffffffcc 48%, #ff8fa3aa 52%, transparent 65%) -150% 0 / 250% 100% no-repeat; animation: mythSweep 2.6s ease-in-out infinite; }
+@keyframes mythSweep { 0%, 40% { background-position: -150% 0; } 75%, 100% { background-position: 250% 0; } }
+/* 반짝이와 스캔라인 */
+.tt-9 s { inset: 2px; border-radius: 7px; opacity: .9;
+  background: repeating-linear-gradient(#ffffff10 0 1px, transparent 1px 3px), radial-gradient(circle, #fff 0 1px, transparent 1.6px) 0 0 / 12px 9px, radial-gradient(circle, #ff1a3c 0 1px, transparent 1.5px) 6px 4px / 12px 9px;
+  animation: ttRise .9s linear infinite, mythTwinkle 1.4s steps(2) infinite; }
+@keyframes mythTwinkle { 50% { opacity: .45; } }
+.tt-9 .tt-myth { position: relative; z-index: 2; font: 900 1.1em/1 serif; background: linear-gradient(180deg, #fff, #ffd23f 45%, #ff1a3c); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 6px #ff1a3c); animation: mythCrown 1.6s ease-in-out infinite; }
+@keyframes mythCrown { 0%, 100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-2px) rotate(8deg) scale(1.12); } }
+.tt-9 i { overflow: visible; font-weight: 900; letter-spacing: .14em; font-size: 1.08em;
+  background: linear-gradient(90deg, #ff004c, #ff8a00, #ffe600, #2bff88, #00e5ff, #4d5bff, #b026ff, #ff2bd6, #ff004c) 0 0 / 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: ttFlow 1.6s linear infinite; filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 6px #ff1a3c) drop-shadow(0 0 10px #ff1a3c88); }
+.tt-9 i::before, .tt-9 i::after { content: attr(data-t); position: absolute; inset: 0; -webkit-text-fill-color: currentColor; background: none; pointer-events: none; mix-blend-mode: screen; }
+.tt-9 i::before { color: #ffffff; animation: ttGlitchA 1.6s steps(1) infinite; }
+.tt-9 i::after { color: #ff1a3c; animation: ttGlitchB 1.6s steps(1) infinite; }
+.tt-9 u { position: relative; z-index: 2; text-decoration: none; font: 900 .52em/1 ui-monospace, Menlo, monospace; letter-spacing: .2em; color: #fff; padding: 2px 5px 1px; border-radius: 3px;
+  background: linear-gradient(90deg, #ff1a3c, #fff, #ff1a3c, #ff004c) 0 0 / 300% 100%; -webkit-text-stroke: .3px #000; text-shadow: 0 0 3px #000; animation: ttFlow 1.2s linear infinite; box-shadow: 0 0 6px #fff, 0 0 10px #ff1a3c; }
+@media (prefers-reduced-motion: reduce) { .tt-9, .tt-9::before, .tt-9::after, .tt-9 em, .tt-9 s, .tt-9 i, .tt-9 i::before, .tt-9 i::after, .tt-9 .tt-myth, .tt-9 u { animation: none; } }

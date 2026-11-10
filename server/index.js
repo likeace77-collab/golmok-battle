@@ -182,6 +182,9 @@ function migrate() {
       id: 'laborer-title', user: name, why: '게임 제작에 가장 힘쓴 플레이어', notice: '우편함에 신급 칭호가 도착했습니다!',
       apply: (u) => sendMail(u, { from: '골목대전 운영팀', title: '골목대전을 함께 만든 당신에게', body: '골목대전을 만드는 데 누구보다 애쓰고 열심히 해 준 분께만 드리는 신급 칭호입니다. 전설보다 높은 단 하나의 등급, LEGENDARY LABORER. 고생 많았어요!', reward: ['titles:laborer'] }),
     })),
+    // 신화 칭호 등신
+    { id: 'deungsin-title', user: 'suho', why: '신화 칭호 등신', notice: '우편함에 신화 등급 칭호가 도착했습니다!',
+      apply: (u) => sendMail(u, { from: '골목대전 운영팀', title: '신화가 된 당신에게', body: '전설도, 신도 넘어선 단 하나의 등급, 신화. 오직 당신만을 위한 칭호 "등신"을 드립니다. 바다의 왕처럼 당당하게 달고 다니세요!', reward: ['titles:deungsin'] }) },
   ];
   for (const g of GRANTS) {
     const u = db.users[keyOf(g.user)];

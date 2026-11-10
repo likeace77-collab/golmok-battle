@@ -275,9 +275,10 @@ function cosmetic(kind, id) {
 }
 
 // 칭호 등급별 효과: 0 일반, 1 반짝, 2 별가루, 3 황금, 4 네온, 5 전설
-const TITLE_TIERS = ['일반', '반짝', '별가루', '황금', '네온', '전설', '개발자', 'Day 1', '신'];
+const TITLE_TIERS = ['일반', '반짝', '별가루', '황금', '네온', '전설', '개발자', 'Day 1', '신', '신화'];
 function titleTag(id, cls = '') {
   const t = cosmetic('titles', id), tier = t.tier || 0;
+  if (tier === 9) return `<span class="tt tt-9 ${cls}"><s aria-hidden="true"></s><em aria-hidden="true"></em><b class="tt-myth" aria-hidden="true">♛</b><i data-t="${esc(t.n)}">${esc(t.n)}</i><u aria-hidden="true">MYTHIC</u></span>`;
   if (tier === 8) return `<span class="tt tt-8 ${cls}"><s aria-hidden="true"></s><b class="tt-god" aria-hidden="true">⚒</b><i data-t="${esc(t.n)}">${esc(t.n)}</i><u aria-hidden="true">GOD</u></span>`;
   if (tier === 7) return `<span class="tt tt-7 ${cls}"><s aria-hidden="true"></s><b class="tt-crown" aria-hidden="true">♛</b><i data-t="${esc(t.n)}">${esc(t.n)}</i><u aria-hidden="true">FOUNDER</u></span>`;
   if (tier === 6) return `<span class="tt tt-6 ${cls}"><s aria-hidden="true"></s><b class="tt-code" aria-hidden="true">&lt;/&gt;</b><i data-t="${esc(t.n)}">${esc(t.n)}</i></span>`;
