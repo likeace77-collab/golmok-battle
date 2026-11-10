@@ -100,7 +100,7 @@ function createBattle(players, seed = (Math.random() * 2 ** 31) | 0, { preview =
     seed, turn: 1, phase: preview ? 'preview' : 'choose', winner: null, weather: null, weatherTurns: 0, terrain: null, terrainTurns: 0,
     pending: players.map(() => null), needs: players.map(() => true),
     sides: players.map((p) => ({
-      name: p.name, avatar: p.avatar, style: p.style, deck: p.deck, active: 0, hazard: false, stones: p.stones || null,
+      name: p.name, avatar: p.avatar, style: p.style, deck: p.deck, active: 0, hazard: false,
       mons: p.team.map(makeMon),
     })),
   };
@@ -166,8 +166,7 @@ function legalActions(b, s) {
 }
 
 // 메가진화는 한 판에 한 번. 행동을 쓰지 않고 그 턴의 기술을 바로 이어서 씁니다.
-const hasStone = (b, s) => !b.sides[s].stones || b.sides[s].stones.includes(activeOf(b, s).species); // 메가스톤이 있어야 메가진화 (봇·훈련장은 제한 없음)
-const canMega = (b, s) => b.phase === 'choose' && !b.sides[s].megaUsed && !activeOf(b, s).mega && alive(activeOf(b, s)) && hasStone(b, s);
+const canMega = (b, s) => b.phase === 'choose' && !b.sides[s].megaUsed && !activeOf(b, s).mega && alive(activeOf(b, s));
 
 function doMega(b, s, ev) {
   const m = activeOf(b, s);
@@ -1198,7 +1197,6 @@ function viewFor(b, s) {
     weather: b.weather, weatherTurns: b.weatherTurns, terrain: b.terrain, terrainTurns: b.terrainTurns, terrainMine: b.terrain ? b.terrainTeam === teamOf(b, s) : null,
     mustAct: b.needs[s] && !lock,
     canMega: canMega(b, s) && !lock,
-    noStone: !hasStone(b, s),
     trapped: b.phase === 'choose' && trapped(b, s),
     canZ: canZ(b, s) && !lock,
     zUsed: !!me.zUsed,
@@ -1449,5 +1447,5 @@ function botTeam(level, size, enemy = []) {
 }
 
 module.exports = {
-  createBattle, createTraining, DUMMY_HP, smartMoves, choose, speedOf, legalActions, viewFor, botAction, botTeam, forfeit, teamOf, canZ, calcStats, effOf, josa, activeOf, canMega,
+  createBattle, createTraining, DUMMY_HP, choose, speedOf, legalActions, viewFor, botAction, botTeam, forfeit, teamOf, canZ, calcStats, effOf, josa, activeOf, canMega,
 };

@@ -1,8 +1,6 @@
 // 이벤트 목록: ends(마감 시각)가 지나면 '진행 중'에서 빠집니다.
 const EVENTS = [
-  { id: 'contest', title: '신캐 만들기 공모전', ends: Date.parse('2026-11-13T23:59:59+09:00'), period: '11월 13일(금)까지', desc: '나만의 골목몬을 만들어 올려 주세요! 우승작은 실제 게임에 출시되고, 만든 사람에게 그 골목몬의 신화 등급 칭호를 드려요.', open: () => showContest() },
-  { id: 'sunfish', title: '미니게임: 개복치 키우기', period: '상시', desc: '해파리를 먹여 개복치를 300cm까지 키워 보세요. 처음 성공하면 골목몬 등신을 무료로!', open: () => showSunfish() },
-  { id: 'survey', title: '설문조사', period: '상시', desc: '지금 게임이 만족스러운지, 어떤 시스템이 생겼으면 좋겠는지 알려 주세요. 처음 답하면 1,000GP!', open: () => showSurvey() },
+  { id: 'contest', title: '신캐 만들기 공모전', ends: Date.parse('2026-11-13T23:59:59+09:00'), period: '11월 13일(금)까지' },
 ];
 const liveEvents = () => EVENTS.filter((e) => !e.ends || Date.now() <= e.ends);
 // 화면 전환, 로그인, 로비, 아바타, 팀 편성
@@ -202,7 +200,7 @@ function onServer(m) {
       if (G.screen === 'lobby') renderLobby();
       break;
     case 'toast': toast(m.text); break;
-    case 'me': G.user = m.user; if (G.screen === 'lobby') renderLobby(); else if (G.screen === 'box' && !sheetRoot.innerHTML) showBox(); break;
+    case 'me': G.user = m.user; if (G.screen === 'lobby') renderLobby(); break;
     case 'no_battle': Battle.onNoBattle(); break;
     case 'battle': Battle.enter(m); break;
     case 'turn': Battle.onTurn(m); break;
@@ -259,11 +257,7 @@ function tagHTML(L) {
     <button class="btn wide" id="tag-new">태그 방 만들기</button></section>`;
 }
 
-function showLobby() {
-  // 새 게임: 튜토리얼(스타터 덱)을 끝내야 로비로
-  if (!G.user.tutorial) { if (!['tutorial', 'starters'].includes(G.screen)) { closeSheet(); showTutorial(); } return; }
-  G.screen = 'lobby'; app.className = ''; closeSheet(); renderLobby();
-}
+function showLobby() { G.screen = 'lobby'; app.className = ''; closeSheet(); renderLobby(); }
 
 function renderLobby() {
   const u = G.user, L = G.lobby;
@@ -271,20 +265,13 @@ function renderLobby() {
   const rival = Object.entries(u.h2h || {}).map(([n, r]) => `${esc(n)}: ${r.w}승 ${r.l}패${r.d ? ` ${r.d}무` : ''}`).join(', ');
   app.innerHTML = `
     ${L.incoming.map((c) => `<div class="notice"><b>${esc(c.name)}님의 ${c.size}대${c.size} 대전 신청</b>
-      <p style="margin-bottom:8px">내 덱: ${esc(u.decks[u.active]?.name || '')}</p>
+      <p style="margin-bottom:8px">내 덱: ${esc(u.decks[u.active].name)}</p>
       <div class="row"><button class="btn mint" data-acc="${esc(c.from)}">받기</button><button class="btn paper" data-dec="${esc(c.from)}">거절</button></div></div>`).join('')}
     <section class="panel">
-      ${walletHTML(u)}
       <div class="profile">
         ${battleCard({ name: u.name, avatar: u.avatar, style: u.style }, 'big')}
         <p class="muted">${recordText(u)}${u.stats?.streak > 1 ? `, ${u.stats.streak}연승 중` : ''}</p>
         ${rival ? `<p class="muted">${rival}</p>` : ''}
-      </div>
-      <div class="g2nav">
-        <button class="g2b scout" id="go-scout"><span>🔍</span><b>스카우트</b>${u.scoutReady ? '<em class="mailbadge">!</em>' : ''}</button>
-        <button class="g2b box" id="go-box"><span>📦</span><b>내 골목몬</b><small>${u.mons.length}마리</small></button>
-        <button class="g2b rew" id="go-rew"><span>🎁</span><b>보상</b>${(u.badges.attend + u.badges.quest + u.badges.ach) ? `<em class="mailbadge">${u.badges.attend + u.badges.quest + u.badges.ach}</em>` : ''}</button>
-        <button class="g2b pass" id="go-pass"><span>👑</span><b>시즌 패스</b>${u.badges.pass ? `<em class="mailbadge">${u.badges.pass}</em>` : ''}</button>
       </div>
       <div class="nav">
         <button class="btn paper" id="go-team">덱 관리</button>
@@ -307,7 +294,7 @@ function renderLobby() {
       </div>
       <h2 style="margin-top:12px">사용할 덱</h2>
       <div class="chips deckpick">${u.decks.map((d, i) => `<button data-deck="${i}" aria-pressed="${i === u.active}">${esc(d.name)}</button>`).join('')}</div>
-      <div class="mini big">${(u.decks[u.active]?.team || []).map((m, i) => `<span class="${i < G.size ? '' : 'off'}">${monsterSVG(m.species)}</span>`).join('')}</div>
+      <div class="mini big">${u.decks[u.active].team.map((m, i) => `<span class="${i < G.size ? '' : 'off'}">${monsterSVG(m.species)}</span>`).join('')}</div>
       <p class="muted">${G.size === 1 ? '덱 맨 앞의 골목몬 1마리끼리 맞붙습니다. 교체 없는 진검승부!' : `덱 앞에서부터 ${G.size}마리가 나갑니다. 대전 전에 상대 덱을 보고 먼저 낼 골목몬을 고릅니다.`}</p>
     </section>
     <section class="panel">
@@ -337,10 +324,6 @@ function renderLobby() {
     </section>
     <p style="text-align:center;margin-top:16px"><button class="btn small paper" id="logout">로그아웃</button></p>`;
   app.querySelector('#go-team').onclick = showDecks;
-  app.querySelector('#go-scout').onclick = showScout;
-  app.querySelector('#go-box').onclick = showBox;
-  app.querySelector('#go-rew').onclick = () => showRewards();
-  app.querySelector('#go-pass').onclick = showPass;
   app.querySelectorAll('[data-watch]').forEach((b) => { b.onclick = () => wsSend({ t: 'spectate', id: b.dataset.watch }); });
   app.querySelector('#tag-new')?.addEventListener('click', () => wsSend({ t: 'tag_create' }));
   app.querySelector('#tag-leave')?.addEventListener('click', () => wsSend({ t: 'tag_leave' }));
@@ -470,8 +453,7 @@ const STAT_LABEL = { hp: '체력', atk: '공격', def: '방어', spa: '특공', 
 const cloneDecks = () => JSON.parse(JSON.stringify(G.user.decks));
 
 async function saveDecks(decks, active) {
-  const slim = decks.map((d) => ({ name: d.name, team: d.team.map((m) => ({ uid: m.uid, ...(m.item ? { item: m.item } : {}) })) }));
-  G.user = (await api('PUT', '/api/decks', { decks: slim, active })).user;
+  G.user = (await api('PUT', '/api/decks', { decks, active })).user;
 }
 
 function showDecks() {
@@ -531,7 +513,7 @@ function showTeam(index, draft) {
           </button>
           <div class="ord">
             <button data-up="${i}" aria-label="${sp.n} 앞으로" ${i ? '' : 'disabled'}>▲</button>
-            <button data-rm="${i}" aria-label="${sp.n} 빼기" ${team.length > 1 ? '' : 'disabled'}>✕</button>
+            <button data-rm="${i}" aria-label="${sp.n} 빼기" ${team.length > 3 ? '' : 'disabled'}>✕</button>
           </div></div>`;
       }).join('')}
       ${team.length < 6 ? '<button class="slot empty" id="add">골목몬 추가</button>' : ''}
@@ -569,18 +551,18 @@ const isBanned = (id) => (G.data.BANNED || []).includes(id) && !G.user?.dev;
 const isSecret = isBanned; // 공개 전: 개발자 말고는 그림·이름·정보를 숨김
 
 function pickMonster(team, done) {
-  const usedUid = new Set(team.map((m) => m.uid)), usedSp = new Set(team.map((m) => m.species));
-  const order = Object.keys(G.data.MONSTERS);
-  const mons = [...G.user.mons].sort((x, y) => order.indexOf(x.species) - order.indexOf(y.species));
-  const bg = openSheet(`<div class="row"><h2>내 골목몬 고르기</h2><button class="btn small paper" data-x>닫기</button></div>
-    <p class="muted" style="margin-bottom:8px">한 덱에 같은 골목몬은 한 마리만 넣을 수 있어요. 더 모으려면 스카우트!</p>
-    <div class="grid">${mons.map((m) => { const sp = G.data.MONSTERS[m.species]; const off = usedUid.has(m.uid) || usedSp.has(m.species) || isBanned(m.species);
-      return `<button class="card" data-uid="${m.uid}" ${off ? 'disabled' : ''} style="--tc:${G.data.TYPES[sp.types[0]].c}">${monsterSVG(m.species)}<span>${sp.n}</span><small class="cmoves">${m.moves.map((id) => G.data.MOVES[id].n).join(' · ')}</small></button>`; }).join('') || '<p class="muted">골목몬이 없어요.</p>'}</div>`);
+  const used = new Set(team.map((m) => m.species));
+  const bg = openSheet(`<div class="row"><h2>골목몬 고르기</h2><button class="btn small paper" data-x>닫기</button></div>
+    <div class="grid">${Object.entries(G.data.MONSTERS).map(([id, m]) => { const ban = isBanned(id); return ban ? `<button class="card secret" disabled><span class="soon-art" aria-hidden="true">?</span><span>???</span><em class="bantag soon">곧 공개!</em></button>`
+      : `<button class="card" data-id="${id}" ${used.has(id) ? 'disabled' : ''}
+      style="--tc:${G.data.TYPES[m.types[0]].c}">${monsterSVG(id)}<span>${m.n}</span></button>`; }).join('')}</div>`);
   bg.querySelector('[data-x]').onclick = closeSheet;
-  bg.querySelectorAll('[data-uid]').forEach((b) => {
+  bg.querySelectorAll('[data-id]').forEach((b) => {
     b.onclick = () => {
-      const m = G.user.mons.find((x) => x.uid === b.dataset.uid);
-      team.push({ uid: m.uid, species: m.species, moves: [...m.moves] });
+      const all = G.data.MONSTERS[b.dataset.id].moves;
+      const atk = all.filter((m) => G.data.MOVES[m].cat !== 'x').slice(0, 3);
+      const rest = all.filter((m) => !atk.includes(m));
+      team.push({ species: b.dataset.id, moves: [...atk, ...rest].slice(0, 4) });
       done();
       editMon(team, team.length - 1, done);
     };
@@ -600,9 +582,6 @@ function moveLine(id) {
 function editMon(team, i, done) {
   const slot = team[i], sp = G.data.MONSTERS[slot.species];
   const render = () => {
-    const mine = G.user.mons.find((x) => x.uid === slot.uid);
-    if (mine) slot.moves = [...mine.moves]; // 기술은 내 골목몬에 붙어 있음
-    const stone = G.user.stones.includes(slot.species);
     const bg = openSheet(`<div class="row" style="margin-bottom:10px"><h2>${sp.n}</h2><button class="btn small" data-x>완료</button></div>
       <div class="row" style="align-items:flex-start;margin-bottom:12px">
         <div class="detail-pic" style="--tc:${G.data.TYPES[sp.types[0]].c}">${monsterSVG(slot.species)}</div>
@@ -611,16 +590,15 @@ function editMon(team, i, done) {
           ${Object.entries(sp.base).map(([k, v]) => `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${v}</span><i style="width:${Math.min(100, v / 1.3)}%"></i></div>`).join('')}
         </div>
       </div>
+      <p class="muted" style="margin-bottom:10px">${sp.flavor}</p>
       ${sp.trait ? `<p class="trait"><b>특성 ${sp.trait.n}</b> ${sp.trait.d}</p>` : ''}
-      <p class="mega-line">${stoneSVG(slot.species, 34, { lock: !stone })}<span>${stone ? `메가스톤 있음: <b>${sp.mega.n}</b>(으)로 메가진화 가능` : '메가스톤이 없어 메가진화를 못 해요'}</span></p>
-      <h3 style="font-family:var(--ui);font-weight:400;margin-bottom:6px">도구 <small class="muted">전부 무료 · ${slot.item && G.data.ITEMS[slot.item] ? `${G.data.ITEMS[slot.item].i} ${G.data.ITEMS[slot.item].n}` : '없음'}</small></h3>
+      <h3 style="font-family:var(--ui);font-weight:400;margin-bottom:6px">도구 <small class="muted">${slot.item && G.data.ITEMS[slot.item] ? `${G.data.ITEMS[slot.item].i} ${G.data.ITEMS[slot.item].n}` : '없음'}</small></h3>
       <div class="items">${Object.entries(G.data.ITEMS || {}).map(([id, it]) => `<button class="itm" data-item="${id}" aria-pressed="${slot.item === id}" title="${esc(it.d)}"><span class="ii">${it.i}</span><b>${it.n}</b></button>`).join('')}</div>
       <p class="item-desc muted">${slot.item && G.data.ITEMS[slot.item] ? `${G.data.ITEMS[slot.item].n}: ${G.data.ITEMS[slot.item].d}` : '도구를 누르면 들려 주고, 다시 누르면 뺍니다.'}</p>
-      <h3 style="font-family:var(--ui);font-weight:400;margin-bottom:6px">기술 <small class="muted">이 골목몬의 기술 (바꾸면 500GP)</small></h3>
-      ${slot.moves.map((id) => `<div class="mv">${typeChip(G.data.MOVES[id].type)}<b>${G.data.MOVES[id].n}</b>${sigTag(id)}<small>${moveLine(id)}</small></div>`).join('')}
-      <button class="btn small paper" data-moves>기술 바꾸기 / 메가스톤</button>`);
+      <h3 style="font-family:var(--ui);font-weight:400;margin-bottom:6px">기술 ${slot.moves.length}/4</h3>
+      ${sp.moves.map((id) => `<button class="mv" data-mv="${id}" aria-pressed="${slot.moves.includes(id)}">
+        ${typeChip(G.data.MOVES[id].type)}<b>${G.data.MOVES[id].n}</b>${sigTag(id)}<small>${moveLine(id)}</small></button>`).join('')}`);
     bg.querySelector('[data-x]').onclick = () => { closeSheet(); done(); };
-    bg.querySelector('[data-moves]').onclick = () => openMon(slot.uid, render);
     bg.querySelectorAll('[data-item]').forEach((b) => {
       b.onclick = () => {
         const id = b.dataset.item;
@@ -630,10 +608,22 @@ function editMon(team, i, done) {
         sheetRoot.querySelector('.sheet').scrollTop = top;
       };
     });
+    bg.querySelectorAll('[data-mv]').forEach((b) => {
+      b.onclick = () => {
+        const id = b.dataset.mv, at = slot.moves.indexOf(id);
+        if (at >= 0) { if (slot.moves.length > 1) slot.moves.splice(at, 1); else return toast('기술은 1개 이상 있어야 합니다.'); }
+        else if (slot.moves.length >= 4) return toast('기술은 4개까지입니다. 하나를 먼저 빼세요.');
+        else slot.moves.push(id);
+        const top = sheetRoot.querySelector('.sheet').scrollTop;
+        render();
+        sheetRoot.querySelector('.sheet').scrollTop = top;
+      };
+    });
   };
   render();
 }
 
+/* ---------- 플레이어 목록 ---------- */
 function ago(t) {
   if (!t) return '기록 없음';
   const m = Math.floor((Date.now() - t) / 60000);
@@ -662,17 +652,11 @@ async function showPlayers() {
       ${list.map((p) => `<section class="panel pl">
         ${battleCard({ name: p.name + (p.me ? ' (나)' : ''), avatar: p.avatar, style: p.style })}
         <p class="pmeta"><i class="dot ${p.online ? 'on' : ''}"></i>${p.online ? (p.busy ? '대전 중' : '접속 중') : `마지막 접속 ${ago(p.lastSeen)}`}, ${recordText(p)}${p.createdAt ? `, ${new Date(p.createdAt).toLocaleDateString('ko-KR')} 가입` : ''}</p>
-        ${G.user.dev ? `<p class="pmeta">골목몬 ${p.mons || 0}종 · ${p.premium ? '👑 이번 시즌 프리미엄 패스 있음' : '프리미엄 패스 없음'} <button class="btn small ${p.premium ? 'paper' : ''}" data-prem="${esc(p.name)}">${p.premium ? '프리미엄 회수' : '👑 프리미엄 패스 주기'}</button></p>` : ''}
         ${p.me ? '' : `<div class="note"><input data-note="${esc(p.key)}" maxlength="100" placeholder="누군지 메모 (예: 회사 동기 민수)" value="${esc(p.note)}" autocomplete="off"><button class="btn small" data-save="${esc(p.key)}">저장</button></div>`}
       </section>`).join('') || '<p class="wait">찾는 플레이어가 없습니다.</p>'}`;
     app.querySelector('#back').onclick = showLobby;
     const pq = app.querySelector('#pq');
     pq.oninput = () => { const pos = pq.selectionStart; render(pq.value.trim().toLowerCase()); const n = app.querySelector('#pq'); n.focus(); n.setSelectionRange(pos, pos); };
-    app.querySelectorAll('[data-prem]').forEach((b) => {
-      b.onclick = async () => {
-        try { const r = await api('POST', '/api/dev/premium', { name: b.dataset.prem }); players.find((p) => p.name === r.name).premium = r.premium; toast(`${r.name}님 프리미엄 패스 ${r.premium ? '지급' : '회수'}`); render(app.querySelector('#pq').value.trim().toLowerCase()); } catch (e) { toast(e.message); }
-      };
-    });
     app.querySelectorAll('[data-save]').forEach((b) => {
       b.onclick = async () => {
         const key = b.dataset.save;
@@ -754,13 +738,13 @@ function showEvents() {
   const dday = (t) => { if (Date.now() > t) return '마감'; const d = Math.ceil((t - Date.now()) / 86400000) - 1; return d > 0 ? `D-${d}` : 'D-DAY'; }; // 마감일 자정 기준
   app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>EVENT</h1></div>
     ${EVENTS.length ? EVENTS.map((e) => `<button class="ev-card ev-${e.id}" data-ev="${e.id}">
-      <span class="ev-badge ${e.ends && Date.now() > e.ends ? 'off' : ''}">${e.ends ? dday(e.ends) : e.id === 'sunfish' ? (G.user.sunfish ? '클리어' : 'GAME') : (G.user.surveyDone ? '답함' : 'NEW')}</span>
+      <span class="ev-badge ${Date.now() > e.ends ? 'off' : ''}">${dday(e.ends)}</span>
       <h2>${esc(e.title)}</h2><small>${esc(e.period)}</small>
-      <p>${esc(e.desc)}</p>
+      <p>나만의 골목몬을 만들어 올려 주세요! 우승작은 실제 게임에 출시되고, 만든 사람에게 그 골목몬의 신화 등급 칭호를 드려요.</p>
       <b class="ev-go">자세히 보기 ›</b></button>`).join('')
     : '<section class="panel"><div class="ev-empty"><b>🎪</b><h2>진행 중인 이벤트가 없어요</h2><p>새 이벤트가 열리면 여기에서 알려 드릴게요!</p></div></section>'}`;
   app.querySelector('#back').onclick = showLobby;
-  app.querySelectorAll('[data-ev]').forEach((b) => { b.onclick = () => EVENTS.find((e) => e.id === b.dataset.ev)?.open(); });
+  app.querySelectorAll('[data-ev]').forEach((b) => { b.onclick = () => showContest(); });
 }
 
 /* ---------- 신캐 만들기 공모전 ---------- */
