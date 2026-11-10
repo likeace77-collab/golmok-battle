@@ -42,7 +42,8 @@ const gistHeaders = {
 
 // 신캐 공모전 출품작은 그림이 커서 따로 저장합니다 (게임 기록 저장이 무거워지지 않게).
 const CONTEST_FILE = path.join(DATA_DIR, 'contest.json');
-const GIST_CONTEST = GIST_FILE.replace(/\.json$/, '') + '-contest.json';
+const GIST_CONTEST_OLD = GIST_FILE.replace(/\.json$/, '') + '-contest.json'; // 원래 게임 서버 것 (읽기만)
+const GIST_CONTEST = GIST_FILE.replace(/\.json$/, '') + '-v2-contest.json';
 const contest = fs.existsSync(CONTEST_FILE) ? JSON.parse(fs.readFileSync(CONTEST_FILE, 'utf8')) : { entries: [] };
 
 async function loadGist() {
@@ -51,6 +52,7 @@ async function loadGist() {
   const files = (await r.json()).files || {};
   const read = async (f) => (f.truncated ? (await fetch(f.raw_url, { headers: gistHeaders })).text() : f.content);
   if (files[GIST_CONTEST]) Object.assign(contest, JSON.parse(await read(files[GIST_CONTEST])));
+  else if (files[GIST_CONTEST_OLD]) Object.assign(contest, JSON.parse(await read(files[GIST_CONTEST_OLD]))); // 처음엔 원래 게임 출품작을 복사
   if (files[GIST_FILE2]) return replaceDb(JSON.parse(await read(files[GIST_FILE2])));
   if (files[GIST_FILE]) { replaceDb(fromOldGame(JSON.parse(await read(files[GIST_FILE])))); queueGist(); } // 처음 새 게임으로 넘어올 때
 }
