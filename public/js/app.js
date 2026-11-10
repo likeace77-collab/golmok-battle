@@ -749,19 +749,58 @@ function showEvents() {
 
 /* ---------- 신캐 만들기 공모전 ---------- */
 const typeChips = (ts) => (ts || []).map(typeChip).join('');
+const CT_STATS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
+const CT_CAT = { p: '물리', s: '특수', x: '변화' };
+const tColor = (t) => G.data.TYPES[t]?.c || '#ccc';
+// 출품작 목록 카드 (누르면 도감처럼 자세히)
 function entryCard(e, { dev = false, mine = false, closed = false } = {}) {
   return `<article class="ct-entry ${e.winner ? 'win' : ''}">
     ${e.winner ? '<em class="ct-win">🏆 우승</em>' : ''}
-    ${e.image ? `<img src="${e.image}" alt="${esc(e.name)} 디자인">` : '<div class="ct-noimg">그림 없음</div>'}
+    <button class="ct-open" data-open="${e.id}">${e.image ? `<img src="${e.image}" alt="${esc(e.name)} 디자인">` : '<div class="ct-noimg">그림 없음</div>'}</button>
     <div class="ct-body"><h3>${esc(e.name)} ${typeChips(e.types)}</h3>
       <small>${esc(e.user)} · ${new Date(e.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</small>
-      <h4>설명</h4><p>${esc(e.desc)}</p>
-      ${e.trait ? `<h4>특성</h4><p>${esc(e.trait)}</p>` : ''}
-      ${e.moves ? `<h4>기술셋</h4><p>${esc(e.moves)}</p>` : ''}
+      <p class="ct-desc">${esc(e.desc)}</p>
       <div class="row ct-acts">
+        <button class="btn small" data-open="${e.id}">📖 도감처럼 보기</button>
         ${dev ? `<button class="btn small ${e.winner ? 'paper' : ''}" data-win="${e.id}">${e.winner ? '우승 취소' : '🏆 우승으로 뽑기'}</button>` : ''}
         ${dev || (mine && !closed) ? `<button class="btn small paper" data-del="${e.id}">지우기</button>` : ''}
       </div></div></article>`;
+}
+// 출품작을 도감 화면과 같은 모양으로
+function openContestDex(e) {
+  const tc = tColor(e.types?.[0]);
+  const base = e.base && CT_STATS.some((k) => e.base[k]) ? e.base : null;
+  const total = base ? CT_STATS.reduce((a, k) => a + (base[k] || 0), 0) : 0;
+  const pic = (src, alt) => `<div class="detail-pic ct-pic" style="--tc:${tc}">${src ? `<img src="${src}" alt="${esc(alt)}">` : '<span>그림 없음</span>'}</div>`;
+  const trait = typeof e.trait === 'string' ? (e.trait ? { n: '', d: e.trait } : null) : e.trait?.n || e.trait?.d ? e.trait : null;
+  const mega = e.mega && (e.mega.n || e.mega.d || e.mega.image) ? e.mega : null;
+  const boostSum = mega?.boost ? CT_STATS.reduce((a, k) => a + (mega.boost[k] || 0), 0) : 0;
+  const z = e.z && e.z.n ? e.z : null;
+  const moves = Array.isArray(e.moves) ? e.moves.filter((m) => m.n) : null;
+  const mline = (m) => [CT_CAT[m.cat] || '', m.pow ? `위력 ${m.pow}` : '', m.acc ? `명중 ${m.acc}` : '', m.pp ? `PP ${m.pp}` : ''].filter(Boolean).join(', ') + (m.d ? `. ${esc(m.d)}` : '');
+  const bg = openSheet(`<div class="row" style="margin-bottom:10px"><h2>${e.winner ? '🏆 ' : ''}${esc(e.name)}</h2><button class="btn small paper" data-x>닫기</button></div>
+    <p class="muted" style="margin:-6px 0 10px">만든 사람 ${esc(e.user)} · 신캐 공모전 출품작</p>
+    <div class="row" style="align-items:flex-start;margin-bottom:12px">
+      ${pic(e.image, e.name)}
+      <div style="flex:1;min-width:0">
+        <p style="margin-bottom:4px">${typeChips(e.types) || '<span class="muted">타입 없음</span>'}</p>
+        ${base ? `${CT_STATS.map((k) => `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${base[k] || 0}</span><i style="width:${Math.min(100, (base[k] || 0) / 1.3)}%"></i></div>`).join('')}
+        <p class="muted" style="text-align:right;line-height:1.3">합계 ${total}</p>` : '<p class="muted">능력치 없음</p>'}
+      </div>
+    </div>
+    <p style="margin-bottom:12px;white-space:pre-wrap">${esc(e.desc)}</p>
+    ${trait ? `<p class="trait"><b>특성${trait.n ? ' ' + esc(trait.n) : ''}</b> ${esc(trait.d || '')}</p>` : ''}
+    ${mega ? `<section class="megabox"><h3>메가진화: ${esc(mega.n || '(이름 없음)')}</h3>
+      <div class="row" style="align-items:flex-start">${pic(mega.image, mega.n || '메가진화')}
+        <div style="flex:1;min-width:0">${base ? CT_STATS.map((k) => { const up = mega.boost?.[k] || 0, now = (base[k] || 0) + up; return `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${now}${up ? ` <b>+${up}</b>` : ''}</span><i style="width:${Math.min(100, now / 1.7)}%"></i></div>`; }).join('') + `<p style="text-align:right;line-height:1.3;font-size:14px">합계 ${total + boostSum}</p>` : ''}</div></div>
+      ${mega.d ? `<p style="margin-top:8px;font-size:15px;line-height:1.4;white-space:pre-wrap">${esc(mega.d)}</p>` : ''}</section>` : ''}
+    ${z ? `<section class="zbox" style="--zc:${tColor(z.type)}"><span>Z기술</span><b>${esc(z.n)}</b>
+      <small>${z.type ? typeChip(z.type) : ''}${CT_CAT[z.cat] || ''}${z.pow ? `, 위력 ${z.pow}` : ''}, 반드시 명중.${z.d ? ' ' + esc(z.d) : ''}</small></section>` : ''}
+    ${e.types?.length ? `<h3 class="dex-h">타입 상성</h3>${matchups(e.types)}` : ''}
+    ${moves ? `<h3 class="dex-h">배울 수 있는 스킬 ${moves.length}개</h3>
+      ${moves.map((m) => `<div class="mv">${m.type ? typeChip(m.type) : ''}<b>${esc(m.n)}</b>${m.sig ? '<em class="sigtag">전용기</em>' : ''}<small>${mline(m)}</small></div>`).join('')}`
+    : e.moves ? `<h3 class="dex-h">기술셋</h3><p style="white-space:pre-wrap">${esc(e.moves)}</p>` : ''}`);
+  bg.querySelector('[data-x]').onclick = closeSheet;
 }
 async function showContest(tab = 'info') {
   G.screen = 'contest';
@@ -793,12 +832,25 @@ async function showContest(tab = 'info') {
     app.querySelector('#back').onclick = showEvents;
     app.querySelector('#ct-new')?.addEventListener('click', () => showContestForm());
     app.querySelectorAll('[data-del]').forEach((b) => { b.onclick = async () => { if (!confirm('이 출품작을 지울까요?')) return; try { v = await api('POST', '/api/contest/delete', { id: b.dataset.del }); render(); toast('지웠어요.'); } catch (e) { toast(e.message); } }; });
+    const every = [...v.mine, ...(v.all || [])];
+    app.querySelectorAll('[data-open]').forEach((b) => { b.onclick = () => { const e = every.find((x) => x.id === b.dataset.open); if (e) openContestDex(e); }; });
     app.querySelectorAll('[data-win]').forEach((b) => { b.onclick = async () => { try { v = await api('POST', '/api/contest/winner', { id: b.dataset.win }); render(); } catch (e) { toast(e.message); } }; });
   };
   render();
 }
 
 // 손가락이나 마우스로 그리는 그림판 (사진을 올려 그 위에 그릴 수도 있음)
+// 사진 열기: 휴대폰 사진의 회전 정보도 반영. HEIC는 브라우저가 못 여는 경우가 많아 안내.
+async function loadPicture(f) {
+  if (f.size > 25e6) throw new Error('사진이 너무 커요 (25MB까지).');
+  try { return await createImageBitmap(f, { imageOrientation: 'from-image' }); } catch { /* 아래 방법으로 */ }
+  const url = URL.createObjectURL(f);
+  try {
+    return await new Promise((ok, no) => { const img = new Image(); img.onload = () => ok(img); img.onerror = no; img.src = url; });
+  } catch {
+    throw new Error(/hei[cf]/i.test(f.type + f.name) ? 'HEIC 사진은 열 수 없어요. 스크린샷을 찍거나 JPG/PNG로 올려 주세요.' : '그림 파일을 열 수 없어요. JPG나 PNG로 올려 주세요.');
+  } finally { setTimeout(() => URL.revokeObjectURL(url), 2000); }
+}
 function drawPad(root) {
   const cv = root.querySelector('canvas'), ctx = cv.getContext('2d');
   const N = 480; cv.width = cv.height = N;
@@ -818,12 +870,21 @@ function drawPad(root) {
   root.querySelector('[data-tool=erase]').onclick = (ev) => { erase = true; root.querySelectorAll('[data-col],[data-tool]').forEach((x) => x.classList.toggle('on', x === ev.currentTarget)); };
   root.querySelector('[data-tool=undo]').onclick = () => { const h = hist.pop(); if (h) ctx.putImageData(h, 0, 0); };
   root.querySelector('[data-tool=clear]').onclick = () => { snap(); blank(); used = false; };
-  root.querySelector('input[type=file]').onchange = (ev) => {
-    const f = ev.target.files?.[0]; if (!f) return;
-    const img = new Image();
-    img.onload = () => { snap(); blank(); const k = Math.min(N / img.width, N / img.height); const w = img.width * k, h = img.height * k; ctx.drawImage(img, (N - w) / 2, (N - h) / 2, w, h); used = true; URL.revokeObjectURL(img.src); };
-    img.onerror = () => toast('그림 파일을 열 수 없어요.');
-    img.src = URL.createObjectURL(f);
+  const file = root.querySelector('input[type=file]');
+  root.querySelector('[data-tool=photo]').onclick = () => file.click();
+  file.onchange = async () => {
+    const f = file.files?.[0]; file.value = '';
+    if (!f) return;
+    try {
+      const img = await loadPicture(f);
+      snap(); blank();
+      const iw = img.width || img.naturalWidth, ih = img.height || img.naturalHeight;
+      const k = Math.min(N / iw, N / ih), w = iw * k, h = ih * k;
+      ctx.drawImage(img, (N - w) / 2, (N - h) / 2, w, h);
+      img.close?.();
+      used = true;
+      toast('사진을 넣었어요. 위에 덧그려도 돼요!');
+    } catch (e) { toast(e.message); }
   };
   return { used: () => used, data: () => { for (const q of [.85, .7, .55]) { const d = cv.toDataURL('image/jpeg', q); if (d.length < 380000) return d; } return cv.toDataURL('image/jpeg', .4); } };
 }
@@ -832,29 +893,51 @@ function showContestForm() {
   G.screen = 'contest-form';
   const types = Object.entries(G.data.TYPES).filter(([k]) => k !== 'none');
   const COLS = ['#1a1433', '#ffffff', '#E8402C', '#FF8A00', '#FFD23F', '#4CD964', '#2F7DE1', '#7FB8A4', '#9A4FB8', '#F27FA5', '#A9713A', '#7C8798'];
+  const padHTML = (id) => `<div class="pad" id="${id}">
+      <canvas aria-label="그림판"></canvas>
+      <div class="pad-tools">${COLS.map((c, i) => `<button type="button" class="pc ${i ? '' : 'on'}" data-col="${c}" style="--c:${c}" aria-label="색"></button>`).join('')}</div>
+      <div class="pad-tools">
+        ${[3, 6, 12, 22].map((n) => `<button type="button" class="ps ${n === 6 ? 'on' : ''}" data-size="${n}" aria-label="굵기 ${n}"><i style="width:${n / 1.4 + 2}px;height:${n / 1.4 + 2}px"></i></button>`).join('')}
+        <button type="button" class="pt" data-tool="erase">지우개</button><button type="button" class="pt" data-tool="undo">되돌리기</button><button type="button" class="pt" data-tool="clear">전부 지우기</button>
+        <button type="button" class="pt pfile" data-tool="photo">📷 사진 넣기</button><input type="file" accept="image/*" class="vh">
+      </div></div>`;
+  const typeSel = (cls, none = '타입') => `<select class="${cls}"><option value="">${none}</option>${types.map(([k, t]) => `<option value="${k}">${t.n}</option>`).join('')}</select>`;
+  const statInputs = (cls, ph) => CT_STATS.map((k) => `<label class="ct-stat"><span>${STAT_LABEL[k]}</span><input type="number" inputmode="numeric" min="0" max="${cls === 'b' ? 255 : 100}" class="ct-${cls}" data-k="${k}" placeholder="${ph}"><i></i></label>`).join('');
+  const moveRow = (i) => `<div class="ct-mv" data-i="${i}">
+      <div class="ct-mv-top"><b>${i + 1}</b><input class="m-n" maxlength="16" placeholder="기술 이름"></div>
+      <div class="ct-mv-sel">${typeSel('m-type')}<select class="m-cat"><option value="p">물리</option><option value="s">특수</option><option value="x">변화</option></select>
+        <label class="m-sigl"><input class="m-sig" type="checkbox"> 전용기</label></div>
+      <div class="ct-mv-nums"><label>위력<input class="m-pow" type="number" inputmode="numeric" min="0" max="300" placeholder="80"></label><label>명중<input class="m-acc" type="number" inputmode="numeric" min="0" max="100" placeholder="100"></label><label>PP<input class="m-pp" type="number" inputmode="numeric" min="1" max="40" placeholder="10"></label></div>
+      <input class="m-d" maxlength="120" placeholder="효과 (예: 30% 확률로 화상)"></div>`;
   app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>신캐 만들기</h1></div>
+    <p class="ct-tip">도감과 같은 모양으로 만들어요. <b>이름과 설명</b>만 꼭 쓰면 되고, 나머지는 생각해 둔 만큼만 채워 주세요.</p>
     <section class="panel ct-form">
-      <h3>디자인 <small>직접 그리거나 사진을 올려요 (사진 위에 그려도 돼요)</small></h3>
-      <div class="pad">
-        <canvas aria-label="그림판"></canvas>
-        <div class="pad-tools">
-          ${COLS.map((c, i) => `<button class="pc ${i ? '' : 'on'}" data-col="${c}" style="--c:${c}" aria-label="색"></button>`).join('')}
-        </div>
-        <div class="pad-tools">
-          ${[3, 6, 12, 22].map((n) => `<button class="ps ${n === 6 ? 'on' : ''}" data-size="${n}" aria-label="굵기 ${n}"><i style="width:${n / 1.4 + 2}px;height:${n / 1.4 + 2}px"></i></button>`).join('')}
-          <button class="pt" data-tool="erase">지우개</button><button class="pt" data-tool="undo">되돌리기</button><button class="pt" data-tool="clear">전부 지우기</button>
-          <label class="pt pfile">📷 사진 올리기<input type="file" accept="image/*" hidden></label>
-        </div>
-      </div>
       <label class="fl">이름 <small>12자까지</small><input id="ct-name" maxlength="12" placeholder="예: 등신"></label>
       <div class="fl">타입 <small>2개까지</small><div class="ct-types">${types.map(([k, t]) => `<button type="button" data-type="${k}" style="--tc:${t.c}">${t.n}</button>`).join('')}</div></div>
-      <label class="fl">설명 <small>꼭 써 주세요! 어떤 골목몬인지, 생김새·성격·사연 (1000자까지)</small><textarea id="ct-desc" rows="5" maxlength="1000" placeholder="예: 바다의 개복치. 햇빛만 봐도 죽는다..."></textarea></label>
-      <label class="fl">특성 <small>선택</small><textarea id="ct-trait" rows="3" maxlength="400" placeholder="예: 돌연사 - 매 턴 10% 확률로 즉사"></textarea></label>
-      <label class="fl">기술셋 <small>선택 · 기술 이름, 타입, 효과</small><textarea id="ct-moves" rows="5" maxlength="800" placeholder="예: 유리대포(전기) - 위력 200, 연속으로 쓰면 25% 즉사"></textarea></label>
+      <h3 class="dex-h">디자인 <small>직접 그리거나 사진을 넣어요 (사진 위에 덧그려도 돼요)</small></h3>
+      ${padHTML('pad-base')}
+      <h3 class="dex-h">능력치 <small>0~255</small></h3>
+      <div class="ct-stats">${statInputs('b', '80')}<p class="ct-sum">합계 <b id="sum-b">0</b></p></div>
+      <label class="fl">설명 <small>꼭 써 주세요! 어떤 골목몬인지, 생김새·성격·사연</small><textarea id="ct-desc" rows="4" maxlength="1000" placeholder="예: 구멍 스물두 개로 숨을 쉰다. 다 타면 하얗게 삐친다."></textarea></label>
+      <div class="ct-traitbox"><b>특성</b><input id="ct-tn" maxlength="12" placeholder="특성 이름 (예: 불꽃의무장)"><textarea id="ct-td" rows="2" maxlength="300" placeholder="특성 효과 (예: 얼음 상태가 되지 않는다)"></textarea></div>
+      <section class="megabox ct-megaf"><h3>메가진화 <small>선택</small></h3>
+        <input id="ct-mn" maxlength="16" placeholder="메가진화 이름 (예: 불판 연탄대왕)">
+        ${padHTML('pad-mega')}
+        <p class="ct-mhint">능력치 증가 (+)</p>
+        <div class="ct-stats">${statInputs('m', '+0')}<p class="ct-sum">증가 합계 <b id="sum-m">0</b></p></div>
+        <textarea id="ct-md" rows="3" maxlength="400" placeholder="메가진화 설명"></textarea></section>
+      <section class="zbox ct-zf" style="--zc:#E8402C"><span>Z기술 <small>선택</small></span>
+        <input id="ct-zn" maxlength="16" placeholder="Z기술 이름 (예: 구공탄 대폭발)">
+        <div class="ct-zrow">${typeSel('z-type')}<select class="z-cat"><option value="p">물리</option><option value="s">특수</option></select></div>
+        <label class="ct-zpow">위력<input class="z-pow" type="number" inputmode="numeric" min="0" max="400" placeholder="180"></label>
+        <input id="ct-zd" maxlength="160" placeholder="Z기술 효과"></section>
+      <h3 class="dex-h">배울 수 있는 스킬 <small>10개까지 · 이름을 쓴 칸만 들어가요</small></h3>
+      <div id="ct-moves">${[0, 1, 2, 3].map(moveRow).join('')}</div>
+      <button type="button" class="btn small paper" id="ct-addmv">+ 기술 칸 추가</button>
       <button class="btn wide" id="ct-send">공모전에 내기</button>
     </section>`;
   app.querySelector('#back').onclick = () => showContest();
-  const pad = drawPad(app.querySelector('.pad'));
+  const pad = drawPad(app.querySelector('#pad-base')), mpad = drawPad(app.querySelector('#pad-mega'));
   const picked = [];
   app.querySelectorAll('[data-type]').forEach((b) => {
     b.onclick = () => {
@@ -863,16 +946,43 @@ function showContestForm() {
       app.querySelectorAll('[data-type]').forEach((x) => x.setAttribute('aria-pressed', picked.includes(x.dataset.type)));
     };
   });
+  const sums = () => {
+    for (const c of ['b', 'm']) {
+      let sum = 0;
+      app.querySelectorAll(`.ct-${c}`).forEach((inp) => { const n = Math.max(0, +inp.value || 0); sum += n; inp.nextElementSibling.style.width = `${Math.min(100, n / (c === 'b' ? 1.3 : .6))}%`; });
+      app.querySelector(`#sum-${c}`).textContent = sum;
+    }
+  };
+  app.querySelectorAll('.ct-b, .ct-m').forEach((i) => { i.oninput = sums; });
+  app.querySelector('#ct-addmv').onclick = (ev) => {
+    const box = app.querySelector('#ct-moves'), n = box.children.length;
+    if (n >= 10) return toast('기술은 10개까지예요.');
+    box.insertAdjacentHTML('beforeend', moveRow(n));
+    if (n + 1 >= 10) ev.currentTarget.disabled = true;
+  };
+  const num = (el) => (el && el.value !== '' ? Math.round(+el.value) : 0);
   app.querySelector('#ct-send').onclick = async (ev) => {
     const val = (id) => app.querySelector(id).value.trim();
     if (!val('#ct-name')) return toast('골목몬 이름을 넣어 주세요.');
     if (!val('#ct-desc')) return toast('골목몬 설명을 넣어 주세요.');
-    ev.currentTarget.disabled = true;
+    const stats = (c) => Object.fromEntries([...app.querySelectorAll(`.ct-${c}`)].map((i) => [i.dataset.k, num(i)]));
+    const moves = [...app.querySelectorAll('.ct-mv')].map((r) => ({
+      n: r.querySelector('.m-n').value.trim(), type: r.querySelector('.m-type').value, cat: r.querySelector('.m-cat').value,
+      pow: num(r.querySelector('.m-pow')), acc: num(r.querySelector('.m-acc')), pp: num(r.querySelector('.m-pp')), d: r.querySelector('.m-d').value.trim(), sig: r.querySelector('.m-sig').checked,
+    })).filter((m) => m.n);
+    const body = {
+      name: val('#ct-name'), types: picked, desc: val('#ct-desc'), base: stats('b'),
+      trait: { n: val('#ct-tn'), d: val('#ct-td') },
+      mega: { n: val('#ct-mn'), d: val('#ct-md'), boost: stats('m'), image: mpad.used() ? mpad.data() : '' },
+      z: { n: val('#ct-zn'), type: app.querySelector('.z-type').value, cat: app.querySelector('.z-cat').value, pow: num(app.querySelector('.z-pow')), d: val('#ct-zd') },
+      moves, image: pad.used() ? pad.data() : '',
+    };
+    const btn = ev.currentTarget; btn.disabled = true; btn.textContent = '보내는 중...';
     try {
-      await api('POST', '/api/contest', { name: val('#ct-name'), types: picked, desc: val('#ct-desc'), trait: val('#ct-trait'), moves: val('#ct-moves'), image: pad.used() ? pad.data() : '' });
+      await api('POST', '/api/contest', body);
       toast('공모전에 냈어요! 행운을 빌어요 🍀');
       showContest();
-    } catch (e) { toast(e.message); ev.currentTarget.disabled = false; }
+    } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = '공모전에 내기'; }
   };
 }
 
@@ -925,9 +1035,10 @@ function showFields() {
 
 function matchups(id) {
   const groups = {};
+  const types = Array.isArray(id) ? id : G.data.MONSTERS[id].types;
   for (const atk of Object.keys(G.data.TYPES)) {
     if (atk === 'none') continue;
-    const eff = G.data.MONSTERS[id].types.reduce((x, t) => x * (G.data.CHART[atk][t] ?? 1), 1);
+    const eff = types.reduce((x, t) => x * (G.data.CHART[atk]?.[t] ?? 1), 1);
     if (eff !== 1) (groups[eff] ||= []).push(atk);
   }
   return [[4, '4배로 받음'], [2, '2배로 받음'], [.5, '절반만 받음'], [.25, '1/4만 받음'], [0, '안 받음']]
