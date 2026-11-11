@@ -1246,7 +1246,7 @@ button.ev-card h2 { margin: 6px 0 2px; font-size: 24px; } button.ev-card p { mar
 .mega-line { display: flex; gap: 8px; align-items: center; margin: 8px 0 12px; font-size: 14px; }
 .card .cmoves { display: block; font-size: 10px; color: #5f5870; line-height: 1.2; margin-top: 2px; }
 /* 보상 */
-.rtabs .mailbadge { margin-left: 4px; }
+.rtabs .mailbadge, .passbtn .mailbadge { position: static; display: inline-grid; vertical-align: middle; margin-left: 6px; }
 .att { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin: 10px 0; }
 .att-d { position: relative; display: grid; justify-items: center; align-content: start; gap: 2px; padding: 6px 2px; background: #fff; border: 2px solid var(--ink); border-radius: 10px; min-height: 92px; }
 .att-d small { font: 11px var(--ui); } .att-d .rw { flex-direction: column; padding: 2px 3px; font-size: 11px; border-radius: 8px; margin: 0; }
