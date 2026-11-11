@@ -135,6 +135,28 @@ function fromOldGame(old) {
   return { users, sessions: old.sessions || {}, v: 2 };
 }
 
+/* ---------- 특별 지급 ---------- */
+// 긴급 보상: 2026-11-11 (한국시간) 자정 전에 접속하면 한 번
+const EMERGENCY = { id: 'emg-20261111', until: Date.parse('2026-11-12T00:00:00+09:00'), title: '긴급 보상 도착!', r: { skips: 50, tickets: 3, gp: 5000 } };
+// 새 게임으로 바뀌기 전부터 있던 계정에 '차원을 넘어온 자' 칭호
+const DIMENSION_BEFORE = Date.parse('2026-11-12T00:00:00+09:00');
+function specialGrants(u) {
+  u.flags ||= {};
+  let changed = false;
+  if (!u.flags.dimension && (u.createdAt || 0) < DIMENSION_BEFORE) {
+    u.flags.dimension = true; changed = true;
+    (u.owned ||= []).includes('titles:dimension') || u.owned.push('titles:dimension');
+    sendMail(u, { from: '골목대전 운영진', title: '차원을 넘어온 자', body: '골목대전이 새로운 차원으로 넘어왔습니다. 처음부터 함께해 준 골목몬꾼에게 특별 칭호 「차원을 넘어온 자」를 드립니다. 꾸미기 → 칭호에서 장착해 보세요!' });
+  }
+  return changed;
+}
+function emergencyGift(u) {
+  u.flags ||= {};
+  if (Date.now() >= EMERGENCY.until || u.flags[EMERGENCY.id]) return null;
+  u.flags[EMERGENCY.id] = true;
+  return P.grant(u, EMERGENCY.r);
+}
+
 /* ---------- 우편함 ---------- */
 // reward: ['titles:day1', 'cards:gold', ...] 꾸미기 아이템
 function sendMail(u, { from, title, body, reward = [] }) {
@@ -197,6 +219,7 @@ function migrate() {
       for (const id of sp.moves) if (ok.length < 4 && !ok.includes(id)) ok.push(id);
       m.moves = ok; changed = true;
     }
+    if (specialGrants(u)) changed = true;
     // 개발자 계정: 모든 골목몬 1마리씩과 모든 메가스톤 (꾸미기는 isUnlocked에서 전부 열림)
     if (isDev(u)) {
       const have = new Set(u.mons.map((m) => m.species));
@@ -1039,6 +1062,7 @@ server.on('upgrade', (req, socket, head) => {
     online.get(key)?.close(4000, 'replaced'); // 새 탭/기기로 접속하면 이전 연결은 닫음
     db.users[key].lastSeen = Date.now(); save();
     online.set(key, ws);
+    { const u = db.users[key]; specialGrants(u); const got = emergencyGift(u); if (got) { save(); send(ws, { t: 'me', user: publicUser(u) }); send(ws, { t: 'gift', title: EMERGENCY.title, got }); } }
     ws.alive = true;
     ws.on('pong', () => { ws.alive = true; });
     ws.on('message', (raw) => {

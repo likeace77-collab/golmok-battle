@@ -123,7 +123,8 @@ function buyStone(u, species) {
 }
 
 /* ---------- 출석 ---------- */
-const ATTEND = [{ gp: 500 }, { skips: 5 }, { gp: 1000 }, { tickets: 1 }, { gp: 1500 }, { skips: 10 }, { tickets: 1, stones: 'random' }];
+// 보상량: GP 4배, 1시간 스킵권 5배로 올림 (2026-11-11)
+const ATTEND = [{ gp: 2000 }, { skips: 25 }, { gp: 4000 }, { tickets: 1 }, { gp: 6000 }, { skips: 50 }, { tickets: 1, stones: 'random' }];
 function attendState(u) {
   const today = dayKey(), yest = dayKey(Date.now() - DAY);
   const a = u.attend;
@@ -140,16 +141,16 @@ function attend(u) {
 
 /* ---------- 퀘스트 ---------- */
 const DAILY = [
-  { id: 'battle3', n: '대전 3판 하기', k: 'battle', goal: 3, r: { gp: 500, pass: 50 } },
-  { id: 'win1', n: '대전 1번 이기기', k: 'win', goal: 1, r: { skips: 3, pass: 50 } },
-  { id: 'mega1', n: '메가진화 1번 하기', k: 'mega', goal: 1, r: { gp: 300, pass: 30 } },
-  { id: 'scout1', n: '스카우트로 골목몬 얻기', k: 'scout', goal: 1, r: { gp: 300, pass: 30 } },
+  { id: 'battle3', n: '대전 3판 하기', k: 'battle', goal: 3, r: { gp: 2000, pass: 50 } },
+  { id: 'win1', n: '대전 1번 이기기', k: 'win', goal: 1, r: { skips: 15, pass: 50 } },
+  { id: 'mega1', n: '메가진화 1번 하기', k: 'mega', goal: 1, r: { gp: 1200, pass: 30 } },
+  { id: 'scout1', n: '스카우트로 골목몬 얻기', k: 'scout', goal: 1, r: { gp: 1200, pass: 30 } },
 ];
 const WEEKLY = [
   { id: 'win10', n: '대전 10번 이기기', k: 'win', goal: 10, r: { tickets: 1, pass: 150 } },
   { id: 'battle25', n: '대전 25판 하기', k: 'battle', goal: 25, r: { stones: 'random', pass: 150 } },
-  { id: 'pvp3', n: '친구와 대전 3판', k: 'pvp', goal: 3, r: { gp: 3000, pass: 100 } },
-  { id: 'z5', n: 'Z기술 5번 쓰기', k: 'z', goal: 5, r: { skips: 10, pass: 100 } },
+  { id: 'pvp3', n: '친구와 대전 3판', k: 'pvp', goal: 3, r: { gp: 12000, pass: 100 } },
+  { id: 'z5', n: 'Z기술 5번 쓰기', k: 'z', goal: 5, r: { skips: 50, pass: 100 } },
 ];
 function questBook(u) {
   if (u.daily?.day !== dayKey()) u.daily = { day: dayKey(), prog: {}, done: [] };
@@ -180,15 +181,15 @@ function claimQuest(u, id) {
 /* ---------- 업적 ---------- */
 const uniqueSpecies = (u) => new Set(u.mons.map((m) => m.species)).size;
 const ACH = [
-  ...[[10, { gp: 2000 }], [20, { tickets: 1 }], [30, { tickets: 2, stones: 1 }], [45, { tickets: 3, stones: 2 }], [55, { tickets: 5, stones: 3 }]].map(([n, r]) => ({ id: `col${n}`, n: `골목몬 ${n}종 모으기`, val: uniqueSpecies, goal: n, r })),
-  ...[[1, { gp: 500 }], [10, { gp: 1000 }], [50, { skips: 20 }], [100, { tickets: 1 }], [300, { tickets: 2, stones: 1 }]].map(([n, r]) => ({ id: `win${n}`, n: `대전 ${n}번 이기기`, val: (u) => u.counts.wins, goal: n, r })),
+  ...[[10, { gp: 8000 }], [20, { tickets: 1 }], [30, { tickets: 2, stones: 1 }], [45, { tickets: 3, stones: 2 }], [55, { tickets: 5, stones: 3 }]].map(([n, r]) => ({ id: `col${n}`, n: `골목몬 ${n}종 모으기`, val: uniqueSpecies, goal: n, r })),
+  ...[[1, { gp: 2000 }], [10, { gp: 4000 }], [50, { skips: 100 }], [100, { tickets: 1 }], [300, { tickets: 2, stones: 1 }]].map(([n, r]) => ({ id: `win${n}`, n: `대전 ${n}번 이기기`, val: (u) => u.counts.wins, goal: n, r })),
   ...[[5, { stones: 1 }], [30, { tickets: 1 }]].map(([n, r]) => ({ id: `pvp${n}`, n: `친구와의 대전 ${n}번 이기기`, val: (u) => u.counts.pvpWins, goal: n, r })),
-  ...[[1, { gp: 500 }], [30, { stones: 1 }]].map(([n, r]) => ({ id: `mega${n}`, n: `메가진화 ${n}번`, val: (u) => u.stats.megas, goal: n, r })),
-  ...[[1, { gp: 500 }], [30, { stones: 1 }]].map(([n, r]) => ({ id: `z${n}`, n: `Z기술 ${n}번`, val: (u) => u.stats.zmoves, goal: n, r })),
+  ...[[1, { gp: 2000 }], [30, { stones: 1 }]].map(([n, r]) => ({ id: `mega${n}`, n: `메가진화 ${n}번`, val: (u) => u.stats.megas, goal: n, r })),
+  ...[[1, { gp: 2000 }], [30, { stones: 1 }]].map(([n, r]) => ({ id: `z${n}`, n: `Z기술 ${n}번`, val: (u) => u.stats.zmoves, goal: n, r })),
   ...[[5, { tickets: 1 }], [20, { tickets: 2 }]].map(([n, r]) => ({ id: `scout${n}`, n: `스카우트 ${n}번`, val: (u) => u.counts.scouts, goal: n, r })),
   { id: 'stone30', n: '메가스톤 30종 모으기', val: (u) => u.stones.length, goal: 30, r: { tickets: 2 } },
-  { id: 'flawless1', n: '한 마리도 안 쓰러지고 이기기', val: (u) => u.stats.flawless, goal: 1, r: { gp: 1000 } },
-  { id: 'dupe', n: '같은 골목몬 2마리 갖기', val: (u) => { const c = {}; for (const m of u.mons) c[m.species] = (c[m.species] || 0) + 1; return Math.max(0, ...Object.values(c)); }, goal: 2, r: { gp: 1000 } },
+  { id: 'flawless1', n: '한 마리도 안 쓰러지고 이기기', val: (u) => u.stats.flawless, goal: 1, r: { gp: 4000 } },
+  { id: 'dupe', n: '같은 골목몬 2마리 갖기', val: (u) => { const c = {}; for (const m of u.mons) c[m.species] = (c[m.species] || 0) + 1; return Math.max(0, ...Object.values(c)); }, goal: 2, r: { gp: 4000 } },
 ];
 const achState = (u) => ACH.map((a) => ({ id: a.id, n: a.n, goal: a.goal, r: a.r, prog: Math.min(a.goal, a.val(u)), done: u.achieved.includes(a.id) }));
 function claimAch(u, id) {
@@ -204,8 +205,8 @@ function claimAch(u, id) {
 const SEASON_EPOCH = Date.parse('2026-11-09T00:00:00+09:00'), SEASON_LEN = 14 * DAY, PASS_LV = 30, PASS_PER = 80;
 const seasonOf = (t = Date.now()) => Math.floor((t - SEASON_EPOCH) / SEASON_LEN) + 1;
 const seasonEnds = (s) => SEASON_EPOCH + s * SEASON_LEN;
-const freeReward = (lv) => (lv % 10 === 0 ? { tickets: 1, stones: 'random' } : lv % 5 === 0 ? { tickets: 1 } : lv % 3 === 0 ? { stones: 'random' } : lv % 2 ? { gp: 500 } : { skips: 3 });
-const premReward = (lv) => (lv % 10 === 0 ? { tickets: 2, stones: 2, gp: 3000 } : lv % 5 === 0 ? { tickets: 1, stones: 'random' } : lv % 3 === 0 ? { tickets: 1 } : lv % 2 ? { gp: 1000 } : { skips: 6, stones: lv % 4 === 0 ? 'random' : 0 });
+const freeReward = (lv) => (lv % 10 === 0 ? { tickets: 1, stones: 'random' } : lv % 5 === 0 ? { tickets: 1 } : lv % 3 === 0 ? { stones: 'random' } : lv % 2 ? { gp: 2000 } : { skips: 15 });
+const premReward = (lv) => (lv % 10 === 0 ? { tickets: 2, stones: 2, gp: 12000 } : lv % 5 === 0 ? { tickets: 1, stones: 'random' } : lv % 3 === 0 ? { tickets: 1 } : lv % 2 ? { gp: 4000 } : { skips: 30, stones: lv % 4 === 0 ? 'random' : 0 });
 function passBook(u) {
   const s = seasonOf();
   if (u.pass?.season !== s) u.pass = { season: s, pts: 0, free: [], prem: [], premium: !!u.premiumSeasons?.includes(s), practiceDay: '', practicePts: 0 };

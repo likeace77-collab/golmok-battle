@@ -596,6 +596,7 @@ const COSMETICS = {
     C('laborer', 'LEGENDARY LABORER', ['gift', 'titles:laborer'], { tier: 8 }),
     C('deungsin', '등신', ['gift', 'titles:deungsin'], { tier: 9 }),
     C('noisecrime', '소음공해죄', ['gift', 'titles:noisecrime'], { tier: 9, icon: '♬' }),
+    C('dimension', '차원을 넘어온 자', ['gift', 'titles:dimension'], { tier: 10 }), // 옛 골목대전에서 넘어온 계정 기념
     // 상점 (GP로 구매)
     C('boughttitle', '돈 주고 산 칭호', ['shop', 2000], { tier: 1 }), C('cvsvip', '편의점 VIP', ['shop', 3000], { tier: 1 }),
     C('flexer', '플렉스 장인', ['shop', 6000], { tier: 2 }), C('bigspender', '골목 큰손', ['shop', 10000], { tier: 3 }),

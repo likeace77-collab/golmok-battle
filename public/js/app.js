@@ -219,6 +219,7 @@ function onServer(m) {
       if (G.screen === 'lobby') renderLobby();
       break;
     case 'toast': toast(m.text); break;
+    case 'gift': if (G.screen === 'battle' || typeof showGot !== 'function') toast(`${m.title} 지갑을 확인해 보세요.`); else showGot(m.got, m.title); break;
     case 'me': G.user = m.user; if (G.screen === 'lobby') renderLobby(); else if (G.screen === 'box' && !sheetRoot.innerHTML) showBox(); break;
     case 'no_battle': Battle.onNoBattle(); break;
     case 'battle': Battle.enter(m); break;
