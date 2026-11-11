@@ -507,7 +507,7 @@ async function progressApi(req, res, route, auth, user) {
   if (route === 'POST /api/sunfish/start') { user.sunfishRun = Date.now(); save(); return json(res, 200, { ok: true }); }
   if (route === 'POST /api/sunfish/clear') {
     const size = Number(body.size);
-    if (!user.sunfishRun || Date.now() - user.sunfishRun < 20000 || !(size >= SUNFISH_GOAL)) return json(res, 400, { error: '기록을 확인할 수 없어요. 다시 해 주세요.' });
+    if (!user.sunfishRun || Date.now() - user.sunfishRun < 6000 || !(size >= SUNFISH_GOAL)) return json(res, 400, { error: '기록을 확인할 수 없어요. 다시 해 주세요.' });
     user.sunfishRun = 0;
     user.sunfishBest = Math.max(user.sunfishBest || 0, Math.min(999, size));
     if (user.sunfishDone) return done({ got: [], again: true });
