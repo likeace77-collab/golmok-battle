@@ -197,6 +197,12 @@ function migrate() {
       for (const id of sp.moves) if (ok.length < 4 && !ok.includes(id)) ok.push(id);
       m.moves = ok; changed = true;
     }
+    // 개발자 계정: 모든 골목몬 1마리씩과 모든 메가스톤 (꾸미기는 isUnlocked에서 전부 열림)
+    if (isDev(u)) {
+      const have = new Set(u.mons.map((m) => m.species));
+      for (const sp of Object.keys(Data.MONSTERS)) if (!have.has(sp)) { P.addMon(u, sp); changed = true; }
+      for (const sp of Object.keys(Data.MONSTERS)) if (Data.MONSTERS[sp].mega && !u.stones.includes(sp)) { u.stones.push(sp); changed = true; }
+    }
   }
   // 운영 보상: 버그로 기록이 날아간 계정에 한 번만 지급 (grants에 남겨 다시 주지 않음)
   const GRANTS = [
@@ -338,6 +344,7 @@ async function api(req, res, url) {
       const u = db.users[key];
       const ok = u && crypto.timingSafeEqual(Buffer.from(hashPw(password, u.salt), 'hex'), Buffer.from(u.hash, 'hex'));
       if (!ok) return json(res, 401, { error: '아이디나 비밀번호가 맞지 않습니다.' });
+      if (isDev(u)) { migrate(); save(); }
       createSession(res, req, key);
       return json(res, 200, { user: publicUser(u) });
     }
@@ -353,6 +360,7 @@ async function api(req, res, url) {
       name, salt, hash: hashPw(password, salt), avatar: randomAvatar(), createdAt: Date.now(), lastSeen: Date.now(), notes: {}, stats: newStats(), style: defaultStyle(),
       wins: 0, losses: 0, draws: 0, h2h: {}, birthYear, settings: { mosaic: false },
     };
+    if (isDev(db.users[key])) { migrate(); save(); }
     createSession(res, req, key);
     return json(res, 200, { user: publicUser(db.users[key]) });
   }
