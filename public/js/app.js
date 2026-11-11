@@ -593,12 +593,12 @@ const isBanned = (id) => (G.data.BANNED || []).includes(id) && !G.user?.dev;
 const isSecret = isBanned; // 공개 전: 개발자 말고는 그림·이름·정보를 숨김
 
 function pickMonster(team, done) {
-  const usedUid = new Set(team.map((m) => m.uid)), usedSp = new Set(team.map((m) => m.species));
+  const usedUid = new Set(team.map((m) => m.uid));
   const order = Object.keys(G.data.MONSTERS);
   const mons = [...G.user.mons].sort((x, y) => order.indexOf(x.species) - order.indexOf(y.species));
   const bg = openSheet(`<div class="row"><h2>내 골목몬 고르기</h2><button class="btn small paper" data-x>닫기</button></div>
-    <p class="muted" style="margin-bottom:8px">한 덱에 같은 골목몬은 한 마리만 넣을 수 있어요. 더 모으려면 스카우트!</p>
-    <div class="grid">${mons.map((m) => { const sp = G.data.MONSTERS[m.species]; const off = usedUid.has(m.uid) || usedSp.has(m.species) || isBanned(m.species);
+    <p class="muted" style="margin-bottom:8px">같은 골목몬도 여러 마리 넣을 수 있어요. 더 모으려면 스카우트!</p>
+    <div class="grid">${mons.map((m) => { const sp = G.data.MONSTERS[m.species]; const off = usedUid.has(m.uid) || isBanned(m.species);
       return `<button class="card" data-uid="${m.uid}" ${off ? 'disabled' : ''} style="--tc:${G.data.TYPES[sp.types[0]].c}">${monsterSVG(m.species)}<span>${sp.n}</span><small class="cmoves">${m.moves.map((id) => G.data.MOVES[id].n).join(' · ')}</small></button>`; }).join('') || '<p class="muted">골목몬이 없어요.</p>'}</div>`);
   bg.querySelector('[data-x]').onclick = closeSheet;
   bg.querySelectorAll('[data-uid]').forEach((b) => {

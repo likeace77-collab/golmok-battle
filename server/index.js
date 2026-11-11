@@ -271,11 +271,11 @@ const BAN_TEXT = (names) => `${names.join(', ')}${names.length > 1 ? '는' : '�
 // 덱의 칸: 내가 가진 골목몬(uid)과 도구. 한 덱에 같은 종류는 한 마리만.
 function validTeam(u, t) {
   if (!Array.isArray(t) || t.length < 1 || t.length > 6) return null;
-  const uids = new Set(), species = new Set(), out = [];
+  const uids = new Set(), out = [];
   for (const x of t) {
     const m = monOf(u, String(x?.uid ?? ''));
-    if (!m || uids.has(m.uid) || species.has(m.species)) return null;
-    uids.add(m.uid); species.add(m.species);
+    if (!m || uids.has(m.uid)) return null; // 같은 골목몬 여러 마리 OK (같은 개체는 한 번만)
+    uids.add(m.uid);
     const item = Data.ITEMS[x.item] ? x.item : undefined; // 도구 (없거나 모르는 도구면 빈손)
     out.push({ uid: m.uid, ...(item ? { item } : {}) });
   }

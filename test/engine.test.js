@@ -804,3 +804,16 @@ test('등신: 돌연사·갈증, 전용기 10개', () => {
   for (let seed = 1; seed < 30; seed++) { const b = battle(custom('deungsin', ['overcome']), custom('maetdol', ['wall']), seed); turn(b, 'overcome', 'wall'); const x = E.activeOf(b, 0); if (x.hp > 0 && x.thirst === null) freed++; }
   assert.ok(freed > 5, String(freed));
 });
+
+test('같은 골목몬 여러 마리로 대전해도 끝까지 가고 서로 구별된다', () => {
+  const one = E.botTeam(1, 1)[0], dup = [one, one, one];
+  for (let seed = 1; seed <= 30; seed++) {
+    const b = E.createBattle([{ name: '가', team: dup }, { name: '나', team: E.botTeam(1, 3) }], seed, { preview: true });
+    const v = E.viewFor(b, 0);
+    assert.deepEqual(v.me.mons.map((m) => m.slot), [0, 1, 2]);
+    assert.deepEqual(E.viewFor(b, 1).opps[0].roster.map((m) => m.slot), [0, 1, 2]);
+    let guard = 0;
+    while (b.phase !== 'over' && ++guard < 3000) for (const s of [0, 1]) if (b.phase !== 'over' && b.needs[s] && !b.pending[s]) assert.ok(E.choose(b, s, E.botAction(b, s, 2)).ok);
+    assert.equal(b.phase, 'over');
+  }
+});

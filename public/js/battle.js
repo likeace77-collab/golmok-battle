@@ -195,8 +195,10 @@ const Battle = (() => {
   }
 
   // 내 골목몬이 든 도구 (상대 도구는 발동해야 보임)
+  // 같은 골목몬이 덱에 여러 마리여도 slot(덱 순서)으로 구별
+  const same = (a, b) => (a.slot != null && b.slot != null ? a.slot === b.slot : a.species === b.species);
   function itemBadge(key, m) {
-    const own = key === 'me' && !spectating ? view.me.mons.find((x) => x.species === m.species) : null;
+    const own = key === 'me' && !spectating ? view.me.mons.find((x) => same(x, m)) : null;
     const id = m.itemSeen || own?.item;
     const it = id && G.data.ITEMS?.[id];
     if (!it) return '';
@@ -267,7 +269,7 @@ const Battle = (() => {
     box.classList.remove('hit', 'lunge', 'enter');
     box.classList.add('wasted');
     trainer(key)?.play('sad');
-    const r = rosterEntry(key, dispMon(key).species);
+    const r = rosterEntry(key, dispMon(key));
     if (r) { r.out = true; drawPips(); }
     const scene = $('#scene');
     const tag = document.createElement('div');
@@ -289,11 +291,11 @@ const Battle = (() => {
   const dispMon = (key) => (key === 'me' ? mine() : seatOf(key).active);
   function putMon(key, mon) {
     if (key === 'me') {
-      disp.me.active = disp.me.mons.findIndex((x) => x.species === mon.species);
+      disp.me.active = disp.me.mons.findIndex((x) => same(x, mon));
       Object.assign(mine(), mon);
     } else seatOf(key).active = mon;
   }
-  const rosterEntry = (key, species) => (key === 'me' ? null : seatOf(key).roster.find((x) => x.species === species));
+  const rosterEntry = (key, mon) => (key === 'me' ? null : seatOf(key).roster.find((x) => same(x, mon)));
 
   function drawPips() {
     drawPipsFrom(disp.opps.flatMap((o) => o.roster));
@@ -406,7 +408,7 @@ const Battle = (() => {
         box.classList.remove('hit', 'lunge', 'enter');
         box.classList.add('faint');
         trainer(key)?.play('sad');
-        const r = rosterEntry(key, dispMon(key).species);
+        const r = rosterEntry(key, dispMon(key));
         if (r) { r.out = true; drawPips(); }
         await wait(1000);
         box.classList.remove('faint'); box.classList.add('hide');
@@ -425,7 +427,7 @@ const Battle = (() => {
         Fx.megaStart(key);
         await wait(1100);
         putMon(key, e.mon);
-        const r = rosterEntry(key, e.mon.species);
+        const r = rosterEntry(key, e.mon);
         if (r) { r.mega = true; drawPips(); }
         drawMon(key, dispMon(key)); drawPlate(key, dispMon(key));
         Fx.megaEnd(key);

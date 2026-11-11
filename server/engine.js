@@ -101,7 +101,7 @@ function createBattle(players, seed = (Math.random() * 2 ** 31) | 0, { preview =
     pending: players.map(() => null), needs: players.map(() => true),
     sides: players.map((p) => ({
       name: p.name, avatar: p.avatar, style: p.style, deck: p.deck, active: 0, hazard: false, stones: p.stones || null,
-      mons: p.team.map(makeMon),
+      mons: p.team.map((spec, slot) => ({ ...makeMon(spec), slot })), // slot: 같은 골목몬이 여러 마리여도 구별
     })),
   };
   return b;
@@ -376,7 +376,7 @@ function faintCheck(b, s, m, ev) {
 
 function publicMon(m) {
   return {
-    species: m.species, name: m.name, types: m.types,
+    species: m.species, slot: m.slot, name: m.name, types: m.types,
     hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega, thirst: m.thirst, blaze: m.blaze || 0, hits: m.hits || 0, strip: stripOf(m), tier: tierOf(m) || formOf(m) || (m.blaze > 0 ? 1 : 0),
   };
 }
@@ -1188,7 +1188,7 @@ function viewFor(b, s) {
     return {
       seat: i, name: o.name, avatar: o.avatar, style: o.style, deck: o.deck, hazard: o.hazard,
       active: preview ? null : publicMon(activeOf(b, i)), // 고르기 전에는 선봉을 숨김
-      roster: o.mons.map((m) => ({ species: m.species, name: m.name, types: m.types, out: !alive(m), mega: m.mega })),
+      roster: o.mons.map((m) => ({ species: m.species, slot: m.slot, name: m.name, types: m.types, out: !alive(m), mega: m.mega })),
     };
   };
   const opps = foesOf(b, s).map(seatView);
