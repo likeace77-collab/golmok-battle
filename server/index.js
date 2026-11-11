@@ -261,7 +261,7 @@ const isAdult = (u) => ageOf(u) !== null && ageOf(u) > 19;
 const uncensored = (u) => isAdult(u) && !u.settings?.mosaic;
 
 const publicUser = (u) => ({
-  dev: isDev(u), owned: u.owned || [], mailNew: (u.mail || []).filter((m) => !m.read || !m.claimed).length, birthYear: u.birthYear || null, needAge: !u.birthYear, adult: isAdult(u), uncensored: uncensored(u), settings: { mosaic: !!u.settings?.mosaic },
+  dev: isDev(u), owned: u.owned || [], mailNew: (u.mail || []).filter((m) => !m.read || !m.claimed).length, tempPw: !!u.tempPw, birthYear: u.birthYear || null, needAge: !u.birthYear, adult: isAdult(u), uncensored: uncensored(u), settings: { mosaic: !!u.settings?.mosaic },
   name: u.name, avatar: u.avatar, decks: deckView(u), active: u.active, stats: u.stats, style: u.style,
   wins: u.wins, losses: u.losses, draws: u.draws, h2h: u.h2h,
   tutorial: !!u.tutorial, gp: u.gp, tickets: u.tickets, skips: u.skips, stones: u.stones, mons: u.mons,
@@ -388,6 +388,31 @@ async function api(req, res, url) {
     }
     save();
     return json(res, 200, { mail: mailView(user), user: publicUser(user), got });
+  }
+  // 비밀번호 바꾸기 (지금 비밀번호 확인)
+  if (route === 'PUT /api/password') {
+    const b = await readBody(req);
+    const old = String(b.old ?? ''), pw = String(b.password ?? '');
+    if (!crypto.timingSafeEqual(Buffer.from(hashPw(old, user.salt), 'hex'), Buffer.from(user.hash, 'hex'))) return json(res, 400, { error: '지금 비밀번호가 맞지 않습니다.' });
+    if (pw.length < 6 || pw.length > 100) return json(res, 400, { error: '새 비밀번호는 6자 이상이어야 합니다.' });
+    user.salt = crypto.randomBytes(16).toString('hex'); user.hash = hashPw(pw, user.salt); delete user.tempPw;
+    for (const [h, s] of Object.entries(db.sessions)) if (s.user === auth.key && h !== auth.hashed) delete db.sessions[h]; // 다른 기기는 로그아웃
+    save();
+    return json(res, 200, { user: publicUser(user) });
+  }
+  // 개발자: 비밀번호 잊은 친구 계정을 임시 비밀번호로 초기화 (원래 비밀번호는 암호화돼 있어 볼 수 없음)
+  if (route === 'POST /api/dev/resetpw') {
+    if (!isDev(user)) return json(res, 403, { error: '개발자만 할 수 있어요.' });
+    const b = await readBody(req);
+    const tk = keyOf(String(b.name ?? '')), t = db.users[tk];
+    if (!t) return json(res, 404, { error: '없는 계정이에요.' });
+    if (isDev(t)) return json(res, 400, { error: '개발자 계정은 여기서 초기화할 수 없어요.' });
+    const ABC = 'abcdefghjkmnpqrstuvwxyz23456789';
+    const temp = Array.from({ length: 8 }, () => ABC[crypto.randomInt(ABC.length)]).join('');
+    t.salt = crypto.randomBytes(16).toString('hex'); t.hash = hashPw(temp, t.salt); t.tempPw = true;
+    for (const [h, s] of Object.entries(db.sessions)) if (s.user === tk) delete db.sessions[h];
+    save();
+    return json(res, 200, { name: t.name, temp });
   }
   if (route === 'PUT /api/settings') {
     const b = await readBody(req);
