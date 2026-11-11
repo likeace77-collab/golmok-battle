@@ -285,6 +285,8 @@ function renderLobby() {
         <button class="g2b box" id="go-box"><span>📦</span><b>내 골목몬</b><small>${u.mons.length}마리</small></button>
         <button class="g2b rew" id="go-rew"><span>🎁</span><b>보상</b>${(u.badges.attend + u.badges.quest + u.badges.ach) ? `<em class="mailbadge">${u.badges.attend + u.badges.quest + u.badges.ach}</em>` : ''}</button>
         <button class="g2b pass" id="go-pass"><span>👑</span><b>시즌 패스</b>${u.badges.pass ? `<em class="mailbadge">${u.badges.pass}</em>` : ''}</button>
+        <button class="g2b shop" id="go-shop"><span>🛒</span><b>상점</b></button>
+        <button class="g2b stones" id="go-stones"><span>💎</span><b>메가스톤</b><small>${u.stones.length}개</small></button>
       </div>
       <div class="nav">
         <button class="btn paper" id="go-team">덱 관리</button>
@@ -341,6 +343,8 @@ function renderLobby() {
   app.querySelector('#go-box').onclick = showBox;
   app.querySelector('#go-rew').onclick = () => showRewards();
   app.querySelector('#go-pass').onclick = showPass;
+  app.querySelector('#go-shop').onclick = () => showShop();
+  app.querySelector('#go-stones').onclick = () => showStones();
   app.querySelectorAll('[data-watch]').forEach((b) => { b.onclick = () => wsSend({ t: 'spectate', id: b.dataset.watch }); });
   app.querySelector('#tag-new')?.addEventListener('click', () => wsSend({ t: 'tag_create' }));
   app.querySelector('#tag-leave')?.addEventListener('click', () => wsSend({ t: 'tag_leave' }));

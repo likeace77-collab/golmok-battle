@@ -4,7 +4,7 @@ const Data = require('./data');
 const E = require('./engine');
 
 const HOUR = 3600e3, DAY = 24 * HOUR;
-const SCOUT_HOURS = 20, SKIP_GP = 100, SCOUT_GP = 2500, STONE_GP = 3000, MOVE_GP = 500;
+const SCOUT_HOURS = 20, SKIP_GP = 100, SCOUT_GP = 2500, STONE_GP = 5000, STONE_DUPE_GP = 3000, MOVE_GP = 500; // 메가스톤: 상점 5000GP, 겹치면 3000GP로 바꿔 줌
 const KST = 9 * HOUR;
 const dayKey = (t = Date.now()) => new Date(t + KST).toISOString().slice(0, 10);
 const weekKey = (t = Date.now()) => { const d = new Date(t + KST); const wd = (d.getUTCDay() + 6) % 7; return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - wd)).toISOString().slice(0, 10); };
@@ -42,8 +42,8 @@ function addStones(u, what, got) {
   const n = typeof what === 'number' ? what : 1;
   for (let i = 0; i < n; i++) {
     let id = typeof what === 'string' && what !== 'random' ? what : null;
-    if (!id) { const left = released().filter((x) => !u.stones.includes(x)); if (!left.length) { u.gp += STONE_GP; got.push({ k: 'gp', n: STONE_GP, why: '메가스톤을 다 모아 GP로' }); continue; } id = left[rnd(left.length)]; }
-    if (u.stones.includes(id)) { u.gp += STONE_GP; got.push({ k: 'gp', n: STONE_GP, why: '이미 있는 메가스톤이라 GP로' }); continue; }
+    if (!id) { const left = released().filter((x) => !u.stones.includes(x)); if (!left.length) { u.gp += STONE_DUPE_GP; got.push({ k: 'gp', n: STONE_DUPE_GP, why: '메가스톤을 다 모아 GP로' }); continue; } id = left[rnd(left.length)]; }
+    if (u.stones.includes(id)) { u.gp += STONE_DUPE_GP; got.push({ k: 'gp', n: STONE_DUPE_GP, why: '이미 있는 메가스톤이라 GP로' }); continue; }
     u.stones.push(id); got.push({ k: 'stone', id });
   }
 }
@@ -272,7 +272,7 @@ function afterBattle(u, kind, won, side) {
 }
 
 module.exports = {
-  SCOUT_HOURS, SKIP_GP, SCOUT_GP, STONE_GP, MOVE_GP, STARTERS, TUTORIAL_REWARD, ATTEND, DAILY, WEEKLY,
+  SCOUT_HOURS, SKIP_GP, SCOUT_GP, STONE_GP, STONE_DUPE_GP, MOVE_GP, STARTERS, TUTORIAL_REWARD, ATTEND, DAILY, WEEKLY,
   newProgress, addMon, grant, finishTutorial, scoutState, scoutSkip, scoutPick, changeMove, buyStone,
   attendState, attend, questState, claimQuest, achState, claimAch, passState, claimPass, claimable, afterBattle, seasonOf, passBook, dayKey, released,
 };

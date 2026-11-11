@@ -92,7 +92,7 @@ function showGot(got, title = '받았어요!', then) {
   const bg = openSheet(`<div class="got"><s aria-hidden="true"></s><h2>${esc(title)}</h2><div class="got-list">${got.map(gotItem).join('')}</div><button class="btn wide" data-x>좋아요!</button></div>`);
   bg.querySelector('[data-x]').onclick = () => { closeSheet(); then?.(); };
 }
-const walletHTML = (u = G.user) => `<div class="wallet"><span title="GP">${ICON.gp(20)}<b>${fmt(u.gp)}</b></span><span title="골목몬 입수권">${ICON.ticket(18)}<b>${fmt(u.tickets)}</b></span><span title="1시간 스킵권">${ICON.skip(18)}<b>${fmt(u.skips)}</b></span><span title="메가스톤">💎<b>${u.stones.length}</b></span></div>`;
+const walletHTML = (u = G.user) => `<div class="wallet"><span title="GP">${ICON.gp(20)}<b>${fmt(u.gp)}</b></span><span title="골목몬 입수권">${ICON.ticket(18)}<b>${fmt(u.tickets)}</b></span><span title="1시간 스킵권">${ICON.skip(18)}<b>${fmt(u.skips)}</b></span><span class="wl-stone" title="내 메가스톤 보기" role="button" tabindex="0" data-gostones>💎<b>${u.stones.length}</b></span></div>`;
 const topbar = (title, back = 'lobby') => `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>${title}</h1></div>${walletHTML()}`;
 const setUser = (r) => { if (r?.user) G.user = r.user; };
 
@@ -227,7 +227,7 @@ function showBox() {
   app.querySelector('#back').onclick = showLobby;
   app.querySelectorAll('[data-uid]').forEach((b) => { b.onclick = () => openMon(b.dataset.uid, showBox); });
 }
-// 골목몬 한 마리: 기술 바꾸기(500GP), 메가스톤 사기(3000GP)
+// 골목몬 한 마리: 기술 바꾸기(500GP), 메가스톤 사기(상점 가격)
 function openMon(uid, after) {
   const m = G.user.mons.find((x) => x.uid === uid);
   if (!m) return;
@@ -237,13 +237,12 @@ function openMon(uid, after) {
       <div style="flex:1;min-width:0"><p style="margin-bottom:4px">${typesOf(m.species)}</p>${Object.entries(sp.base).map(([k, v]) => `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${v}</span><i style="width:${Math.min(100, v / 1.3)}%"></i></div>`).join('')}</div></div>
     ${sp.trait ? `<p class="trait"><b>특성 ${sp.trait.n}</b> ${sp.trait.d}</p>` : ''}
     <section class="mon-stone ${stone ? 'have' : ''}">${stoneSVG(m.species, 64, { lock: !stone })}<div><b>${esc(sp.n)} 메가스톤</b><p>${stone ? `있어요! 대전에서 <b>${esc(sp.mega.n)}</b>(으)로 메가진화할 수 있어요.` : '없으면 이 골목몬은 메가진화를 못 해요.'}</p>
-      ${stone ? '' : `<button class="btn small" data-stone>${ICON.gp(16)} 3000GP로 사기</button>`}</div></section>
+      ${stone ? '' : `<button class="btn small" data-stone>${ICON.gp(16)} ${fmt(STONE_PRICE)}GP로 사기</button>`}</div></section>
     <h3 class="dex-h">기술 <small class="muted">하나 바꿀 때마다 500GP</small></h3>
     ${[0, 1, 2, 3].map((i) => { const id = m.moves[i]; return id ? `<div class="mv mvrow">${typeChip(G.data.MOVES[id].type)}<b>${G.data.MOVES[id].n}</b>${sigTag(id)}<small>${moveLine(id)}</small><button class="btn small paper" data-slot="${i}">바꾸기</button></div>` : `<div class="mv mvrow"><b class="muted">빈 칸</b><button class="btn small paper" data-slot="${i}">기술 넣기</button></div>`; }).join('')}`);
   bg.querySelector('[data-x]').onclick = () => { closeSheet(); after?.(); };
   bg.querySelector('[data-stone]')?.addEventListener('click', async () => {
-    if (!confirm(`${sp.n} 메가스톤을 3000GP에 살까요?`)) return;
-    try { const r = await api('POST', '/api/stone/buy', { species: m.species }); setUser(r); showGot([{ k: 'stone', id: m.species }], '메가스톤을 샀어요!', () => openMon(uid, after)); } catch (e) { toast(e.message); }
+    buyStoneSheet(m.species, () => openMon(uid, after));
   });
   bg.querySelectorAll('[data-slot]').forEach((b) => {
     b.onclick = () => {
@@ -474,3 +473,61 @@ function showSunfish() {
   cv.addEventListener('pointermove', aim);
   app.querySelector('#sf-go').onclick = start;
 }
+
+/* ---------- 메가스톤 ---------- */
+const STONE_PRICE = 5000;
+const megaIds = () => Object.keys(G.data.MONSTERS).filter((id) => G.data.MONSTERS[id].mega && !(G.data.BANNED || []).includes(id));
+// 메가스톤 사기 확인 창 (상점·골목몬 상세에서 같이 씀)
+function buyStoneSheet(id, after) {
+  const sp = G.data.MONSTERS[id], u = G.user, ok = u.gp >= STONE_PRICE;
+  const bg = openSheet(`<div class="buy">${stoneSVG(id, 110)}<h2>${esc(sp.n)} 메가스톤</h2>
+    <p>${esc(sp.n)}을(를) <b>${esc(sp.mega.n)}</b>(으)로 메가진화시켜요.</p>
+    <p class="buy-price">${ICON.gp(22)} <b>${fmt(STONE_PRICE)} GP</b> <small>보유 ${fmt(u.gp)} GP${ok ? ` → 남는 GP ${fmt(u.gp - STONE_PRICE)}` : ''}</small></p>
+    ${ok ? '' : `<p class="buy-no">GP가 ${fmt(STONE_PRICE - u.gp)} 모자라요.</p>`}
+    <div class="sc-pay"><button class="btn paper" data-x>취소</button><button class="btn" data-buy ${ok ? '' : 'disabled'}>사기</button></div></div>`);
+  bg.querySelector('[data-x]').onclick = () => { closeSheet(); after?.(); };
+  bg.querySelector('[data-buy]').onclick = async (e) => {
+    e.target.disabled = true;
+    try { const r = await api('POST', '/api/stone/buy', { species: id }); setUser(r); closeSheet(); showGot([{ k: 'stone', id }], '메가스톤을 샀어요!', after); }
+    catch (err) { toast(err.message); e.target.disabled = false; }
+  };
+}
+const stoneCard = (id, own, extra = '') => { const sp = G.data.MONSTERS[id]; return `<div class="st-card ${own ? 'own' : 'lock'}" data-sid="${id}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${stoneSVG(id, 72, { lock: !own })}<b>${esc(sp.n)}</b><small>${esc(sp.mega.n)}</small>${extra}</div>`; };
+
+// 내 메가스톤 모아 보기
+function showStones(back = showLobby) {
+  G.screen = 'stones'; app.className = '';
+  const all = megaIds(), mine = all.filter((id) => G.user.stones.includes(id)), rest = all.filter((id) => !G.user.stones.includes(id));
+  const hasMon = new Set(G.user.mons.map((m) => m.species));
+  app.innerHTML = `${topbar('내 메가스톤')}
+    <section class="panel st-head"><div class="st-count"><b>${mine.length}</b> / ${all.length}종</div><div class="qbar"><i style="width:${(mine.length / all.length) * 100}%"></i></div>
+      <p class="muted">메가스톤이 있는 골목몬만 대전에서 메가진화할 수 있어요. 없는 스톤은 <b>상점</b>에서 살 수 있어요.</p>
+      <button class="btn small" id="to-shop">🛒 상점 가기</button></section>
+    <h3 class="st-h">가지고 있는 메가스톤 <small>${mine.length}개</small></h3>
+    <div class="st-grid">${mine.map((id) => stoneCard(id, true, hasMon.has(id) ? '<em class="st-ok">골목몬 있음</em>' : '<em class="st-no">골목몬 없음</em>')).join('') || '<p class="wait">아직 메가스톤이 없어요.</p>'}</div>
+    <h3 class="st-h">아직 없는 메가스톤 <small>${rest.length}개</small></h3>
+    <div class="st-grid">${rest.map((id) => stoneCard(id, false)).join('')}</div>`;
+  app.querySelector('#back').onclick = back;
+  app.querySelector('#to-shop').onclick = () => showShop(() => showStones(back));
+  app.querySelectorAll('.st-card.lock').forEach((c) => { c.onclick = () => buyStoneSheet(c.dataset.sid, () => showStones(back)); });
+}
+
+// 상점: 지금은 메가스톤만. 나중에 SHOP_TABS에 물건 칸을 더 넣으면 돼요.
+function showShop(back = showLobby) {
+  G.screen = 'shop'; app.className = '';
+  const all = megaIds(), rest = all.filter((id) => !G.user.stones.includes(id)), mine = all.filter((id) => G.user.stones.includes(id));
+  app.innerHTML = `${topbar('상점')}
+    <section class="shop-banner"><s aria-hidden="true"></s><h2>골목 상점</h2><p>GP로 필요한 걸 사요. 물건은 앞으로 더 들어올 거예요!</p></section>
+    <h3 class="st-h">💎 메가스톤 <small>하나에 ${fmt(STONE_PRICE)} GP</small></h3>
+    <div class="st-grid">${rest.map((id) => stoneCard(id, true, `<span class="st-price">${ICON.gp(14)}${fmt(STONE_PRICE)}</span>`)).join('') || '<p class="wait">메가스톤을 전부 모았어요! 🎉</p>'}</div>
+    ${mine.length ? `<details class="st-owned"><summary>이미 가진 메가스톤 ${mine.length}개 보기</summary><div class="st-grid">${mine.map((id) => stoneCard(id, true, '<em class="st-ok">보유</em>')).join('')}</div></details>` : ''}`;
+  app.querySelector('#back').onclick = back;
+  app.querySelectorAll('.st-grid [data-sid]').forEach((c) => { if (!c.closest('.st-owned')) c.onclick = () => buyStoneSheet(c.dataset.sid, () => showShop(back)); });
+}
+// 지갑의 💎를 누르면 어디서든 내 메가스톤으로
+document.addEventListener('click', (e) => {
+  if (!e.target.closest?.('[data-gostones]')) return;
+  const here = G.screen, again = { box: showBox, shop: showShop, scout: showScout, rewards: showRewards, pass: showPass }[here];
+  if (here === 'stones') return;
+  showStones(again ? () => again() : showLobby);
+});

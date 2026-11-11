@@ -1297,3 +1297,27 @@ button.ev-card h2 { margin: 6px 0 2px; font-size: 24px; } button.ev-card p { mar
 
 .sc-head p b{white-space:nowrap}
 .sc-head p svg{display:inline-block;vertical-align:-3px}
+
+/* 상점 · 내 메가스톤 */
+.g2nav { grid-template-columns: repeat(3, 1fr); }
+.g2b.shop { background: linear-gradient(160deg, #ffd23f, #ff8a00); } .g2b.stones { background: linear-gradient(160deg, #2EF2FF, #2340A8 55%, #9A4FB8); }
+.wallet .wl-stone { cursor: pointer; }
+.st-head { display: grid; gap: 8px; } .st-head .btn { justify-self: start; }
+.st-count { font-family: var(--display); font-size: 22px; } .st-count b { font-size: 34px; color: #7a2cff; }
+.st-h { color: #fff; font-family: var(--display); font-weight: 400; font-size: 22px; margin: 18px 4px 8px; } .st-h small { font: 14px var(--ui); opacity: .85; margin-left: 6px; }
+.st-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.st-card { display: grid; justify-items: center; gap: 2px; padding: 10px 4px 8px; text-align: center; background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--tc) 35%, #fff) 0%, #fff8e0 70%); border: var(--line); border-radius: 14px; box-shadow: 3px 3px 0 var(--ink); }
+.st-card.lock { background: #e7e2d4; cursor: pointer; } .st-card.lock b, .st-card.lock small { opacity: .6; }
+.st-card b { font: 14px var(--ui); } .st-card small { font: 11px var(--ui); color: #6b6380; line-height: 1.2; }
+.st-card em { font-style: normal; font: 11px var(--ui); padding: 1px 7px; border-radius: 99px; border: 2px solid var(--ink); margin-top: 3px; }
+.st-ok { background: #d8f5e4; } .st-no { background: #ffe2e2; }
+.shop-banner + .st-h ~ .st-grid > .st-card { cursor: pointer; }
+.st-price { display: inline-flex; align-items: center; gap: 3px; margin-top: 4px; padding: 2px 8px; font: 13px var(--ui); background: #ffd23f; border: 2px solid var(--ink); border-radius: 99px; box-shadow: 2px 2px 0 var(--ink); }
+.st-card:has(.st-price):hover { transform: translateY(-2px); }
+.shop-banner { position: relative; overflow: hidden; padding: 18px 16px; color: #fff; text-align: center; background: linear-gradient(120deg, #ff8a00, #E8402C 50%, #7a2cff); border: var(--line); border-radius: 16px; box-shadow: 4px 4px 0 var(--ink); }
+.shop-banner s { position: absolute; inset: -60%; background: conic-gradient(#fff2 0 10%, transparent 10% 20%, #fff2 20% 30%, transparent 30% 40%, #fff2 40% 50%, transparent 50% 60%, #fff2 60% 70%, transparent 70% 80%, #fff2 80% 90%, transparent 90%); animation: ttSpin 20s linear infinite; }
+.shop-banner h2 { position: relative; font-family: var(--display); font-weight: 400; font-size: 30px; text-shadow: 2px 2px 0 var(--ink); } .shop-banner p { position: relative; }
+.st-owned { margin-top: 16px; color: #fff; } .st-owned summary { cursor: pointer; font: 15px var(--ui); margin: 0 4px 8px; } .st-owned .st-card { opacity: .75; }
+.buy { text-align: center; } .buy h2 { margin: 6px 0; } .buy p { margin: 4px 0; }
+.buy-price { display: flex; justify-content: center; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 20px; margin: 10px 0 !important; } .buy-price small { width: 100%; font: 13px var(--ui); color: #6b6380; }
+.buy-no { color: #E8402C; font-weight: 700; }
