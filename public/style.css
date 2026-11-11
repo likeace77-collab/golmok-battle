@@ -1202,7 +1202,7 @@ button.ev-card h2 { margin: 6px 0 2px; font-size: 24px; } button.ev-card p { mar
 .got-i { display: grid; justify-items: center; align-content: start; gap: 4px; width: 96px; padding: 8px 4px; background: #fff; border: var(--line); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); animation: gotPop .45s cubic-bezier(.3,1.6,.5,1) both; }
 .got-i:nth-child(n) { animation-delay: calc(var(--i, 0) * 60ms); }
 .got-i b { font: 13px var(--ui); line-height: 1.25; } .got-i small { font-size: 11px; color: #6b6380; }
-.got-i.mon svg { width: 72px; height: 72px; background: var(--tc); border-radius: 10px; border: 2px solid var(--ink); }
+.got-i.got-mon svg { width: 72px; height: 72px; background: var(--tc); border-radius: 10px; border: 2px solid var(--ink); }
 @keyframes gotPop { from { transform: scale(.3) rotate(-10deg); opacity: 0; } to { transform: none; opacity: 1; } }
 .stone { filter: drop-shadow(0 0 4px #fff) drop-shadow(2px 3px 0 rgba(0,0,0,.25)); }
 .stone.lock { filter: grayscale(1) brightness(.75) opacity(.55); }

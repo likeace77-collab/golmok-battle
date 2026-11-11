@@ -84,7 +84,7 @@ function gotItem(x) {
   if (x.k === 'skip') return `<div class="got-i">${ICON.skip(46)}<b>1시간 스킵권 ×${x.n}</b></div>`;
   if (x.k === 'stone') return `<div class="got-i">${stoneSVG(x.id, 60)}<b>${esc(G.data.MONSTERS[x.id].n)} 메가스톤</b></div>`;
   if (x.k === 'pass') return `<div class="got-i">${ICON.pass(50)}<b>패스 포인트 +${x.n}</b></div>`;
-  if (x.k === 'mon') return `<div class="got-i mon" style="--tc:${G.data.TYPES[G.data.MONSTERS[x.id].types[0]].c}">${monsterSVG(x.id)}<b>${esc(G.data.MONSTERS[x.id].n)}</b></div>`;
+  if (x.k === 'mon') return `<div class="got-i got-mon" style="--tc:${G.data.TYPES[G.data.MONSTERS[x.id].types[0]].c}">${monsterSVG(x.id)}<b>${esc(G.data.MONSTERS[x.id].n)}</b></div>`;
   return '';
 }
 function showGot(got, title = '받았어요!', then) {
@@ -194,7 +194,7 @@ async function showScout() {
         b.disabled = true;
         try {
           const r = await api('POST', '/api/scout/pick', { species: id, pay: b.dataset.pay });
-          setUser(r); st = r.scout; closeSheet();
+          setUser(r); st = r.scout; closeSheet(); const w = app.querySelector('.wallet'); if (w) w.outerHTML = walletHTML();
           showGot([{ k: 'mon', id }], `${sp.n} 스카우트 성공!`, render);
         } catch (e) { toast(e.message); b.disabled = false; }
       };
