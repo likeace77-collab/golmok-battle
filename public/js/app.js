@@ -406,6 +406,7 @@ function condText(item) {
   if (!item.cond) return '처음부터 사용 가능';
   if (item.cond[0] === 'dev') return '개발자 계정 전용';
   if (item.cond[0] === 'gift') return '우편 보상으로 받은 아이템';
+  if (item.cond[0] === 'shop') return unlocked(G.user, item) ? '상점에서 산 아이템' : `상점에서 ${item.cond[1].toLocaleString('ko-KR')}GP`;
   const [k, n] = item.cond;
   const dmg = k.startsWith('dummy'), f = (x) => x.toLocaleString('ko-KR');
   return `${G.data.STAT_NAMES[k]} ${f(n)}${k === 'streakBest' ? '연승' : dmg ? '' : '회'} (${f(Math.min(statOf(G.user, k), n))}/${f(n)})`;

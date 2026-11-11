@@ -512,17 +512,56 @@ function showStones(back = showLobby) {
   app.querySelectorAll('.st-card.lock').forEach((c) => { c.onclick = () => buyStoneSheet(c.dataset.sid, () => showStones(back)); });
 }
 
-// 상점: 지금은 메가스톤만. 나중에 SHOP_TABS에 물건 칸을 더 넣으면 돼요.
+// 상점: 탭마다 물건 칸. 꾸미기는 data.js에서 cond: ['shop', 가격]만 달면 자동으로 진열돼요.
+let shopTab = 'stone';
+const SHOP_TABS = [['stone', '💎 스톤'], ['titles', '🏷️ 칭호'], ['cards', '🃏 카드'], ['pins', '📌 핀']];
+const shopItems = (kind) => G.data.COSMETICS[kind].filter((x) => x.cond?.[0] === 'shop');
+function cosLook(kind, item, big) {
+  if (kind === 'titles') return `<div class="sh-look sh-title">${titleTag(item.id)}</div>`;
+  if (kind === 'cards') return `<div class="sh-look sh-card">${big ? battleCard({ name: G.user.name, avatar: G.user.avatar, style: { ...G.user.style, card: item.id }, record: recordText(G.user) }) : `<span class="cswatch bc-${item.id}"></span>`}</div>`;
+  return `<div class="sh-look sh-pin">${pinSVG(item.id)}</div>`;
+}
+function buyCosSheet(kind, item, after) {
+  const u = G.user, price = item.cond[1], ok = u.gp >= price, KN = { titles: '칭호', cards: '전투카드', pins: '핀' }[kind];
+  const bg = openSheet(`<div class="buy">${cosLook(kind, item, true)}<h2>${kind === 'titles' ? '' : esc(item.n)}</h2><p>${KN}${kind === 'titles' ? ` · ${TITLE_TIERS[item.tier || 0]} 등급` : ''}</p>
+    <p class="buy-price">${ICON.gp(22)} <b>${fmt(price)} GP</b> <small>보유 ${fmt(u.gp)} GP${ok ? ` → 남는 GP ${fmt(u.gp - price)}` : ''}</small></p>
+    ${ok ? '' : `<p class="buy-no">GP가 ${fmt(price - u.gp)} 모자라요.</p>`}
+    <div class="sc-pay"><button class="btn paper" data-x>취소</button><button class="btn" data-buy ${ok ? '' : 'disabled'}>사기</button></div></div>`);
+  bg.querySelector('[data-x]').onclick = closeSheet;
+  bg.querySelector('[data-buy]').onclick = async (e) => {
+    e.target.disabled = true;
+    try {
+      const r = await api('POST', '/api/shop/cosmetic', { ref: `${kind}:${item.id}` }); setUser(r);
+      const bg2 = openSheet(`<div class="buy">${cosLook(kind, item, true)}<h2>샀어요! 🎉</h2><p>꾸미기에서 바로 장착할 수 있어요.</p>
+        <div class="sc-pay"><button class="btn paper" data-x>계속 쇼핑</button><button class="btn" data-go>꾸미기로 가기</button></div></div>`);
+      bg2.querySelector('[data-x]').onclick = () => { closeSheet(); after(); };
+      bg2.querySelector('[data-go]').onclick = () => { closeSheet(); showAvatar(); };
+    } catch (err) { toast(err.message); e.target.disabled = false; }
+  };
+}
 function showShop(back = showLobby) {
   G.screen = 'shop'; app.className = '';
-  const all = megaIds(), rest = all.filter((id) => !G.user.stones.includes(id)), mine = all.filter((id) => G.user.stones.includes(id));
-  app.innerHTML = `${topbar('상점')}
-    <section class="shop-banner"><s aria-hidden="true"></s><h2>골목 상점</h2><p>GP로 필요한 걸 사요. 물건은 앞으로 더 들어올 거예요!</p></section>
-    <h3 class="st-h">💎 메가스톤 <small>하나에 ${fmt(STONE_PRICE)} GP</small></h3>
+  const again = () => { const y = scrollY; showShop(back); scrollTo(0, y); };
+  let body = '';
+  if (shopTab === 'stone') {
+    const all = megaIds(), rest = all.filter((id) => !G.user.stones.includes(id)), mine = all.filter((id) => G.user.stones.includes(id));
+    body = `<h3 class="st-h">💎 메가스톤 <small>하나에 ${fmt(STONE_PRICE)} GP</small></h3>
     <div class="st-grid">${rest.map((id) => stoneCard(id, true, `<span class="st-price">${ICON.gp(14)}${fmt(STONE_PRICE)}</span>`)).join('') || '<p class="wait">메가스톤을 전부 모았어요! 🎉</p>'}</div>
     ${mine.length ? `<details class="st-owned"><summary>이미 가진 메가스톤 ${mine.length}개 보기</summary><div class="st-grid">${mine.map((id) => stoneCard(id, true, '<em class="st-ok">보유</em>')).join('')}</div></details>` : ''}`;
+  } else {
+    const kind = shopTab, owned = new Set(G.user.owned || []);
+    body = `<h3 class="st-h">${{ titles: '🏷️ 칭호', cards: '🃏 전투카드', pins: '📌 핀' }[kind]} <small>상점에서만 파는 ${{ titles: '칭호', cards: '전투카드', pins: '핀' }[kind]}</small></h3>
+    <div class="sh-grid ${kind}">${shopItems(kind).map((x) => { const have = owned.has(`${kind}:${x.id}`) || G.user.dev; return `<button class="sh-item ${have ? 'have' : ''}" data-cos="${x.id}" ${have ? 'disabled' : ''}>
+      ${cosLook(kind, x)}<b>${kind === 'titles' ? `${TITLE_TIERS[x.tier || 0]} 등급` : esc(x.n)}</b>${have ? '<em class="st-ok">보유</em>' : `<span class="st-price">${ICON.gp(14)}${fmt(x.cond[1])}</span>`}</button>`; }).join('')}</div>`;
+  }
+  app.innerHTML = `${topbar('상점')}
+    <section class="shop-banner"><s aria-hidden="true"></s><h2>골목 상점</h2><p>GP로 필요한 걸 사요. 물건은 앞으로 더 들어올 거예요!</p></section>
+    <div class="tabs sh-tabs">${SHOP_TABS.map(([k, n]) => `<button data-stab="${k}" aria-selected="${shopTab === k}">${n}</button>`).join('')}</div>
+    ${body}`;
   app.querySelector('#back').onclick = back;
-  app.querySelectorAll('.st-grid [data-sid]').forEach((c) => { if (!c.closest('.st-owned')) c.onclick = () => buyStoneSheet(c.dataset.sid, () => showShop(back)); });
+  app.querySelectorAll('[data-stab]').forEach((b) => { b.onclick = () => { shopTab = b.dataset.stab; showShop(back); }; });
+  app.querySelectorAll('.st-grid [data-sid]').forEach((c) => { if (!c.closest('.st-owned')) c.onclick = () => buyStoneSheet(c.dataset.sid, again); });
+  app.querySelectorAll('[data-cos]').forEach((b) => { b.onclick = () => buyCosSheet(shopTab, shopItems(shopTab).find((x) => x.id === b.dataset.cos), again); });
 }
 // 지갑의 💎를 누르면 어디서든 내 메가스톤으로
 document.addEventListener('click', (e) => {

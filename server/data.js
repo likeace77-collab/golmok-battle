@@ -596,6 +596,10 @@ const COSMETICS = {
     C('laborer', 'LEGENDARY LABORER', ['gift', 'titles:laborer'], { tier: 8 }),
     C('deungsin', '등신', ['gift', 'titles:deungsin'], { tier: 9 }),
     C('noisecrime', '소음공해죄', ['gift', 'titles:noisecrime'], { tier: 9, icon: '♬' }),
+    // 상점 (GP로 구매)
+    C('boughttitle', '돈 주고 산 칭호', ['shop', 2000], { tier: 1 }), C('cvsvip', '편의점 VIP', ['shop', 3000], { tier: 1 }),
+    C('flexer', '플렉스 장인', ['shop', 6000], { tier: 2 }), C('bigspender', '골목 큰손', ['shop', 10000], { tier: 3 }),
+    C('chaebol', '골목 재벌 3세', ['shop', 20000], { tier: 4, glow: '#FFD23F' }),
   ],
   cards: [
     C('basic', '기본 딱지', null), C('blue', '망점 블루', null, { dark: true }), C('red', '집중선 레드', null, { dark: true }),
@@ -618,6 +622,9 @@ const COSMETICS = {
     C('dmgmeter', '데미지 미터', ['dummyDmg', 150000], { dark: true }), C('shatter', '산산조각', ['dummyBest', 500], { dark: true }),
     C('millon', '백만 폭발', ['dummyDmg', 1000000], { dark: true }),
     C('devcore', '개발자 콘솔', ['dev', 1], { dark: true }),
+    // 상점 (GP로 구매)
+    C('sunset', '옥상 노을', ['shop', 4000]), C('vending', '자판기 불빛', ['shop', 6000], { dark: true }),
+    C('money', '돈다발', ['shop', 8000]), C('goldrush', '황금 비', ['shop', 15000], { dark: true }),
   ],
   pins: [
     C('star', '별', null), C('heart', '하트', null), C('sprout', '새싹', null),
@@ -647,6 +654,9 @@ const COSMETICS = {
     C('dummy', '훈련용 더미', ['dummyDmg', 1000]), C('glove', '권투 글러브', ['dummyDmg', 20000]), C('dumbbell', '아령', ['dummyDmg', 80000]),
     C('crack', '금 간 더미', ['dummyBest', 400]), C('dmg999', '9999', ['dummyDmg', 300000]), C('goldglove', '황금 글러브', ['dummyDmg', 1000000]),
     C('error', '에러', ['dev', 1]),
+    // 상점 (GP로 구매)
+    C('receipt', '영수증', ['shop', 1000]), C('gpcoin', 'GP 코인', ['shop', 1500]), C('cupteok', '컵떡볶이', ['shop', 1500]),
+    C('cart', '장바구니', ['shop', 2000]), C('moneybag', '돈주머니', ['shop', 3000]), C('gemcrown', '보석 왕관', ['shop', 6000]),
   ],
 };
 const STAT_NAMES = {
@@ -654,7 +664,7 @@ const STAT_NAMES = {
   p0: '골목대장(쉬움) 승리', p1: '골목대장(보통) 승리', p2: '골목대장(어려움) 승리', p3: '골목대장(지옥) 승리',
   tagGames: '태그 대전', tagWins: '태그 승리', megas: '메가진화 사용',
   dev: '개발자 계정', gift: '우편 보상', dummyDmg: '훈련장 누적 피해', dummyBest: '훈련장 한 턴 최고 피해',
-  zmoves: 'Z기술 사용', botWins: '골목대장 승리(난이도 무관)', draws: '1대1 무승부', flawless: '한 마리도 안 쓰러지고 승리',
+  zmoves: 'Z기술 사용', botWins: '골목대장 승리(난이도 무관)', draws: '1대1 무승부', flawless: '한 마리도 안 쓰러지고 승리', shop: '상점',
 };
 
 // 루미나와 실비아는 사진 그림(public/img/mon)을 씁니다.

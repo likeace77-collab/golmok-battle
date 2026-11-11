@@ -1326,3 +1326,36 @@ button.ev-card h2 { margin: 6px 0 2px; font-size: 24px; } button.ev-card p { mar
 .pwform { display: grid; gap: 8px; margin-top: 8px; }
 .pw-warn { color: #E8402C; font-weight: 700; margin: 6px 0; }
 .temppw { font: 700 32px/1.2 ui-monospace, monospace; letter-spacing: 3px; text-align: center; padding: 12px; margin: 8px 0; background: #fff; border: var(--line); border-radius: 12px; user-select: all; }
+
+/* 상점 전투카드 */
+.bc-sunset { background: linear-gradient(#2a1550 0%, #8a2f6a 35%, #ff7a45 62%, #ffd27a 78%, #3a2a4a 78.5%, #241a33 100%); }
+.bc-sunset::before { content: ''; position: absolute; left: 0; right: 0; bottom: 21.5%; height: 22%; background: linear-gradient(90deg, #241a33 0 8%, transparent 8% 12%, #241a33 12% 26%, transparent 26% 30%, #241a33 30% 38%, transparent 38% 60%, #241a33 60% 74%, transparent 74% 78%, #241a33 78% 100%); clip-path: polygon(0 40%, 8% 40%, 8% 0, 26% 0, 26% 30%, 38% 30%, 38% 60%, 60% 60%, 60% 10%, 74% 10%, 74% 45%, 100% 45%, 100% 100%, 0 100%); }
+.bc-sunset::after { content: ''; position: absolute; right: 14%; bottom: 30%; width: 40px; height: 40px; border-radius: 50%; background: radial-gradient(#fff6c4, #ffb347 70%); box-shadow: 0 0 24px #ffb347; z-index: 0; }
+.bc-sunset .bc-name { color: #fff; text-shadow: 2px 2px 0 #2a1550; }
+.bc-vending { background: #10131f; }
+.bc-vending::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, #0000 0 26px, #2EF2FF22 26px 28px), radial-gradient(ellipse at 80% 50%, #2EF2FF66, transparent 55%), radial-gradient(ellipse at 15% 20%, #FF3E9A55, transparent 50%); animation: bcFlicker 3s steps(1) infinite; }
+.bc-vending::after { content: ''; position: absolute; right: 6%; top: 10%; bottom: 10%; width: 22%; border: 2px solid #2EF2FF; border-radius: 6px; box-shadow: 0 0 10px #2EF2FF, inset 0 0 10px #2EF2FF; background: repeating-linear-gradient(#0000 0 10px, #2EF2FF33 10px 12px), repeating-linear-gradient(90deg, #FFD23F55 0 6px, #FF3E9A55 6px 12px, #6CF2C255 12px 18px); }
+@keyframes bcFlicker { 0%, 100% { opacity: 1; } 47% { opacity: .65; } 49% { opacity: 1; } 83% { opacity: .8; } }
+.bc-money { background: linear-gradient(135deg, #cfe9c8, #9fd39a); }
+.bc-money::before { content: '₩ 50000  ₩ 10000  ₩ 50000  ₩ 10000  ₩ 50000  ₩ 10000  ₩ 50000  ₩ 10000'; position: absolute; inset: -20% -10%; font: 900 15px/26px var(--ui, sans-serif); color: #3a7a3a33; word-spacing: 6px; transform: rotate(-14deg); white-space: normal; letter-spacing: 1px; }
+.bc-money::after { content: ''; position: absolute; inset: 6px; border: 2px dashed #2f6a2f66; border-radius: 10px; }
+.bc-money .bc-name { color: #1d4a1d; text-shadow: 1px 1px 0 #e8ffe0; }
+.bc-goldrush { background: radial-gradient(ellipse at 50% 120%, #7a4a00, #1a1205 70%); }
+.bc-goldrush::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle, #FFE27A 1.4px, transparent 2px) 0 0 / 22px 26px, radial-gradient(circle, #FFD23F 1px, transparent 1.6px) 11px 13px / 22px 26px, radial-gradient(circle, #fff6c4 .8px, transparent 1.4px) 5px 4px / 17px 21px; animation: bcGold 2.4s linear infinite; }
+.bc-goldrush::after { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, #0000 35%, #FFE27A55 50%, #0000 65%) 0 0 / 250% 100%; animation: bcFlow 3s linear infinite; }
+@keyframes bcGold { to { background-position: 0 26px, 11px 39px, 5px 25px; } }
+.bc-goldrush .bc-name { color: #FFE27A; text-shadow: 0 0 8px #ffb347, 2px 2px 0 #3a2400; }
+.sh-tabs { margin: 12px 0 0; }
+.sh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.sh-grid.pins { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+.sh-item { display: grid; justify-items: center; align-content: start; gap: 6px; padding: 12px 6px 10px; font: inherit; color: var(--ink); background: #fff8e0; border: var(--line); border-radius: 14px; box-shadow: 3px 3px 0 var(--ink); cursor: pointer; }
+.sh-item:hover:not(:disabled) { transform: translateY(-2px); }
+.sh-item:disabled { opacity: .7; cursor: default; }
+.sh-item b { font: 13px var(--ui); }
+.sh-item em { font-style: normal; font: 11px var(--ui); padding: 1px 7px; border-radius: 99px; border: 2px solid var(--ink); }
+.sh-look { display: grid; place-items: center; min-height: 52px; max-width: 100%; }
+.sh-pin svg { width: 52px; height: 52px; }
+.sh-card .cswatch { width: 120px; height: 64px; }
+.buy .sh-look { margin: 4px auto 8px; } .buy .sh-card .bcard { width: min(320px, 100%); text-align: left; }
+.buy .sh-pin svg { width: 84px; height: 84px; } .buy .sh-title { transform: scale(1.25); margin: 14px auto; }
+.sh-tabs button { white-space: nowrap; font-size: 14px; padding-left: 2px; padding-right: 2px; letter-spacing: -.3px; }

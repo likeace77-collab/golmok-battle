@@ -265,6 +265,13 @@ const PIN_ART = {
   crack: '<circle cx="12" cy="12" r="10" fill="#D9B66A"/><path d="M12 2l-2 6 4 3-3 4 3 3-2 4" fill="none" stroke-width="1.800"/><path d="M14 11l5-2M11 15l-6 1" fill="none" stroke-width="1.200"/><path d="M3 4l2 2M21 4l-2 2M3 20l2-2" stroke="#FFD23F" stroke-width="1.500"/>',
   dmg999: '<path d="M1 5h22v14H1z" fill="#1a1433"/><text x="12" y="16" font-size="9" text-anchor="middle" font-weight="900" fill="#FFD23F" stroke="#E8402C" stroke-width=".6">9999</text>',
   goldglove: '<path d="M6 10q0-7 7-7 7 0 7 7v5q0 4-4 4H9q-3 0-3-4z" fill="#FFD23F"/><path d="M6 13q-3 0-3-3t3-2" fill="#FFD23F"/><path d="M8 19h10v3H8z" fill="#E8402C"/><path d="M10 7q3-2 6 0" fill="none" stroke="#fff" stroke-width="1.300"/><path d="M21 2l1 2M1 3l2 1M22 9h1" stroke="#FFD23F" stroke-width="1.500"/>',
+  // 상점 핀
+  receipt: '<path d="M5 2h14v20l-2-1.500-2 1.500-2-1.500-2 1.500-2-1.500-2 1.500-2-1.500z" fill="#fff"/><path d="M8 6h8M8 9h8M8 12h5" stroke-width="1.200"/><path d="M8 16h8" stroke="#E8402C" stroke-width="1.600"/>',
+  gpcoin: '<circle cx="12" cy="12" r="10" fill="#FFD23F"/><circle cx="12" cy="12" r="7.500" fill="#F2B21E" stroke-width="1"/><text x="12" y="15.200" text-anchor="middle" font-size="8.500" font-weight="900" font-family="sans-serif" fill="#7a4a00" stroke="none">GP</text><path d="M6.500 7.500q2-2.500 5-3" fill="none" stroke="#fff" stroke-width="1.300"/>',
+  cupteok: '<path d="M4 9h16l-2 13H6z" fill="#fff"/><path d="M4.600 13h14.800" stroke="#E8402C" stroke-width="2.500"/><path d="M7 9q1-5 4-3M11 9q2-6 5-2M15 9q1-3 3-2" fill="#E8402C"/><path d="M9 4.500l2-3M14 5l1.500-3.500" stroke-width="1.400"/>',
+  cart: '<path d="M1 3h3l3 12h12l3-9H6" fill="none" stroke-width="2"/><path d="M6.200 6H22l-3 9H8z" fill="#37e0ff"/><circle cx="9" cy="19.500" r="2" fill="#fff"/><circle cx="17" cy="19.500" r="2" fill="#fff"/><path d="M11 9v3M14.500 9v3" stroke-width="1"/>',
+  moneybag: '<path d="M9 2h6l-2 4h-2z" fill="#C9A06A"/><path d="M11 6h2q9 4 8 11-1 5-9 5t-9-5q-1-7 8-11z" fill="#E7C27A"/><path d="M8 6.500h8" stroke-width="1.800"/><text x="12" y="18" text-anchor="middle" font-size="9" font-weight="900" font-family="sans-serif" fill="#3FA34D" stroke="none">₩</text>',
+  gemcrown: '<path d="M2 8l5 4 5-8 5 8 5-4-2 12H4z" fill="#FFD23F"/><path d="M4 20h16" stroke-width="2"/><path d="M12 10l2.500 3-2.500 3-2.500-3z" fill="#E8402C" stroke-width="1"/><circle cx="6.500" cy="15" r="1.400" fill="#37e0ff" stroke-width=".8"/><circle cx="17.500" cy="15" r="1.400" fill="#3FA34D" stroke-width=".8"/>',
 };
 const pinSVG = (id) => `<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#1a1433" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">${PIN_ART[id] || ''}</g></svg>`;
 
@@ -307,4 +314,5 @@ function statOf(u, k) {
   if (k === 'wins' || k === 'losses' || k === 'draws') return u[k] || 0;
   return (u.stats || {})[k] || 0;
 }
-const unlocked = (u, item) => !item.cond || !!u.dev || (item.cond[0] === 'gift' ? (u.owned || []).includes(item.cond[1]) : item.cond[0] !== 'dev' && statOf(u, item.cond[0]) >= item.cond[1]);
+const cosRef = (item) => { for (const [k, list] of Object.entries(G.data.COSMETICS)) if (list.includes(item)) return `${k}:${item.id}`; return ''; };
+const unlocked = (u, item) => !item.cond || !!u.dev || (u.owned || []).includes(cosRef(item)) || (item.cond[0] === 'gift' ? (u.owned || []).includes(item.cond[1]) : !['dev', 'shop'].includes(item.cond[0]) && statOf(u, item.cond[0]) >= item.cond[1]);

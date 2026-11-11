@@ -116,7 +116,7 @@ const statOf = (u, k) => (k === 'wins' || k === 'losses' || k === 'draws' ? u[k]
 // 개발자 계정은 모든 꾸미기를 씁니다. 'dev' 조건은 개발자 계정 전용, 'gift'는 우편 보상으로 받은 것만.
 const owns = (u, ref) => (u.owned || []).includes(ref);
 const REF = new Map(Object.entries(Data.COSMETICS).flatMap(([kind, list]) => list.map((x) => [x, `${kind}:${x.id}`])));
-const isUnlocked = (u, item) => !item.cond || isDev(u) || owns(u, REF.get(item)) || (item.cond[0] === 'gift' ? owns(u, item.cond[1]) : item.cond[0] !== 'dev' && statOf(u, item.cond[0]) >= item.cond[1]);
+const isUnlocked = (u, item) => !item.cond || isDev(u) || owns(u, REF.get(item)) || (item.cond[0] === 'gift' ? owns(u, item.cond[1]) : !['dev', 'shop'].includes(item.cond[0]) && statOf(u, item.cond[0]) >= item.cond[1]);
 
 // 예전 게임 계정을 새 게임으로: 아이디·비밀번호·아바타·칭호(연 꾸미기 전부)·우편만 옮기고 나머지는 처음부터.
 function fromOldGame(old) {
@@ -502,6 +502,17 @@ async function progressApi(req, res, route, auth, user) {
   if (route === 'POST /api/scout/pick') { const r = P.scoutPick(user, String(body.species ?? ''), body.pay === 'ticket' ? 'ticket' : 'gp'); return done(r, { scout: P.scoutState(user) }); }
   if (route === 'POST /api/mon/move') return done(P.changeMove(user, String(body.uid ?? ''), Number(body.slot), String(body.move ?? '')));
   if (route === 'POST /api/stone/buy') return done(P.buyStone(user, String(body.species ?? '')));
+  // 상점 꾸미기 (칭호·전투카드·핀): ref = 'titles:id' 같은 꼴
+  if (route === 'POST /api/shop/cosmetic') {
+    const ref = String(body.ref ?? ''), [kind, id] = ref.split(':');
+    const item = (Data.COSMETICS[kind] || []).find((x) => x.id === id);
+    if (!item || item.cond?.[0] !== 'shop') return json(res, 400, { error: '상점에 없는 물건이에요.' });
+    if (owns(user, ref)) return json(res, 400, { error: '이미 가지고 있어요.' });
+    const price = item.cond[1];
+    if (user.gp < price) return json(res, 400, { error: `GP가 ${(price - user.gp).toLocaleString('ko-KR')} 모자라요.` });
+    user.gp -= price; (user.owned ||= []).push(ref);
+    return done({ ok: true });
+  }
   if (route === 'GET /api/rewards') return json(res, 200, rewardsView(user));
   if (route === 'POST /api/attend') return done(P.attend(user), rewardsView(user));
   if (route === 'POST /api/quest/claim') return done(P.claimQuest(user, String(body.id ?? '')), rewardsView(user));
