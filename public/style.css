@@ -1176,3 +1176,8 @@ button.ev-card h2 { margin: 6px 0 2px; font-size: 24px; } button.ev-card p { mar
 .m-sigl { display: flex; gap: 4px; align-items: center; font-size: 13px; white-space: nowrap; }
 .ct-zrow { grid-template-columns: 1fr 1fr !important; }
 .ct-zpow { display: grid; grid-template-columns: auto 1fr; gap: 6px; align-items: center; color: #fff; font-size: 14px; }
+
+/* 비밀번호 */
+.pwform { display: grid; gap: 8px; margin-top: 8px; }
+.pw-warn { color: #E8402C; font-weight: 700; margin: 6px 0; }
+.temppw { font: 700 32px/1.2 ui-monospace, monospace; letter-spacing: 3px; text-align: center; padding: 12px; margin: 8px 0; background: #fff; border: var(--line); border-radius: 12px; user-select: all; }

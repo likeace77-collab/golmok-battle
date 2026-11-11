@@ -167,8 +167,25 @@ function showSettings() {
       ${u.adult ? `<label class="toggle"><input type="checkbox" id="mosaic" ${u.settings.mosaic ? 'checked' : ''}> 루미나, 실비아 의상에 모자이크 켜기</label>
         <p class="muted" style="font-size:13px;margin-top:6px">켜면 성인 계정도 모자이크로 보입니다.</p>`
         : '<p>19세 이하 계정이라 루미나, 실비아의 의상이 모자이크로 보입니다.</p>'}
+    </section>
+    <section class="panel">
+      <h2>비밀번호 바꾸기</h2>
+      ${u.tempPw ? '<p class="pw-warn">지금 임시 비밀번호를 쓰고 있어요. 새 비밀번호로 바꿔 주세요!</p>' : ''}
+      <form id="pwform" class="pwform">
+        <input type="password" name="old" placeholder="${u.tempPw ? '임시 비밀번호' : '지금 비밀번호'}" autocomplete="current-password" required>
+        <input type="password" name="pw" placeholder="새 비밀번호 (6자 이상)" autocomplete="new-password" minlength="6" required>
+        <input type="password" name="pw2" placeholder="새 비밀번호 한 번 더" autocomplete="new-password" minlength="6" required>
+        <button class="btn">바꾸기</button>
+      </form>
     </section>`;
   app.querySelector('#back').onclick = showLobby;
+  app.querySelector('#pwform').onsubmit = async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    if (f.pw.value !== f.pw2.value) return toast('새 비밀번호 두 개가 서로 달라요.');
+    try { G.user = (await api('PUT', '/api/password', { old: f.old.value, password: f.pw.value })).user; toast('비밀번호를 바꿨어요!'); showSettings(); }
+    catch (err) { toast(err.message); }
+  };
   app.querySelector('#mosaic')?.addEventListener('change', async (e) => {
     try { G.user = (await api('PUT', '/api/settings', { mosaic: e.target.checked })).user; toast(e.target.checked ? '모자이크를 켰습니다.' : '모자이크를 껐습니다.'); }
     catch (err) { toast(err.message); }
@@ -257,7 +274,7 @@ function tagHTML(L) {
     <button class="btn wide" id="tag-new">태그 방 만들기</button></section>`;
 }
 
-function showLobby() { G.screen = 'lobby'; app.className = ''; closeSheet(); renderLobby(); }
+function showLobby() { G.screen = 'lobby'; app.className = ''; closeSheet(); renderLobby(); if (G.user?.tempPw && !G.pwNag) { G.pwNag = true; toast('임시 비밀번호로 들어왔어요. 설정에서 새 비밀번호로 바꿔 주세요!'); } }
 
 function renderLobby() {
   const u = G.user, L = G.lobby;
@@ -652,11 +669,27 @@ async function showPlayers() {
       ${list.map((p) => `<section class="panel pl">
         ${battleCard({ name: p.name + (p.me ? ' (나)' : ''), avatar: p.avatar, style: p.style })}
         <p class="pmeta"><i class="dot ${p.online ? 'on' : ''}"></i>${p.online ? (p.busy ? '대전 중' : '접속 중') : `마지막 접속 ${ago(p.lastSeen)}`}, ${recordText(p)}${p.createdAt ? `, ${new Date(p.createdAt).toLocaleDateString('ko-KR')} 가입` : ''}</p>
+        ${G.user.dev && !p.me ? `<p class="pmeta"><button class="btn small paper" data-resetpw="${esc(p.name)}">🔑 비밀번호 초기화</button></p>` : ''}
         ${p.me ? '' : `<div class="note"><input data-note="${esc(p.key)}" maxlength="100" placeholder="누군지 메모 (예: 회사 동기 민수)" value="${esc(p.note)}" autocomplete="off"><button class="btn small" data-save="${esc(p.key)}">저장</button></div>`}
       </section>`).join('') || '<p class="wait">찾는 플레이어가 없습니다.</p>'}`;
     app.querySelector('#back').onclick = showLobby;
     const pq = app.querySelector('#pq');
     pq.oninput = () => { const pos = pq.selectionStart; render(pq.value.trim().toLowerCase()); const n = app.querySelector('#pq'); n.focus(); n.setSelectionRange(pos, pos); };
+    app.querySelectorAll('[data-resetpw]').forEach((b) => {
+      b.onclick = () => {
+        const name = b.dataset.resetpw;
+        const bg = openSheet(`<h2>비밀번호 초기화</h2><p style="margin:8px 0"><b>${esc(name)}</b>님의 비밀번호를 임시 비밀번호로 바꿀까요?</p><p class="muted" style="font-size:13px">원래 비밀번호는 암호화돼 있어서 아무도 볼 수 없어요. 바꾸면 그 계정은 모든 기기에서 로그아웃돼요.</p><div class="row" style="gap:8px;margin-top:12px"><button class="btn paper" data-x style="flex:1">취소</button><button class="btn" data-go style="flex:1">초기화</button></div>`);
+        bg.querySelector('[data-x]').onclick = closeSheet;
+        bg.querySelector('[data-go]').onclick = async () => {
+          try {
+            const r = await api('POST', '/api/dev/resetpw', { name });
+            const bg2 = openSheet(`<h2>임시 비밀번호</h2><p style="margin:8px 0"><b>${esc(r.name)}</b>님께 알려 주세요.</p><p class="temppw">${esc(r.temp)}</p><p class="muted" style="font-size:13px">로그인한 뒤 <b>설정 → 비밀번호 바꾸기</b>에서 새 비밀번호로 바꾸라고 해 주세요. 이 창을 닫으면 다시 볼 수 없어요.</p><div class="row" style="gap:8px;margin-top:12px"><button class="btn paper" data-copy style="flex:1">복사</button><button class="btn" data-x style="flex:1">닫기</button></div>`);
+            bg2.querySelector('[data-x]').onclick = closeSheet;
+            bg2.querySelector('[data-copy]').onclick = async () => { try { await navigator.clipboard.writeText(r.temp); toast('복사했어요.'); } catch { toast('복사가 안 돼요. 직접 적어 주세요.'); } };
+          } catch (e) { toast(e.message); closeSheet(); }
+        };
+      };
+    });
     app.querySelectorAll('[data-save]').forEach((b) => {
       b.onclick = async () => {
         const key = b.dataset.save;
