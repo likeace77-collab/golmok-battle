@@ -180,6 +180,7 @@ function pendingGifts(u) {
 // 코드(대소문자 무시) → 보상. 계정마다 한 번. until을 넣으면 그때까지만
 const COUPONS = {
   'golmok-champions': { r: { mon: 'random', stones: 1, skips: 30, tickets: 2 }, title: '쿠폰 보상!' },
+  'tikitikitikitikitiki': { r: { gp: 10000, tickets: 1 }, title: '티키티키 쿠폰 보상!' },
 };
 function useCoupon(u, code) {
   const k = String(code || '').trim().toLowerCase(), c = COUPONS[k];
