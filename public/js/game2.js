@@ -8,6 +8,12 @@ let svgSeq = 0;
 
 /* ---------- 재화 아이콘 ---------- */
 const ICON = {
+  gpt(size = 22) { // 길P: 방패 모양 길드 포인트
+    const id = `gpt${svgSeq++}`;
+    return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9c2ff"/><stop offset=".5" stop-color="#7a2cff"/><stop offset="1" stop-color="#3b0a8e"/></linearGradient></defs>
+      <path d="M20 2 35 7v12c0 9-6.500 15-15 19C11.500 34 5 28 5 19V7z" fill="url(#${id})" stroke="#1a1433" stroke-width="2.600" stroke-linejoin="round"/><path d="M20 6.500 31 10v9c0 6.500-4.500 11-11 14.500" fill="none" stroke="#fff" stroke-width="1.600" opacity=".55"/>
+      <text x="20" y="25" text-anchor="middle" font-family="'Black Han Sans',sans-serif" font-size="13" fill="#fff" stroke="#1a1433" stroke-width=".8" paint-order="stroke">길P</text></svg>`;
+  },
   gp(size = 22) {
     const id = `gpg${svgSeq++}`;
     return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 40 40" aria-hidden="true"><defs><radialGradient id="${id}" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff6c2"/><stop offset=".45" stop-color="#ffd23f"/><stop offset="1" stop-color="#c98a00"/></radialGradient></defs>
@@ -76,6 +82,7 @@ function rewardChips(r) {
   if (r.stones) out.push(`<span class="rw"><span class="rw-stone">💎</span>메가스톤${typeof r.stones === 'number' ? ` ×${r.stones}` : ''}</span>`);
   if (r.pass) out.push(`<span class="rw">${ICON.pass(16)}${r.pass}</span>`);
   if (r.mon) out.push(`<span class="rw">${esc(G.data.MONSTERS[r.mon].n)}</span>`);
+  if (r.gpt) out.push(`<span class="rw">${ICON.gpt(18)}${fmt(r.gpt)}</span>`);
   return out.join('');
 }
 function gotItem(x) {
@@ -83,6 +90,7 @@ function gotItem(x) {
   if (x.k === 'ticket') return `<div class="got-i">${ICON.ticket(46)}<b>골목몬 입수권 ×${x.n}</b></div>`;
   if (x.k === 'skip') return `<div class="got-i">${ICON.skip(46)}<b>1시간 스킵권 ×${x.n}</b></div>`;
   if (x.k === 'stone') return `<div class="got-i">${stoneSVG(x.id, 60)}<b>${esc(G.data.MONSTERS[x.id].n)} 메가스톤</b></div>`;
+  if (x.k === 'gpt') return `<div class="got-i">${ICON.gpt(52)}<b>길P +${fmt(x.n)}</b></div>`;
   if (x.k === 'pass') return `<div class="got-i">${ICON.pass(50)}<b>패스 포인트 +${x.n}</b></div>`;
   if (x.k === 'mon') return `<div class="got-i got-mon" style="--tc:${G.data.TYPES[G.data.MONSTERS[x.id].types[0]].c}">${monsterSVG(x.id)}<b>${esc(G.data.MONSTERS[x.id].n)}</b></div>`;
   return '';
@@ -92,7 +100,7 @@ function showGot(got, title = '받았어요!', then) {
   const bg = openSheet(`<div class="got"><s aria-hidden="true"></s><h2>${esc(title)}</h2><div class="got-list">${got.map(gotItem).join('')}</div><button class="btn wide" data-x>좋아요!</button></div>`);
   bg.querySelector('[data-x]').onclick = () => { closeSheet(); then?.(); };
 }
-const walletHTML = (u = G.user) => `<div class="wallet"><span title="GP">${ICON.gp(20)}<b>${fmt(u.gp)}</b></span><span title="골목몬 입수권">${ICON.ticket(18)}<b>${fmt(u.tickets)}</b></span><span title="1시간 스킵권">${ICON.skip(18)}<b>${fmt(u.skips)}</b></span><span class="wl-stone" title="내 메가스톤 보기" role="button" tabindex="0" data-gostones>💎<b>${u.stones.length}</b></span></div>`;
+const walletHTML = (u = G.user) => `<div class="wallet"><span title="GP">${ICON.gp(20)}<b>${fmt(u.gp)}</b></span><span title="골목몬 입수권">${ICON.ticket(18)}<b>${fmt(u.tickets)}</b></span><span title="1시간 스킵권">${ICON.skip(18)}<b>${fmt(u.skips)}</b></span><span class="wl-stone" title="내 메가스톤 보기" role="button" tabindex="0" data-gostones>💎<b>${u.stones.length}</b></span>${u.guild || u.gpt ? `<span title="길P (길드 포인트)">${ICON.gpt(18)}<b>${fmt(u.gpt || 0)}</b></span>` : ''}</div>`;
 const topbar = (title, back = 'lobby') => `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>${title}</h1></div>${walletHTML()}`;
 const setUser = (r) => { if (r?.user) G.user = r.user; };
 
@@ -521,17 +529,17 @@ function cosLook(kind, item, big) {
   if (kind === 'cards') return `<div class="sh-look sh-card">${big ? battleCard({ name: G.user.name, avatar: G.user.avatar, style: { ...G.user.style, card: item.id }, record: recordText(G.user) }) : `<span class="cswatch bc-${item.id}"></span>`}</div>`;
   return `<div class="sh-look sh-pin">${pinSVG(item.id)}</div>`;
 }
-function buyCosSheet(kind, item, after) {
-  const u = G.user, price = item.cond[1], ok = u.gp >= price, KN = { titles: '칭호', cards: '전투카드', pins: '핀' }[kind];
+function buyCosSheet(kind, item, after, cur = { have: G.user.gp, icon: ICON.gp, unit: 'GP', path: '/api/shop/cosmetic' }) {
+  const u = G.user, price = item.cond[1], ok = cur.have >= price, KN = { titles: '칭호', cards: '전투카드', pins: '핀' }[kind];
   const bg = openSheet(`<div class="buy">${cosLook(kind, item, true)}<h2>${kind === 'titles' ? '' : esc(item.n)}</h2><p>${KN}${kind === 'titles' ? ` · ${TITLE_TIERS[item.tier || 0]} 등급` : ''}</p>
-    <p class="buy-price">${ICON.gp(22)} <b>${fmt(price)} GP</b> <small>보유 ${fmt(u.gp)} GP${ok ? ` → 남는 GP ${fmt(u.gp - price)}` : ''}</small></p>
-    ${ok ? '' : `<p class="buy-no">GP가 ${fmt(price - u.gp)} 모자라요.</p>`}
+    <p class="buy-price">${cur.icon(22)} <b>${fmt(price)} ${cur.unit}</b> <small>보유 ${fmt(cur.have)} ${cur.unit}${ok ? ` → 남는 ${cur.unit} ${fmt(cur.have - price)}` : ''}</small></p>
+    ${ok ? '' : `<p class="buy-no">${cur.unit}가 ${fmt(price - cur.have)} 모자라요.</p>`}
     <div class="sc-pay"><button class="btn paper" data-x>취소</button><button class="btn" data-buy ${ok ? '' : 'disabled'}>사기</button></div></div>`);
   bg.querySelector('[data-x]').onclick = closeSheet;
   bg.querySelector('[data-buy]').onclick = async (e) => {
     e.target.disabled = true;
     try {
-      const r = await api('POST', '/api/shop/cosmetic', { ref: `${kind}:${item.id}` }); setUser(r);
+      const r = await api('POST', cur.path, { ref: `${kind}:${item.id}` }); setUser(r);
       const bg2 = openSheet(`<div class="buy">${cosLook(kind, item, true)}<h2>샀어요! 🎉</h2><p>꾸미기에서 바로 장착할 수 있어요.</p>
         <div class="sc-pay"><button class="btn paper" data-x>계속 쇼핑</button><button class="btn" data-go>꾸미기로 가기</button></div></div>`);
       bg2.querySelector('[data-x]').onclick = () => { closeSheet(); after(); };

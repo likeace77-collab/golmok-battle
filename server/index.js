@@ -117,7 +117,16 @@ const statOf = (u, k) => (k === 'wins' || k === 'losses' || k === 'draws' ? u[k]
 // 개발자 계정은 모든 꾸미기를 씁니다. 'dev' 조건은 개발자 계정 전용, 'gift'는 우편 보상으로 받은 것만.
 const owns = (u, ref) => (u.owned || []).includes(ref);
 const REF = new Map(Object.entries(Data.COSMETICS).flatMap(([kind, list]) => list.map((x) => [x, `${kind}:${x.id}`])));
-const isUnlocked = (u, item) => !item.cond || isDev(u) || owns(u, REF.get(item)) || (item.cond[0] === 'gift' ? owns(u, item.cond[1]) : !['dev', 'shop'].includes(item.cond[0]) && statOf(u, item.cond[0]) >= item.cond[1]);
+const isUnlocked = (u, item) => !item.cond || isDev(u) || owns(u, REF.get(item)) || (item.cond[0] === 'gift' ? owns(u, item.cond[1])
+  : item.cond[0] === 'guild' ? S.roleOk(u, item.cond[1]) : !['dev', 'shop', 'gshop'].includes(item.cond[0]) && statOf(u, item.cond[0]) >= item.cond[1]);
+// 길드 직책이 바뀌어 못 쓰게 된 꾸미기는 기본으로 되돌림
+function fixStyle(u) {
+  if (!u.style) return;
+  const ok = (kind, id) => Data.COSMETICS[kind].some((x) => x.id === id && isUnlocked(u, x));
+  if (!ok('titles', u.style.title)) u.style.title = Data.COSMETICS.titles.find((x) => !x.cond).id;
+  if (!ok('cards', u.style.card)) u.style.card = Data.COSMETICS.cards.find((x) => !x.cond).id;
+  u.style.pins = (u.style.pins || []).filter((p) => ok('pins', p));
+}
 
 // 예전 게임 계정을 새 게임으로: 아이디·비밀번호·아바타·칭호(연 꾸미기 전부)·우편만 옮기고 나머지는 처음부터.
 function fromOldGame(old) {
@@ -295,7 +304,7 @@ const publicUser = (u) => ({
   name: u.name, avatar: u.avatar, decks: deckView(u), active: u.active, stats: u.stats, style: u.style,
   wins: u.wins, losses: u.losses, draws: u.draws, h2h: u.h2h,
   tutorial: !!u.tutorial, gp: u.gp, tickets: u.tickets, skips: u.skips, stones: u.stones, mons: u.mons,
-  premium: P.passState(u).premium, badges: { ...P.claimable(u), social: (u.freq?.in?.length || 0) + (db.guilds ? S.guildClaimable(u, keyOf(u.name)) : 0) }, guild: u.guild && db.guilds?.[u.guild] ? { id: u.guild, name: db.guilds[u.guild].name, emblem: db.guilds[u.guild].emblem, color: db.guilds[u.guild].color } : null, friendsN: (u.friends || []).length, scoutReady: !!P.scoutState(u).cands, surveyDone: !!db.surveys?.[keyOf(u.name)], sunfish: !!u.sunfishDone,
+  premium: P.passState(u).premium, badges: { ...P.claimable(u), social: (u.freq?.in?.length || 0) + (db.guilds ? S.guildClaimable(u, keyOf(u.name)) : 0) }, guild: u.guild && db.guilds?.[u.guild] ? { id: u.guild, name: db.guilds[u.guild].name, emblem: db.guilds[u.guild].emblem, color: db.guilds[u.guild].color, role: S.roleOf(u) } : null, gpt: u.gpt || 0, friendsN: (u.friends || []).length, scoutReady: !!P.scoutState(u).cands, surveyDone: !!db.surveys?.[keyOf(u.name)], sunfish: !!u.sunfishDone,
 });
 
 function createSession(res, req, key) {
@@ -1123,7 +1132,7 @@ setInterval(() => {
     catch (e) { console.error(e.message); process.exit(1); }
   }
   migrate();
-  S.init(db, { keyOf, online, send, toast, publicUser, save, grant: P.grant, bump: P.bump, isDev, inBattle, sendMail });
+  S.init(db, { keyOf, online, send, toast, publicUser, save, grant: P.grant, bump: P.bump, isDev, inBattle, sendMail, fixStyle, seasonOf: P.seasonOf, cosmetic: (kind, id) => Data.COSMETICS[kind]?.find((x) => x.id === id), owns });
   server.listen(PORT, () => console.log(`골목대전 서버 실행 중: http://localhost:${PORT}`));
 })();
 

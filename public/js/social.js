@@ -97,25 +97,32 @@ async function showGuild(back = showLobby) {
     app.querySelectorAll('[data-join]').forEach((b) => { b.onclick = () => act('/api/guild/join', { id: b.dataset.join }); });
     return;
   }
-  const g = v.guild, me = keyOfMe(), lead = g.leader === me;
+  const g = v.guild, me = keyOfMe(), lead = g.leader === me, vice = g.vices.includes(me);
+  const passCan = g.pass.levels.filter((l) => l.can).length;
   const left = Math.max(0, g.weekEnds - Date.now()), days = Math.floor(left / 864e5), hrs = Math.floor((left % 864e5) / 36e5);
   app.innerHTML = `${topbar('길드')}
     <section class="gd-head" style="--gc:${g.color}"><s aria-hidden="true"></s>${emblemTag(g, true)}<div><h2>${esc(g.name)}</h2><p>${esc(g.intro || '소개가 없어요')}</p><small>${g.members.length}/${g.max}명 · 이번 주 내 기여 ${g.myContrib}판</small></div></section>
     <div class="gd-acts"><button class="btn" id="gd-chat">💬 길드 채팅${Social.unread.guild ? ` <em class="mailbadge">${Social.unread.guild}</em>` : ''}</button>${lead ? '<button class="btn paper" id="gd-edit">✏️ 꾸미기</button>' : ''}<button class="btn paper" id="gd-leave">나가기</button></div>
+    <div class="gd-big"><button class="gd-tile pass" id="gd-pass"><span>🎫</span><b>길드 패스</b><small>Lv ${g.pass.lv} / ${g.pass.max}</small>${passCan ? `<em class="mailbadge">${passCan}</em>` : ''}</button>
+      <button class="gd-tile shop" id="gd-shop"><span>🛍️</span><b>길드 상점</b><small>${ICON.gpt(14)} ${fmt(g.gpt)} 길P</small></button></div>
     <section class="panel"><h2>🤝 협업 퀘스트 <small class="muted">${days}일 ${hrs}시간 뒤 초기화</small></h2>
       <p class="muted" style="font-size:13px;margin-bottom:6px">길드원 모두의 대전이 합쳐져요. 목표를 채우면 <b>이번 주에 한 판이라도 한 길드원</b>이 각자 보상을 받아요.</p>
       ${g.quests.map((q) => `<div class="quest ${q.got ? 'got' : ''}"><div class="qt"><b>${esc(q.n)}</b>${rewardChips(q.r)}<div class="qbar"><i style="width:${(q.v / q.goal) * 100}%"></i><span>${Math.floor(q.v)} / ${q.goal}</span></div></div>
         <button class="btn small" data-gq="${q.id}" ${q.can ? '' : 'disabled'}>${q.got ? '받음' : q.can ? '받기' : q.done ? '한 판 하면 받기' : '진행 중'}</button></div>`).join('')}
     </section>
     <section class="panel"><h2>길드원</h2>
-      ${g.members.map((p) => `<div class="fr-row"><div class="ava">${avatarSVG(p.avatar)}</div><div class="fr-name">${onlineDot(p)}<b>${p.key === g.leader ? '👑 ' : ''}${esc(p.name)}</b><small>이번 주 ${p.contrib}판</small></div>
-        <div class="fr-btns">${lead && p.key !== me ? `<button class="btn small paper" data-lead="${p.key}" title="길드장 넘기기">👑</button><button class="btn small paper" data-kick="${p.key}" title="내보내기">✕</button>` : ''}</div></div>`).join('')}
+      ${g.members.map((p) => `<div class="fr-row"><div class="ava">${avatarSVG(p.avatar)}</div><div class="fr-name">${onlineDot(p)}<b>${p.key === g.leader ? '👑 ' : g.vices.includes(p.key) ? '🥈 ' : ''}${esc(p.name)}</b><small>${p.key === g.leader ? '길드장 · ' : g.vices.includes(p.key) ? '부길드장 · ' : ''}이번 주 ${p.contrib}판</small></div>
+        <div class="fr-btns">${lead && p.key !== me ? `<button class="btn small ${g.vices.includes(p.key) ? '' : 'paper'}" data-vice="${p.key}" data-on="${g.vices.includes(p.key) ? 0 : 1}" title="${g.vices.includes(p.key) ? '부길드장 해제' : '부길드장 지정'}">🥈</button><button class="btn small paper" data-lead="${p.key}" title="길드장 넘기기">👑</button>` : ''}${(lead && p.key !== me) || (vice && p.key !== me && p.key !== g.leader && !g.vices.includes(p.key)) ? `<button class="btn small paper" data-kick="${p.key}" title="내보내기">✕</button>` : ''}</div></div>`).join('')}
+      ${lead ? `<p class="muted" style="font-size:12px;margin-top:6px">🥈 부길드장은 ${g.viceMax}명까지 뽑을 수 있어요. 부길드장은 네온 칭호 「길드 부마」를 받고, 일반 길드원을 내보낼 수 있어요.</p>` : ''}
     </section>`;
   app.querySelector('#back').onclick = back;
   app.querySelector('#gd-chat').onclick = () => showChat('guild', again);
   app.querySelector('#gd-leave').onclick = () => { if (confirm(lead && g.members.length > 1 ? '길드장이 나가면 다음 사람이 길드장이 돼요. 나갈까요?' : '길드에서 나갈까요?')) act('/api/guild/leave', {}); };
   app.querySelectorAll('[data-gq]').forEach((b) => { b.onclick = () => act('/api/guild/claim', { id: b.dataset.gq }); });
   app.querySelectorAll('[data-kick]').forEach((b) => { b.onclick = () => { if (confirm('이 길드원을 내보낼까요?')) act('/api/guild/kick', { key: b.dataset.kick }); }; });
+  app.querySelectorAll('[data-vice]').forEach((b) => { b.onclick = () => act('/api/guild/edit', { vice: b.dataset.vice, on: b.dataset.on === '1' }); });
+  app.querySelector('#gd-pass').onclick = () => showGuildPass(again);
+  app.querySelector('#gd-shop').onclick = () => showGuildShop(again);
   app.querySelectorAll('[data-lead]').forEach((b) => { b.onclick = () => { if (confirm('길드장을 넘길까요?')) act('/api/guild/edit', { leader: b.dataset.lead }); }; });
   app.querySelector('#gd-edit')?.addEventListener('click', () => {
     const bg = openSheet(`<h2>길드 꾸미기</h2><form id="gd-ed" class="gd-form">
@@ -131,6 +138,48 @@ async function showGuild(back = showLobby) {
       closeSheet(); act('/api/guild/edit', { intro: e.target.intro.value, emblem: pick('emblem'), color: pick('color') });
     };
   });
+}
+
+/* ---------- 길드 패스 ---------- */
+async function showGuildPass(back) {
+  G.screen = 'gpass'; app.className = '';
+  let v; try { v = await loadSocial(); } catch (e) { return toast(e.message); }
+  if (!v.guild) return showGuild();
+  const g = v.guild, P = g.pass, inLv = P.lv >= P.max ? P.per : P.pts % P.per, can = P.levels.filter((l) => l.can).length;
+  const again = () => { const y = scrollY; showGuildPass(back); scrollTo(0, y); };
+  app.innerHTML = `${topbar('길드 패스')}
+    <section class="gp-head" style="--gc:${g.color}"><s aria-hidden="true"></s>
+      <div class="gp-top">${emblemTag(g)}<div><b>${esc(g.name)}</b><small>시즌 ${P.season} 길드 패스</small></div><div class="gp-lv"><small>LV</small>${P.lv}</div></div>
+      <div class="qbar gp-bar"><i style="width:${P.lv >= P.max ? 100 : (inLv / P.per) * 100}%"></i><span>${P.lv >= P.max ? 'MAX' : `${inLv} / ${P.per}`}</span></div>
+      <p>길드원 <b>누구든</b> 대전하면 함께 올라가요. 친구 대전 20·10, 태그전 16·8, 연습전 6·3점 (이김·짐), 협업 퀘스트를 달성하면 +150!</p>
+      ${can ? `<button class="btn" id="gp-all">받을 수 있는 보상 ${can}개 모두 받기</button>` : ''}</section>
+    <div class="gp-track">${P.levels.map((l) => `<div class="gp-cell ${l.got ? 'got' : l.can ? 'can' : l.lv <= P.lv ? '' : 'lock'}"><span class="gp-n">${l.lv}</span><div class="gp-r">${rewardChips(l.r)}</div>
+      ${l.got ? '<em class="st-ok">받음</em>' : l.can ? `<button class="btn small" data-gl="${l.lv}">받기</button>` : '<em class="gp-lock">🔒</em>'}</div>`).join('')}</div>`;
+  app.querySelector('#back').onclick = back;
+  const claim = async (lv) => { try { const r = await api('POST', '/api/guild/pass', { lv }); setUser(r); showGot(r.got, '길드 패스 보상!', again); } catch (e) { toast(e.message); } };
+  app.querySelector('#gp-all')?.addEventListener('click', () => claim('all'));
+  app.querySelectorAll('[data-gl]').forEach((b) => { b.onclick = () => claim(Number(b.dataset.gl)); });
+}
+
+/* ---------- 길드 상점 (길P) ---------- */
+let gshopTab = 'titles';
+async function showGuildShop(back) {
+  G.screen = 'gshop'; app.className = '';
+  let v; try { v = await loadSocial(); } catch (e) { return toast(e.message); }
+  if (!v.guild) return showGuild();
+  const again = () => { const y = scrollY; showGuildShop(back); scrollTo(0, y); };
+  const items = (k) => G.data.COSMETICS[k].filter((x) => x.cond?.[0] === 'gshop'), owned = new Set(G.user.owned || []);
+  const roles = G.data.COSMETICS.titles.filter((x) => x.cond?.[0] === 'guild');
+  app.innerHTML = `${topbar('길드 상점')}
+    <section class="shop-banner gshop-banner"><s aria-hidden="true"></s><h2>길드 상점</h2><p>길드 패스·협업 퀘스트로 모은 <b>길P</b>로만 살 수 있는 특별한 물건!</p></section>
+    <div class="tabs sh-tabs">${[['titles', '🏷️ 칭호'], ['cards', '🃏 카드'], ['pins', '📌 핀']].map(([k, n]) => `<button data-gtab="${k}" aria-selected="${gshopTab === k}">${n}</button>`).join('')}</div>
+    <div class="sh-grid ${gshopTab}">${items(gshopTab).map((x) => { const have = owned.has(`${gshopTab}:${x.id}`) || G.user.dev; return `<button class="sh-item ${have ? 'have' : ''}" data-gcos="${x.id}" ${have ? 'disabled' : ''}>
+      ${cosLook(gshopTab, x)}<b>${gshopTab === 'titles' ? `${TITLE_TIERS[x.tier || 0]} 등급` : esc(x.n)}</b>${have ? '<em class="st-ok">보유</em>' : `<span class="st-price gpt">${ICON.gpt(14)}${fmt(x.cond[1])}</span>`}</button>`; }).join('')}</div>
+    ${gshopTab === 'titles' ? `<h3 class="st-h">길드 직책 칭호 <small>사지 않아도 직책이 있으면 열려요</small></h3>
+    <div class="sh-grid titles">${roles.map((x) => `<div class="sh-item ${unlocked(G.user, x) ? 'have' : ''}">${cosLook('titles', x)}<b>${TITLE_TIERS[x.tier]} 등급</b><em class="${unlocked(G.user, x) ? 'st-ok' : 'st-no'}">${{ master: '길드장', vice: '부길드장', member: '길드원 모두' }[x.cond[1]]}</em></div>`).join('')}</div>` : ''}`;
+  app.querySelector('#back').onclick = back;
+  app.querySelectorAll('[data-gtab]').forEach((b) => { b.onclick = () => { gshopTab = b.dataset.gtab; again(); }; });
+  app.querySelectorAll('[data-gcos]').forEach((b) => { b.onclick = () => buyCosSheet(gshopTab, items(gshopTab).find((x) => x.id === b.dataset.gcos), again, { have: G.user.gpt || 0, icon: ICON.gpt, unit: '길P', path: '/api/guild/shop' }); });
 }
 
 /* ---------- 채팅 ---------- */

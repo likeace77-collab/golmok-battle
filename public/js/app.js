@@ -415,6 +415,8 @@ function condText(item) {
   if (!item.cond) return '처음부터 사용 가능';
   if (item.cond[0] === 'dev') return '개발자 계정 전용';
   if (item.cond[0] === 'gift') return '우편 보상으로 받은 아이템';
+  if (item.cond[0] === 'guild') return { master: '길드를 만든 길드장 (길드장인 동안)', vice: '길드장이 뽑은 부길드장 (부길드장인 동안)', member: '길드에 들어가 있는 동안' }[item.cond[1]];
+  if (item.cond[0] === 'gshop') return unlocked(G.user, item) ? '길드 상점에서 산 아이템' : `길드 상점에서 ${item.cond[1].toLocaleString('ko-KR')}길P`;
   if (item.cond[0] === 'shop') return unlocked(G.user, item) ? '상점에서 산 아이템' : `상점에서 ${item.cond[1].toLocaleString('ko-KR')}GP`;
   const [k, n] = item.cond;
   const dmg = k.startsWith('dummy'), f = (x) => x.toLocaleString('ko-KR');

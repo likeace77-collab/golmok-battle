@@ -597,6 +597,10 @@ const COSMETICS = {
     C('deungsin', '등신', ['gift', 'titles:deungsin'], { tier: 9 }),
     C('noisecrime', '소음공해죄', ['gift', 'titles:noisecrime'], { tier: 9, icon: '♬' }),
     C('dimension', '차원을 넘어온 자', ['gift', 'titles:dimension'], { tier: 10 }), // 옛 골목대전에서 넘어온 계정 기념
+    // 길드 직책 (길드에 있는 동안만)
+    C('guildmaster', '길드 마스터', ['guild', 'master'], { tier: 5, glow: '#FFD23F' }), C('guildvice', '길드 부마', ['guild', 'vice'], { tier: 4, glow: '#B44BFF' }), C('guildmember', '길드원', ['guild', 'member'], { tier: 2 }),
+    // 길드 상점 (길P로 구매)
+    C('allied', '골목 연합군', ['gshop', 600], { tier: 3 }), C('gshield', '길드의 방패', ['gshop', 1200], { tier: 4, glow: '#2EA8E0' }), C('comrades', '전설의 동료들', ['gshop', 2500], { tier: 5, glow: '#6CF2C2' }),
     // 상점 (GP로 구매)
     C('boughttitle', '돈 주고 산 칭호', ['shop', 2000], { tier: 1 }), C('cvsvip', '편의점 VIP', ['shop', 3000], { tier: 1 }),
     C('flexer', '플렉스 장인', ['shop', 6000], { tier: 2 }), C('bigspender', '골목 큰손', ['shop', 10000], { tier: 3 }),
@@ -626,6 +630,8 @@ const COSMETICS = {
     // 상점 (GP로 구매)
     C('sunset', '옥상 노을', ['shop', 4000]), C('vending', '자판기 불빛', ['shop', 6000], { dark: true }),
     C('money', '돈다발', ['shop', 8000]), C('goldrush', '황금 비', ['shop', 15000], { dark: true }),
+    // 길드 상점
+    C('gbanner', '길드 깃발', ['gshop', 800]), C('gcastle', '성벽 야경', ['gshop', 1500], { dark: true }),
   ],
   pins: [
     C('star', '별', null), C('heart', '하트', null), C('sprout', '새싹', null),
@@ -658,6 +664,8 @@ const COSMETICS = {
     // 상점 (GP로 구매)
     C('receipt', '영수증', ['shop', 1000]), C('gpcoin', 'GP 코인', ['shop', 1500]), C('cupteok', '컵떡볶이', ['shop', 1500]),
     C('cart', '장바구니', ['shop', 2000]), C('moneybag', '돈주머니', ['shop', 3000]), C('gemcrown', '보석 왕관', ['shop', 6000]),
+    // 길드 상점
+    C('gflag', '길드 깃발', ['gshop', 300]), C('gbuckler', '방패', ['gshop', 300]), C('gpact', '동맹 고리', ['gshop', 500]), C('gtrophy', '우승컵', ['gshop', 800]),
   ],
 };
 const STAT_NAMES = {

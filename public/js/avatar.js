@@ -272,6 +272,11 @@ const PIN_ART = {
   cart: '<path d="M1 3h3l3 12h12l3-9H6" fill="none" stroke-width="2"/><path d="M6.200 6H22l-3 9H8z" fill="#37e0ff"/><circle cx="9" cy="19.500" r="2" fill="#fff"/><circle cx="17" cy="19.500" r="2" fill="#fff"/><path d="M11 9v3M14.500 9v3" stroke-width="1"/>',
   moneybag: '<path d="M9 2h6l-2 4h-2z" fill="#C9A06A"/><path d="M11 6h2q9 4 8 11-1 5-9 5t-9-5q-1-7 8-11z" fill="#E7C27A"/><path d="M8 6.500h8" stroke-width="1.800"/><text x="12" y="18" text-anchor="middle" font-size="9" font-weight="900" font-family="sans-serif" fill="#3FA34D" stroke="none">₩</text>',
   gemcrown: '<path d="M2 8l5 4 5-8 5 8 5-4-2 12H4z" fill="#FFD23F"/><path d="M4 20h16" stroke-width="2"/><path d="M12 10l2.500 3-2.500 3-2.500-3z" fill="#E8402C" stroke-width="1"/><circle cx="6.500" cy="15" r="1.400" fill="#37e0ff" stroke-width=".8"/><circle cx="17.500" cy="15" r="1.400" fill="#3FA34D" stroke-width=".8"/>',
+  // 길드 상점 핀
+  gflag: '<path d="M5 2v21" stroke-width="2.200"/><path d="M6 3h14l-3.500 4.500L20 12H6z" fill="#7a2cff"/><path d="M10 6l1.200 2.200 2.400.300-1.700 1.600.400 2.300-2.300-1.100" fill="#FFD23F" stroke-width=".8"/>',
+  gbuckler: '<path d="M12 2l9 3v7c0 5.500-4 9-9 10.500C7 21 3 17.500 3 12V5z" fill="#2EA8E0"/><path d="M12 2v20.500M3.500 9h17" stroke-width="1.400"/><path d="M12 2l9 3v4h-9zM3.500 9H12v13C7 21 3.500 17 3.500 12z" fill="#fff" fill-opacity=".35" stroke="none"/>',
+  gpact: '<circle cx="8.500" cy="12" r="5.500" fill="none" stroke="#FFD23F" stroke-width="3.400"/><circle cx="15.500" cy="12" r="5.500" fill="none" stroke="#7a2cff" stroke-width="3.400"/><circle cx="8.500" cy="12" r="5.500" fill="none" stroke-width="1"/><circle cx="15.500" cy="12" r="5.500" fill="none" stroke-width="1"/><path d="M12.300 7.700a5.500 5.500 0 0 1 0 8.600" fill="none" stroke="#FFD23F" stroke-width="3.400"/>',
+  gtrophy: '<path d="M7 3h10v6a5 5 0 0 1-10 0z" fill="#FFD23F"/><path d="M7 5H3.500q0 5 4 6M17 5h3.500q0 5-4 6" fill="none" stroke-width="1.800"/><path d="M10.500 14h3v3.500h-3z" fill="#E7B020"/><path d="M7.500 21h9l-1-3.500h-7z" fill="#C9A06A"/><path d="M9.500 5.500v3" stroke="#fff" stroke-width="1.600"/>',
 };
 const pinSVG = (id) => `<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#1a1433" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">${PIN_ART[id] || ''}</g></svg>`;
 
@@ -316,4 +321,4 @@ function statOf(u, k) {
   return (u.stats || {})[k] || 0;
 }
 const cosRef = (item) => { for (const [k, list] of Object.entries(G.data.COSMETICS)) if (list.includes(item)) return `${k}:${item.id}`; return ''; };
-const unlocked = (u, item) => !item.cond || !!u.dev || (u.owned || []).includes(cosRef(item)) || (item.cond[0] === 'gift' ? (u.owned || []).includes(item.cond[1]) : !['dev', 'shop'].includes(item.cond[0]) && statOf(u, item.cond[0]) >= item.cond[1]);
+const unlocked = (u, item) => !item.cond || !!u.dev || (u.owned || []).includes(cosRef(item)) || (item.cond[0] === 'gift' ? (u.owned || []).includes(item.cond[1]) : item.cond[0] === 'guild' ? !!u.guild && (item.cond[1] === 'member' || u.guild.role === item.cond[1]) : !['dev', 'shop', 'gshop'].includes(item.cond[0]) && statOf(u, item.cond[0]) >= item.cond[1]);

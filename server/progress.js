@@ -56,6 +56,7 @@ function grant(u, r) {
   if (r.stones) addStones(u, r.stones, got);
   if (r.mon) { const m = addMon(u, r.mon); got.push({ k: 'mon', id: m.species }); }
   if (r.pass) { addPass(u, r.pass); got.push({ k: 'pass', n: r.pass }); }
+  if (r.gpt) { u.gpt = (u.gpt || 0) + r.gpt; got.push({ k: 'gpt', n: r.gpt }); } // 길드 포인트(길P)
   return got;
 }
 
