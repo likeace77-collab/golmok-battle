@@ -1510,3 +1510,11 @@ button.ev-card h2 { margin: 6px 0 2px; font-size: 24px; } button.ev-card p { mar
 .moves.giant .mb.gx-g { background: linear-gradient(135deg, var(--tc), #1a1433 140%); color: #fff; }
 .moves.giant .mb.gx-g b { text-shadow: 0 0 6px #fff8; }
 .scene .plate { z-index: 5; } /* 거다이맥스로 커져도 체력판이 위에 */
+/* 도감: 거다이맥스 */
+.gmaxbox { margin: 12px 0; padding: 12px; color: #fff; background: radial-gradient(ellipse at 50% 30%, color-mix(in srgb, var(--gc) 45%, #1a1433), #120a22 75%); border: var(--line); border-radius: 14px; box-shadow: 3px 3px 0 var(--ink); }
+.gmaxbox h3 { font-family: var(--display); font-weight: 400; font-size: 24px; color: #fff; text-shadow: 0 0 10px var(--gc), 2px 2px 0 var(--ink); margin-bottom: 4px; }
+.gmax-pic { max-width: 260px; margin: 0 auto; } .gmax-pic svg { width: 100%; display: block; }
+.gmax-rule { font-size: 13px; opacity: .9; margin: 4px 0 8px; }
+.gmax-g { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: center; padding: 8px 10px; background: #ffffff14; border: 2px solid var(--gc); border-radius: 10px; box-shadow: 0 0 12px color-mix(in srgb, var(--gc) 60%, transparent); }
+.gmax-g b { font-size: 17px; } .gmax-g small { grid-column: 1 / -1; opacity: .85; }
+.gmax-dai { display: grid; gap: 4px; } .gmax-dai > div { display: grid; grid-template-columns: auto auto 1fr; gap: 6px; align-items: center; font-size: 14px; } .gmax-dai small { opacity: .8; }

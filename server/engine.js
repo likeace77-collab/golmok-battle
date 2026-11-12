@@ -223,6 +223,8 @@ function gmaxMoves(m) {
   const g = { n: GMAX_MOVES[m.species] || `거다이 ${sp.n}`, type: gt, cat, pow: G_POW, acc: 100, pp: 1, pri: 0, ...strongFx(DAI_FX[gt] || DAI_FX.normal), breakGuard: true, gmaxMove: true };
   return [g, ...dai];
 }
+// 도감에 보여 줄 거다이맥스 정보
+const gmaxInfo = () => ({ turns: GMAX_TURNS, hp: GMAX_HP, gpow: G_POW, dpow: DAI_POW, names: GMAX_MOVES, fx: Object.fromEntries(Object.entries(DAI_FX).map(([t, f]) => [t, f.d])), gfx: Object.fromEntries(Object.entries(DAI_FX).map(([t, f]) => [t, strongFx(f).d])) });
 const canGmax = (b, s) => { const m = activeOf(b, s); return b.phase === 'choose' && !b.sides[s].gmaxUsed && !m.mega && !m.gmax && alive(m); };
 function doGmax(b, s, ev) {
   const m = activeOf(b, s);
@@ -1529,5 +1531,5 @@ function botTeam(level, size, enemy = []) {
 }
 
 module.exports = {
-  createBattle, createTraining, DUMMY_HP, smartMoves, gmaxMoves, canGmax, choose, speedOf, legalActions, viewFor, botAction, botTeam, forfeit, teamOf, canZ, calcStats, effOf, josa, activeOf, canMega,
+  createBattle, createTraining, DUMMY_HP, smartMoves, gmaxMoves, canGmax, gmaxInfo, choose, speedOf, legalActions, viewFor, botAction, botTeam, forfeit, teamOf, canZ, calcStats, effOf, josa, activeOf, canMega,
 };
