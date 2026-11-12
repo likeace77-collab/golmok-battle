@@ -171,6 +171,10 @@ function showSettings() {
         : '<p>19세 이하 계정이라 루미나, 실비아의 의상이 모자이크로 보입니다.</p>'}
     </section>
     <section class="panel">
+      <h2>🎟️ 쿠폰 코드</h2>
+      <form id="cpform" class="fr-add"><input name="code" placeholder="쿠폰 코드 입력" autocomplete="off" autocapitalize="off" spellcheck="false" required><button class="btn">사용</button></form>
+    </section>
+    <section class="panel">
       <h2>비밀번호 바꾸기</h2>
       ${u.tempPw ? '<p class="pw-warn">지금 임시 비밀번호를 쓰고 있어요. 새 비밀번호로 바꿔 주세요!</p>' : ''}
       <form id="pwform" class="pwform">
@@ -181,6 +185,11 @@ function showSettings() {
       </form>
     </section>`;
   app.querySelector('#back').onclick = showLobby;
+  app.querySelector('#cpform').onsubmit = async (e) => {
+    e.preventDefault();
+    try { const r = await api('POST', '/api/coupon', { code: e.target.code.value }); setUser(r); showGot(r.got, r.title, showSettings); }
+    catch (err) { toast(err.message); }
+  };
   app.querySelector('#pwform').onsubmit = async (e) => {
     e.preventDefault();
     const f = e.target;

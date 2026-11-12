@@ -176,6 +176,21 @@ function pendingGifts(u) {
   return out;
 }
 
+/* ---------- 쿠폰 ---------- */
+// 코드(대소문자 무시) → 보상. 계정마다 한 번. until을 넣으면 그때까지만
+const COUPONS = {
+  'golmok-champions': { r: { mon: 'random', stones: 1, skips: 30, tickets: 2 }, title: '쿠폰 보상!' },
+};
+function useCoupon(u, code) {
+  const k = String(code || '').trim().toLowerCase(), c = COUPONS[k];
+  if (!k) return { error: '쿠폰 코드를 입력해 주세요.' };
+  if (!c || (c.until && Date.now() > c.until)) return { error: '없거나 기간이 끝난 쿠폰이에요.' };
+  u.coupons ||= [];
+  if (u.coupons.includes(k)) return { error: '이미 사용한 쿠폰이에요.' };
+  u.coupons.push(k);
+  return { ok: true, title: c.title, got: P.grant(u, c.r) };
+}
+
 /* ---------- 우편함 ---------- */
 // reward: ['titles:day1', 'cards:gold', ...] 꾸미기 아이템
 function sendMail(u, { from, title, body, reward = [] }) {
@@ -540,6 +555,7 @@ async function progressApi(req, res, route, auth, user) {
   if (route === 'POST /api/tutorial') return done(P.finishTutorial(user, Number(body.starter)));
   if (!user.tutorial) return json(res, 403, { error: '튜토리얼을 먼저 끝내 주세요.', needTutorial: true });
   { const sr = S.api(route, user, auth.key, body); if (sr !== undefined) return done(sr); }
+  if (route === 'POST /api/coupon') return done(useCoupon(user, body.code));
   if (route === 'GET /api/scout') return json(res, 200, { scout: P.scoutState(user), user: publicUser(user) });
   if (route === 'POST /api/scout/skip') return done(P.scoutSkip(user), { scout: P.scoutState(user) });
   if (route === 'POST /api/scout/pick') { const r = P.scoutPick(user, String(body.species ?? ''), body.pay === 'ticket' ? 'ticket' : 'gp'); return done(r, { scout: P.scoutState(user) }); }
