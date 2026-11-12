@@ -102,6 +102,8 @@ function guildView(g, key) {
 }
 const guildList = () => Object.values(db.guilds).map((g) => ({ id: g.id, name: g.name, emblem: g.emblem, color: g.color, intro: g.intro, count: g.members.length, max: GUILD_MAX, leader: nameOf(g.leader), online: g.members.filter((k) => H.online.has(k)).length }))
   .sort((a, b) => b.online - a.online || b.count - a.count);
+// 길드 설명: 길이 제한 없음, 줄바꿈 유지 (빈 줄은 최대 1줄)
+const cleanIntro = (s) => String(s || '').replace(/\r\n?/g, '\n').replace(/[\u0000-\u0009\u000b-\u001f]/g, '').replace(/\n{3,}/g, '\n\n').trim();
 const cleanName = (s) => String(s || '').replace(/\s+/g, ' ').trim();
 function guildCreate(u, key, b) {
   if (u.guild) return err('이미 길드에 들어가 있어요.');
@@ -111,7 +113,7 @@ function guildCreate(u, key, b) {
   if (!H.isDev(u) && u.gp < GUILD_GP) return err(`길드를 만들려면 ${GUILD_GP.toLocaleString('ko-KR')}GP가 필요해요.`);
   if (!H.isDev(u)) u.gp -= GUILD_GP;
   const id = `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
-  db.guilds[id] = { id, name, emblem: EMBLEMS.includes(b.emblem) ? b.emblem : EMBLEMS[0], color: COLORS.includes(b.color) ? b.color : COLORS[6], intro: cleanName(b.intro).slice(0, 60), leader: key, members: [key], createdAt: Date.now() };
+  db.guilds[id] = { id, name, emblem: EMBLEMS.includes(b.emblem) ? b.emblem : EMBLEMS[0], color: COLORS.includes(b.color) ? b.color : COLORS[6], intro: cleanIntro(b.intro), leader: key, members: [key], createdAt: Date.now() };
   db.guilds[id].vices = [];
   u.guild = id;
   return { ok: true, msg: `길드 「${name}」을(를) 만들었어요! 전설 칭호 「길드 마스터」가 열렸어요.` };
@@ -151,7 +153,7 @@ function guildKick(u, key, tk) {
 function guildEdit(u, key, b) {
   const g = db.guilds[u.guild];
   if (!g || g.leader !== key) return err('길드장만 할 수 있어요.');
-  if (b.intro != null) g.intro = cleanName(b.intro).slice(0, 60);
+  if (b.intro != null) g.intro = cleanIntro(b.intro);
   if (EMBLEMS.includes(b.emblem)) g.emblem = b.emblem;
   if (COLORS.includes(b.color)) g.color = b.color;
   if (b.leader && g.members.includes(b.leader) && b.leader !== key) {

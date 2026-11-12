@@ -78,13 +78,13 @@ async function showGuild(back = showLobby) {
       <section class="panel"><h2>길드 만들기 <small class="muted">${ICON.gp(14)} ${fmt(v.guildGp)} GP</small></h2>
         <form id="gd-new" class="gd-form">
           <input name="name" placeholder="길드 이름 (2~12자)" maxlength="12" required autocomplete="off">
-          <input name="intro" placeholder="한 줄 소개 (선택)" maxlength="60" autocomplete="off">
+          <textarea name="intro" rows="3" placeholder="길드 설명 (선택, 길이 제한 없음)"></textarea>
           <div class="gd-pick" data-k="emblem">${v.emblems.map((e, i) => `<button type="button" data-v="${e}" aria-pressed="${!i}">${e}</button>`).join('')}</div>
           <div class="gd-pick colors" data-k="color">${v.colors.map((c, i) => `<button type="button" data-v="${c}" aria-pressed="${i === 6}" style="background:${c}"></button>`).join('')}</div>
           <button class="btn">만들기</button>
         </form></section>
       <section class="panel"><h2>길드 찾기 <small class="muted">${v.guilds.length}개</small></h2>
-        ${v.guilds.map((g) => `<div class="gd-row">${emblemTag(g)}<div class="gd-info"><b>${esc(g.name)}</b><small>${esc(g.intro || '소개가 없어요')}</small><small>👑 ${esc(g.leader)} · ${g.count}/${g.max}명 · 접속 ${g.online}명</small></div>
+        ${v.guilds.map((g) => `<div class="gd-row">${emblemTag(g)}<div class="gd-info"><b>${esc(g.name)}</b><small class="gd-intro-s">${esc(g.intro || '소개가 없어요')}</small><small>👑 ${esc(g.leader)} · ${g.count}/${g.max}명 · 접속 ${g.online}명</small></div>
           <button class="btn small" data-join="${g.id}" ${g.count >= g.max ? 'disabled' : ''}>${g.count >= g.max ? '꽉 참' : '가입'}</button></div>`).join('') || '<p class="wait">아직 길드가 없어요. 첫 길드를 만들어 보세요!</p>'}
       </section>`;
     app.querySelector('#back').onclick = back;
@@ -101,7 +101,7 @@ async function showGuild(back = showLobby) {
   const passCan = g.pass.levels.filter((l) => l.can).length;
   const left = Math.max(0, g.weekEnds - Date.now()), days = Math.floor(left / 864e5), hrs = Math.floor((left % 864e5) / 36e5);
   app.innerHTML = `${topbar('길드')}
-    <section class="gd-head" style="--gc:${g.color}"><s aria-hidden="true"></s>${emblemTag(g, true)}<div><h2>${esc(g.name)}</h2><p>${esc(g.intro || '소개가 없어요')}</p><small>${g.members.length}/${g.max}명 · 이번 주 내 기여 ${g.myContrib}판</small></div></section>
+    <section class="gd-head" style="--gc:${g.color}"><s aria-hidden="true"></s>${emblemTag(g, true)}<div><h2>${esc(g.name)}</h2><p class="gd-intro">${esc(g.intro || '소개가 없어요')}</p><small>${g.members.length}/${g.max}명 · 이번 주 내 기여 ${g.myContrib}판</small></div></section>
     <div class="gd-acts"><button class="btn" id="gd-chat">💬 길드 채팅${Social.unread.guild ? ` <em class="mailbadge">${Social.unread.guild}</em>` : ''}</button>${lead ? '<button class="btn paper" id="gd-edit">✏️ 꾸미기</button>' : ''}<button class="btn paper" id="gd-leave">나가기</button></div>
     <div class="gd-big"><button class="gd-tile pass" id="gd-pass"><span>🎫</span><b>길드 패스</b><small>Lv ${g.pass.lv} / ${g.pass.max}</small>${passCan ? `<em class="mailbadge">${passCan}</em>` : ''}</button>
       <button class="gd-tile shop" id="gd-shop"><span>🛍️</span><b>길드 상점</b><small>${ICON.gpt(14)} ${fmt(g.gpt)} 길P</small></button></div>
@@ -126,7 +126,7 @@ async function showGuild(back = showLobby) {
   app.querySelectorAll('[data-lead]').forEach((b) => { b.onclick = () => { if (confirm('길드장을 넘길까요?')) act('/api/guild/edit', { leader: b.dataset.lead }); }; });
   app.querySelector('#gd-edit')?.addEventListener('click', () => {
     const bg = openSheet(`<h2>길드 꾸미기</h2><form id="gd-ed" class="gd-form">
-      <input name="intro" value="${esc(g.intro || '')}" placeholder="한 줄 소개" maxlength="60">
+      <textarea name="intro" rows="6" placeholder="길드 설명 (길이 제한 없음)">${esc(g.intro || '')}</textarea>
       <div class="gd-pick" data-k="emblem">${v.emblems.map((e) => `<button type="button" data-v="${e}" aria-pressed="${e === g.emblem}">${e}</button>`).join('')}</div>
       <div class="gd-pick colors" data-k="color">${v.colors.map((c) => `<button type="button" data-v="${c}" aria-pressed="${c === g.color}" style="background:${c}"></button>`).join('')}</div>
       <div class="sc-pay"><button type="button" class="btn paper" data-x>취소</button><button class="btn">저장</button></div></form>`);
