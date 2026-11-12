@@ -827,7 +827,7 @@ test('거다이맥스: 체력 1.5배, 거다이·다이기술 4칸, 5턴 뒤 원
   assert.ok(E.choose(b, 0, { type: 'move', index: 0, gmax: true }).ok);
   const ev = E.choose(b, 1, E.botAction(b, 1, 0)).events;
   assert.ok(ev.some((e) => e.t === 'gmax'));
-  if (me.hp > 0) {
+  if (me.hp > 0 && E.activeOf(b, 0) === me) { // 상대 기술로 강제 교체되면 바로 돌아옴
     assert.equal(me.maxHp, Math.round(max * 1.5));
     assert.ok(ev.some((e) => e.t === 'move' && e.side === 0 && e.gmax === 2));
     assert.equal(E.viewFor(b, 0).canGmax, false); assert.equal(E.viewFor(b, 0).canZ, false);
