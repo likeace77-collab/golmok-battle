@@ -818,7 +818,7 @@ test('같은 골목몬 여러 마리로 대전해도 끝까지 가고 서로 구
   }
 });
 
-test('거다이맥스: 체력 1.5배, 거다이·다이기술 4칸, 3턴 뒤 원래대로, 한 판에 한 번', () => {
+test('거다이맥스: 체력 1.5배, 거다이·다이기술 4칸, 5턴 뒤 원래대로, 한 판에 한 번', () => {
   const b = E.createBattle([{ name: '가', team: E.botTeam(1, 3) }, { name: '나', team: E.botTeam(1, 3) }], 11, { preview: true });
   E.choose(b, 0, { type: 'lead', index: 0 }); E.choose(b, 1, { type: 'lead', index: 0 });
   const me = E.activeOf(b, 0), max = me.maxHp;

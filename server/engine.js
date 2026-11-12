@@ -187,9 +187,9 @@ function doMega(b, s, ev) {
 // Z기술도 한 판에 한 번. 메가진화와는 따로 셉니다. 거다이맥스 중에는 못 씀
 const canZ = (b, s) => b.phase === 'choose' && !b.sides[s].zUsed && alive(activeOf(b, s)) && !activeOf(b, s).gmax;
 
-/* ---------- 거다이맥스: 한 판에 한 번, 3턴 동안 거대해짐 ----------
-   체력 1.5배, 기술은 거다이기술(전용) 1개 + 다이기술(다이+타입) 3개만. 교체하거나 3턴이 지나면 돌아옴. 메가진화한 골목몬은 못 함 */
-const GMAX_TURNS = 3, GMAX_HP = 1.5, DAI_POW = 130, G_POW = 160;
+/* ---------- 거다이맥스: 한 판에 한 번, 5턴 동안 거대해짐 ----------
+   체력 1.5배, 기술은 거다이기술(전용) 1개 + 다이기술(다이+타입) 3개만. 교체하거나 5턴이 지나면 돌아옴. 메가진화한 골목몬은 못 함 */
+const GMAX_TURNS = 5, GMAX_HP = 1.5, DAI_POW = 130, G_POW = 160;
 const DAI_FX = {
   normal: { self: { atk: 1 }, selfAfter: true, d: '내 공격 1랭크 상승' },
   fire: { st: { s: 'brn', ch: 30 }, d: '30% 확률로 화상' },
