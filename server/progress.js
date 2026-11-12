@@ -80,7 +80,7 @@ function scoutState(u, now = Date.now()) {
   if (!s.cands && now >= s.next) s.cands = shuffle(released()).slice(0, 8);
   const left = s.cands ? 0 : Math.max(0, s.next - now);
   const need = Math.ceil(left / HOUR);
-  return { cands: s.cands, next: s.next, left, skipNeed: need, skipHave: Math.min(u.skips, need), skipGp: Math.max(0, need - u.skips) * SKIP_GP, cost: SCOUT_GP };
+  return { cands: s.cands, next: s.next, left, skipNeed: need, skipHave: Math.min(u.skips, need), skipGp: Math.max(0, need - u.skips) * SKIP_GP, cost: SCOUT_GP, reroll: REROLL_GP };
 }
 function scoutSkip(u) {
   const st = scoutState(u);
@@ -89,6 +89,18 @@ function scoutSkip(u) {
   if (u.gp < gp) return { error: `1시간 스킵권이 ${st.skipNeed - useSkip}장 모자라요. 대신 ${gp}GP가 필요해요.` };
   u.skips -= useSkip; u.gp -= gp; u.scout.next = 0;
   return { used: { skips: useSkip, gp } };
+}
+// 후보 다시 뽑기: 500GP. 지금 후보와 최대한 다른 8마리로
+const REROLL_GP = 500;
+function scoutReroll(u) {
+  const st = scoutState(u);
+  if (!st.cands) return { error: '스카우트 후보가 나와 있을 때만 다시 뽑을 수 있어요.' };
+  if (u.gp < REROLL_GP) return { error: `GP가 모자라요. (${REROLL_GP}GP 필요)` };
+  u.gp -= REROLL_GP;
+  const fresh = shuffle(released().filter((x) => !st.cands.includes(x)));
+  u.scout.cands = [...fresh, ...shuffle(st.cands)].slice(0, 8);
+  u.counts.rerolls = (u.counts.rerolls || 0) + 1;
+  return { ok: true };
 }
 function scoutPick(u, species, pay) {
   const st = scoutState(u);
@@ -277,6 +289,6 @@ function afterBattle(u, kind, won, side) {
 
 module.exports = {
   SCOUT_HOURS, SKIP_GP, SCOUT_GP, STONE_GP, STONE_DUPE_GP, MOVE_GP, STARTERS, TUTORIAL_REWARD, ATTEND, DAILY, WEEKLY,
-  newProgress, addMon, grant, finishTutorial, scoutState, scoutSkip, scoutPick, changeMove, buyStone,
+  newProgress, addMon, grant, finishTutorial, scoutState, scoutSkip, scoutReroll, scoutPick, changeMove, buyStone,
   bump, attendState, attend, questState, claimQuest, achState, claimAch, passState, claimPass, claimable, afterBattle, seasonOf, passBook, dayKey, released,
 };

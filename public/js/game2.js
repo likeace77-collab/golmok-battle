@@ -169,7 +169,8 @@ async function showScout() {
     if (G.screen !== 'scout') return clearInterval(G.scoutTimer);
     const u = G.user;
     if (st.cands) {
-      app.innerHTML = `${topbar('스카우트')}<section class="sc-head"><s aria-hidden="true"></s><h2>오늘의 후보 8마리</h2><p>1마리를 골라 <b>${ICON.gp(16)} 2500GP</b> 또는 <b>${ICON.ticket(14)} 입수권 1장</b>으로 데려와요.</p></section>
+      app.innerHTML = `${topbar('스카우트')}<section class="sc-head"><s aria-hidden="true"></s><h2>오늘의 후보 8마리</h2><p>1마리를 골라 <b>${ICON.gp(16)} 2500GP</b> 또는 <b>${ICON.ticket(14)} 입수권 1장</b>으로 데려와요.</p>
+        <button class="btn small sc-reroll" id="sc-reroll" ${G.user.gp < (st.reroll || 500) ? 'disabled' : ''}>🎲 후보 다시 뽑기 <span>${ICON.gp(14)} ${fmt(st.reroll || 500)}</span></button></section>
         <div class="sc-grid">${st.cands.map((id, i) => { const sp = G.data.MONSTERS[id], n = ownCount(id); const tot = Object.values(sp.base).reduce((a, b) => a + b, 0);
           return `<button class="sc-card" data-pick="${id}" style="--tc:${G.data.TYPES[sp.types[0]].c};--d:${i * 70}ms">${n ? `<em class="sc-own">보유 ${n}</em>` : '<em class="sc-new">NEW</em>'}${monsterSVG(id)}<b>${esc(sp.n)}</b><span>${typesOf(id)}</span><small>능력치 합계 ${tot}</small></button>`; }).join('')}</div>`;
     } else {
@@ -186,6 +187,11 @@ async function showScout() {
     }
     app.querySelector('#back').onclick = () => { clearInterval(G.scoutTimer); showLobby(); };
     app.querySelectorAll('[data-pick]').forEach((b) => { b.onclick = () => pickSheet(b.dataset.pick); });
+    app.querySelector('#sc-reroll')?.addEventListener('click', async (e) => {
+      e.currentTarget.disabled = true;
+      try { const r = await api('POST', '/api/scout/reroll'); setUser(r); st = r.scout; toast('후보를 새로 뽑았어요!'); render(); }
+      catch (err) { toast(err.message); e.currentTarget.disabled = false; }
+    });
   };
   const pickSheet = (id) => {
     const sp = G.data.MONSTERS[id], u = G.user;

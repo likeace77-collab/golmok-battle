@@ -1518,3 +1518,5 @@ button.ev-card h2 { margin: 6px 0 2px; font-size: 24px; } button.ev-card p { mar
 .gmax-g { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: center; padding: 8px 10px; background: #ffffff14; border: 2px solid var(--gc); border-radius: 10px; box-shadow: 0 0 12px color-mix(in srgb, var(--gc) 60%, transparent); }
 .gmax-g b { font-size: 17px; } .gmax-g small { grid-column: 1 / -1; opacity: .85; }
 .gmax-dai { display: grid; gap: 4px; } .gmax-dai > div { display: grid; grid-template-columns: auto auto 1fr; gap: 6px; align-items: center; font-size: 14px; } .gmax-dai small { opacity: .8; }
+.sc-reroll { position: relative; margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; }
+.sc-reroll span { color: var(--ink); display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px; background: #fff8e0; border: 2px solid var(--ink); border-radius: 99px; font-size: 13px; }
