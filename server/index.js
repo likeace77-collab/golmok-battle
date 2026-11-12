@@ -148,6 +148,11 @@ function fromOldGame(old) {
 /* ---------- 특별 지급 ---------- */
 // 긴급 보상: 2026-11-11 (한국시간) 자정 전에 접속하면 한 번
 const EMERGENCY = { id: 'emg-20261111', until: Date.parse('2026-11-12T00:00:00+09:00'), title: '긴급 보상 도착!', r: { skips: 50, tickets: 3, gp: 5000 } };
+// 한 번씩 뿌리는 선물: before 전에 만든 계정이 다음 접속 때 받아요 (until이 있으면 그때까지 접속해야 함)
+const GIFTS = [
+  EMERGENCY,
+  { id: 'startup-20261112', before: Date.parse('2026-11-13T00:00:00+09:00'), title: '🏰 길드 창업 지원금 도착!', r: { gp: 3000, tickets: 1 } },
+];
 // 새 게임으로 바뀌기 전부터 있던 계정에 '차원을 넘어온 자' 칭호
 const DIMENSION_BEFORE = Date.parse('2026-11-12T00:00:00+09:00');
 function specialGrants(u) {
@@ -160,11 +165,15 @@ function specialGrants(u) {
   }
   return changed;
 }
-function emergencyGift(u) {
+function pendingGifts(u) {
   u.flags ||= {};
-  if (Date.now() >= EMERGENCY.until || u.flags[EMERGENCY.id]) return null;
-  u.flags[EMERGENCY.id] = true;
-  return P.grant(u, EMERGENCY.r);
+  const out = [];
+  for (const g of GIFTS) {
+    if (u.flags[g.id] || (g.until && Date.now() >= g.until) || (g.before && (u.createdAt || 0) >= g.before)) continue;
+    u.flags[g.id] = true;
+    out.push({ title: g.title, got: P.grant(u, g.r) });
+  }
+  return out;
 }
 
 /* ---------- 우편함 ---------- */
@@ -1077,7 +1086,7 @@ server.on('upgrade', (req, socket, head) => {
     online.get(key)?.close(4000, 'replaced'); // 새 탭/기기로 접속하면 이전 연결은 닫음
     db.users[key].lastSeen = Date.now(); save();
     online.set(key, ws);
-    { const u = db.users[key]; specialGrants(u); const got = emergencyGift(u); if (got) { save(); send(ws, { t: 'me', user: publicUser(u) }); send(ws, { t: 'gift', title: EMERGENCY.title, got }); } }
+    { const u = db.users[key]; specialGrants(u); const gifts = pendingGifts(u); if (gifts.length) { save(); send(ws, { t: 'me', user: publicUser(u) }); send(ws, { t: 'gift', title: gifts.length > 1 ? '선물이 도착했어요!' : gifts[0].title, got: gifts.flatMap((x) => x.got) }); } }
     ws.alive = true;
     ws.on('pong', () => { ws.alive = true; });
     ws.on('message', (raw) => {
