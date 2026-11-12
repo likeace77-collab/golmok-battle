@@ -217,7 +217,7 @@ const strongFx = (fx) => {
 function gmaxMoves(m) {
   const sp = MONSTERS[m.species], cat = m.stats.atk >= m.stats.spa ? 'p' : 's';
   const types = [...new Set(m.moves.map((x) => MOVES[x.id]).filter((v) => v && v.cat !== 'x' && TYPES[v.type] && v.type !== 'none').map((v) => v.type))];
-  for (const t of [...sp.types, 'normal']) if (types.length < 3 && !types.includes(t) && TYPES[t]) types.push(t);
+  for (const t of [...sp.types, 'normal', ...Object.keys(TYPES)]) if (types.length < 3 && !types.includes(t) && TYPES[t] && t !== 'none') types.push(t); // 모자라면 다른 타입으로 채워 항상 3개
   const dai = types.slice(0, 3).map((t) => ({ n: `다이${TYPES[t].n}`, type: t, cat, pow: DAI_POW, acc: 100, pp: 1, pri: 0, ...DAI_FX[t], dai: true }));
   const gt = sp.types[0];
   const g = { n: GMAX_MOVES[m.species] || `거다이 ${sp.n}`, type: gt, cat, pow: G_POW, acc: 100, pp: 1, pri: 0, ...strongFx(DAI_FX[gt] || DAI_FX.normal), breakGuard: true, gmaxMove: true };
