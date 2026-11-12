@@ -145,12 +145,14 @@ const DAILY = [
   { id: 'win1', n: '대전 1번 이기기', k: 'win', goal: 1, r: { skips: 15, pass: 50 } },
   { id: 'mega1', n: '메가진화 1번 하기', k: 'mega', goal: 1, r: { gp: 1200, pass: 30 } },
   { id: 'scout1', n: '스카우트로 골목몬 얻기', k: 'scout', goal: 1, r: { gp: 1200, pass: 30 } },
+  { id: 'friendpvp1', n: '🤝 친구와 대전 1판', k: 'friendpvp', goal: 1, r: { gp: 1500, pass: 40 } },
 ];
 const WEEKLY = [
   { id: 'win10', n: '대전 10번 이기기', k: 'win', goal: 10, r: { tickets: 1, pass: 150 } },
   { id: 'battle25', n: '대전 25판 하기', k: 'battle', goal: 25, r: { stones: 'random', pass: 150 } },
   { id: 'pvp3', n: '친구와 대전 3판', k: 'pvp', goal: 3, r: { gp: 12000, pass: 100 } },
   { id: 'z5', n: 'Z기술 5번 쓰기', k: 'z', goal: 5, r: { skips: 50, pass: 100 } },
+  { id: 'friendtag2', n: '🤝 친구와 같은 팀으로 태그전 2번 이기기', k: 'friendtag', goal: 2, r: { tickets: 1, gp: 4000, pass: 150 } },
 ];
 function questBook(u) {
   if (u.daily?.day !== dayKey()) u.daily = { day: dayKey(), prog: {}, done: [] };
@@ -275,5 +277,5 @@ function afterBattle(u, kind, won, side) {
 module.exports = {
   SCOUT_HOURS, SKIP_GP, SCOUT_GP, STONE_GP, STONE_DUPE_GP, MOVE_GP, STARTERS, TUTORIAL_REWARD, ATTEND, DAILY, WEEKLY,
   newProgress, addMon, grant, finishTutorial, scoutState, scoutSkip, scoutPick, changeMove, buyStone,
-  attendState, attend, questState, claimQuest, achState, claimAch, passState, claimPass, claimable, afterBattle, seasonOf, passBook, dayKey, released,
+  bump, attendState, attend, questState, claimQuest, achState, claimAch, passState, claimPass, claimable, afterBattle, seasonOf, passBook, dayKey, released,
 };

@@ -7,6 +7,7 @@ const { WebSocketServer } = require('ws');
 const Data = require('./data');
 const E = require('./engine');
 const P = require('./progress');
+const S = require('./social'); // 친구·길드·채팅·협업 퀘스트
 
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -294,7 +295,7 @@ const publicUser = (u) => ({
   name: u.name, avatar: u.avatar, decks: deckView(u), active: u.active, stats: u.stats, style: u.style,
   wins: u.wins, losses: u.losses, draws: u.draws, h2h: u.h2h,
   tutorial: !!u.tutorial, gp: u.gp, tickets: u.tickets, skips: u.skips, stones: u.stones, mons: u.mons,
-  premium: P.passState(u).premium, badges: P.claimable(u), scoutReady: !!P.scoutState(u).cands, surveyDone: !!db.surveys?.[keyOf(u.name)], sunfish: !!u.sunfishDone,
+  premium: P.passState(u).premium, badges: { ...P.claimable(u), social: (u.freq?.in?.length || 0) + (db.guilds ? S.guildClaimable(u, keyOf(u.name)) : 0) }, guild: u.guild && db.guilds?.[u.guild] ? { id: u.guild, name: db.guilds[u.guild].name, emblem: db.guilds[u.guild].emblem, color: db.guilds[u.guild].color } : null, friendsN: (u.friends || []).length, scoutReady: !!P.scoutState(u).cands, surveyDone: !!db.surveys?.[keyOf(u.name)], sunfish: !!u.sunfishDone,
 });
 
 function createSession(res, req, key) {
@@ -520,6 +521,7 @@ async function progressApi(req, res, route, auth, user) {
   if (route === 'GET /api/starters') return json(res, 200, { starters: P.STARTERS, reward: P.TUTORIAL_REWARD });
   if (route === 'POST /api/tutorial') return done(P.finishTutorial(user, Number(body.starter)));
   if (!user.tutorial) return json(res, 403, { error: '튜토리얼을 먼저 끝내 주세요.', needTutorial: true });
+  { const sr = S.api(route, user, auth.key, body); if (sr !== undefined) return done(sr); }
   if (route === 'GET /api/scout') return json(res, 200, { scout: P.scoutState(user), user: publicUser(user) });
   if (route === 'POST /api/scout/skip') return done(P.scoutSkip(user), { scout: P.scoutState(user) });
   if (route === 'POST /api/scout/pick') { const r = P.scoutPick(user, String(body.species ?? ''), body.pay === 'ticket' ? 'ticket' : 'gp'); return done(r, { scout: P.scoutState(user) }); }
@@ -912,6 +914,8 @@ function finish(room) {
     if (room.tag) { st.tagGames++; if (won) st.tagWins++; }
     else if (!pvp && won) { st[`p${room.botLevel}`]++; st.botWins++; }
     const pts = P.afterBattle(db.users[k], room.tag ? 'tag' : pvp ? 'pvp' : 'practice', won, room.b.sides[s]);
+    { const team = E.teamOf(room.b, s); const mates = humans.filter(([k2, s2]) => k2 !== k && E.teamOf(room.b, s2) === team).map(([k2]) => k2), foes = humans.filter(([, s2]) => E.teamOf(room.b, s2) !== team).map(([k2]) => k2);
+      S.afterBattle(k, { won, mega: !!room.b.sides[s].megaUsed, mates, foes, kind: room.tag ? 'tag' : pvp ? 'pvp' : 'practice' }); }
     if (pts) { if (online.has(k)) toast(k, `시즌 패스 포인트 +${pts}`); else notices.set(k, [notices.get(k), `시즌 패스 포인트 +${pts}`].filter(Boolean).join(' · ')); }
   }
   if (pvp) {
@@ -961,6 +965,8 @@ function onMessage(key, msg) {
       break;
     }
     case 'unspectate': stopWatching(key); broadcastLobby(); break;
+    case 'chat': S.chatSend(key, msg.ch, msg.text); break;
+    case 'chat_hist': send(online.get(key), { t: 'chat_hist', ch: String(msg.ch || ''), list: S.chatHistory(key, msg.ch) }); break;
     case 'tag_create': {
       if (room || tagOf(key)) return;
       const id = crypto.randomUUID();
@@ -1117,6 +1123,7 @@ setInterval(() => {
     catch (e) { console.error(e.message); process.exit(1); }
   }
   migrate();
+  S.init(db, { keyOf, online, send, toast, publicUser, save, grant: P.grant, bump: P.bump, isDev, inBattle, sendMail });
   server.listen(PORT, () => console.log(`골목대전 서버 실행 중: http://localhost:${PORT}`));
 })();
 
