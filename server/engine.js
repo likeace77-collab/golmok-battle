@@ -1,5 +1,5 @@
 // 배틀 엔진. 서버에서만 돌고, 모든 판정은 여기서 결정됩니다.
-const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP, BANNED, TIERS, FORMS, ITEMS } = require('./data');
+const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP, BANNED, TIERS, FORMS, ITEMS, TYPES, GMAX_MOVES } = require('./data');
 
 const LEVEL = 50;
 // 골목몬이 너무 빨리 쓰러지지 않도록 모든 골목몬의 체력을 1.3배로 (훈련장 더미 1000은 그대로)
@@ -152,6 +152,7 @@ function legalActions(b, s) {
     .map(({ i }) => ({ type: 'switch', index: i }));
   if (b.phase === 'switch') return switches;
   if (trapped(b, s)) switches.length = 0;
+  if (activeOf(b, s).gmax) return [0, 1, 2, 3].map((i) => ({ type: 'move', index: i })).concat(switches); // 거다이맥스 중: 거다이·다이기술 4칸
   const moves = activeOf(b, s).moves
     .map((mv, i) => ({ mv, i }))
     .filter(({ mv }) => {
@@ -167,7 +168,7 @@ function legalActions(b, s) {
 
 // 메가진화는 한 판에 한 번. 행동을 쓰지 않고 그 턴의 기술을 바로 이어서 씁니다.
 const hasStone = (b, s) => !b.sides[s].stones || b.sides[s].stones.includes(activeOf(b, s).species); // 메가스톤이 있어야 메가진화 (봇·훈련장은 제한 없음)
-const canMega = (b, s) => b.phase === 'choose' && !b.sides[s].megaUsed && !activeOf(b, s).mega && alive(activeOf(b, s)) && hasStone(b, s);
+const canMega = (b, s) => b.phase === 'choose' && !b.sides[s].megaUsed && !activeOf(b, s).mega && !activeOf(b, s).gmax && alive(activeOf(b, s)) && hasStone(b, s);
 
 function doMega(b, s, ev) {
   const m = activeOf(b, s);
@@ -183,17 +184,73 @@ function doMega(b, s, ev) {
   if (m.species === DS && m.thirst != null) { m.thirst = null; ev.push({ t: 'thirst', side: s, v: null, text: '바다의 왕이 되어 더는 목마르지 않다! 죽을 확률도 절반이 되었다!' }); }
 }
 
-// Z기술도 한 판에 한 번. 메가진화와는 따로 셉니다.
-const canZ = (b, s) => b.phase === 'choose' && !b.sides[s].zUsed && alive(activeOf(b, s));
+// Z기술도 한 판에 한 번. 메가진화와는 따로 셉니다. 거다이맥스 중에는 못 씀
+const canZ = (b, s) => b.phase === 'choose' && !b.sides[s].zUsed && alive(activeOf(b, s)) && !activeOf(b, s).gmax;
+
+/* ---------- 거다이맥스: 한 판에 한 번, 3턴 동안 거대해짐 ----------
+   체력 1.5배, 기술은 거다이기술(전용) 1개 + 다이기술(다이+타입) 3개만. 교체하거나 3턴이 지나면 돌아옴. 메가진화한 골목몬은 못 함 */
+const GMAX_TURNS = 3, GMAX_HP = 1.5, DAI_POW = 130, G_POW = 160;
+const DAI_FX = {
+  normal: { self: { atk: 1 }, selfAfter: true, d: '내 공격 1랭크 상승' },
+  fire: { st: { s: 'brn', ch: 30 }, d: '30% 확률로 화상' },
+  water: { drain: 0.25, d: '준 피해의 1/4 회복' },
+  grass: { foe: { atk: -1 }, d: '상대 공격 1랭크 하락' },
+  elec: { st: { s: 'par', ch: 30 }, d: '30% 확률로 마비' },
+  ice: { foe: { spe: -1 }, d: '상대 스피드 1랭크 하락' },
+  earth: { foe: { def: -1 }, d: '상대 방어 1랭크 하락' },
+  wind: { self: { spe: 1 }, selfAfter: true, d: '내 스피드 1랭크 상승' },
+  steel: { self: { def: 1 }, selfAfter: true, d: '내 방어 1랭크 상승' },
+  spirit: { foe: { spa: -1 }, d: '상대 특공 1랭크 하락' },
+  poison: { st: { s: 'psn', ch: 40 }, d: '40% 확률로 독' },
+  fairy: { self: { spa: 1 }, selfAfter: true, d: '내 특공 1랭크 상승' },
+};
+// 거다이기술: 같은 효과를 두 배로 + 막기를 뚫음
+const strongFx = (fx) => {
+  const o = { ...fx };
+  if (o.st) o.st = { ...o.st, ch: Math.min(100, o.st.ch * 2) };
+  if (o.foe) o.foe = Object.fromEntries(Object.entries(o.foe).map(([k, v]) => [k, v * 2]));
+  if (o.self) o.self = Object.fromEntries(Object.entries(o.self).map(([k, v]) => [k, v * 2]));
+  if (o.drain) o.drain = 0.5;
+  o.d = `${o.d.replace(/(\d+)%/, (_, n) => `${Math.min(100, n * 2)}%`).replace('1랭크', '2랭크').replace('1/4', '1/2')}, 막기를 뚫음`;
+  return o;
+};
+function gmaxMoves(m) {
+  const sp = MONSTERS[m.species], cat = m.stats.atk >= m.stats.spa ? 'p' : 's';
+  const types = [...new Set(m.moves.map((x) => MOVES[x.id]).filter((v) => v && v.cat !== 'x' && TYPES[v.type] && v.type !== 'none').map((v) => v.type))];
+  for (const t of [...sp.types, 'normal']) if (types.length < 3 && !types.includes(t) && TYPES[t]) types.push(t);
+  const dai = types.slice(0, 3).map((t) => ({ n: `다이${TYPES[t].n}`, type: t, cat, pow: DAI_POW, acc: 100, pp: 1, pri: 0, ...DAI_FX[t], dai: true }));
+  const gt = sp.types[0];
+  const g = { n: GMAX_MOVES[m.species] || `거다이 ${sp.n}`, type: gt, cat, pow: G_POW, acc: 100, pp: 1, pri: 0, ...strongFx(DAI_FX[gt] || DAI_FX.normal), breakGuard: true, gmaxMove: true };
+  return [g, ...dai];
+}
+const canGmax = (b, s) => { const m = activeOf(b, s); return b.phase === 'choose' && !b.sides[s].gmaxUsed && !m.mega && !m.gmax && alive(m); };
+function doGmax(b, s, ev) {
+  const m = activeOf(b, s);
+  m.preMax = m.maxHp;
+  m.maxHp = Math.round(m.maxHp * GMAX_HP); m.hp = Math.round(m.hp * GMAX_HP);
+  m.gmax = GMAX_TURNS;
+  b.sides[s].gmaxUsed = true;
+  ev.push({ t: 'gmax', side: s, mon: publicMon(m), text: `${josa(m.name, '이/가')} 거다이맥스했다! 거대한 괴수가 되어 골목을 뒤덮는다!` });
+}
+function endGmax(b, s, m, ev, quiet = false) {
+  if (!m.gmax) return;
+  m.gmax = 0;
+  const old = m.preMax || Math.round(m.maxHp / GMAX_HP);
+  if (m.hp > 0) m.hp = Math.max(1, Math.min(old, Math.ceil(m.hp / GMAX_HP)));
+  m.maxHp = old;
+  if (!quiet && ev) ev.push({ t: 'gmaxEnd', side: s, mon: publicMon(m), text: `${josa(m.name, '은/는')} 원래 크기로 돌아왔다.` });
+}
 
 // 플레이어 선택을 받습니다. 양쪽이 다 정하면 턴을 처리하고 이벤트를 돌려줍니다.
 function choose(b, s, action) {
   const legal = legalActions(b, s);
-  if (!legal.some((a) => a.type === action?.type && a.index === action?.index)) return { ok: false };
+  const gmaxPick = action?.gmax && action.type === 'move' && canGmax(b, s) && Number.isInteger(action.index) && action.index >= 0 && action.index < 4; // 변신하는 턴엔 거다이 기술 칸에서 고름
+  if (!gmaxPick && !legal.some((a) => a.type === action?.type && a.index === action?.index)) return { ok: false };
+  if (action.gmax && (!gmaxPick || action.mega || action.z)) return { ok: false };
   if (b.pending[s]) return { ok: false };
   if (action.mega && (action.type !== 'move' || !canMega(b, s))) return { ok: false };
   if (action.z && (action.type !== 'move' || !canZ(b, s))) return { ok: false };
-  b.pending[s] = { type: action.type, index: action.index, mega: !!action.mega, z: !!action.z, target: action.target };
+  b.pending[s] = { type: action.type, index: action.index, mega: !!action.mega, z: !!action.z, gmax: !!action.gmax, target: action.target };
   const ready = seats(b).every((i) => !b.needs[i] || b.pending[i]);
   return ready ? { ok: true, events: resolve(b) } : { ok: true, events: null };
 }
@@ -232,6 +289,7 @@ function runTurn(b, ev) {
   if (b.training) b.dummy.turn = 0;
   const acts = seats(b).filter((s) => b.pending[s]).map((s) => ({ s, a: b.pending[s] }));
   for (const { s, a } of acts) if (a.mega) doMega(b, s, ev);
+  for (const { s, a } of acts) if (a.gmax) doGmax(b, s, ev);
   // 교체가 먼저
   for (const { s, a } of acts) if (a.type === 'switch') doSwitch(b, s, a.index, ev);
 
@@ -239,7 +297,7 @@ function runTurn(b, ev) {
   if (checkOver(b, ev)) { b.turn++; return; }
   const movers = acts.filter(({ a }) => a.type === 'move').map((o) => {
     const mon = activeOf(b, o.s);
-    const mv = o.a.z ? MOVES[MONSTERS[mon.species].z] : o.a.index === -1 ? STRUGGLE : MOVES[mon.moves[o.a.index].id];
+    const mv = o.a.z ? MOVES[MONSTERS[mon.species].z] : mon.gmax && o.a.index >= 0 ? gmaxMoves(mon)[o.a.index] : o.a.index === -1 ? STRUGGLE : MOVES[mon.moves[o.a.index].id];
     const ride = mon.species === 'bangpae' && mon.hp === mon.maxHp && mv.type === 'wind' ? 1 : 0; // 방패연 바람타기
     const rush = mon.species === 'baedalbot' && chance(b, 30) ? 1 : 0; // 배달봇 배달의민족
     if (rush) msg(ev, `${mon.name}의 배달의민족! 신호등을 건너뛰고 먼저 출발했다!`);
@@ -266,7 +324,7 @@ function trainingReset(b, ev) {
   if (d.turn > d.best) d.best = d.turn;
   ev.push({ t: 'dummy', turn: d.turn, total: d.total, best: d.best });
   const side = b.sides[0];
-  side.megaUsed = false; side.zUsed = false;
+  side.megaUsed = false; side.zUsed = false; side.gmaxUsed = false;
   side.mons.forEach((m, i) => {
     for (const x of m.moves) x.pp = MOVES[x.id].pp;
     if (m.hp < m.maxHp || m.status) {
@@ -363,6 +421,7 @@ function faintCheck(b, s, m, ev) {
   if (m.hp === 0 && !m.faintedShown) {
     m.faintedShown = true;
     m.status = null;
+    if (m.gmax) endGmax(b, s, m, null, true);
     ev.push({ t: 'faint', side: s, text: `${josa(m.name, '은/는')} 쓰러졌다!` });
     if (m.species === 'yeonji' && !m.markDone) { // 연지곤지: 공격 말고 다른 이유로 쓰러져도 상대에게 자국
       m.markDone = true;
@@ -377,13 +436,14 @@ function faintCheck(b, s, m, ev) {
 function publicMon(m) {
   return {
     species: m.species, slot: m.slot, name: m.name, types: m.types,
-    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega, thirst: m.thirst, blaze: m.blaze || 0, hits: m.hits || 0, strip: stripOf(m), tier: tierOf(m) || formOf(m) || (m.blaze > 0 ? 1 : 0),
+    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega, gmax: m.gmax || 0, thirst: m.thirst, blaze: m.blaze || 0, hits: m.hits || 0, strip: stripOf(m), tier: tierOf(m) || formOf(m) || (m.blaze > 0 ? 1 : 0),
   };
 }
 
 function doSwitch(b, s, idx, ev) {
   const side = b.sides[s];
   const out = activeOf(b, s);
+  if (out.gmax) endGmax(b, s, out, ev, true);
   if (alive(out)) {
     Object.assign(out, freshVolatile());
     ev.push({ t: 'recall', side: s, text: `${side.name}: ${out.name}, 돌아와!` });
@@ -614,9 +674,10 @@ function useMove(b, s, index, ev, want, z = false) {
 function useMoveCore(b, s, index, ev, want, z = false) {
   const o = targetOf(b, s, want);
   const me = activeOf(b, s);
-  const slot = z || index === -1 ? null : me.moves[index];
+  const gm = !z && me.gmax && index >= 0 ? gmaxMoves(me)[index] : null; // 거다이맥스 기술
+  const slot = z || gm || index === -1 ? null : me.moves[index];
   const zid = z ? MONSTERS[me.species].z : null;
-  let mv = z ? MOVES[zid] : slot ? MOVES[slot.id] : STRUGGLE;
+  let mv = z ? MOVES[zid] : gm || (slot ? MOVES[slot.id] : STRUGGLE);
   if (slot) mv = { ...mv, _id: slot.id };
 
   if (mv.tierPow) mv = { ...mv, pow: mv.pow + Math.min(tierOf(me), TIERS.base) * mv.tierPow }; // 강화 단계만큼 위력 증가 (네더라이트까지)
@@ -639,9 +700,9 @@ function useMoveCore(b, s, index, ev, want, z = false) {
   let fill = null;
   if (mv.split) fill = ['pat', 'cream', 'pizza'][Math.floor(rand(b) * 3)];
   ev.push({
-    t: 'move', side: s, target: o, fill, id: z ? zid : slot ? slot.id : 'struggle', move: mv.n, type: mv.type, cat: mv.cat, z,
+    t: 'move', side: s, target: o, fill, id: z ? zid : gm ? (gm.gmaxMove ? 'gmax' : 'dai') : slot ? slot.id : 'struggle', move: mv.n, type: mv.type, cat: mv.cat, z, gmax: gm ? (gm.gmaxMove ? 2 : 1) : 0,
     player: b.sides[s].name, mon: publicMon(me),
-    text: z ? `${josa(b.sides[s].name, '과/와')} ${me.name}의 Z기술! ${mv.n}!` : `${josa(me.name, '은/는')} ${josa(mv.n, '을/를')} 썼다!`,
+    text: z ? `${josa(b.sides[s].name, '과/와')} ${me.name}의 Z기술! ${mv.n}!` : gm?.gmaxMove ? `${me.name}의 거다이기술! ${mv.n}!` : `${josa(me.name, '은/는')} ${josa(mv.n, '을/를')} 썼다!`,
   });
 
   if (fill) {
@@ -1043,6 +1104,7 @@ function statusMove(b, s, me, o, foe, mv, ev) {
 }
 
 function endOfTurn(b, ev) {
+  for (const s of seats(b)) { const m = activeOf(b, s); if (m.gmax && alive(m)) { if (m.gmax > 1) m.gmax--; else endGmax(b, s, m, ev); } } // 거다이맥스 남은 턴
   // 가시복: 물리 공격을 안 받았으면 자기 가시에 찔림
   for (const s of seats(b)) {
     const m = activeOf(b, s), sp = m.spiky;
@@ -1201,6 +1263,8 @@ function viewFor(b, s) {
     noStone: !hasStone(b, s),
     trapped: b.phase === 'choose' && trapped(b, s),
     canZ: canZ(b, s) && !lock,
+    canGmax: canGmax(b, s) && !lock, gmaxUsed: !!me.gmaxUsed,
+    gmoves: b.phase === 'choose' && alive(activeOf(b, s)) ? gmaxMoves(activeOf(b, s)).map((x) => ({ n: x.n, type: x.type, cat: x.cat, pow: x.pow, d: x.d, g: !!x.gmaxMove })) : null,
     zUsed: !!me.zUsed,
     megaUsed: !!me.megaUsed,
     lead: preview && lock ? b.pending[s].index : null,
@@ -1373,6 +1437,13 @@ function botTarget(b, s, level) {
 function botAction(b, s, level = 1) {
   const o = botTarget(b, s, level);
   let a;
+  // 거다이맥스 중: 가장 아프게 들어가는 거다이·다이기술
+  if (b.phase === 'choose' && activeOf(b, s).gmax) {
+    const me = activeOf(b, s), foe = activeOf(b, o), gm = gmaxMoves(me);
+    let best = 0, bv = -1;
+    gm.forEach((mv, i) => { const v = rawDamage(b, me, foe, mv) * (level === 0 ? Math.random() + .5 : 1); if (v > bv) { bv = v; best = i; } });
+    return { type: 'move', index: best, ...(isDoubles(b) ? { target: o } : {}) };
+  }
   if (b.phase === 'preview' || level === 1) a = normalAction(b, s, o);
   else a = level === 0 ? easyAction(b, s) : smartAction(b, s, level, o);
   // 강화 용사: 체력이 넉넉하면 강화부터
@@ -1386,6 +1457,15 @@ function botAction(b, s, level = 1) {
     const me = activeOf(b, s), foe = activeOf(b, o);
     const dmg = rawDamage(b, me, foe, MOVES[MONSTERS[me.species].z]);
     if (dmg > 0 && (dmg >= foe.hp || (b.turn >= 3 && dmg >= foe.hp * .5 && chance(b, level >= 2 ? 60 : 35)))) a = { ...a, z: true };
+  }
+  // 거다이맥스: 판이 무르익거나 몰렸을 때 (메가·Z와 같은 턴은 안 함)
+  if (a && a.type === 'move' && level >= 1 && !a.z && !a.mega && canGmax(b, s) && !canMega(b, s)) {
+    const me = activeOf(b, s);
+    if ((b.turn >= 2 && chance(b, level >= 2 ? 35 : 20)) || me.hp < me.maxHp * .4) {
+      const foe = activeOf(b, o), gm = gmaxMoves(me);
+      let best = 0, bv = -1; gm.forEach((mv, i) => { const v = rawDamage(b, me, foe, mv); if (v > bv) { bv = v; best = i; } });
+      a = { type: 'move', index: best, gmax: true };
+    }
   }
   return a && a.type === 'move' && isDoubles(b) ? { ...a, target: o } : a;
 }
@@ -1449,5 +1529,5 @@ function botTeam(level, size, enemy = []) {
 }
 
 module.exports = {
-  createBattle, createTraining, DUMMY_HP, smartMoves, choose, speedOf, legalActions, viewFor, botAction, botTeam, forfeit, teamOf, canZ, calcStats, effOf, josa, activeOf, canMega,
+  createBattle, createTraining, DUMMY_HP, smartMoves, gmaxMoves, canGmax, choose, speedOf, legalActions, viewFor, botAction, botTeam, forfeit, teamOf, canZ, calcStats, effOf, josa, activeOf, canMega,
 };

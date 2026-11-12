@@ -817,3 +817,36 @@ test('같은 골목몬 여러 마리로 대전해도 끝까지 가고 서로 구
     assert.equal(b.phase, 'over');
   }
 });
+
+test('거다이맥스: 체력 1.5배, 거다이·다이기술 4칸, 3턴 뒤 원래대로, 한 판에 한 번', () => {
+  const b = E.createBattle([{ name: '가', team: E.botTeam(1, 3) }, { name: '나', team: E.botTeam(1, 3) }], 11, { preview: true });
+  E.choose(b, 0, { type: 'lead', index: 0 }); E.choose(b, 1, { type: 'lead', index: 0 });
+  const me = E.activeOf(b, 0), max = me.maxHp;
+  const v = E.viewFor(b, 0);
+  assert.equal(v.canGmax, true); assert.equal(v.gmoves.length, 4); assert.ok(v.gmoves[0].g); assert.ok(v.gmoves.slice(1).every((x) => x.n.startsWith('다이')));
+  assert.ok(E.choose(b, 0, { type: 'move', index: 0, gmax: true }).ok);
+  const ev = E.choose(b, 1, E.botAction(b, 1, 0)).events;
+  assert.ok(ev.some((e) => e.t === 'gmax'));
+  if (me.hp > 0) {
+    assert.equal(me.maxHp, Math.round(max * 1.5));
+    assert.ok(ev.some((e) => e.t === 'move' && e.side === 0 && e.gmax === 2));
+    assert.equal(E.viewFor(b, 0).canGmax, false); assert.equal(E.viewFor(b, 0).canZ, false);
+  }
+  let turns = 0;
+  while (b.phase !== 'over' && me.gmax && turns++ < 10) for (const s of [0, 1]) if (b.phase !== 'over' && b.needs[s] && !b.pending[s]) E.choose(b, s, E.botAction(b, s, 1));
+  assert.ok(!me.gmax); if (me.hp > 0) assert.equal(me.maxHp, max);
+});
+
+test('봇도 거다이맥스를 쓰고 판이 끝까지 간다', () => {
+  let used = 0;
+  for (let seed = 1; seed <= 40; seed++) {
+    const b = E.createBattle([{ name: '가', team: E.botTeam(2, 3) }, { name: '나', team: E.botTeam(2, 3) }], seed, { preview: true });
+    let guard = 0;
+    while (b.phase !== 'over' && ++guard < 3000) for (const s of [0, 1]) if (b.phase !== 'over' && b.needs[s] && !b.pending[s]) {
+      const a = E.botAction(b, s, 2); if (a.gmax) used++;
+      assert.ok(E.choose(b, s, a).ok);
+    }
+    assert.equal(b.phase, 'over');
+  }
+  assert.ok(used > 2, `거다이맥스 ${used}번`);
+});

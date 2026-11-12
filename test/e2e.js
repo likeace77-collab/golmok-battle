@@ -27,6 +27,8 @@ async function signup(ctx, name) {
   await page.click('form .btn');
   // 새 게임: 튜토리얼을 건너뛰고 첫 번째 스타터 덱을 고름
   await page.waitForSelector('#tu-skip');
+  await page.waitForTimeout(800);
+  if (await page.$('.got [data-x]')) await page.click('.got [data-x]'); // 접속 선물 창이 뜨면 닫기
   await page.click('#tu-skip');
   await page.waitForSelector('[data-st="0"]');
   await page.click('[data-st="0"]');

@@ -1,7 +1,7 @@
 // 배틀 화면과 연출
 const Battle = (() => {
   let view = null, disp = null, note = '', menu = 'moves', practice = false, training = false;
-  let queue = Promise.resolve(), playing = false, skip = null, armed = false;
+  let queue = Promise.resolve(), playing = false, skip = null, armed = false, gArmed = false;
   let spectating = false, tag = false, moveDraft = null, zLockTurn = -1;
   let trainers = {};
   const has3D = () => typeof Avatar3D !== 'undefined' && !!Avatar3D;
@@ -284,8 +284,8 @@ const Battle = (() => {
 
   function drawMon(key, m) {
     const box = $(`#m-${key}`);
-    box.className = `mon ${key}${m.mega ? ' mega' : ''}${auraClass(m)}`;
-    box.innerHTML = monsterSVG(m.species, '', m.mega, m.hits, m.tier);
+    box.className = `mon ${key}${m.mega ? ' mega' : ''}${m.gmax ? ' giant' : ''}${auraClass(m)}`;
+    box.innerHTML = m.gmax ? gmaxSVG(m.species) : monsterSVG(m.species, '', m.mega, m.hits, m.tier);
   }
 
   const dispMon = (key) => (key === 'me' ? mine() : seatOf(key).active);
@@ -358,6 +358,7 @@ const Battle = (() => {
       case 'msg': await wait(850); break;
       case 'move':
         if (e.z) { await zCinematic(e, key); break; }
+        if (e.gmax === 2) { const sc = document.querySelector('.scene'); sc?.classList.add('gmax-quake'); setTimeout(() => sc?.classList.remove('gmax-quake'), 900); }
         trainer(key)?.play('command');
         await wait(Math.max(760, Fx.play(e.id, key, sideKey(e.target), e)));
         break;
@@ -422,6 +423,22 @@ const Battle = (() => {
         if (AWAKEN[e.mon.species]) Fx.entrance(key, e.mon.species);
         await wait(900); break;
       }
+      case 'gmax': { // 거다이맥스: 화면이 흔들리며 거대해짐
+        trainer(key)?.play('mega', { dur: 2 });
+        const sc = document.querySelector('.scene'); sc?.classList.add('gmax-quake');
+        Fx.megaStart(key);
+        await wait(900);
+        putMon(key, e.mon); drawMon(key, dispMon(key)); drawPlate(key, dispMon(key));
+        $(`#m-${key}`)?.classList.add('grow');
+        Fx.megaEnd(key);
+        await wait(1100);
+        sc?.classList.remove('gmax-quake'); $(`#m-${key}`)?.classList.remove('grow');
+        break;
+      }
+      case 'gmaxEnd':
+        putMon(key, e.mon); drawMon(key, dispMon(key)); drawPlate(key, dispMon(key));
+        $(`#m-${key}`)?.classList.add('shrink'); await wait(700); $(`#m-${key}`)?.classList.remove('shrink');
+        break;
       case 'mega': {
         trainer(key)?.play('mega', { dur: 2 });
         Fx.megaStart(key);
@@ -545,7 +562,7 @@ const Battle = (() => {
       view = m.view; disp = cloneView(view);
       syncAll();
       setClock(m.remain);
-      menu = 'moves'; armed = false;
+      menu = 'moves'; armed = false; gArmed = false;
       renderPanel();
     }).catch((err) => { console.error(err); playing = false; });
   }
@@ -648,7 +665,7 @@ const Battle = (() => {
     if (playing) return;
     if (view?.phase === 'preview') renderPreview(); else renderPanel();
   }
-  const act = (action) => { armed = false; wsSend({ t: 'action', action }); $('#panel').innerHTML = '<p class="wait">기다리는 중...</p>'; };
+  const act = (action) => { armed = false; gArmed = false; wsSend({ t: 'action', action }); $('#panel').innerHTML = '<p class="wait">기다리는 중...</p>'; };
 
   const effOn = (mv, mon) => (mon.species === 'bonaeng' && mv.type === 'fire' ? 1 : mon.types.reduce((x, t) => x * (G.data.CHART[mv.type][t] ?? 1), 1)); // 보냉이 아이스박스
   function effHint(mv) {
@@ -678,10 +695,13 @@ const Battle = (() => {
     if (menu === 'target') return renderTarget(panel);
 
     const cur = view.me.mons[view.me.active];
-    say(armed ? `메가진화! ${cur.name}의 기술을 고르세요.` : note || `${cur.name}, 뭘 할까?`);
-    const noPP = cur.moves.every((x) => x.pp <= 0 || x.off);
-    panel.innerHTML = `<div class="moves ${cur.moves.length > 4 ? 'ten' : ''}">
-      ${noPP ? `<button class="mb" data-mv="-1" style="--tc:${G.data.TYPES.none.c}"><b>악쓰기</b><small>기술을 다 써서 몸으로 부딪힌다</small></button>`
+    const giant = cur.gmax > 0 || gArmed; // 거다이맥스 중이거나 이번 턴에 할 거면 거다이·다이기술 4칸
+    say(gArmed ? `거다이맥스! ${cur.name}의 거다이 기술을 고르세요.` : cur.gmax ? `거다이맥스 ${cur.name}! (남은 턴 ${cur.gmax})` : armed ? `메가진화! ${cur.name}의 기술을 고르세요.` : note || `${cur.name}, 뭘 할까?`);
+    const noPP = !giant && cur.moves.every((x) => x.pp <= 0 || x.off);
+    panel.innerHTML = `<div class="moves ${giant ? 'giant' : cur.moves.length > 4 ? 'ten' : ''}">
+      ${giant && view.gmoves ? view.gmoves.map((mv, i) => `<button class="mb gx ${mv.g ? 'gx-g' : ''} ${['elec', 'ice', 'wind', 'none'].includes(mv.type) ? 'dark' : ''}" data-gmv="${i}" style="--tc:${G.data.TYPES[mv.type].c}">
+            <b>${mv.g ? '★ ' : ''}${mv.n}</b><small>${G.data.TYPES[mv.type].n}, 위력 ${mv.pow}${mv.g ? ' · 거다이기술' : ' · 다이기술'}</small><small class="eff">${mv.d}</small></button>`).join('')
+        : noPP ? `<button class="mb" data-mv="-1" style="--tc:${G.data.TYPES.none.c}"><b>악쓰기</b><small>기술을 다 써서 몸으로 부딪힌다</small></button>`
         : cur.moves.map((x, i) => {
           const mv = G.data.MOVES[x.id];
           const dark = ['elec', 'ice', 'wind', 'none'].includes(mv.type);
@@ -693,9 +713,10 @@ const Battle = (() => {
         }).join('')}
       </div>
       <div class="bar-actions">
-        <button class="btn mega ${armed ? 'on' : ''}" id="to-mega" ${view.canMega ? '' : 'disabled'} aria-pressed="${armed}">${view.megaUsed ? '메가 사용함' : armed ? '메가 취소' : view.noStone && !view.megaUsed ? '메가스톤 없음' : '메가진화'}</button>
-        <button class="btn zbtn" id="to-z" ${view.canZ && zLockTurn !== view.turn ? '' : 'disabled'}>${view.zUsed ? 'Z 사용함' : zLockTurn === view.turn ? '다음 턴에' : 'Z기술'}<small>${G.data.MOVES[G.data.MONSTERS[cur.species].z].n}</small></button>
-        <button class="btn paper" id="to-sw" ${armed ? 'disabled' : ''}>교체</button>
+        <button class="btn gmaxbtn ${gArmed ? 'on' : ''}" id="to-gmax" ${view.canGmax && !armed ? '' : 'disabled'} aria-pressed="${gArmed}">${cur.gmax ? `거다이 ${cur.gmax}턴` : view.gmaxUsed ? '거다이 사용함' : gArmed ? '거다이 취소' : '거다이맥스'}</button>
+        <button class="btn mega ${armed ? 'on' : ''}" id="to-mega" ${view.canMega && !gArmed ? '' : 'disabled'} aria-pressed="${armed}">${view.megaUsed ? '메가 사용함' : armed ? '메가 취소' : view.noStone && !view.megaUsed ? '메가스톤 없음' : '메가진화'}</button>
+        <button class="btn zbtn" id="to-z" ${view.canZ && !gArmed && zLockTurn !== view.turn ? '' : 'disabled'}>${view.zUsed ? 'Z 사용함' : zLockTurn === view.turn ? '다음 턴에' : 'Z기술'}<small>${G.data.MOVES[G.data.MONSTERS[cur.species].z].n}</small></button>
+        <button class="btn paper" id="to-sw" ${armed || gArmed ? 'disabled' : ''}>교체</button>
         <button class="btn paper" id="ff">${tag || training ? '나가기' : '기권'}</button>
       </div>`;
     panel.querySelectorAll('[data-mv]').forEach((b) => {
@@ -713,6 +734,14 @@ const Battle = (() => {
       };
     });
     panel.querySelector('#to-mega').onclick = () => { armed = !armed; renderPanel(); };
+    panel.querySelector('#to-gmax').onclick = () => { gArmed = !gArmed; renderPanel(); };
+    panel.querySelectorAll('[data-gmv]').forEach((b) => {
+      b.onclick = () => {
+        const index = +b.dataset.gmv, live = liveOpps(), mv = view.gmoves[index], gmax = gArmed;
+        if (view.doubles && live.length > 1) { moveDraft = { index, mv, gmax }; menu = 'target'; return renderPanel(); }
+        act({ type: 'move', index, ...(gmax ? { gmax: true } : {}), target: live[0]?.seat });
+      };
+    });
     panel.querySelector('#to-z').onclick = async () => {
       const zid = G.data.MONSTERS[cur.species].z, zmv = G.data.MOVES[zid];
       const ok = await ZMission.run({ moveName: zmv.n, monName: cur.name, color: G.data.TYPES[zmv.type].c });
@@ -740,7 +769,7 @@ const Battle = (() => {
           <small>${esc(o.name)}${eff === 0 ? ', 효과 없음' : eff !== 1 ? `, 상성 ${eff}배` : ''}</small></div></button>`;
     }).join('')}<button class="btn paper wide" id="tg-back">기술 고르기로 돌아가기</button>`;
     panel.querySelectorAll('[data-tg]').forEach((b) => {
-      b.onclick = () => { menu = 'moves'; act({ type: 'move', index: moveDraft.index, mega: moveDraft.mega, z: !!moveDraft.z, target: +b.dataset.tg }); };
+      b.onclick = () => { menu = 'moves'; act({ type: 'move', index: moveDraft.index, mega: moveDraft.mega, z: !!moveDraft.z, ...(moveDraft.gmax ? { gmax: true } : {}), target: +b.dataset.tg }); };
     });
     panel.querySelector('#tg-back').onclick = () => { menu = 'moves'; renderPanel(); };
   }
