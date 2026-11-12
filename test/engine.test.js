@@ -834,7 +834,7 @@ test('거다이맥스: 체력 1.5배, 거다이·다이기술 4칸, 5턴 뒤 원
   }
   let turns = 0;
   while (b.phase !== 'over' && me.gmax && turns++ < 10) for (const s of [0, 1]) if (b.phase !== 'over' && b.needs[s] && !b.pending[s]) E.choose(b, s, E.botAction(b, s, 1));
-  assert.ok(!me.gmax); if (me.hp > 0) assert.equal(me.maxHp, max);
+  if (b.phase !== 'over') { assert.ok(!me.gmax); if (me.hp > 0) assert.equal(me.maxHp, max); } // 거다이맥스 중에 판이 끝날 수도 있음
 });
 
 test('봇도 거다이맥스를 쓰고 판이 끝까지 간다', () => {
