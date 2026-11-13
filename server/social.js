@@ -87,20 +87,54 @@ const isFriend = (a, b) => !!userOf(a)?.friends?.includes(b);
 
 /* ---------- 길드 ---------- */
 function guildBook(g) {
+  settleWar();
   if (g.week?.id !== weekKey()) g.week = { id: weekKey(), prog: {}, contrib: {}, claimed: {} };
   return g.week;
+}
+
+/* ---------- 길드전: 한 주 동안 길드원들이 이긴 만큼 점수 (친구 대전 3, 태그전 2, 연습·던전 1) ----------
+   주가 바뀌면 1~3위 길드의 (그 주에 한 판 이상 한) 길드원에게 보상, 다음 주 동안 문장에 왕관 테두리 */
+const WAR_PTS = { pvp: 3, tag: 2, practice: 1 };
+const WAR_R = [{ gpt: 500, gp: 10000, tickets: 1 }, { gpt: 300, gp: 6000 }, { gpt: 200, gp: 4000 }];
+let warChecked = '';
+function settleWar() {
+  const now = weekKey();
+  if (warChecked === now) return;
+  warChecked = now;
+  db.war ||= { week: now, last: null };
+  if (db.war.week === now) return;
+  const prev = db.war.week;
+  const rows = Object.values(db.guilds).filter((g) => g.week?.id === prev && (g.week.war || 0) > 0).sort((a, b) => b.week.war - a.week.war).slice(0, 3);
+  rows.forEach((g, i) => {
+    g.champ = { week: now, rank: i + 1 };
+    for (const k of g.members) {
+      const u = userOf(k); if (!u || !(g.week.contrib[k] > 0)) continue;
+      H.grant(u, WAR_R[i]);
+      H.sendMail(u, { from: '골목대전 길드전', title: `⚔️ 길드전 ${i + 1}위! 「${g.name}」`, body: `지난주 길드전에서 ${i + 1}위를 했어요! 보상(${WAR_R[i].gpt}길P, ${WAR_R[i].gp.toLocaleString('ko-KR')}GP${WAR_R[i].tickets ? ', 입수권 1장' : ''})이 지갑에 들어왔어요. 이번 주 동안 길드 문장에 왕관 테두리가 빛나요.` });
+    }
+    sysChat(`g:${g.id}`, `👑 지난주 길드전 ${i + 1}위! 보상이 들어왔어요.`);
+  });
+  for (const g of Object.values(db.guilds)) if (g.champ && g.champ.week !== now) delete g.champ;
+  db.war = { week: now, last: { week: prev, top: rows.map((g, i) => ({ id: g.id, name: g.name, emblem: g.emblem, color: g.color, score: g.week.war, rank: i + 1 })) } };
+}
+function warView(key) {
+  const now = weekKey(), mine = userOf(key)?.guild;
+  const rows = Object.values(db.guilds).map((g) => ({ id: g.id, name: g.name, emblem: g.emblem, color: g.color, champ: g.champ?.rank || 0, score: g.week?.id === now ? g.week.war || 0 : 0, members: g.members.length }))
+    .sort((a, b) => b.score - a.score || b.members - a.members);
+  const myRank = rows.findIndex((r) => r.id === mine) + 1;
+  return { top: rows.slice(0, 10), myRank, mine: rows.find((r) => r.id === mine) || null, last: db.war?.last || null, pts: WAR_PTS, rewards: WAR_R, ends: Date.parse(`${now}T00:00:00+09:00`) + 7 * DAY };
 }
 function guildView(g, key) {
   const w = guildBook(g);
   const mine = w.contrib[key] || 0;
   return {
-    id: g.id, name: g.name, emblem: g.emblem, color: g.color, intro: g.intro, leader: g.leader, vices: g.vices || [], viceMax: VICE_MAX, createdAt: g.createdAt, max: GUILD_MAX, gpt: userOf(key)?.gpt || 0, pass: gpassState(g, userOf(key)),
+    id: g.id, champ: g.champ?.rank || 0, name: g.name, emblem: g.emblem, color: g.color, intro: g.intro, leader: g.leader, vices: g.vices || [], viceMax: VICE_MAX, createdAt: g.createdAt, max: GUILD_MAX, gpt: userOf(key)?.gpt || 0, pass: gpassState(g, userOf(key)),
     members: g.members.map((k) => ({ ...card(k), contrib: w.contrib[k] || 0 })).filter((x) => x.name).sort((a, b) => (b.key === g.leader) - (a.key === g.leader) || b.online - a.online || b.contrib - a.contrib),
     quests: GUILD_QUESTS.map((q) => { const v = Math.min(q.goal, w.prog[q.k] || 0); const got = (w.claimed[key] || []).includes(q.id); return { ...q, v, done: v >= q.goal, got, can: v >= q.goal && !got && mine > 0 }; }),
     myContrib: mine, weekEnds: Date.parse(`${weekKey()}T00:00:00+09:00`) + 7 * DAY,
   };
 }
-const guildList = () => Object.values(db.guilds).map((g) => ({ id: g.id, name: g.name, emblem: g.emblem, color: g.color, intro: g.intro, count: g.members.length, max: GUILD_MAX, leader: nameOf(g.leader), online: g.members.filter((k) => H.online.has(k)).length }))
+const guildList = () => Object.values(db.guilds).map((g) => ({ id: g.id, champ: g.champ?.rank || 0, name: g.name, emblem: g.emblem, color: g.color, intro: g.intro, count: g.members.length, max: GUILD_MAX, leader: nameOf(g.leader), online: g.members.filter((k) => H.online.has(k)).length }))
   .sort((a, b) => b.online - a.online || b.count - a.count);
 // 길드 설명: 길이 제한 없음, 줄바꿈 유지 (빈 줄은 최대 1줄)
 const cleanIntro = (s) => String(s || '').replace(/\r\n?/g, '\n').replace(/[\u0000-\u0009\u000b-\u001f]/g, '').replace(/\n{3,}/g, '\n\n').trim();
@@ -197,6 +231,7 @@ function afterBattle(key, { won, mega, mates = [], foes = [], kind }) {
   setTimeout(() => { const after = GUILD_QUESTS.filter((q) => (w.prog[q.k] || 0) >= q.goal).length; if (after > before) { addGpass(g, 150 * (after - before)); sysChat(`g:${g.id}`, `🎉 협업 퀘스트 달성! 길드 패스 +${150 * (after - before)}`); H.save(); } }, 0);
   w.contrib[key] = (w.contrib[key] || 0) + 1;
   w.prog.games = (w.prog.games || 0) + 1;
+  if (won) w.war = (w.war || 0) + (WAR_PTS[kind] || 1); // 길드전 점수
   if (won) w.prog.wins = (w.prog.wins || 0) + 1;
   if (mega) w.prog.megas = (w.prog.megas || 0) + 1;
   if (kind === 'tag' && won && mates.some((m) => userOf(m)?.guild === g.id)) w.prog.mateWins = (w.prog.mateWins || 0) + 0.5; // 같은 팀 두 사람 모두 불리므로 반씩
@@ -359,6 +394,7 @@ function socialView(u, key) {
     reqIn: u.freq.in.map(card).filter(Boolean), reqOut: u.freq.out.map(card).filter(Boolean),
     guild: g ? guildView(g, key) : null, guilds: g ? [] : guildList(), emblems: EMBLEMS, colors: COLORS, guildGp: GUILD_GP,
     trades: tradeView(key),
+    war: g ? (guildBook(g), warView(key)) : null,
   };
 }
 

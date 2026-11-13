@@ -112,7 +112,7 @@ async function showTrade(fk, back) {
 }
 
 /* ---------- 길드 ---------- */
-const emblemTag = (g, big) => `<span class="gd-emb${big ? ' big' : ''}" style="--gc:${g.color}">${g.emblem}</span>`;
+const emblemTag = (g, big) => `<span class="gd-emb${big ? ' big' : ''}${g.champ ? ` champ champ-${g.champ}` : ''}" style="--gc:${g.color}">${g.emblem}${g.champ ? `<i class="gd-crown">${['', '👑', '🥈', '🥉'][g.champ]}</i>` : ''}</span>`;
 async function showGuild(back = showLobby) {
   G.screen = 'guild'; app.className = '';
   app.innerHTML = `${topbar('길드')}<p class="wait">불러오는 중…</p>`;
@@ -154,6 +154,7 @@ async function showGuild(back = showLobby) {
     <div class="gd-acts"><button class="btn" id="gd-chat">💬 길드 채팅${Social.unread.guild ? ` <em class="mailbadge">${Social.unread.guild}</em>` : ''}</button>${lead ? '<button class="btn paper" id="gd-edit">✏️ 꾸미기</button>' : ''}<button class="btn paper" id="gd-leave">나가기</button></div>
     <div class="gd-big"><button class="gd-tile pass" id="gd-pass"><span>🎫</span><b>길드 패스</b><small>Lv ${g.pass.lv} / ${g.pass.max}</small>${passCan ? `<em class="mailbadge">${passCan}</em>` : ''}</button>
       <button class="gd-tile shop" id="gd-shop"><span>🛍️</span><b>길드 상점</b><small>${ICON.gpt(14)} ${fmt(g.gpt)} 길P</small></button></div>
+    ${warBox(v.war, g.id)}
     <section class="panel"><h2>🤝 협업 퀘스트 <small class="muted">${days}일 ${hrs}시간 뒤 초기화</small></h2>
       <p class="muted" style="font-size:13px;margin-bottom:6px">길드원 모두의 대전이 합쳐져요. 목표를 채우면 <b>이번 주에 한 판이라도 한 길드원</b>이 각자 보상을 받아요.</p>
       ${g.quests.map((q) => `<div class="quest ${q.got ? 'got' : ''}"><div class="qt"><b>${esc(q.n)}</b>${rewardChips(q.r)}<div class="qbar"><i style="width:${(q.v / q.goal) * 100}%"></i><span>${Math.floor(q.v)} / ${q.goal}</span></div></div>
@@ -187,6 +188,19 @@ async function showGuild(back = showLobby) {
       closeSheet(); act('/api/guild/edit', { intro: e.target.intro.value, emblem: pick('emblem'), color: pick('color') });
     };
   });
+}
+
+/* ---------- 길드전 ---------- */
+function warBox(w, myId) {
+  if (!w) return '';
+  const left = Math.max(0, w.ends - Date.now()), d = Math.floor(left / 864e5), h = Math.floor((left % 864e5) / 36e5);
+  return `<section class="panel war"><h2>⚔️ 길드전 <small class="muted">${d}일 ${h}시간 뒤 정산</small></h2>
+    <p class="muted" style="font-size:12px;margin-bottom:6px">이번 주 길드원들이 이긴 만큼 점수: 친구 대전 ${w.pts.pvp} · 태그전 ${w.pts.tag} · 연습·던전 ${w.pts.practice}. 1~3위 길드의 (한 판 이상 한) 길드원 모두 보상 + 다음 주 문장에 왕관!</p>
+    <div class="war-rw">${w.rewards.map((r, i) => `<div><b>${['🥇', '🥈', '🥉'][i]} ${i + 1}위</b>${rewardChips(r)}</div>`).join('')}</div>
+    ${w.top.map((r, i) => `<div class="war-row ${r.id === myId ? 'me' : ''}"><b class="rk-n">${i + 1}</b>${emblemTag(r)}<div class="rk-who"><b>${esc(r.name)}</b><small>${r.members}명</small></div><span class="war-score">${r.score}점</span></div>`).join('')}
+    ${w.myRank > 10 ? `<div class="war-row me"><b class="rk-n">${w.myRank}</b>${emblemTag(w.mine)}<div class="rk-who"><b>${esc(w.mine.name)}</b></div><span class="war-score">${w.mine.score}점</span></div>` : ''}
+    ${w.last?.top?.length ? `<p class="muted" style="font-size:12px;margin-top:8px">지난주 우승: ${w.last.top.map((t) => `${['🥇', '🥈', '🥉'][t.rank - 1]} ${esc(t.name)} (${t.score}점)`).join(' · ')}</p>` : ''}
+  </section>`;
 }
 
 /* ---------- 길드 패스 ---------- */

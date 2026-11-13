@@ -1637,3 +1637,10 @@ svg[data-shiny] { filter: hue-rotate(var(--shue)) saturate(1.35) brightness(1.05
 .dg-week { display: grid; grid-template-columns: 24px 30px 1fr; gap: 6px; align-items: center; padding: 6px 4px; border-top: 2px dashed #1a143320; } .dg-week:first-of-type { border-top: 0; }
 .dg-week > div { display: grid; } .dg-week small { font-size: 12px; color: #6b6380; } .dg-week span { font-size: 20px; } .dg-week.on { background: #fff3b0; border-radius: 10px; }
 .dg-floor .rw, .dg-clear .rw { font-size: 12px; padding: 1px 6px; } .dg-floor .rw svg, .dg-clear .rw svg { width: 14px; height: 14px; }
+/* 길드전 */
+.war-rw { display: grid; gap: 4px; margin-bottom: 8px; } .war-rw > div { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; } .war-rw b { width: 64px; font-size: 13px; }
+.war-rw .rw { font-size: 12px; padding: 1px 6px; } .war-rw .rw svg { width: 14px; height: 14px; }
+.war-row { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-top: 2px dashed #1a143320; } .war-row.me { background: #fff3b0; border-radius: 10px; }
+.war-row .gd-emb { width: 34px; height: 34px; font-size: 18px; } .war-score { font: 900 15px var(--ui); }
+.gd-emb.champ { box-shadow: 0 0 0 3px #FFD23F, 0 0 14px #ffd23f, 2px 2px 0 var(--ink); } .gd-emb.champ-2 { box-shadow: 0 0 0 3px #c3ccd8, 0 0 10px #fff, 2px 2px 0 var(--ink); } .gd-emb.champ-3 { box-shadow: 0 0 0 3px #c8873a, 0 0 10px #ffb347, 2px 2px 0 var(--ink); }
+.gd-crown { position: absolute; top: -12px; right: -8px; font-style: normal; font-size: 16px; filter: drop-shadow(0 0 3px #fff); }
