@@ -1523,7 +1523,7 @@ button.ev-card h2 { margin: 6px 0 2px; font-size: 24px; } button.ev-card p { mar
 /* 이로치 */
 svg[data-shiny] { filter: hue-rotate(var(--shue)) saturate(1.35) brightness(1.05); animation: shinyGlow 2.4s ease-in-out infinite; }
 @keyframes shinyGlow { 0%, 100% { filter: hue-rotate(var(--shue)) saturate(1.35) brightness(1.05) drop-shadow(0 0 0 #fff0); } 50% { filter: hue-rotate(var(--shue)) saturate(1.5) brightness(1.15) drop-shadow(0 0 6px #fff); } }
-.is-shiny { position: relative; }
+.is-shiny { position: relative; } .mon.is-shiny { position: absolute; } /* 대전 화면 골목몬은 제자리 유지 */
 .is-shiny::after { content: '✦  ✧    ✦\A   ✧  ✦  ✧\A ✦    ✧  ✦'; white-space: pre; position: absolute; inset: 8% 6% auto; text-align: center; font-size: 13px; line-height: 1.9; color: #fff; text-shadow: 0 0 4px #ffe680, 0 0 8px #ffd23f; pointer-events: none; animation: shinyTwinkle 1.6s steps(2) infinite; z-index: 2; }
 @keyframes shinyTwinkle { 50% { opacity: .35; transform: translateY(-2px); } }
 .shiny-tag { position: absolute; top: 6px; left: 6px; z-index: 3; font-style: normal; font: 11px var(--ui); color: #1a1433; padding: 1px 8px; background: linear-gradient(90deg, #fff6b0, #ffd23f, #ffb0e6, #b0f0ff); background-size: 200% 100%; border: 2px solid var(--ink); border-radius: 99px; box-shadow: 0 0 8px #ffd23f; animation: ttFlow 2s linear infinite; }
