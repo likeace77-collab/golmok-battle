@@ -850,3 +850,24 @@ test('봇도 거다이맥스를 쓰고 판이 끝까지 간다', () => {
   }
   assert.ok(used > 0, `거다이맥스 ${used}번`);
 });
+
+test('레이드: 4명 대 보스 1마리, 보스는 거다이맥스 유지·광역 공격, 제한 턴 안에 끝난다', () => {
+  for (const mode of ['gmax', 'dark']) for (let seed = 1; seed <= 12; seed++) {
+    const players = [0, 1, 2, 3].map((i) => ({ name: `p${i}`, team: E.botTeam(2, 3) }));
+    players.push({ name: 'boss', team: [{ species: 'daeya', moves: E.smartMoves('daeya', []), plus: 5 }] });
+    const b = E.createBattle(players, seed, { preview: true, raid: mode === 'gmax' ? { gmax: true, hpMul: 17 } : { mega: true, dark: true, hpMul: 19 } });
+    const boss = E.activeOf(b, 4);
+    assert.equal(E.teamOf(b, 0), E.teamOf(b, 3)); assert.notEqual(E.teamOf(b, 0), E.teamOf(b, 4));
+    if (mode === 'gmax') assert.ok(boss.gmax > 100); else { assert.ok(boss.mega); assert.ok(boss.name.startsWith('흑화')); }
+    const v = E.viewFor(b, 0); assert.equal(v.allies.length, 3); assert.equal(v.opps.length, 1); assert.ok(v.raid);
+    let guard = 0, spread = false;
+    while (b.phase !== 'over' && ++guard < 3000) for (let s = 0; s < 5; s++) if (b.phase !== 'over' && b.needs[s] && !b.pending[s]) {
+      const r = E.choose(b, s, E.botAction(b, s, 2));
+      assert.ok(r.ok);
+      if (r.events?.some((e) => e.t === 'msg' && e.text === '상대 모두를 공격했다!')) spread = true;
+    }
+    assert.equal(b.phase, 'over'); assert.ok(b.turn <= 16);
+    if (mode === 'gmax' && boss.hp > 0) assert.ok(boss.gmax > 0);
+    assert.ok(spread || b.turn < 3);
+  }
+});

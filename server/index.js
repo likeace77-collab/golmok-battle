@@ -10,6 +10,7 @@ const P = require('./progress');
 const S = require('./social'); // 친구·길드·채팅·협업 퀘스트
 const R = require('./rank'); // 랭크전
 const DG = require('./dungeon'); // 이벤트 던전
+const RD = require('./raid'); // 레이드·흑화 메가배틀
 
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -583,6 +584,7 @@ async function progressApi(req, res, route, auth, user) {
   { const sr = S.api(route, user, auth.key, body); if (sr !== undefined) return done(sr); }
   if (route === 'POST /api/coupon') return done(useCoupon(user, body.code));
   if (route === 'GET /api/scout') return json(res, 200, { scout: P.scoutState(user), user: publicUser(user) });
+  if (route === 'GET /api/raid') return done({ ok: true }, { raid: raidView(auth.key) });
   if (route === 'GET /api/dungeon') return done({ ok: true }, { dungeon: DG.view(user) });
   if (route === 'GET /api/rank') { const v = R.view(user); return done({ ok: true }, { rank: v, board: R.board(db.users, v.season), queued: rankQ.has(auth.key) }); }
   if (route === 'GET /api/expe') return done({ ok: true }, { expe: P.expeState(user) });
@@ -834,7 +836,7 @@ function clearChallenges(key) {
 }
 
 const BOT = 'bot';
-const isPractice = (room) => !room.tag && room.keys.includes(BOT);
+const isPractice = (room) => !room.tag && !room.raid && room.keys.includes(BOT);
 const BOT_LEVELS = ['쉬움', '보통', '어려움', '지옥'];
 
 // 훈련장: 더미와 1대1. 시간 제한, 승패, 기록 없음. 더미에게 준 피해만 쌓입니다.
@@ -872,7 +874,10 @@ function startBattle(keys, size, level = 1, tag = false, ranked = false, dungeon
     ? (dungeon ? { name: `${dungeon.rule.icon} ${dungeon.floor + 1}층 골목대장`, avatar: randomAvatar(true), style: randomStyle(), deck: dungeon.rule.n, team: DG.foeTeam(dungeon.rule, dungeon.floor, foeDeck(i)), ...(dungeon.rule.noMega ? { stones: [] } : {}) }
       : { name: `골목대장(${BOT_LEVELS[level]})`, avatar: randomAvatar(true), style: randomStyle(), deck: `${BOT_LEVELS[level]} 덱`, team: E.botTeam(level, size, foeDeck(i)) })
     : { name: db.users[k].name, avatar: db.users[k].avatar, style: db.users[k].style, deck: deckOf(db.users[k]).name, team: battleTeam(db.users[k]).slice(0, size), stones: dungeon?.rule.noMega ? [] : db.users[k].stones }));
-  const room = { id: crypto.randomUUID(), keys, b: E.createBattle(players, undefined, { preview: true }), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: level, tag, ranked, dungeon, spectators: new Set() };
+  openRoom({ id: crypto.randomUUID(), keys, b: E.createBattle(players, undefined, { preview: true }), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: level, tag, ranked, dungeon, spectators: new Set() });
+}
+function openRoom(room) {
+  const { keys } = room;
   battles.set(room.id, room);
   keys.forEach((k) => { if (k !== BOT) { inBattle.set(k, room); clearChallenges(k); removeFromTag(k); stopWatching(k); } });
   armTimer(room);
@@ -936,8 +941,8 @@ function dissolve(room) {
 function onLeaveTimeout(room, key) {
   if (room.ended || online.has(key)) return;
   const s = room.keys.indexOf(key);
-  if (!room.tag && !online.has(room.keys[1 - s])) return dissolve(room); // 둘 다 나갔으면 무효
-  if (room.tag) return seatToBot(room, key, '대전을 나가서 골목대장이 자리를 맡았습니다.');
+  if (!room.tag && !room.raid && !online.has(room.keys[1 - s])) return dissolve(room); // 둘 다 나갔으면 무효
+  if (room.tag || room.raid) return seatToBot(room, key, '대전을 나가서 골목대장이 자리를 맡았습니다.');
   notices.set(key, '대전을 나가서 패배 처리되었습니다.');
   afterTurn(room, E.forfeit(room.b, s, true));
 }
@@ -960,7 +965,7 @@ function apply(room, s, action) {
   if (!r.ok) { toast(room.keys[s], '지금은 할 수 없는 행동입니다.'); return; }
   if (!r.events) {
     send(online.get(room.keys[s]), { t: 'chosen', view: E.viewFor(room.b, s) });
-    if (!room.tag && room.keys[1 - s] !== BOT) send(online.get(room.keys[1 - s]), { t: 'opp_ready' });
+    if (!room.tag && !room.raid && room.keys[1 - s] !== BOT) send(online.get(room.keys[1 - s]), { t: 'opp_ready' });
     pumpBot(room);
     return;
   }
@@ -1003,11 +1008,12 @@ function finish(room) {
     const won = winner !== null && E.teamOf(room.b, s) === winner;
     // ez: 기권승이 아니고, 내 골목몬이 한 마리도 쓰러지지 않은 승리
     if (won && !room.b.forfeited && room.b.sides[s].mons.every((m) => m.hp > 0)) st.flawless++;
-    if (room.tag) { st.tagGames++; if (won) st.tagWins++; }
+    if (room.raid) raidResult(room, k, won);
+    else if (room.tag) { st.tagGames++; if (won) st.tagWins++; }
     else if (!pvp && won) { st[`p${room.botLevel}`]++; st.botWins++; }
-    const pts = P.afterBattle(db.users[k], room.tag ? 'tag' : pvp ? 'pvp' : 'practice', won, room.b.sides[s]);
+    const pts = P.afterBattle(db.users[k], room.tag || room.raid ? 'tag' : pvp ? 'pvp' : 'practice', won, room.b.sides[s]);
     { const team = E.teamOf(room.b, s); const mates = humans.filter(([k2, s2]) => k2 !== k && E.teamOf(room.b, s2) === team).map(([k2]) => k2), foes = humans.filter(([, s2]) => E.teamOf(room.b, s2) !== team).map(([k2]) => k2);
-      S.afterBattle(k, { won, mega: !!room.b.sides[s].megaUsed, mates, foes, kind: room.tag ? 'tag' : pvp ? 'pvp' : 'practice' }); }
+      S.afterBattle(k, { won, mega: !!room.b.sides[s].megaUsed, mates, foes, kind: room.tag || room.raid ? 'tag' : pvp ? 'pvp' : 'practice' }); }
     if (pts) { if (online.has(k)) toast(k, `시즌 패스 포인트 +${pts}`); else notices.set(k, [notices.get(k), `시즌 패스 포인트 +${pts}`].filter(Boolean).join(' · ')); }
     if (room.dungeon) {
       const dr = DG.result(db.users[k], room.dungeon.floor, won, P.grant);
@@ -1031,14 +1037,80 @@ function finish(room) {
       l.stats.streak = 0;
     }
   }
+  if (room.raid && winner === 0) raidTarget(room);
   save();
   humans.forEach(([k]) => send(online.get(k), { t: 'me', user: publicUser(db.users[k]) }));
   dissolve(room);
 }
 
+/* ---------- 레이드 대기실 ---------- */
+const raidRooms = new Map(); // id -> { id, host, mode, target, members, bots, title }
+const raidOf = (key) => [...raidRooms.values()].find((l) => l.members.includes(key));
+const isMate = (u, k) => u.friends.includes(k) || (u.guild && db.users[k]?.guild === u.guild);
+function raidLobbyView(l) {
+  return { id: l.id, host: l.host === undefined ? null : db.users[l.host]?.name, hostKey: l.host, mode: l.mode, title: l.title, bots: l.bots,
+    target: l.target ? { name: l.target.name, species: l.target.ace.species, shiny: !!l.target.ace.shiny } : null,
+    members: l.members.map((k) => ({ key: k, name: db.users[k].name, avatar: db.users[k].avatar, online: online.has(k) })) };
+}
+function raidPush(l) { for (const k of l.members) send(online.get(k), { t: 'raid_room', room: raidLobbyView(l) }); }
+function raidLeave(key, quiet = false) {
+  const l = raidOf(key);
+  if (!l) return;
+  l.members = l.members.filter((k) => k !== key);
+  if (!quiet) send(online.get(key), { t: 'raid_room', room: null });
+  if (!l.members.length) { raidRooms.delete(l.id); return; }
+  if (l.host === key) l.host = l.members[0];
+  raidPush(l);
+}
+function raidView(key) {
+  const u = db.users[key], gb = RD.todayBoss(), mine = raidOf(key);
+  const friends = u.friends.map((k) => db.users[k]).filter(Boolean).map((f) => { const ace = RD.aceOf(battleTeam(f)); return { key: keyOf(f.name), name: f.name, avatar: f.avatar, online: online.has(keyOf(f.name)), busy: inBattle.has(keyOf(f.name)), ace: ace && { species: ace.species, plus: ace.plus || 0, shiny: !!ace.shiny } }; });
+  const open = [...raidRooms.values()].filter((l) => l !== mine && l.members.length < RD.MAX && (isMate(u, l.host) || l.members.some((k) => isMate(u, k)))).map(raidLobbyView);
+  return { boss: gb, left: RD.left(u), daily: RD.DAILY, limit: RD.LIMIT, max: RD.MAX, size: RD.SIZE, reward: RD.REWARD, friends, open, room: mine ? raidLobbyView(mine) : null };
+}
+function startRaid(l) {
+  const ok = [], size = RD.SIZE;
+  for (const k of l.members) {
+    const u = db.users[k], team = battleTeam(u).slice(0, size);
+    if (!online.has(k) || inBattle.has(k)) continue;
+    if (team.length < size || bannedIn(u, team).length || secretIn(team).length) { toast(k, `레이드는 덱에 공개된 골목몬이 ${size}마리 있어야 해요. 이번 판은 빠졌어요.`); continue; }
+    ok.push(k);
+  }
+  if (!ok.length) return toast(l.host, '출발할 수 있는 사람이 없어요.');
+  raidRooms.delete(l.id);
+  for (const k of l.members) if (!ok.includes(k)) send(online.get(k), { t: 'raid_room', room: null });
+  const n = l.bots ? RD.MAX : ok.length, keys = [...ok];
+  while (keys.length < n) keys.push(BOT);
+  keys.push(BOT); // 마지막 자리 = 보스
+  const bossSide = RD.boss(l.mode, l.target);
+  const players = keys.map((k, i) => (i === keys.length - 1 ? { ...bossSide, avatar: bossSide.avatar || randomAvatar(true), style: bossSide.style || randomStyle() }
+    : k === BOT ? { name: `골목 용병 ${i + 1}`, avatar: randomAvatar(true), style: randomStyle(), deck: '용병 덱', team: E.botTeam(2, size, []) }
+    : { name: db.users[k].name, avatar: db.users[k].avatar, style: db.users[k].style, deck: deckOf(db.users[k]).name, team: battleTeam(db.users[k]).slice(0, size), stones: db.users[k].stones }));
+  const b = E.createBattle(players, undefined, { preview: true, raid: RD.raidOpts(l.mode, n, l.title) });
+  openRoom({ id: crypto.randomUUID(), keys, b, deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: 2, tag: false, ranked: false, dungeon: null, raid: { mode: l.mode, target: l.target?.key || null, targetName: l.target?.name || '' }, spectators: new Set() });
+}
+function raidResult(room, k, won) {
+  const u = db.users[k], st = u.stats, bk = RD.book(u), mode = room.raid.mode;
+  if (won) { st.raidWins = (st.raidWins || 0) + 1; if (mode === 'dark') st.darkWins = (st.darkWins || 0) + 1; }
+  let got = [], title;
+  if (bk.n < RD.DAILY) {
+    if (won) { bk.n++; got = P.grant(u, RD.REWARD[mode]); title = mode === 'dark' ? `💜 ${room.raid.targetName}님을 정화했어요!` : '🔥 레이드 클리어!'; }
+    else { got = P.grant(u, RD.REWARD.lose); title = '레이드 실패... 참가 보상'; }
+  }
+  if (got.length) setTimeout(() => send(online.get(k), { t: 'gift', title: `${title} (오늘 보상 ${RD.DAILY - bk.n}번 남음)`, got }), 1800);
+}
+function raidTarget(room) {
+  const tk = room.raid.target, t = tk && db.users[tk];
+  if (!t) return;
+  const names = room.keys.filter((k) => k !== BOT).map((k) => db.users[k].name);
+  P.grant(t, RD.REWARD.target);
+  sendMail(t, { from: '골목대전 레이드', title: '💜 친구들이 흑화한 당신을 정화했어요!', body: `${names.join(', ')}님이 흑화 메가배틀에서 흑화한 당신을 쓰러뜨려 정화했어요. 정화 선물 ${RD.REWARD.target.gp.toLocaleString('ko-KR')}GP가 지갑에 들어왔어요.` });
+  if (online.has(tk)) send(online.get(tk), { t: 'me', user: publicUser(t) });
+}
+
 function onMessage(key, msg) {
   if (!db.users[key].birthYear) return send(online.get(key), { t: 'need_age' });
-  if (!db.users[key].tutorial && ['dungeon', 'rank_queue', 'practice', 'challenge', 'accept', 'tag_create', 'tag_seat', 'tag_start', 'training'].includes(msg?.t)) return toast(key, '튜토리얼을 먼저 끝내 주세요.');
+  if (!db.users[key].tutorial && ['raid_open', 'raid_join', 'raid_start', 'dungeon', 'rank_queue', 'practice', 'challenge', 'accept', 'tag_create', 'tag_seat', 'tag_start', 'training'].includes(msg?.t)) return toast(key, '튜토리얼을 먼저 끝내 주세요.');
   const room = inBattle.get(key);
   switch (msg?.t) {
     case 'action': {
@@ -1049,7 +1121,7 @@ function onMessage(key, msg) {
     case 'forfeit': {
       if (!room) return;
       if (room.training) { dissolve(room); send(online.get(key), { t: 'kicked', text: '훈련장에서 나왔습니다.' }); break; }
-      if (room.tag) return seatToBot(room, key, '대전에서 나왔습니다. 골목대장이 자리를 맡았습니다.');
+      if (room.tag || room.raid) return seatToBot(room, key, room.raid ? '레이드에서 나왔습니다. 골목 용병이 자리를 맡았습니다.' : '대전에서 나왔습니다. 골목대장이 자리를 맡았습니다.');
       const events = E.forfeit(room.b, room.keys.indexOf(key));
       afterTurn(room, events);
       break;
@@ -1094,6 +1166,52 @@ function onMessage(key, msg) {
       break;
     }
     case 'rank_cancel': rankLeave(key); send(online.get(key), { t: 'rank_cancel' }); break;
+    case 'raid_open': {
+      if (room) return;
+      const u = db.users[key], mode = msg.mode === 'dark' ? 'dark' : 'gmax';
+      let target = null;
+      if (mode === 'dark') {
+        const fk = String(msg.friend ?? ''), f = db.users[fk];
+        if (!f || !u.friends.includes(fk)) return toast(key, '흑화시킬 친구를 골라 주세요.');
+        const ace = RD.aceOf(battleTeam(f));
+        if (!ace) return toast(key, `${f.name}님 덱에 골목몬이 없어요.`);
+        target = { key: fk, name: f.name, avatar: f.avatar, style: f.style, ace };
+      }
+      raidLeave(key, true);
+      const gb = RD.todayBoss();
+      const l = { id: crypto.randomUUID().slice(0, 8), host: key, mode, target, members: [key], bots: msg.bots !== false, title: mode === 'dark' ? `흑화한 ${target.name}` : `거다이 ${gb.name}` };
+      raidRooms.set(l.id, l); raidPush(l);
+      break;
+    }
+    case 'raid_join': {
+      if (room) return;
+      const l = raidRooms.get(String(msg.id ?? ''));
+      if (!l) return toast(key, '이미 출발했거나 없어진 레이드예요.');
+      if (l.members.includes(key)) return raidPush(l);
+      if (l.members.length >= RD.MAX) return toast(key, `레이드는 ${RD.MAX}명까지예요.`);
+      raidLeave(key, true);
+      l.members.push(key); raidPush(l);
+      for (const k of l.members) if (k !== key) toast(k, `${db.users[key].name}님이 레이드에 들어왔어요!`);
+      break;
+    }
+    case 'raid_leave': raidLeave(key); break;
+    case 'raid_bots': { const l = raidOf(key); if (l && l.host === key) { l.bots = !!msg.on; raidPush(l); } break; }
+    case 'raid_invite': {
+      const l = raidOf(key), to = String(msg.to ?? ''), u = db.users[key];
+      if (!l || !db.users[to] || !isMate(u, to)) return;
+      if (!online.has(to)) return toast(key, `${db.users[to].name}님은 지금 접속해 있지 않아요.`);
+      if (inBattle.has(to)) return toast(key, `${db.users[to].name}님은 대전 중이에요.`);
+      send(online.get(to), { t: 'raid_invite', id: l.id, from: u.name, title: l.title, mode: l.mode });
+      toast(key, `${db.users[to].name}님에게 초대를 보냈어요.`);
+      break;
+    }
+    case 'raid_start': {
+      if (room) return;
+      const l = raidOf(key);
+      if (!l || l.host !== key) return;
+      startRaid(l);
+      break;
+    }
     case 'react': { // 대전 응원·이모티콘: 같은 방 사람과 관전자에게
       const r = String(msg.r || '');
       if (!REACTS.has(r) && !(r.startsWith('s:') && Data.MONSTERS[r.slice(2)])) break;
@@ -1217,7 +1335,7 @@ server.on('upgrade', (req, socket, head) => {
     });
     ws.on('close', () => {
       if (online.get(key) !== ws) return;
-      online.delete(key); rankLeave(key);
+      online.delete(key); rankLeave(key); raidLeave(key, true);
       db.users[key].lastSeen = Date.now(); save();
       challenges.delete(key);
       removeFromTag(key);

@@ -271,6 +271,7 @@ function onServer(m) {
     case 'turn': Battle.onTurn(m); break;
     case 'react': Battle.onReact(m); break;
     case 'rank_wait': case 'rank_found': case 'rank_cancel': onRankMsg(m); break;
+    case 'raid_room': case 'raid_invite': onRaidMsg(m); break;
     case 'traded': if (G.screen !== 'battle') tradeDone(m, () => (G.screen === 'friends' ? showFriends() : null)); else toast(`🔄 ${m.with}님과 교환이 끝났어요!`); break;
     case 'chosen': Battle.onChosen(m); break;
     case 'opp_ready': Battle.setNote('상대가 행동을 골랐습니다.'); break;
@@ -357,6 +358,7 @@ function renderLobby() {
         <button class="g2b friends" id="go-friends"><span>👥</span><b>친구</b>${u.badges.social ? `<em class="mailbadge">${u.badges.social}</em>` : ''}<small>${u.friendsN}명</small></button>
         <button class="g2b guild" id="go-guild"><span>${u.guild ? u.guild.emblem : '🏰'}</span><b>${u.guild ? esc(u.guild.name) : '길드'}</b>${u.guild ? '' : '<small>만들기·가입</small>'}</button>
         <button class="g2b rank" id="go-rank" style="--rc:${['#c8873a', '#b8c4d0', '#FFD23F', '#6CF2C2', '#2EF2FF', '#B44BFF', '#ff3a4a'][u.rank?.tier || 0]}"><span>${['🥉', '🥈', '🥇', '💠', '💎', '👑', '🔥'][u.rank?.tier || 0]}</span><b>랭크전</b><small>${u.rank?.pts ?? 1000}점</small></button>
+        <button class="g2b raid" id="go-raid"><span>🐲</span><b>레이드</b><small>최대 4명</small></button>
         <button class="g2b dungeon" id="go-dungeon"><span>🗼</span><b>이벤트 던전</b></button>
         <button class="g2b expe" id="go-expe"><span>🧭</span><b>원정</b>${u.badges.expe ? `<em class="mailbadge">${u.badges.expe}</em>` : ''}</button>
         <button class="g2b chat" id="go-chat"><span>💬</span><b>채팅</b><em class="mailbadge" data-chatbadge hidden></em></button>
@@ -424,6 +426,7 @@ function renderLobby() {
   app.querySelector('#go-expe').onclick = () => showExpe();
   app.querySelector('#go-rank').onclick = () => showRank();
   app.querySelector('#go-dungeon').onclick = () => showDungeon();
+  app.querySelector('#go-raid').onclick = () => showRaid();
   refreshChatBadge();
   app.querySelectorAll('[data-watch]').forEach((b) => { b.onclick = () => wsSend({ t: 'spectate', id: b.dataset.watch }); });
   app.querySelector('#tag-new')?.addEventListener('click', () => wsSend({ t: 'tag_create' }));

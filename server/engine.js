@@ -57,6 +57,7 @@ const DS = 'deungsin';
 function suddenDeath(b, s, m, ev, text) {
   if (!alive(m) || b.training) return false;
   ev.push({ t: 'msg', text });
+  if (isBoss(b, s)) { msg(ev, '그러나 레이드 보스는 쓰러지지 않고 버텼다!'); hurt(b, s, m, m.maxHp * .12, ev); faintCheck(b, s, m, ev); return true; }
   hurt(b, s, m, m.hp, ev, { sudden: true });
   faintCheck(b, s, m, ev);
   return true;
@@ -96,22 +97,61 @@ function createTraining(player, seed, exclude = []) {
   return b;
 }
 
-function createBattle(players, seed = (Math.random() * 2 ** 31) | 0, { preview = false } = {}) {
+function createBattle(players, seed = (Math.random() * 2 ** 31) | 0, { preview = false, raid = null } = {}) {
   const b = {
     seed, turn: 1, phase: preview ? 'preview' : 'choose', winner: null, weather: null, weatherTurns: 0, terrain: null, terrainTurns: 0,
     pending: players.map(() => null), needs: players.map(() => true),
+    ...(raid ? { raid: { boss: players.length - 1, ...raid } } : {}),
     sides: players.map((p) => ({
       name: p.name, avatar: p.avatar, style: p.style, deck: p.deck, active: 0, hazard: false, stones: p.stones || null,
       mons: p.team.map((spec, slot) => ({ ...makeMon(spec), slot })), // slot: 같은 골목몬이 여러 마리여도 구별
     })),
   };
+  if (raid) setupBoss(b);
   return b;
+}
+
+/* ---------- 레이드: 1~4명이 한 팀(0), 맨 끝 자리가 보스(1팀) ----------
+   보스는 한 마리, 체력이 사람 수만큼 커지고, 공격기는 모두 광역. 2턴마다 충격파, 제한 턴 안에 못 잡으면 실패 */
+const isBoss = (b, s) => !!b.raid && s === b.raid.boss;
+function setupBoss(b) {
+  const r = b.raid, side = b.sides[r.boss], m = side.mons[0];
+  side.mons = [m];
+  if (r.mega) { doMega(b, r.boss, []); side.megaUsed = true; }
+  if (r.gmax) { m.preMax = m.maxHp; m.gmax = 999; side.gmaxUsed = true; }
+  side.zUsed = !r.z;
+  m.maxHp = m.hp = Math.round(m.maxHp * (r.hpMul || 4));
+  if (r.dark) m.name = `흑화 ${m.name}`;
+  r.limit ||= 15; r.shock ||= 0.1;
+}
+function raidEndTurn(b, ev) {
+  const r = b.raid, boss = activeOf(b, r.boss);
+  if (!alive(boss) || b.phase === 'over') return;
+  if (b.turn % 2 === 0) {
+    ev.push({ t: 'msg', text: `${boss.name}의 ${r.dark ? '어둠의 파동' : '거대 충격파'}! 골목 전체가 흔들린다!` });
+    for (const s of seats(b)) {
+      if (s === r.boss) continue;
+      const m = activeOf(b, s);
+      if (!alive(m)) continue;
+      hurt(b, s, m, m.maxHp * r.shock, ev); faintCheck(b, s, m, ev);
+    }
+  }
+  if (b.turn % 3 === 0 && Object.values(boss.stages).some((v) => v < 0)) {
+    for (const k of Object.keys(boss.stages)) if (boss.stages[k] < 0) boss.stages[k] = 0;
+    ev.push({ t: 'stage', side: r.boss, stat: 'atk', value: boss.stages.atk, up: true, text: `${josa(boss.name, '은/는')} 포효하며 떨어진 능력을 되돌렸다!` });
+  }
+  checkOver(b, ev);
+  if (b.phase !== 'over' && b.turn >= r.limit) {
+    b.phase = 'over'; b.winner = 1;
+    ev.push({ t: 'over', winner: 1, text: `${r.limit}턴이 지났다... ${josa(boss.name, '은/는')} 골목을 휩쓸고 사라졌다. 레이드 실패!` });
+  }
 }
 
 // 자리: 1대1은 0, 1번. 태그는 0·1번이 한 팀, 2·3번이 한 팀입니다.
 const seats = (b) => b.sides.map((_, i) => i);
-const isDoubles = (b) => b.sides.length === 4;
-const teamOf = (b, s) => (isDoubles(b) ? (s < 2 ? 0 : 1) : s);
+const isDoubles = (b) => b.sides.length === 4 && !b.raid;
+const teamOf = (b, s) => (b.raid ? (s === b.raid.boss ? 1 : 0) : isDoubles(b) ? (s < 2 ? 0 : 1) : s);
+const multi = (b) => isDoubles(b) || !!b.raid; // 상대를 골라야 하는 판
 const foesOf = (b, s) => seats(b).filter((i) => teamOf(b, i) !== teamOf(b, s));
 const matesOf = (b, s) => seats(b).filter((i) => teamOf(b, i) === teamOf(b, s));
 const teamName = (b, t) => seats(b).filter((i) => teamOf(b, i) === t).map((i) => b.sides[i].name).join(', ');
@@ -176,7 +216,7 @@ function doMega(b, s, ev) {
   const sp = MONSTERS[m.species];
   const base = Object.fromEntries(Object.entries(sp.base).map(([k, v]) => [k, v + sp.mega.boost[k]]));
   const oldName = m.name, oldMax = m.maxHp;
-  m.stats = calcStats(base);
+  m.stats = Object.fromEntries(Object.entries(calcStats(base)).map(([k, v]) => [k, Math.round(v * (1 + (m.plus || 0) * 0.04))])); // 강화 보너스 유지
   m.maxHp = m.stats.hp + tierHp(m);
   m.hp += m.maxHp - oldMax;
   m.name = sp.mega.n; m.mega = true;
@@ -317,6 +357,7 @@ function runTurn(b, ev) {
     if (checkOver(b, ev)) break;
   }
   if (b.phase !== 'over') endOfTurn(b, ev);
+  if (b.raid) raidEndTurn(b, ev);
   if (b.training) trainingReset(b, ev);
   b.turn++;
 }
@@ -744,7 +785,7 @@ function useMoveCore(b, s, index, ev, want, z = false) {
   if (mv.self_) return selfMove(b, s, me, mv, ev);
 
   // 광역기: 태그 배틀에서는 살아 있는 상대 모두를 공격 (위력 3/4)
-  const targets = mv.spread && isDoubles(b) ? foesOf(b, s).filter((i) => alive(activeOf(b, i))) : [o];
+  const targets = (mv.spread && isDoubles(b)) || (isBoss(b, s) && mv.cat !== 'x') ? foesOf(b, s).filter((i) => alive(activeOf(b, i))) : [o]; // 레이드 보스의 공격기는 모두 광역
   if (targets.length > 1) { msg(ev, '상대 모두를 공격했다!'); mv = { ...mv, pow: Math.round(mv.pow * .75) }; }
   for (const t of targets) { if (!alive(me) || b.phase === 'over') break; hitOne(b, s, me, t, mv, ev); }
 }
@@ -801,7 +842,7 @@ function hitOne(b, s, me, o, mv, ev) {
 
   if (mv.kamikaze) { // 돌연사-들이박기: 상대와 함께 사망
     msg(ev, `${josa(me.name, '은/는')} 온몸을 던져 ${foe.name}에게 들이박았다!`);
-    hurt(b, o, foe, foe.hp, ev, { eff: 1, moveType: mv.type, kamikaze: 1 });
+    hurt(b, o, foe, isBoss(b, o) ? Math.min(foe.hp, foe.maxHp * .15) : foe.hp, ev, { eff: 1, moveType: mv.type, kamikaze: 1 });
     faintCheck(b, o, foe, ev);
     suddenDeath(b, s, me, ev, `${josa(me.name, '은/는')} 충격을 이기지 못하고 함께 쓰러졌다!`);
     return;
@@ -1257,9 +1298,10 @@ function viewFor(b, s) {
     };
   };
   const opps = foesOf(b, s).map(seatView);
-  const ally = matesOf(b, s).filter((i) => i !== s).map(seatView)[0] ?? null;
+  const allies = matesOf(b, s).filter((i) => i !== s).map(seatView), ally = allies[0] ?? null;
   return {
-    you: s, team: teamOf(b, s), doubles: isDoubles(b), turn: b.turn, phase: b.phase, winner: b.winner,
+    you: s, team: teamOf(b, s), doubles: multi(b), allies,
+    raid: b.raid ? { boss: b.raid.boss, limit: b.raid.limit, dark: !!b.raid.dark, gmax: !!b.raid.gmax, title: b.raid.title || '' } : null, turn: b.turn, phase: b.phase, winner: b.winner,
     weather: b.weather, weatherTurns: b.weatherTurns, terrain: b.terrain, terrainTurns: b.terrainTurns, terrainMine: b.terrain ? b.terrainTeam === teamOf(b, s) : null,
     mustAct: b.needs[s] && !lock,
     canMega: canMega(b, s) && !lock,
@@ -1445,7 +1487,7 @@ function botAction(b, s, level = 1) {
     const me = activeOf(b, s), foe = activeOf(b, o), gm = gmaxMoves(me);
     let best = 0, bv = -1;
     gm.forEach((mv, i) => { const v = rawDamage(b, me, foe, mv) * (level === 0 ? Math.random() + .5 : 1); if (v > bv) { bv = v; best = i; } });
-    return { type: 'move', index: best, ...(isDoubles(b) ? { target: o } : {}) };
+    return { type: 'move', index: best, ...(multi(b) ? { target: o } : {}) };
   }
   if (b.phase === 'preview' || level === 1) a = normalAction(b, s, o);
   else a = level === 0 ? easyAction(b, s) : smartAction(b, s, level, o);
@@ -1453,7 +1495,7 @@ function botAction(b, s, level = 1) {
   if (a && a.type === 'move' && level >= 1 && b.phase === 'choose') {
     const me = activeOf(b, s), fi = me.moves.findIndex((x) => MOVES[x.id].forge && x.pp > 0);
     const t = tierOf(me), want = t < TIERS.base ? (level >= 2 ? 65 : 45) : 20; // 네더라이트 뒤로는 가끔만
-    if (fi >= 0 && t < (MONSTERS[me.species].tiers || 0) && me.hp > me.maxHp * .5 && chance(b, want)) return { type: 'move', index: fi, ...(isDoubles(b) ? { target: o } : {}) };
+    if (fi >= 0 && t < (MONSTERS[me.species].tiers || 0) && me.hp > me.maxHp * .5 && chance(b, want)) return { type: 'move', index: fi, ...(multi(b) ? { target: o } : {}) };
   }
   if (a && a.type === 'move' && level >= 1 && canZ(b, s)) {
     // Z기술: 쓰러뜨릴 수 있거나, 판이 무르익었을 때 씁니다.
@@ -1470,7 +1512,7 @@ function botAction(b, s, level = 1) {
       a = { type: 'move', index: best, gmax: true };
     }
   }
-  return a && a.type === 'move' && isDoubles(b) ? { ...a, target: o } : a;
+  return a && a.type === 'move' && multi(b) ? { ...a, target: o } : a;
 }
 
 const shuffled = (list) => list.map((x) => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map((p) => p[1]);
@@ -1532,5 +1574,5 @@ function botTeam(level, size, enemy = []) {
 }
 
 module.exports = {
-  createBattle, createTraining, DUMMY_HP, smartMoves, gmaxMoves, canGmax, gmaxInfo, choose, speedOf, legalActions, viewFor, botAction, botTeam, forfeit, teamOf, canZ, calcStats, effOf, josa, activeOf, canMega,
+  createBattle, createTraining, DUMMY_HP, smartMoves, gmaxMoves, canGmax, gmaxInfo, choose, speedOf, legalActions, viewFor, botAction, botTeam, forfeit, teamOf, canZ, calcStats, effOf, josa, activeOf, canMega, isBoss,
 };

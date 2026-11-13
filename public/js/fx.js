@@ -547,7 +547,7 @@ const Fx = (() => {
     glow(A, color, { r: 120, dur: 640, a: .8 });
     ring(A, { color, r0: 150, r1: 12, dur: 380, w: 6 });
     ring(A, { color: '#fff', r0: 120, r1: 10, dur: 380, w: 3, delay: 140 });
-    cutIn(name, color, key === 'me' || key === 'ally');
+    cutIn(name, color, /^(me|ally)/.test(key));
     return 560;
   }
 

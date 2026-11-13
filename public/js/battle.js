@@ -5,7 +5,9 @@ const Battle = (() => {
   let spectating = false, tag = false, moveDraft = null, zLockTurn = -1;
   let trainers = {};
   const has3D = () => typeof Avatar3D !== 'undefined' && !!Avatar3D;
-  const avatarOf = (key) => (key === 'me' ? view.me : key === 'ally' ? view.ally : key === 'opp' ? view.opps[0] : view.opps[1])?.avatar;
+  const ALLY = ['ally', 'ally2', 'ally3'];
+  const isMine = (key) => key === 'me' || ALLY.includes(key);
+  const avatarOf = (key) => (key === 'me' ? view.me : ALLY.includes(key) ? (view.allies?.[ALLY.indexOf(key)] || view.ally) : key === 'opp' ? view.opps[0] : view.opps[1])?.avatar;
   const trainer = (key) => trainers[key];
   let deadline = 0, tick = null, gen = 0;
   const SPEED = Number(new URLSearchParams(location.search).get('speed') ?? 1); // ?speed=0 이면 연출 생략
@@ -49,19 +51,21 @@ const Battle = (() => {
   </svg>`;
 
   const mine = () => disp.me.mons[disp.me.active];
-  const keysNow = () => (view.doubles ? ['me', 'ally', 'opp', 'opp2'] : ['me', 'opp']);
+  const keysNow = () => (view.raid ? ['me', ...view.allies.map((_, i) => ALLY[i]), 'opp'] : view.doubles ? ['me', 'ally', 'opp', 'opp2'] : ['me', 'opp']);
   const sideKey = (s) => {
     if (s === view.you) return 'me';
+    const ai = (view.allies || []).findIndex((a) => a.seat === s);
+    if (ai >= 0) return ALLY[ai];
     if (view.ally?.seat === s) return 'ally';
     return view.opps[0].seat === s ? 'opp' : 'opp2';
   };
-  const seatOf = (key) => ({ ally: disp.ally, opp: disp.opps[0], opp2: disp.opps[1] }[key]);
+  const seatOf = (key) => (ALLY.includes(key) ? (disp.allies?.[ALLY.indexOf(key)] || disp.ally) : { opp: disp.opps[0], opp2: disp.opps[1] }[key]);
   const liveOpps = () => view.opps.filter((o) => o.active && o.active.hp > 0);
   const oppNames = () => view.opps.map((o) => o.name).join(', ');
-  const myNames = () => [view.me.name, view.ally?.name].filter(Boolean).join(', ');
+  const myNames = () => [view.me.name, ...(view.allies?.length ? view.allies : [view.ally]).filter(Boolean).map((a) => a.name)].join(', ');
 
   function enter(m) {
-    practice = m.practice; spectating = !!m.spectator; tag = !!m.tag; training = !!m.training || !!m.view?.training;
+    practice = m.practice; spectating = !!m.spectator; tag = !!m.tag || !!m.view?.raid; training = !!m.training || !!m.view?.training;
     const fresh = !view || G.screen !== 'battle';
     view = m.view; note = m.oppOnline ? '' : '나간 사람이 있습니다. 재접속을 기다립니다.';
     closeSheet();
@@ -81,14 +85,14 @@ const Battle = (() => {
   }
 
   const clone = (x) => JSON.parse(JSON.stringify(x));
-  const cloneView = (v) => { const d = clone(v); d.opp = d.opps[0]; return d; };
+  const cloneView = (v) => { const d = clone(v); d.opp = d.opps[0]; if (d.allies?.length) d.ally = d.allies[0]; return d; };
 
   const fmt = (n) => Number(n || 0).toLocaleString('ko-KR');
   const meterHTML = (d) => `<span><small>이번 턴</small><b id="dm-turn">${fmt(d.turn)}</b></span><span><small>최고</small><b id="dm-best">${fmt(d.best)}</b></span><span><small>누적</small><b id="dm-total">${fmt(d.total)}</b></span>`;
   const headHTML = () => (training ? `<div class="bhead train"><div class="who">훈련장<small>턴마다 모두 회복, 메가진화·Z기술 무제한</small></div>
       <div class="dmeter" id="dmeter">${meterHTML(view.training)}</div></div>` : `<div class="bhead">
       ${view.opps.map((o) => `<div class="ava">${avatarSVG(o.avatar)}</div>`).join('')}
-      <div class="who">${esc(oppNames())}<div class="pips" id="pips"></div></div>
+      <div class="who">${view.raid ? `<b class="raid-tag ${view.raid.dark ? 'dark' : ''}">${view.raid.dark ? '💜 흑화 메가배틀' : '🔥 거다이 레이드'}</b>` : ''}${esc(oppNames())}${view.raid ? `<small class="raid-lim" id="raid-lim">${Math.max(0, view.raid.limit - view.turn + 1)}턴 남음</small>` : ''}<div class="pips" id="pips"></div></div>
       <div class="clock" id="clock"></div>
     </div>`);
 
@@ -98,12 +102,15 @@ const Battle = (() => {
     const rosterHTML = (o) => `<div class="grid pv">${o.roster.map((m) => `<div class="card" style="--tc:${G.data.TYPES[m.types[0]].c}">${monsterSVG(m.species)}<span>${m.name}</span><p>${m.types.map(typeChip).join('')}</p></div>`).join('')}</div>`;
     const vsCard = (x) => battleCard({ name: x.name, avatar: x.avatar, style: x.style });
     app.innerHTML = `${headHTML()}
-      <section class="vs ${view.doubles ? 'dbl' : ''}">
-        <div class="vs-side">${vsCard(view.me)}${view.ally ? vsCard(view.ally) : ''}</div>
+      <section class="vs ${view.doubles ? 'dbl' : ''}${view.raid?.dark ? ' raid-dark' : ''}">
+        <div class="vs-side">${vsCard(view.me)}${(view.raid ? view.allies : [view.ally]).filter(Boolean).map(vsCard).join('')}</div>
         <b class="vs-mark">VS</b>
         <div class="vs-side">${view.opps.map(vsCard).join('')}</div>
       </section>
-      ${view.opps.map((o) => `<section class="panel">
+      ${view.raid ? `<section class="panel raid-boss ${view.raid.dark ? 'dark' : ''}"><h2>레이드 보스: ${esc(view.raid.title)}</h2>
+        <div class="rb-art">${view.raid.gmax ? gmaxSVG(view.opps[0].roster[0].species) : monsterSVG(view.opps[0].roster[0].species, '', true)}</div>
+        <p class="muted">+5 강화 · ${view.raid.gmax ? '판 내내 거다이맥스' : '처음부터 메가진화'} · 공격은 모두 광역 · 2턴마다 충격파 · ${view.raid.limit}턴 제한</p></section>`
+      : view.opps.map((o) => `<section class="panel">
         <h2>${view.doubles ? esc(o.name) : '상대'} 덱: ${esc(o.deck)}</h2>${rosterHTML(o)}
       </section>`).join('')}
       ${view.ally ? `<section class="panel"><h2>팀원 ${esc(view.ally.name)} 덱: ${esc(view.ally.deck)}</h2>${rosterHTML(view.ally)}</section>` : ''}
@@ -225,7 +232,7 @@ const Battle = (() => {
   }
   // 태그전: 이름표가 커져도 서로 겹치지 않게 위아래로 쌓음
   function stackPlates() {
-    if (!view?.doubles) return;
+    if (!view?.doubles || view.raid) return;
     const sc = $('#scene'), op = $('#p-opp'), op2 = $('#p-opp2'), me = $('#p-me'), al = $('#p-ally');
     if (!sc) return;
     const H = sc.clientHeight, gap = 4;
@@ -239,7 +246,7 @@ const Battle = (() => {
   async function awakenCut(key, m) {
     const sp = G.data.MONSTERS[m.species];
     const cut = document.createElement('div');
-    cut.className = `awx awx-${m.species} ${key === 'me' || key === 'ally' ? 'mine' : 'theirs'} aw${m.strip}`;
+    cut.className = `awx awx-${m.species} ${isMine(key) ? 'mine' : 'theirs'} aw${m.strip}`;
     cut.style.setProperty('--zs', `${SPEED}`);
     cut.innerHTML = `<div class="awx-band"><div class="awx-shards"></div>
         <div class="awx-face">${bust(m)}</div>
@@ -312,7 +319,7 @@ const Battle = (() => {
 
   function drawWeather() {
     const s = $('#scene');
-    s.className = `scene${s.classList.contains('has-tr') ? ' has-tr' : ''}${view.doubles ? ' dbl' : ''}${disp.weather ? ` w-${disp.weather}` : ''}${disp.terrain ? ` tr-${disp.terrain} tr-${disp.terrainMine ? 'mine' : 'theirs'}` : ''}${disp.me.hazard ? ' haz-me' : ''}${disp.opp.hazard ? ' haz-opp' : ''}`;
+    s.className = `scene${s.classList.contains('has-tr') ? ' has-tr' : ''}${view.doubles ? ' dbl' : ''}${view.raid ? ` raid raid${view.allies.length + 1}${view.raid.dark ? ' dark' : ''}` : ''}${disp.weather ? ` w-${disp.weather}` : ''}${disp.terrain ? ` tr-${disp.terrain} tr-${disp.terrainMine ? 'mine' : 'theirs'}` : ''}${disp.me.hazard ? ' haz-me' : ''}${disp.opp.hazard ? ' haz-opp' : ''}`;
     const chips = [];
     if (disp.weather) chips.push(`<span class="f-${disp.weather}">${WEATHER[disp.weather]} ${disp.weatherTurns}턴</span>`);
     if (disp.terrain) chips.push(`<span class="f-grassfield">${disp.terrainMine ? (spectating ? `${esc(myNames())} 쪽` : '내 쪽') : (spectating ? `${esc(oppNames())} 쪽` : '상대 쪽')} 그래스필드 ${disp.terrainTurns}턴</span>`);
@@ -358,7 +365,7 @@ const Battle = (() => {
     if (e.text) say(e.text);
     const key = e.side === undefined ? null : sideKey(e.side);
     switch (e.t) {
-      case 'turn': break;
+      case 'turn': { const l = $('#raid-lim'); if (l && view.raid) { const n = Math.max(0, view.raid.limit - e.turn + 1); l.textContent = `${n}턴 남음`; l.classList.toggle('low', n <= 3); } break; }
       case 'msg': await wait(850); break;
       case 'move':
         if (e.z) { await zCinematic(e, key); break; }
@@ -472,12 +479,12 @@ const Battle = (() => {
         await wait(Math.max(1000, e.trait ? Fx.weather(e.weather) : 0)); break;
       case 'terrain':
         disp.terrain = e.terrain; disp.terrainTurns = e.terrain ? 5 : 0;
-        if (e.terrain) disp.terrainMine = key === 'me' || key === 'ally';
+        if (e.terrain) disp.terrainMine = isMine(key);
         drawWeather();
         if (e.terrain) Fx.terrain?.(e.terrain);
         await wait(1000); break;
       case 'hazard':
-        disp[key === 'me' || key === 'ally' ? 'me' : 'opp'].hazard = e.on; drawWeather();
+        disp[isMine(key) ? 'me' : 'opp'].hazard = e.on; drawWeather();
         await wait(900); break;
       case 'dummy': {
         const m = $('#dmeter');
@@ -591,7 +598,7 @@ const Battle = (() => {
       ${Array.from({ length: 12 }, (_, i) => { const a = (i / 12) * 6.283; return `<circle cx="${(Math.cos(a) * 75).toFixed(1)}" cy="${(Math.sin(a) * 75).toFixed(1)}" r="3.2" fill="${i % 2 ? c1 : c2}"/>`; }).join('')}
     </g></svg>`;
   async function zSpecial(e, key) {
-    const mine = key === 'me' || key === 'ally';
+    const mine = isMine(key);
     const sp = e.mon.species, av = avatarOf(key), duo = has3D() && av;
     const lum = sp === 'lumina';
     const cut = document.createElement('div');
@@ -626,7 +633,7 @@ const Battle = (() => {
   async function zCinematic(e, key) {
     if (AWAKEN[e.mon.species]) return zSpecial(e, key);
     const color = G.data.TYPES[e.type].c;
-    const mine = key === 'me' || key === 'ally';
+    const mine = isMine(key);
     const av = avatarOf(key);
     const duo = has3D() && av;
     const cut = document.createElement('div');
@@ -813,9 +820,10 @@ const Battle = (() => {
     div.className = 'result';
     const champ = win || draw ? view.me : view.opp;
     if (!draw) { trainer('me')?.play(win ? 'cheer' : 'sad', { hold: true, dur: 1.6 }); trainer('opp')?.play(win ? 'sad' : 'cheer', { hold: true, dur: 1.6 }); }
-    div.innerHTML = `<div class="result-card">${battleCard({ name: champ.name, avatar: champ.avatar, style: champ.style }, 'big')}</div>
+    const rb = view.raid && view.opp.roster[0];
+    div.innerHTML = `<div class="result-card">${rb && !win ? `<div class="raid-res ${view.raid.dark ? 'dark' : ''}">${view.raid.gmax ? gmaxSVG(rb.species) : monsterSVG(rb.species, '', true)}<b>${esc(view.raid.title)}</b></div>` : battleCard({ name: champ.name, avatar: champ.avatar, style: champ.style }, 'big')}</div>
       <h1 class="title ${spectating ? 'small' : ''}">${draw ? '무승부' : spectating ? `${esc(winners)} 승리` : win ? '승리' : '패배'}</h1>
-      <p style="color:#fff">${esc(myNames())} 대 ${esc(oppNames())}, ${view.turn - 1}턴${practice ? ' (연습)' : ''}${spectating ? ' (관전)' : ''}</p>
+      <p style="color:#fff">${esc(myNames())} 대 ${esc(oppNames())}, ${view.turn - 1}턴${practice && !view.raid ? ' (연습)' : ''}${spectating ? ' (관전)' : ''}</p>
       <button class="btn" id="to-lobby">로비로 돌아가기</button>`;
     app.appendChild(div);
     div.querySelector('#to-lobby').onclick = () => { view = null; showLobby(); };

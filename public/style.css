@@ -1644,3 +1644,50 @@ svg[data-shiny] { filter: hue-rotate(var(--shue)) saturate(1.35) brightness(1.05
 .war-row .gd-emb { width: 34px; height: 34px; font-size: 18px; } .war-score { font: 900 15px var(--ui); }
 .gd-emb.champ { box-shadow: 0 0 0 3px #FFD23F, 0 0 14px #ffd23f, 2px 2px 0 var(--ink); } .gd-emb.champ-2 { box-shadow: 0 0 0 3px #c3ccd8, 0 0 10px #fff, 2px 2px 0 var(--ink); } .gd-emb.champ-3 { box-shadow: 0 0 0 3px #c8873a, 0 0 10px #ffb347, 2px 2px 0 var(--ink); }
 .gd-crown { position: absolute; top: -12px; right: -8px; font-style: normal; font-size: 16px; filter: drop-shadow(0 0 3px #fff); }
+/* 레이드 */
+.g2b.raid { background: linear-gradient(160deg, #ff3a4a, #5a1a8c); }
+.rd-hero, .rd-room { position: relative; overflow: hidden; display: grid; justify-items: center; gap: 4px; padding: 16px; margin-bottom: 12px; color: #fff; text-align: center; background: linear-gradient(150deg, #2a0f1f, #b3122e 55%, #ff7a3a); border: var(--line); border-radius: 18px; box-shadow: 4px 4px 0 var(--ink); }
+.rd-hero.dark, .rd-room.dark { background: linear-gradient(150deg, #0d0618, #3b0f5c 55%, #8c2bd9); }
+.rd-hero > *, .rd-room > * { position: relative; } .rd-hero s, .rd-room s { position: absolute; inset: -60%; background: repeating-conic-gradient(#fff1 0 6deg, transparent 6deg 18deg); animation: ttSpin 30s linear infinite; }
+.rd-hero h2, .rd-room h2 { font-family: var(--display); font-weight: 400; font-size: 24px; text-shadow: 2px 2px 0 var(--ink); margin: 0; } .rd-hero p { margin: 0; font-size: 13px; } .rd-hero small { opacity: .85; }
+.rd-gx { width: 180px; max-width: 60%; filter: drop-shadow(0 0 16px #ff3a4a); } .rd-gx svg { width: 100%; height: auto; }
+.rd-title { font-size: 17px; }
+.rd-go { margin-top: 6px; background: #FFD23F; color: var(--ink); }
+.dark-art { position: relative; width: 120px; } .dark-art svg { width: 100%; height: auto; filter: saturate(.55) brightness(.75) hue-rotate(250deg) drop-shadow(0 0 10px #b44bff) drop-shadow(0 0 3px #000); }
+.rd-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; margin-top: 6px; }
+.rd-f { display: grid; justify-items: center; gap: 2px; padding: 6px 2px; color: #fff; font: inherit; background: #ffffff14; border: 2px solid #ffffff40; border-radius: 12px; cursor: pointer; }
+.rd-f .dark-art { width: 70px; } .rd-f small { font-size: 11px; opacity: .85; } .rd-f:disabled { opacity: .45; }
+.rd-mem { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; margin: 6px 0; }
+.rd-mem > div { display: grid; justify-items: center; padding: 6px 2px; background: #ffffff18; border-radius: 12px; font-size: 12px; } .rd-mem > div.off { opacity: .5; }
+.rd-mem .ava { width: 44px; height: 44px; display: grid; place-items: center; font-size: 24px; } .rd-mem .ava svg { width: 100%; height: 100%; }
+.rd-mem small { font-size: 10px; } .rd-empty { border: 2px dashed #ffffff55; }
+.rd-bots { font-size: 13px; display: flex; gap: 6px; align-items: center; }
+.rd-fr { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 2px dashed #1a143320; } .rd-fr .ava { width: 36px; height: 36px; display: grid; place-items: center; font-size: 22px; } .rd-fr .ava svg { width: 100%; height: 100%; }
+.rd-fr b { flex: 1; } .rd-fr small { font-size: 11px; color: #6a6480; }
+/* 레이드 대전 화면 */
+.raid-tag { display: inline-block; margin-right: 6px; padding: 0 6px; font-size: 11px; color: #fff; background: #d8203a; border-radius: 6px; } .raid-tag.dark { background: #6a1fb0; }
+.raid-lim { display: inline-block; margin-left: 6px; padding: 0 6px; font-size: 11px; background: #fff3b0; border: 2px solid var(--ink); border-radius: 6px; } .raid-lim.low { background: #ff6b6b; color: #fff; }
+.raid-boss { text-align: center; } .raid-boss .rb-art { width: 200px; max-width: 70%; margin: 0 auto; } .raid-boss .rb-art svg { width: 100%; height: auto; }
+.raid-boss.dark .rb-art svg { filter: saturate(.55) brightness(.75) hue-rotate(250deg) drop-shadow(0 0 10px #b44bff); }
+.mon.ally2, .mon.ally3, .plate.ally2, .plate.ally3 { position: absolute; }
+.mon.ally2, .mon.ally3 { --sx: 1; --sy: -1; } .mon.ally2 svg, .mon.ally3 svg { transform: scaleX(-1); } .mon.ally2.mega svg, .mon.ally3.mega svg { transform: none; }
+.scene.raid .mon.opp, .scene.raid .mon.opp.giant, .scene.raid .mon.opp.mega { width: 46%; right: 1%; top: 0; left: auto; scale: 1; }
+.scene.raid.dark .mon.opp svg { filter: saturate(.55) brightness(.8) hue-rotate(250deg) drop-shadow(0 0 12px #b44bff) drop-shadow(0 0 4px #000); animation: darkPulse 2.4s ease-in-out infinite; }
+@keyframes darkPulse { 50% { filter: saturate(.55) brightness(.9) hue-rotate(250deg) drop-shadow(0 0 22px #d07bff) drop-shadow(0 0 4px #000); } }
+.scene.raid .mon.me { width: 25%; left: 1%; bottom: 3%; top: auto; }
+.scene.raid .mon.ally { width: 21%; left: 25%; bottom: 17%; top: auto; }
+.scene.raid .mon.ally2 { width: 21%; left: 46%; bottom: 5%; top: auto; }
+.scene.raid .mon.ally3 { width: 19%; left: 66%; bottom: 20%; top: auto; }
+.scene.raid .mon.me.giant, .scene.raid .mon.ally.giant, .scene.raid .mon.ally2.giant, .scene.raid .mon.ally3.giant { width: 30%; }
+.scene.raid .plate { width: 31%; } .scene.raid .plate .num { display: none; } .scene.raid .plate.me .num, .scene.raid .plate.opp .num { display: block; }
+.scene.raid .plate.opp { top: 2%; left: 1%; width: 50%; }
+.scene.raid .plate.ally { top: 24%; left: 1%; bottom: auto; right: auto; }
+.scene.raid .plate.ally2 { top: 38%; left: 1%; } .scene.raid .plate.ally3 { top: 52%; left: 1%; }
+.scene.raid .plate.me { bottom: 2%; right: 1%; width: 40%; }
+.scene.raid .plate.ally, .scene.raid .plate.ally2, .scene.raid .plate.ally3 { padding: 1px 5px 3px; opacity: .93; } .scene.raid .plate.ally .nm, .scene.raid .plate.ally2 .nm, .scene.raid .plate.ally3 .nm { font-size: 11px; }
+.scene.raid .plate .owner { font-size: 10px; }
+.rd-hero .rw, .rd-room .rw { color: var(--ink); }
+.scene.raid .plate.ally { top: 28%; } .scene.raid .plate.ally2 { top: 42%; } .scene.raid .plate.ally3 { top: 56%; }
+.raid-res { display: grid; justify-items: center; gap: 4px; width: 240px; padding: 10px; color: #fff; background: linear-gradient(150deg, #2a0f1f, #b3122e); border: var(--line); border-radius: 16px; } .raid-res.dark { background: linear-gradient(150deg, #0d0618, #6a1fb0); }
+.raid-res svg { width: 170px; height: auto; } .raid-res.dark svg { filter: saturate(.55) brightness(.8) hue-rotate(250deg) drop-shadow(0 0 10px #b44bff); }
+.vs.raid-dark .vs-side:last-child .bc-ava { filter: saturate(.5) brightness(.7) hue-rotate(250deg) drop-shadow(0 0 8px #b44bff); }

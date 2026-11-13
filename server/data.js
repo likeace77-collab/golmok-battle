@@ -599,6 +599,8 @@ const COSMETICS = {
     C('dimension', '차원을 넘어온 자', ['gift', 'titles:dimension'], { tier: 10 }), // 옛 골목대전에서 넘어온 계정 기념
     // 랭크전 (한 번이라도 그 티어에 오르면)
     C('rankgold', '골드 골목꾼', ['rank', 2], { tier: 3 }), C('rankdia', '다이아 골목꾼', ['rank', 4], { tier: 4, glow: '#2EF2FF' }), C('rankmaster', '골목 마스터', ['rank', 5], { tier: 5, glow: '#B44BFF' }), C('rankboss', '진짜 골목대장', ['rank', 6], { tier: 5, glow: '#ff3a4a' }),
+    // 레이드
+    C('raider', '레이드 헌터', ['raidWins', 5], { tier: 4, glow: '#ff3a4a' }), C('raidlord', '거다이 사냥꾼', ['raidWins', 30], { tier: 5, glow: '#FFD23F' }), C('purifier', '흑화 정화단', ['darkWins', 1], { tier: 4, glow: '#B44BFF' }),
     // 길드 직책 (길드에 있는 동안만)
     C('guildmaster', '길드 마스터', ['guild', 'master'], { tier: 5, glow: '#FFD23F' }), C('guildvice', '길드 부마', ['guild', 'vice'], { tier: 4, glow: '#B44BFF' }), C('guildmember', '길드원', ['guild', 'member'], { tier: 2 }),
     // 길드 상점 (길P로 구매)
@@ -675,7 +677,7 @@ const STAT_NAMES = {
   p0: '골목대장(쉬움) 승리', p1: '골목대장(보통) 승리', p2: '골목대장(어려움) 승리', p3: '골목대장(지옥) 승리',
   tagGames: '태그 대전', tagWins: '태그 승리', megas: '메가진화 사용',
   dev: '개발자 계정', gift: '우편 보상', dummyDmg: '훈련장 누적 피해', dummyBest: '훈련장 한 턴 최고 피해',
-  zmoves: 'Z기술 사용', botWins: '골목대장 승리(난이도 무관)', draws: '1대1 무승부', flawless: '한 마리도 안 쓰러지고 승리', shop: '상점',
+  zmoves: 'Z기술 사용', botWins: '골목대장 승리(난이도 무관)', draws: '1대1 무승부', flawless: '한 마리도 안 쓰러지고 승리', shop: '상점', raidWins: '레이드 클리어', darkWins: '흑화 친구 정화',
 };
 
 // 루미나와 실비아는 사진 그림(public/img/mon)을 씁니다.
