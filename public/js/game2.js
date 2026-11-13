@@ -518,6 +518,28 @@ function shinify(svg, id) {
 const monArt = (id, shiny, ...rest) => (shiny ? shinify(monsterSVG(id, ...rest), id) : monsterSVG(id, ...rest));
 const SHINY_TAG = '<em class="shiny-tag">✨ 이로치</em>';
 
+/* ---------- 이벤트 던전 ---------- */
+async function showDungeon(back = showLobby) {
+  G.screen = 'dungeon'; app.className = '';
+  app.innerHTML = `${topbar('이벤트 던전')}<p class="wait">불러오는 중…</p>`;
+  app.querySelector('#back').onclick = back;
+  let v; try { v = (await api('GET', '/api/dungeon')).dungeon; } catch (e) { return toast(e.message); }
+  if (G.screen !== 'dungeon') return;
+  const r = v.rule, days = ['일', '월', '화', '수', '목', '금', '토'];
+  app.innerHTML = `${topbar('이벤트 던전')}
+    <section class="dg-hero"><s aria-hidden="true"></s><span class="dg-ic">${r.icon}</span><h2>오늘의 던전: ${esc(r.n)}</h2><p>${esc(r.d)}</p><small>${r.size}대${r.size} · 골목대장 ${v.floors}연전 · 매일 자정에 새 규칙</small></section>
+    <section class="panel dg-tower">
+      ${Array.from({ length: v.floors }, (_, i) => v.floors - 1 - i).map((f) => { const st = f < v.floor ? 'done' : f === v.floor && !v.cleared ? 'now' : 'lock';
+        return `<div class="dg-floor ${st}"><b>${f + 1}층</b><div>${rewardChips(v.floorR[f])}</div><span>${st === 'done' ? '✅' : st === 'now' ? '⚔️' : '🔒'}</span></div>`; }).join('')}
+      <div class="dg-clear ${v.cleared ? 'done' : ''}"><b>🏆 완전 정복 보상</b><div>${rewardChips(v.clearR)}</div></div>
+      <button class="btn wide dg-go" id="dg-go" ${v.cleared ? 'disabled' : ''}>${v.cleared ? '오늘은 다 깼어요! 내일 또 와요' : `${v.floor + 1}층 도전하기`}</button>
+      <p class="muted" style="font-size:12px;text-align:center">져도 다시 도전할 수 있어요. 층 보상과 정복 보상은 하루 한 번씩.</p>
+    </section>
+    <section class="panel"><h2>이번 주 던전</h2>${v.week.map((w) => `<div class="dg-week ${w.id === r.id ? 'on' : ''}"><b>${days[w.day]}</b><span>${w.icon}</span><div><b>${esc(w.n)}</b><small>${esc(w.d)}</small></div></div>`).join('')}</section>`;
+  app.querySelector('#back').onclick = back;
+  app.querySelector('#dg-go').onclick = () => wsSend({ t: 'dungeon' });
+}
+
 /* ---------- 랭크전 ---------- */
 let rankWaiting = false;
 async function showRank(back = showLobby) {

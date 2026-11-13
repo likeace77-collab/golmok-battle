@@ -1623,3 +1623,17 @@ svg[data-shiny] { filter: hue-rotate(var(--shue)) saturate(1.35) brightness(1.05
 .rk-tier:first-of-type { border-top: 0; } .rk-tier span { font-size: 22px; } .rk-tier small { font-size: 12px; color: #6b6380; } .rk-tier > div { display: flex; flex-wrap: wrap; gap: 3px; }
 .rk-tier.on { background: color-mix(in srgb, var(--rc) 25%, #fff); border-radius: 10px; }
 .rk-tier .rw { font-size: 12px; padding: 1px 6px; } .rk-tier .rw svg { width: 14px; height: 14px; }
+/* 이벤트 던전 */
+.g2b.dungeon { background: linear-gradient(160deg, #b48cff, #ff3e9a); color: #fff; }
+.dg-hero { position: relative; overflow: hidden; display: grid; justify-items: center; gap: 4px; padding: 16px; color: #fff; text-align: center; background: linear-gradient(140deg, #1a1433, #5a2ccf 55%, #ff3e9a); border: var(--line); border-radius: 18px; box-shadow: 4px 4px 0 var(--ink); }
+.dg-hero > * { position: relative; } .dg-hero s { position: absolute; inset: -60%; background: repeating-conic-gradient(#fff1 0 6deg, transparent 6deg 18deg); animation: ttSpin 30s linear infinite; }
+.dg-ic { font-size: 48px; filter: drop-shadow(0 0 10px #fff8); } .dg-hero h2 { font-family: var(--display); font-weight: 400; font-size: 24px; text-shadow: 2px 2px 0 var(--ink); } .dg-hero p { margin: 0; } .dg-hero small { opacity: .85; }
+.dg-tower { display: grid; gap: 6px; }
+.dg-floor { display: grid; grid-template-columns: 54px 1fr 30px; align-items: center; gap: 8px; padding: 8px 10px; background: #e7e2d4; border: var(--line); border-radius: 12px; }
+.dg-floor b { font-family: var(--display); font-size: 18px; } .dg-floor > div { display: flex; flex-wrap: wrap; gap: 3px; } .dg-floor span { font-size: 20px; text-align: center; }
+.dg-floor.now { background: linear-gradient(90deg, #fff3b0, #fff8e0); box-shadow: 3px 3px 0 var(--ink), 0 0 14px #ffd23f; } .dg-floor.done { background: #d8f5e4; opacity: .8; }
+.dg-clear { padding: 10px; text-align: center; background: linear-gradient(135deg, #ffd23f, #ff8a00); border: var(--line); border-radius: 12px; } .dg-clear > div { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 4px; }
+.dg-clear.done { filter: grayscale(.6); } .dg-go { margin-top: 6px; font-size: 17px; }
+.dg-week { display: grid; grid-template-columns: 24px 30px 1fr; gap: 6px; align-items: center; padding: 6px 4px; border-top: 2px dashed #1a143320; } .dg-week:first-of-type { border-top: 0; }
+.dg-week > div { display: grid; } .dg-week small { font-size: 12px; color: #6b6380; } .dg-week span { font-size: 20px; } .dg-week.on { background: #fff3b0; border-radius: 10px; }
+.dg-floor .rw, .dg-clear .rw { font-size: 12px; padding: 1px 6px; } .dg-floor .rw svg, .dg-clear .rw svg { width: 14px; height: 14px; }

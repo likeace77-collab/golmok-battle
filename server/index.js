@@ -9,6 +9,7 @@ const E = require('./engine');
 const P = require('./progress');
 const S = require('./social'); // 친구·길드·채팅·협업 퀘스트
 const R = require('./rank'); // 랭크전
+const DG = require('./dungeon'); // 이벤트 던전
 
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -582,6 +583,7 @@ async function progressApi(req, res, route, auth, user) {
   { const sr = S.api(route, user, auth.key, body); if (sr !== undefined) return done(sr); }
   if (route === 'POST /api/coupon') return done(useCoupon(user, body.code));
   if (route === 'GET /api/scout') return json(res, 200, { scout: P.scoutState(user), user: publicUser(user) });
+  if (route === 'GET /api/dungeon') return done({ ok: true }, { dungeon: DG.view(user) });
   if (route === 'GET /api/rank') { const v = R.view(user); return done({ ok: true }, { rank: v, board: R.board(db.users, v.season), queued: rankQ.has(auth.key) }); }
   if (route === 'GET /api/expe') return done({ ok: true }, { expe: P.expeState(user) });
   if (route === 'POST /api/expe/send') return done(P.expeSend(user, String(body.uid || ''), String(body.dest || ''), new Set(deckOf(user).team.map((t) => t.uid))), { expe: P.expeState(user) });
@@ -860,16 +862,17 @@ function countTraining(room) {
 const KIND_NAME = { titles: '칭호', cards: '전투카드', pins: '핀' };
 const unlockedIds = (u) => Object.entries(Data.COSMETICS).flatMap(([kind, list]) => list.filter((x) => x.cond && isUnlocked(u, x)).map((x) => `${kind}:${KIND_NAME[kind]} ${x.n}`));
 
-function startBattle(keys, size, level = 1, tag = false, ranked = false) {
+function startBattle(keys, size, level = 1, tag = false, ranked = false, dungeon = null) {
   const foeDeck = (i) => {
     const mine = tag ? (i < 2 ? 0 : 1) : i;
     const human = keys.find((k, j) => k !== BOT && (tag ? (j < 2 ? 0 : 1) : j) !== mine) ?? keys.find((k) => k !== BOT);
     return battleTeam(db.users[human]).slice(0, size);
   };
   const players = keys.map((k, i) => (k === BOT
-    ? { name: `골목대장(${BOT_LEVELS[level]})`, avatar: randomAvatar(true), style: randomStyle(), deck: `${BOT_LEVELS[level]} 덱`, team: E.botTeam(level, size, foeDeck(i)) }
-    : { name: db.users[k].name, avatar: db.users[k].avatar, style: db.users[k].style, deck: deckOf(db.users[k]).name, team: battleTeam(db.users[k]).slice(0, size), stones: db.users[k].stones }));
-  const room = { id: crypto.randomUUID(), keys, b: E.createBattle(players, undefined, { preview: true }), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: level, tag, ranked, spectators: new Set() };
+    ? (dungeon ? { name: `${dungeon.rule.icon} ${dungeon.floor + 1}층 골목대장`, avatar: randomAvatar(true), style: randomStyle(), deck: dungeon.rule.n, team: DG.foeTeam(dungeon.rule, dungeon.floor, foeDeck(i)), ...(dungeon.rule.noMega ? { stones: [] } : {}) }
+      : { name: `골목대장(${BOT_LEVELS[level]})`, avatar: randomAvatar(true), style: randomStyle(), deck: `${BOT_LEVELS[level]} 덱`, team: E.botTeam(level, size, foeDeck(i)) })
+    : { name: db.users[k].name, avatar: db.users[k].avatar, style: db.users[k].style, deck: deckOf(db.users[k]).name, team: battleTeam(db.users[k]).slice(0, size), stones: dungeon?.rule.noMega ? [] : db.users[k].stones }));
+  const room = { id: crypto.randomUUID(), keys, b: E.createBattle(players, undefined, { preview: true }), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: level, tag, ranked, dungeon, spectators: new Set() };
   battles.set(room.id, room);
   keys.forEach((k) => { if (k !== BOT) { inBattle.set(k, room); clearChallenges(k); removeFromTag(k); stopWatching(k); } });
   armTimer(room);
@@ -1006,6 +1009,10 @@ function finish(room) {
     { const team = E.teamOf(room.b, s); const mates = humans.filter(([k2, s2]) => k2 !== k && E.teamOf(room.b, s2) === team).map(([k2]) => k2), foes = humans.filter(([, s2]) => E.teamOf(room.b, s2) !== team).map(([k2]) => k2);
       S.afterBattle(k, { won, mega: !!room.b.sides[s].megaUsed, mates, foes, kind: room.tag ? 'tag' : pvp ? 'pvp' : 'practice' }); }
     if (pts) { if (online.has(k)) toast(k, `시즌 패스 포인트 +${pts}`); else notices.set(k, [notices.get(k), `시즌 패스 포인트 +${pts}`].filter(Boolean).join(' · ')); }
+    if (room.dungeon) {
+      const dr = DG.result(db.users[k], room.dungeon.floor, won, P.grant);
+      if (dr) setTimeout(() => send(online.get(k), { t: 'gift', title: dr.cleared ? `🏆 ${room.dungeon.rule.n} 완전 정복!` : `${room.dungeon.floor + 1}층 돌파!`, got: dr.got }), 1800);
+    }
     if (room.ranked && winner !== null) {
       const rr = R.result(db.users[k], won, room.keys.includes(BOT)), T = R.TIERS[rr.tier];
       const msg = `🏆 랭크 ${rr.delta >= 0 ? '+' : ''}${rr.delta}점 (${T.icon} ${T.n} ${rr.pts})${rr.up ? ` · ${T.n} 승급!` : ''}`;
@@ -1031,7 +1038,7 @@ function finish(room) {
 
 function onMessage(key, msg) {
   if (!db.users[key].birthYear) return send(online.get(key), { t: 'need_age' });
-  if (!db.users[key].tutorial && ['practice', 'challenge', 'accept', 'tag_create', 'tag_seat', 'tag_start', 'training'].includes(msg?.t)) return toast(key, '튜토리얼을 먼저 끝내 주세요.');
+  if (!db.users[key].tutorial && ['dungeon', 'rank_queue', 'practice', 'challenge', 'accept', 'tag_create', 'tag_seat', 'tag_start', 'training'].includes(msg?.t)) return toast(key, '튜토리얼을 먼저 끝내 주세요.');
   const room = inBattle.get(key);
   switch (msg?.t) {
     case 'action': {
@@ -1074,6 +1081,16 @@ function onMessage(key, msg) {
       }, 15000);
       rankQ.set(key, { at: Date.now(), timer });
       send(online.get(key), { t: 'rank_wait', n: rankQ.size });
+      break;
+    }
+    case 'dungeon': {
+      if (room) return;
+      const u = db.users[key], v = DG.view(u);
+      if (v.cleared) return toast(key, '오늘 던전은 이미 다 깼어요! 내일 새 규칙으로 열려요.');
+      const size = v.rule.size, team = battleTeam(u).slice(0, size);
+      if (team.length < size) return toast(key, `덱에 골목몬이 ${size}마리 있어야 해요.`);
+      if (bannedIn(u, team).length || secretIn(team).length) return toast(key, '덱에 공개 전 골목몬이 있어 들어갈 수 없어요.');
+      startBattle([key, BOT], size, DG.LEVELS[v.floor], false, false, { rule: v.rule, floor: v.floor });
       break;
     }
     case 'rank_cancel': rankLeave(key); send(online.get(key), { t: 'rank_cancel' }); break;
