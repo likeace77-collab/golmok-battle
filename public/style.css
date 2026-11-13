@@ -1607,3 +1607,19 @@ svg[data-shiny] { filter: hue-rotate(var(--shue)) saturate(1.35) brightness(1.05
 .enh { margin: 10px 0; } .enh-bar { display: flex; gap: 4px; margin: 4px 0 6px; } .enh-bar i { flex: 1; height: 10px; background: #e7e2d4; border: 2px solid var(--ink); border-radius: 4px; }
 .enh-bar i.on { background: linear-gradient(90deg, #ffd23f, #ff8a00); box-shadow: 0 0 6px #ff8a00; }
 .enh-food { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
+/* 랭크전 */
+.g2b.rank { background: linear-gradient(160deg, #fff, var(--rc) 70%); }
+.rk-hero { position: relative; overflow: hidden; display: grid; justify-items: center; gap: 6px; padding: 18px 14px; color: #fff; text-align: center; background: radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--rc) 70%, #fff), color-mix(in srgb, var(--rc) 55%, #1a1433) 55%, #14102a); border: var(--line); border-radius: 18px; box-shadow: 4px 4px 0 var(--ink); }
+.rk-hero > * { position: relative; } .rk-hero s { position: absolute; inset: -60%; background: repeating-conic-gradient(#fff1 0 6deg, transparent 6deg 18deg); animation: ttSpin 26s linear infinite; }
+.rk-badge { display: grid; justify-items: center; } .rk-badge span { font-size: 54px; filter: drop-shadow(0 0 12px var(--rc)); } .rk-badge b { font-family: var(--display); font-weight: 400; font-size: 28px; text-shadow: 2px 2px 0 var(--ink); }
+.rk-pts b { font-family: var(--display); font-size: 40px; text-shadow: 2px 2px 0 var(--ink); } .rk-pts small { margin-left: 2px; }
+.rk-bar { width: 100%; max-width: 360px; height: 20px; } .rk-hero p { margin: 0; font-size: 13px; }
+.rk-go { font-size: 18px; padding: 12px 22px; } .rk-rule { font-size: 11px; opacity: .85; max-width: 360px; }
+.rk-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 2px dashed #1a143320; } .rk-row:first-of-type { border-top: 0; }
+.rk-row.me { background: #fff3b0; border-radius: 8px; } .rk-n { width: 26px; text-align: center; font-family: var(--display); font-size: 18px; } .rk-row .ava { width: 34px; }
+.rk-who { flex: 1; min-width: 0; display: grid; } .rk-who small { font-size: 12px; color: #6b6380; }
+.rk-t { font: 900 14px var(--ui); padding: 2px 8px; border: 2px solid var(--ink); border-radius: 99px; background: color-mix(in srgb, var(--rc) 50%, #fff); }
+.rk-tier { display: grid; grid-template-columns: 30px 72px 64px 1fr; align-items: center; gap: 6px; padding: 6px 4px; border-top: 2px dashed #1a143320; }
+.rk-tier:first-of-type { border-top: 0; } .rk-tier span { font-size: 22px; } .rk-tier small { font-size: 12px; color: #6b6380; } .rk-tier > div { display: flex; flex-wrap: wrap; gap: 3px; }
+.rk-tier.on { background: color-mix(in srgb, var(--rc) 25%, #fff); border-radius: 10px; }
+.rk-tier .rw { font-size: 12px; padding: 1px 6px; } .rk-tier .rw svg { width: 14px; height: 14px; }

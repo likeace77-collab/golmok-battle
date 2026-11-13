@@ -597,6 +597,8 @@ const COSMETICS = {
     C('deungsin', '등신', ['gift', 'titles:deungsin'], { tier: 9 }),
     C('noisecrime', '소음공해죄', ['gift', 'titles:noisecrime'], { tier: 9, icon: '♬' }),
     C('dimension', '차원을 넘어온 자', ['gift', 'titles:dimension'], { tier: 10 }), // 옛 골목대전에서 넘어온 계정 기념
+    // 랭크전 (한 번이라도 그 티어에 오르면)
+    C('rankgold', '골드 골목꾼', ['rank', 2], { tier: 3 }), C('rankdia', '다이아 골목꾼', ['rank', 4], { tier: 4, glow: '#2EF2FF' }), C('rankmaster', '골목 마스터', ['rank', 5], { tier: 5, glow: '#B44BFF' }), C('rankboss', '진짜 골목대장', ['rank', 6], { tier: 5, glow: '#ff3a4a' }),
     // 길드 직책 (길드에 있는 동안만)
     C('guildmaster', '길드 마스터', ['guild', 'master'], { tier: 5, glow: '#FFD23F' }), C('guildvice', '길드 부마', ['guild', 'vice'], { tier: 4, glow: '#B44BFF' }), C('guildmember', '길드원', ['guild', 'member'], { tier: 2 }),
     // 길드 상점 (길P로 구매)

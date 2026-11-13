@@ -518,6 +518,45 @@ function shinify(svg, id) {
 const monArt = (id, shiny, ...rest) => (shiny ? shinify(monsterSVG(id, ...rest), id) : monsterSVG(id, ...rest));
 const SHINY_TAG = '<em class="shiny-tag">✨ 이로치</em>';
 
+/* ---------- 랭크전 ---------- */
+let rankWaiting = false;
+async function showRank(back = showLobby) {
+  G.screen = 'rank'; app.className = '';
+  app.innerHTML = `${topbar('랭크전')}<p class="wait">불러오는 중…</p>`;
+  app.querySelector('#back').onclick = back;
+  let r; try { r = await api('GET', '/api/rank'); } catch (e) { return toast(e.message); }
+  if (G.screen !== 'rank') return;
+  rankWaiting = r.queued;
+  const v = r.rank, T = v.tiers, t = T[v.tier];
+  const pct = v.next ? ((v.pts - v.floor) / (v.next - v.floor)) * 100 : 100;
+  const rw = (x) => rewardChips(x.r);
+  app.innerHTML = `${topbar('랭크전')}
+    <section class="rk-hero" style="--rc:${t.c}"><s aria-hidden="true"></s>
+      <div class="rk-badge"><span>${t.icon}</span><b>${t.n}</b></div>
+      <div class="rk-pts"><b>${v.pts}</b><small>점</small></div>
+      <div class="qbar rk-bar"><i style="width:${Math.max(0, Math.min(100, pct))}%"></i><span>${v.next ? `${T[v.tier + 1].icon} ${T[v.tier + 1].n}까지 ${v.next - v.pts}점` : '최고 티어!'}</span></div>
+      <p>시즌 ${esc(v.season)} · ${v.w}승 ${v.l}패${v.streak > 1 ? ` · 🔥 ${v.streak}연승` : ''} · 이번 시즌 최고 ${T[v.best].icon} ${T[v.best].n}</p>
+      <button class="btn rk-go" id="rk-go">${rankWaiting ? '⏳ 상대 찾는 중… (취소)' : `⚔️ 랭크전 시작 (${v.size}대${v.size})`}</button>
+      <small class="rk-rule">상대를 15초 동안 못 찾으면 내 티어에 맞는 골목대장과 붙어요. 사람과 이기면 +25(연승 보너스 최대 +10), 지면 -20 · 골목대장 상대는 +12 / -10</small>
+    </section>
+    <section class="panel"><h2>🏅 이번 시즌 순위</h2>
+      ${r.board.map((p, i) => `<div class="rk-row ${p.name === G.user.name ? 'me' : ''}"><b class="rk-n">${i + 1}</b><div class="ava">${avatarSVG(p.avatar)}</div><div class="rk-who"><b>${esc(p.name)}</b><small>${p.w}승 ${p.l}패</small></div><span class="rk-t" style="--rc:${T[p.tier].c}">${T[p.tier].icon} ${p.pts}</span></div>`).join('') || '<p class="wait">아직 이번 시즌 랭크전을 한 사람이 없어요. 1등이 되어 보세요!</p>'}
+    </section>
+    <section class="panel"><h2>티어와 시즌 보상 <small class="muted">시즌이 끝나면 최고 티어 보상이 우편으로</small></h2>
+      ${T.map((x, i) => `<div class="rk-tier ${i === v.tier ? 'on' : ''}" style="--rc:${x.c}"><span>${x.icon}</span><b>${x.n}</b><small>${x.min ? `${x.min}점~` : '시작'}</small><div>${rw(x)}</div></div>`).join('')}
+      <p class="muted" style="font-size:12px;margin-top:6px">골드·다이아·마스터·골목대장에 처음 오르면 랭크 칭호가 열려요. 새 시즌엔 점수가 1000점 쪽으로 반쯤 돌아가요.</p>
+    </section>`;
+  app.querySelector('#back').onclick = () => { if (rankWaiting) wsSend({ t: 'rank_cancel' }); back(); };
+  app.querySelector('#rk-go').onclick = () => { if (rankWaiting) { wsSend({ t: 'rank_cancel' }); } else { wsSend({ t: 'rank_queue' }); } };
+}
+function onRankMsg(m) {
+  if (m.t === 'rank_wait') { rankWaiting = true; toast('상대를 찾는 중이에요…'); }
+  if (m.t === 'rank_cancel') { rankWaiting = false; toast('랭크전 찾기를 그만뒀어요.'); }
+  if (m.t === 'rank_found') { rankWaiting = false; toast(m.bot ? '사람 상대가 없어 골목대장과 랭크전!' : '랭크전 상대를 찾았어요!'); }
+  const b = document.getElementById('rk-go');
+  if (b && G.screen === 'rank') b.textContent = rankWaiting ? '⏳ 상대 찾는 중… (취소)' : '⚔️ 랭크전 시작 (3대3)';
+}
+
 /* ---------- 원정 ---------- */
 async function showExpe(back = showLobby) {
   G.screen = 'expe'; app.className = '';

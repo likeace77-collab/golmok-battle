@@ -8,6 +8,7 @@ const Data = require('./data');
 const E = require('./engine');
 const P = require('./progress');
 const S = require('./social'); // 친구·길드·채팅·협업 퀘스트
+const R = require('./rank'); // 랭크전
 
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -118,7 +119,7 @@ const statOf = (u, k) => (k === 'wins' || k === 'losses' || k === 'draws' ? u[k]
 const owns = (u, ref) => (u.owned || []).includes(ref);
 const REF = new Map(Object.entries(Data.COSMETICS).flatMap(([kind, list]) => list.map((x) => [x, `${kind}:${x.id}`])));
 const isUnlocked = (u, item) => !item.cond || isDev(u) || owns(u, REF.get(item)) || (item.cond[0] === 'gift' ? owns(u, item.cond[1])
-  : item.cond[0] === 'guild' ? S.roleOk(u, item.cond[1]) : !['dev', 'shop', 'gshop'].includes(item.cond[0]) && statOf(u, item.cond[0]) >= item.cond[1]);
+  : item.cond[0] === 'guild' ? S.roleOk(u, item.cond[1]) : item.cond[0] === 'rank' ? (u.rank?.ever || 0) >= item.cond[1] : !['dev', 'shop', 'gshop'].includes(item.cond[0]) && statOf(u, item.cond[0]) >= item.cond[1]);
 // 길드 직책이 바뀌어 못 쓰게 된 꾸미기는 기본으로 되돌림
 function fixStyle(u) {
   if (!u.style) return;
@@ -352,7 +353,7 @@ const publicUser = (u) => ({
   name: u.name, avatar: u.avatar, decks: deckView(u), active: u.active, stats: u.stats, style: u.style,
   wins: u.wins, losses: u.losses, draws: u.draws, h2h: u.h2h,
   tutorial: !!u.tutorial, gp: u.gp, tickets: u.tickets, skips: u.skips, stones: u.stones, mons: u.mons,
-  premium: P.passState(u).premium, badges: { ...P.claimable(u), social: (u.freq?.in?.length || 0) + (db.guilds ? S.guildClaimable(u, keyOf(u.name)) + S.tradeIn(keyOf(u.name)) : 0) }, guild: u.guild && db.guilds?.[u.guild] ? { id: u.guild, name: db.guilds[u.guild].name, emblem: db.guilds[u.guild].emblem, color: db.guilds[u.guild].color, role: S.roleOf(u) } : null, gpt: u.gpt || 0, friendsN: (u.friends || []).length, scoutReady: !!P.scoutState(u).cands, surveyDone: !!db.surveys?.[keyOf(u.name)], sunfish: !!u.sunfishDone,
+  premium: P.passState(u).premium, badges: { ...P.claimable(u), social: (u.freq?.in?.length || 0) + (db.guilds ? S.guildClaimable(u, keyOf(u.name)) + S.tradeIn(keyOf(u.name)) : 0) }, guild: u.guild && db.guilds?.[u.guild] ? { id: u.guild, name: db.guilds[u.guild].name, emblem: db.guilds[u.guild].emblem, color: db.guilds[u.guild].color, role: S.roleOf(u) } : null, gpt: u.gpt || 0, friendsN: (u.friends || []).length, rank: u.rank ? { pts: u.rank.pts, tier: R.tierOf(u.rank.pts), ever: u.rank.ever || 0 } : { pts: 1000, tier: 0, ever: 0 }, scoutReady: !!P.scoutState(u).cands, surveyDone: !!db.surveys?.[keyOf(u.name)], sunfish: !!u.sunfishDone,
 });
 
 function createSession(res, req, key) {
@@ -581,6 +582,7 @@ async function progressApi(req, res, route, auth, user) {
   { const sr = S.api(route, user, auth.key, body); if (sr !== undefined) return done(sr); }
   if (route === 'POST /api/coupon') return done(useCoupon(user, body.code));
   if (route === 'GET /api/scout') return json(res, 200, { scout: P.scoutState(user), user: publicUser(user) });
+  if (route === 'GET /api/rank') { const v = R.view(user); return done({ ok: true }, { rank: v, board: R.board(db.users, v.season), queued: rankQ.has(auth.key) }); }
   if (route === 'GET /api/expe') return done({ ok: true }, { expe: P.expeState(user) });
   if (route === 'POST /api/expe/send') return done(P.expeSend(user, String(body.uid || ''), String(body.dest || ''), new Set(deckOf(user).team.map((t) => t.uid))), { expe: P.expeState(user) });
   if (route === 'POST /api/expe/claim') return done(P.expeClaim(user, String(body.uid || 'all')), { expe: P.expeState(user) });
@@ -787,6 +789,9 @@ const challenges = new Map(); // 신청자 키 → { to, size }
 const notices = new Map();    // 다음 접속 때 알려 줄 말
 const tagRooms = new Map();   // 태그 방 id → { id, host, level, slots }
 const spectating = new Map(); // 유저 키 → 관전 중인 room
+// 랭크전 대기열: 사람끼리 먼저, 15초 안에 상대가 없으면 내 티어에 맞는 골목대장과
+const rankQ = new Map(); // key → { at, timer }
+function rankLeave(key) { const q = rankQ.get(key); if (q) { clearTimeout(q.timer); rankQ.delete(key); } }
 const REACTS = new Set(['kk', 'gg', 'nice', 'wow', 'oops', 'sorry', 'hi', 'gl', 'fire', 'cry', 'clap', 'think']), reactAt = new Map();
 
 const send = (ws, msg) => { if (ws?.readyState === 1) ws.send(JSON.stringify(msg)); };
@@ -855,7 +860,7 @@ function countTraining(room) {
 const KIND_NAME = { titles: '칭호', cards: '전투카드', pins: '핀' };
 const unlockedIds = (u) => Object.entries(Data.COSMETICS).flatMap(([kind, list]) => list.filter((x) => x.cond && isUnlocked(u, x)).map((x) => `${kind}:${KIND_NAME[kind]} ${x.n}`));
 
-function startBattle(keys, size, level = 1, tag = false) {
+function startBattle(keys, size, level = 1, tag = false, ranked = false) {
   const foeDeck = (i) => {
     const mine = tag ? (i < 2 ? 0 : 1) : i;
     const human = keys.find((k, j) => k !== BOT && (tag ? (j < 2 ? 0 : 1) : j) !== mine) ?? keys.find((k) => k !== BOT);
@@ -864,7 +869,7 @@ function startBattle(keys, size, level = 1, tag = false) {
   const players = keys.map((k, i) => (k === BOT
     ? { name: `골목대장(${BOT_LEVELS[level]})`, avatar: randomAvatar(true), style: randomStyle(), deck: `${BOT_LEVELS[level]} 덱`, team: E.botTeam(level, size, foeDeck(i)) }
     : { name: db.users[k].name, avatar: db.users[k].avatar, style: db.users[k].style, deck: deckOf(db.users[k]).name, team: battleTeam(db.users[k]).slice(0, size), stones: db.users[k].stones }));
-  const room = { id: crypto.randomUUID(), keys, b: E.createBattle(players, undefined, { preview: true }), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: level, tag, spectators: new Set() };
+  const room = { id: crypto.randomUUID(), keys, b: E.createBattle(players, undefined, { preview: true }), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: level, tag, ranked, spectators: new Set() };
   battles.set(room.id, room);
   keys.forEach((k) => { if (k !== BOT) { inBattle.set(k, room); clearChallenges(k); removeFromTag(k); stopWatching(k); } });
   armTimer(room);
@@ -1001,6 +1006,11 @@ function finish(room) {
     { const team = E.teamOf(room.b, s); const mates = humans.filter(([k2, s2]) => k2 !== k && E.teamOf(room.b, s2) === team).map(([k2]) => k2), foes = humans.filter(([, s2]) => E.teamOf(room.b, s2) !== team).map(([k2]) => k2);
       S.afterBattle(k, { won, mega: !!room.b.sides[s].megaUsed, mates, foes, kind: room.tag ? 'tag' : pvp ? 'pvp' : 'practice' }); }
     if (pts) { if (online.has(k)) toast(k, `시즌 패스 포인트 +${pts}`); else notices.set(k, [notices.get(k), `시즌 패스 포인트 +${pts}`].filter(Boolean).join(' · ')); }
+    if (room.ranked && winner !== null) {
+      const rr = R.result(db.users[k], won, room.keys.includes(BOT)), T = R.TIERS[rr.tier];
+      const msg = `🏆 랭크 ${rr.delta >= 0 ? '+' : ''}${rr.delta}점 (${T.icon} ${T.n} ${rr.pts})${rr.up ? ` · ${T.n} 승급!` : ''}`;
+      if (online.has(k)) setTimeout(() => toast(k, msg), 1500); else notices.set(k, [notices.get(k), msg].filter(Boolean).join(' · '));
+    }
   }
   if (pvp) {
     const [a, b] = room.keys.map((k) => db.users[k]);
@@ -1049,6 +1059,24 @@ function onMessage(key, msg) {
       break;
     }
     case 'unspectate': stopWatching(key); broadcastLobby(); break;
+    case 'rank_queue': {
+      if (room || rankQ.has(key)) return;
+      const u = db.users[key], size = R.SIZE, team = battleTeam(u).slice(0, size);
+      if (team.length < size) return toast(key, `랭크전은 덱에 골목몬이 ${size}마리 있어야 해요.`);
+      if (bannedIn(u, team).length || secretIn(team).length) return toast(key, '덱에 공개 전 골목몬이 있어 랭크전을 할 수 없어요.');
+      const other = [...rankQ.keys()].find((k) => k !== key && online.has(k) && !inBattle.has(k));
+      if (other) { rankLeave(other); send(online.get(other), { t: 'rank_found' }); send(online.get(key), { t: 'rank_found' }); startBattle([other, key], size, 1, false, true); break; }
+      const timer = setTimeout(() => {
+        if (!rankQ.has(key)) return; rankLeave(key);
+        if (!online.has(key) || inBattle.has(key)) return;
+        send(online.get(key), { t: 'rank_found', bot: true });
+        startBattle([key, BOT], size, R.botLevel(db.users[key]), false, true);
+      }, 15000);
+      rankQ.set(key, { at: Date.now(), timer });
+      send(online.get(key), { t: 'rank_wait', n: rankQ.size });
+      break;
+    }
+    case 'rank_cancel': rankLeave(key); send(online.get(key), { t: 'rank_cancel' }); break;
     case 'react': { // 대전 응원·이모티콘: 같은 방 사람과 관전자에게
       const r = String(msg.r || '');
       if (!REACTS.has(r) && !(r.startsWith('s:') && Data.MONSTERS[r.slice(2)])) break;
@@ -1172,7 +1200,7 @@ server.on('upgrade', (req, socket, head) => {
     });
     ws.on('close', () => {
       if (online.get(key) !== ws) return;
-      online.delete(key);
+      online.delete(key); rankLeave(key);
       db.users[key].lastSeen = Date.now(); save();
       challenges.delete(key);
       removeFromTag(key);
@@ -1218,6 +1246,7 @@ setInterval(() => {
     catch (e) { console.error(e.message); process.exit(1); }
   }
   migrate();
+  R.init({ seasonOf: P.seasonOf, grant: P.grant, sendMail });
   S.init(db, { keyOf, online, send, toast, publicUser, save, grant: P.grant, bump: P.bump, isDev, inBattle, sendMail, fixStyle, seasonOf: P.seasonOf, cosmetic: (kind, id) => Data.COSMETICS[kind]?.find((x) => x.id === id), owns });
   server.listen(PORT, () => console.log(`골목대전 서버 실행 중: http://localhost:${PORT}`));
 })();

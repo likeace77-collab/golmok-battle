@@ -270,6 +270,7 @@ function onServer(m) {
     case 'battle': Battle.enter(m); break;
     case 'turn': Battle.onTurn(m); break;
     case 'react': Battle.onReact(m); break;
+    case 'rank_wait': case 'rank_found': case 'rank_cancel': onRankMsg(m); break;
     case 'traded': if (G.screen !== 'battle') tradeDone(m, () => (G.screen === 'friends' ? showFriends() : null)); else toast(`🔄 ${m.with}님과 교환이 끝났어요!`); break;
     case 'chosen': Battle.onChosen(m); break;
     case 'opp_ready': Battle.setNote('상대가 행동을 골랐습니다.'); break;
@@ -355,6 +356,7 @@ function renderLobby() {
         <button class="g2b stones" id="go-stones"><span>💎</span><b>메가스톤</b><small>${u.stones.length}개</small></button>
         <button class="g2b friends" id="go-friends"><span>👥</span><b>친구</b>${u.badges.social ? `<em class="mailbadge">${u.badges.social}</em>` : ''}<small>${u.friendsN}명</small></button>
         <button class="g2b guild" id="go-guild"><span>${u.guild ? u.guild.emblem : '🏰'}</span><b>${u.guild ? esc(u.guild.name) : '길드'}</b>${u.guild ? '' : '<small>만들기·가입</small>'}</button>
+        <button class="g2b rank" id="go-rank" style="--rc:${['#c8873a', '#b8c4d0', '#FFD23F', '#6CF2C2', '#2EF2FF', '#B44BFF', '#ff3a4a'][u.rank?.tier || 0]}"><span>${['🥉', '🥈', '🥇', '💠', '💎', '👑', '🔥'][u.rank?.tier || 0]}</span><b>랭크전</b><small>${u.rank?.pts ?? 1000}점</small></button>
         <button class="g2b expe" id="go-expe"><span>🧭</span><b>원정</b>${u.badges.expe ? `<em class="mailbadge">${u.badges.expe}</em>` : ''}</button>
         <button class="g2b chat" id="go-chat"><span>💬</span><b>채팅</b><em class="mailbadge" data-chatbadge hidden></em></button>
       </div>
@@ -419,6 +421,7 @@ function renderLobby() {
   app.querySelector('#go-guild').onclick = () => showGuild();
   app.querySelector('#go-chat').onclick = () => showChat(Social.cur, showLobby);
   app.querySelector('#go-expe').onclick = () => showExpe();
+  app.querySelector('#go-rank').onclick = () => showRank();
   refreshChatBadge();
   app.querySelectorAll('[data-watch]').forEach((b) => { b.onclick = () => wsSend({ t: 'spectate', id: b.dataset.watch }); });
   app.querySelector('#tag-new')?.addEventListener('click', () => wsSend({ t: 'tag_create' }));
@@ -463,6 +466,7 @@ function condText(item) {
   if (!item.cond) return '처음부터 사용 가능';
   if (item.cond[0] === 'dev') return '개발자 계정 전용';
   if (item.cond[0] === 'gift') return '우편 보상으로 받은 아이템';
+  if (item.cond[0] === 'rank') return `랭크전 ${['브론즈', '실버', '골드', '플래티넘', '다이아', '마스터', '골목대장'][item.cond[1]]} 달성`;
   if (item.cond[0] === 'guild') return { master: '길드를 만든 길드장 (길드장인 동안)', vice: '길드장이 뽑은 부길드장 (부길드장인 동안)', member: '길드에 들어가 있는 동안' }[item.cond[1]];
   if (item.cond[0] === 'gshop') return unlocked(G.user, item) ? '길드 상점에서 산 아이템' : `길드 상점에서 ${item.cond[1].toLocaleString('ko-KR')}길P`;
   if (item.cond[0] === 'shop') return unlocked(G.user, item) ? '상점에서 산 아이템' : `상점에서 ${item.cond[1].toLocaleString('ko-KR')}GP`;

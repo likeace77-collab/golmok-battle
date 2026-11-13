@@ -321,4 +321,4 @@ function statOf(u, k) {
   return (u.stats || {})[k] || 0;
 }
 const cosRef = (item) => { for (const [k, list] of Object.entries(G.data.COSMETICS)) if (list.includes(item)) return `${k}:${item.id}`; return ''; };
-const unlocked = (u, item) => !item.cond || !!u.dev || (u.owned || []).includes(cosRef(item)) || (item.cond[0] === 'gift' ? (u.owned || []).includes(item.cond[1]) : item.cond[0] === 'guild' ? !!u.guild && (item.cond[1] === 'member' || u.guild.role === item.cond[1]) : !['dev', 'shop', 'gshop'].includes(item.cond[0]) && statOf(u, item.cond[0]) >= item.cond[1]);
+const unlocked = (u, item) => !item.cond || !!u.dev || (u.owned || []).includes(cosRef(item)) || (item.cond[0] === 'gift' ? (u.owned || []).includes(item.cond[1]) : item.cond[0] === 'guild' ? !!u.guild && (item.cond[1] === 'member' || u.guild.role === item.cond[1]) : item.cond[0] === 'rank' ? (u.rank?.ever || 0) >= item.cond[1] : !['dev', 'shop', 'gshop'].includes(item.cond[0]) && statOf(u, item.cond[0]) >= item.cond[1]);
