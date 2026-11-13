@@ -48,8 +48,9 @@ async function showFriends(back = showLobby) {
     </section>
     ${v.reqIn.length ? `<section class="panel"><h2>받은 신청 <em class="mailbadge">${v.reqIn.length}</em></h2>${v.reqIn.map((p) => row(p, `<button class="btn small" data-acc="${p.key}">수락</button><button class="btn small paper" data-dec="${p.key}">거절</button>`)).join('')}</section>` : ''}
     <section class="panel"><h2>내 친구 <small class="muted">${v.friends.length}명</small></h2>
-      ${v.friends.map((p) => row(p, `<button class="btn small" data-dm="${p.key}" title="1:1 채팅">💬</button>${p.online && !p.busy ? `<button class="btn small mint" data-vs="${p.key}" title="대전 신청">⚔️</button>` : ''}<button class="btn small paper" data-rm="${p.key}" title="친구 삭제">✕</button>`)).join('') || '<p class="wait">아직 친구가 없어요. 위에서 이름으로 신청해 보세요!</p>'}
+      ${v.friends.map((p) => row(p, `<button class="btn small" data-dm="${p.key}" title="1:1 채팅">💬</button><button class="btn small" data-trade="${p.key}" title="골목몬 교환">🔄</button>${p.online && !p.busy ? `<button class="btn small mint" data-vs="${p.key}" title="대전 신청">⚔️</button>` : ''}<button class="btn small paper" data-rm="${p.key}" title="친구 삭제">✕</button>`)).join('') || '<p class="wait">아직 친구가 없어요. 위에서 이름으로 신청해 보세요!</p>'}
     </section>
+    ${tradeSection(v.trades)}
     ${v.reqOut.length ? `<section class="panel"><h2>보낸 신청</h2>${v.reqOut.map((p) => row(p, `<button class="btn small paper" data-cancel="${p.key}">취소</button>`)).join('')}</section>` : ''}`;
   app.querySelector('#back').onclick = back;
   const act = async (path, body, msg) => { try { const r = await api('POST', path, body); setUser(r); if (r.msg || msg) toast(r.msg || msg); showFriends(back); } catch (e) { toast(e.message); } };
@@ -59,7 +60,55 @@ async function showFriends(back = showLobby) {
   app.querySelectorAll('[data-cancel]').forEach((b) => { b.onclick = () => act('/api/friend/cancel', { key: b.dataset.cancel }, '신청을 취소했어요.'); });
   app.querySelectorAll('[data-rm]').forEach((b) => { b.onclick = () => { if (confirm('친구를 삭제할까요?')) act('/api/friend/remove', { key: b.dataset.rm }, '친구를 삭제했어요.'); }; });
   app.querySelectorAll('[data-dm]').forEach((b) => { b.onclick = () => showChat(`dm:${b.dataset.dm}`, () => showFriends(back)); });
+  app.querySelectorAll('[data-trade]').forEach((b) => { b.onclick = () => showTrade(b.dataset.trade, () => showFriends(back)); });
+  app.querySelectorAll('[data-tacc]').forEach((b) => { b.onclick = async () => { b.disabled = true; try { const r = await api('POST', '/api/trade/accept', { id: b.dataset.tacc }); setUser(r); tradeDone(r, () => showFriends(back)); } catch (e) { toast(e.message); b.disabled = false; } }; });
+  app.querySelectorAll('[data-tdec]').forEach((b) => { b.onclick = () => act('/api/trade/decline', { id: b.dataset.tdec }); });
   app.querySelectorAll('[data-vs]').forEach((b) => { b.onclick = () => { wsSend({ t: 'challenge', to: b.dataset.vs, size: G.size || 3 }); toast(`${G.size || 3}대${G.size || 3} 대전을 신청했어요! 로비에서 기다려요.`); showLobby(); }; });
+}
+
+/* ---------- 골목몬 교환 ---------- */
+const tmon = (m) => { if (!m) return ''; const sp = G.data.MONSTERS[m.species]; return `<div class="tr-mon${m.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? '<em class="shiny-dot">✨</em>' : ''}${monArt(m.species, m.shiny)}<b>${esc(sp.n)}</b></div>`; };
+function tradeSection(T) {
+  if (!T || (!T.in.length && !T.out.length)) return '';
+  return `<section class="panel"><h2>🔄 골목몬 교환 <small class="muted">오늘 ${T.left}번 남음</small></h2>
+    ${T.in.map((t) => `<div class="tr-row"><p><b>${esc(t.fromName)}</b>님의 제안</p><div class="tr-pair">${tmon(t.give)}<span class="tr-arrow">⇄</span>${tmon(t.want)}</div>
+      <p class="muted" style="font-size:12px">왼쪽을 받고, 내 오른쪽 골목몬을 줘요. 받은 골목몬은 ${T.shinyPct}% 확률로 반짝반짝 이로치가 돼요!</p>
+      <div class="fr-btns"><button class="btn small" data-tacc="${t.id}">교환하기</button><button class="btn small paper" data-tdec="${t.id}">거절</button></div></div>`).join('')}
+    ${T.out.map((t) => `<div class="tr-row out"><p><b>${esc(t.toName)}</b>님에게 보낸 제안 · 기다리는 중</p><div class="tr-pair">${tmon(t.give)}<span class="tr-arrow">⇄</span>${tmon(t.want)}</div>
+      <div class="fr-btns"><button class="btn small paper" data-tdec="${t.id}">취소</button></div></div>`).join('')}
+  </section>`;
+}
+// 교환 끝: 받은 골목몬 + 반짝반짝 연출
+function tradeDone(r, then) {
+  showGot(r.got, r.sparkle ? '✨ 반짝반짝! 이로치가 됐어요!' : `${r.with}님과 교환 성공!`, then);
+  if (r.sparkle) document.querySelector('.got')?.classList.add('sparkle-burst');
+}
+async function showTrade(fk, back) {
+  G.screen = 'trade'; app.className = '';
+  app.innerHTML = `${topbar('골목몬 교환')}<p class="wait">불러오는 중…</p>`;
+  app.querySelector('#back').onclick = back;
+  let r; try { r = await api('POST', '/api/trade/box', { key: fk }); } catch (e) { toast(e.message); return back(); }
+  if (G.screen !== 'trade') return;
+  let give = null, want = null;
+  const grid = (list, sel, attr) => `<div class="tr-grid">${list.map((m) => `<button class="tr-pick${m.uid === sel ? ' on' : ''}" ${attr}="${m.uid}">${tmon(m)}</button>`).join('') || '<p class="wait">골목몬이 없어요.</p>'}</div>`;
+  const draw = () => {
+    const gm = r.mine.find((m) => m.uid === give), wm = r.mons.find((m) => m.uid === want);
+    app.innerHTML = `${topbar('골목몬 교환')}
+      <section class="tr-hero"><s aria-hidden="true"></s><h2>${esc(r.name)}님과 교환</h2><p>서로 골목몬을 한 마리씩 맞바꿔요. 교환으로 받은 골목몬은 <b>일정 확률로 반짝반짝 ✨ 이로치</b>가 돼요!</p></section>
+      <h3 class="st-h">① 내가 줄 골목몬</h3>${grid(r.mine, give, 'data-g')}
+      <h3 class="st-h">② ${esc(r.name)}님에게 받고 싶은 골목몬</h3>${grid(r.mons, want, 'data-w')}
+      <div class="tr-bar"><div class="tr-pair">${gm ? tmon(gm) : '<div class="tr-mon empty">?</div>'}<span class="tr-arrow">⇄</span>${wm ? tmon(wm) : '<div class="tr-mon empty">?</div>'}</div>
+        <button class="btn" id="tr-send" ${gm && wm ? '' : 'disabled'}>교환 제안 보내기</button></div>`;
+    app.querySelector('#back').onclick = back;
+    app.querySelectorAll('[data-g]').forEach((b) => { b.onclick = () => { give = b.dataset.g; const y = scrollY; draw(); scrollTo(0, y); }; });
+    app.querySelectorAll('[data-w]').forEach((b) => { b.onclick = () => { want = b.dataset.w; const y = scrollY; draw(); scrollTo(0, y); }; });
+    app.querySelector('#tr-send').onclick = async (e) => {
+      e.target.disabled = true;
+      try { const x = await api('POST', '/api/trade/offer', { to: fk, give, want }); setUser(x); toast(x.msg || '교환을 제안했어요!'); back(); }
+      catch (err) { toast(err.message); e.target.disabled = false; }
+    };
+  };
+  draw();
 }
 
 /* ---------- 길드 ---------- */

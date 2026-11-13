@@ -235,6 +235,7 @@ function onServer(m) {
     case 'battle': Battle.enter(m); break;
     case 'turn': Battle.onTurn(m); break;
     case 'react': Battle.onReact(m); break;
+    case 'traded': if (G.screen !== 'battle') tradeDone(m, () => (G.screen === 'friends' ? showFriends() : null)); else toast(`🔄 ${m.with}님과 교환이 끝났어요!`); break;
     case 'chosen': Battle.onChosen(m); break;
     case 'opp_ready': Battle.setNote('상대가 행동을 골랐습니다.'); break;
     case 'opp_conn': Battle.setNote(m.online ? `${m.name}님이 돌아왔습니다.` : `${m.name}님이 나갔습니다. ${m.grace}초 안에 돌아오지 않으면 ${m.tag ? '골목대장이 자리를 맡습니다' : '승리합니다'}.`); break;

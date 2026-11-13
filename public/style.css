@@ -1558,3 +1558,20 @@ svg[data-shiny] { filter: hue-rotate(var(--shue)) saturate(1.35) brightness(1.05
 @keyframes rbPop { 0% { transform: scale(.3) translateY(10px); opacity: 0; } 10% { transform: scale(1.15); opacity: 1; } 18% { transform: scale(1); } 80% { opacity: 1; transform: translateY(-10px); } 100% { opacity: 0; transform: translateY(-24px); } }
 .react-pal { top: 8px; right: 54px; max-height: calc(100% - 16px); overflow-y: auto; width: min(280px, calc(100% - 70px)); } /* 화면 안에 다 보이게 */
 .rp-stk { grid-template-columns: repeat(4, 1fr); } .rp-stk button { padding: 0; } .rp-txt button { padding: 4px 2px; font-size: 13px; }
+/* 골목몬 교환 */
+.tr-hero { position: relative; overflow: hidden; padding: 16px; color: #fff; text-align: center; background: linear-gradient(120deg, #2EA8E0, #7a2cff 55%, #ff3e9a); border: var(--line); border-radius: 16px; box-shadow: 4px 4px 0 var(--ink); }
+.tr-hero s { position: absolute; inset: -60%; background: repeating-conic-gradient(#fff1 0 8deg, transparent 8deg 22deg); animation: ttSpin 28s linear infinite; }
+.tr-hero h2 { position: relative; font-family: var(--display); font-weight: 400; font-size: 26px; text-shadow: 2px 2px 0 var(--ink); } .tr-hero p { position: relative; font-size: 13px; }
+.tr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 6px; }
+.tr-pick { padding: 0; background: none; border: 0; cursor: pointer; font: inherit; }
+.tr-pick.on .tr-mon { outline: 4px solid #FFD23F; outline-offset: 1px; transform: translateY(-2px); }
+.tr-mon { position: relative; display: grid; justify-items: center; padding: 6px 4px; background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--tc, #ccc) 35%, #fff), #fff8e0 70%); border: var(--line); border-radius: 12px; box-shadow: 2px 2px 0 var(--ink); color: var(--ink); }
+.tr-mon svg { width: 100%; max-width: 72px; display: block; } .tr-mon b { font: 12px var(--ui); }
+.tr-mon.empty { width: 80px; height: 96px; place-content: center; font: 900 30px var(--display); background: #e7e2d4; }
+.tr-pair { display: flex; align-items: center; justify-content: center; gap: 10px; } .tr-pair .tr-mon { width: 96px; }
+.tr-arrow { font-size: 28px; font-weight: 900; color: #7a2cff; }
+.tr-row { padding: 10px 0; border-top: 2px dashed #1a143330; display: grid; gap: 6px; } .tr-row:first-of-type { border-top: 0; } .tr-row .fr-btns { justify-content: center; }
+.tr-bar { position: sticky; bottom: 8px; z-index: 5; display: grid; gap: 8px; justify-items: center; margin-top: 14px; padding: 10px; background: #fff8e0; border: var(--line); border-radius: 16px; box-shadow: 4px 4px 0 var(--ink); }
+.got.sparkle-burst { animation: sparkleBurst 1.4s ease-out; }
+.got.sparkle-burst::before { content: '✦ ✧ ✦ ✧ ✦ ✧ ✦'; position: absolute; left: 0; right: 0; top: 6px; text-align: center; font-size: 22px; letter-spacing: 8px; color: #FFD23F; text-shadow: 0 0 8px #fff, 0 0 14px #ffd23f; animation: shinyTwinkle .8s steps(2) infinite; pointer-events: none; }
+@keyframes sparkleBurst { 0% { box-shadow: 0 0 0 0 #fff; } 30% { box-shadow: 0 0 60px 20px #ffe680; } 100% { box-shadow: 0 0 0 0 #fff0; } }

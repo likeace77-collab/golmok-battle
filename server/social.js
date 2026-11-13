@@ -180,6 +180,7 @@ function guildClaim(u, key, qid) {
   const w = guildBook(g); (w.claimed[key] ||= []).push(qid);
   return { ok: true, got: H.grant(u, v.r) };
 }
+const tradeIn = (key) => Object.values(db?.trades || {}).filter((t) => t.to === key && Date.now() - t.at < TRADE_TTL).length;
 const guildClaimable = (u, key) => { if (!db) return 0; const g = u.guild && db.guilds?.[u.guild]; return g ? guildView(g, key).quests.filter((q) => q.can).length + gpassState(g, u).levels.filter((l) => l.can).length : 0; };
 
 // 대전이 끝날 때 index.js가 불러요: 길드 진행도와 친구 협업 퀘스트
@@ -288,12 +289,75 @@ function chatDelete(u, key, c, at) {
   return { ok: true };
 }
 
+/* ---------- 골목몬 교환 (친구끼리 1:1) ----------
+   보낸 사람이 '내 골목몬 하나 ↔ 친구 골목몬 하나'를 제안하고, 받은 사람이 수락하면 맞바꿔요.
+   교환으로 받은 골목몬은 일정 확률로 반짝반짝 이로치가 돼요. */
+const TRADE_SHINY = 0.1, TRADE_DAY = 5, TRADE_TTL = 24 * 3600e3, KSTD = (t = Date.now()) => new Date(t + KST).toISOString().slice(0, 10);
+const monLite = (m) => m && { uid: m.uid, species: m.species, ...(m.shiny ? { shiny: true } : {}) };
+const tradesOf = (key) => Object.values(db.trades || {}).filter((t) => t.from === key || t.to === key);
+function cleanTrades() { db.trades ||= {}; const now = Date.now(); for (const [id, t] of Object.entries(db.trades)) if (now - t.at > TRADE_TTL || !userOf(t.from) || !userOf(t.to)) delete db.trades[id]; }
+const tradeUsed = (u) => (u.tradeDay?.d === KSTD() ? u.tradeDay.n : 0);
+const tradeBump = (u) => { u.tradeDay = { d: KSTD(), n: tradeUsed(u) + 1 }; };
+function tradeView(key) {
+  cleanTrades();
+  const show = (t) => ({ id: t.id, from: t.from, to: t.to, fromName: nameOf(t.from), toName: nameOf(t.to), give: monLite(userOf(t.from).mons.find((m) => m.uid === t.give)), want: monLite(userOf(t.to).mons.find((m) => m.uid === t.want)), at: t.at });
+  const list = tradesOf(key).map(show).filter((t) => t.give && t.want);
+  return { in: list.filter((t) => t.to === key), out: list.filter((t) => t.from === key), left: TRADE_DAY - tradeUsed(userOf(key)), shinyPct: Math.round(TRADE_SHINY * 100) };
+}
+function tradeBox(u, key, fk) {
+  if (!isFriend(key, fk)) return err('친구의 골목몬만 볼 수 있어요.');
+  const f = userOf(fk);
+  return { ok: true, name: f.name, mons: f.mons.map(monLite), mine: u.mons.map(monLite) };
+}
+function tradeOffer(u, key, b) {
+  cleanTrades();
+  const fk = String(b.to || ''), f = userOf(fk);
+  if (!f || !isFriend(key, fk)) return err('친구하고만 교환할 수 있어요.');
+  if (tradeUsed(u) >= TRADE_DAY) return err(`교환은 하루 ${TRADE_DAY}번까지예요.`);
+  const give = u.mons.find((m) => m.uid === b.give), want = f.mons.find((m) => m.uid === b.want);
+  if (!give || !want) return err('골목몬을 다시 골라 주세요.');
+  if (u.mons.length < 2) return err('골목몬이 한 마리뿐이면 교환할 수 없어요.');
+  if (tradesOf(key).some((t) => t.give === give.uid || t.want === give.uid)) return err('이미 다른 교환에 걸려 있는 골목몬이에요.');
+  if (tradesOf(key).filter((t) => t.from === key).length >= 5) return err('보낸 교환 제안은 5개까지예요.');
+  const id = `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  db.trades[id] = { id, from: key, to: fk, give: give.uid, want: want.uid, at: Date.now() };
+  H.toast(fk, `🔄 ${u.name}님이 골목몬 교환을 제안했어요!`); ping(fk);
+  return { ok: true, msg: `${f.name}님에게 교환을 제안했어요.` };
+}
+function tradeAnswer(u, key, id, yes) {
+  cleanTrades();
+  const t = db.trades[id];
+  if (!t || (t.to !== key && t.from !== key)) return err('없거나 끝난 교환이에요.');
+  if (!yes || t.from === key) { delete db.trades[id]; if (t.from !== key) { H.toast(t.from, `${u.name}님이 교환을 거절했어요.`); ping(t.from); } else ping(t.to); return { ok: true, msg: t.from === key ? '교환 제안을 취소했어요.' : '교환을 거절했어요.' }; }
+  const a = userOf(t.from), bUser = u; // a: 제안한 사람, bUser: 수락한 사람
+  if (tradeUsed(bUser) >= TRADE_DAY) return err(`교환은 하루 ${TRADE_DAY}번까지예요.`);
+  if (tradeUsed(a) >= TRADE_DAY) return err(`${a.name}님이 오늘 교환을 다 썼어요.`);
+  const gi = a.mons.findIndex((m) => m.uid === t.give), wi = bUser.mons.findIndex((m) => m.uid === t.want);
+  if (gi < 0 || wi < 0) { delete db.trades[id]; return err('교환할 골목몬이 이미 없어요.'); }
+  if (bUser.mons.length < 2) return err('골목몬이 한 마리뿐이면 교환할 수 없어요.');
+  const [gm] = a.mons.splice(gi, 1), [wm] = bUser.mons.splice(wi, 1);
+  const unDeck = (user, uid) => (user.decks || []).forEach((d) => { d.team = d.team.filter((x) => x.uid !== uid); });
+  unDeck(a, gm.uid); unDeck(bUser, wm.uid);
+  // 반짝반짝: 받은 골목몬이 이로치로
+  const sparkle = (m, owner) => { if (!m.shiny && Math.random() < TRADE_SHINY) { m.shiny = true; owner.counts.shiny = (owner.counts.shiny || 0) + 1; return true; } return false; };
+  const aShiny = sparkle(wm, a), bShiny = sparkle(gm, bUser);
+  a.mons.push(wm); bUser.mons.push(gm);
+  tradeBump(a); tradeBump(bUser);
+  a.counts.trades = (a.counts.trades || 0) + 1; bUser.counts.trades = (bUser.counts.trades || 0) + 1;
+  // 같은 골목몬이 걸린 다른 제안은 정리
+  for (const [oid, o] of Object.entries(db.trades)) if (oid === id || [gm.uid, wm.uid].includes(o.give) || [gm.uid, wm.uid].includes(o.want)) delete db.trades[oid];
+  push(t.from, { t: 'traded', got: [{ k: 'mon', id: wm.species, ...(wm.shiny ? { shiny: true } : {}) }], sparkle: aShiny, with: bUser.name });
+  ping(t.from);
+  return { ok: true, got: [{ k: 'mon', id: gm.species, ...(gm.shiny ? { shiny: true } : {}) }], sparkle: bShiny, with: a.name };
+}
+
 function socialView(u, key) {
   const g = u.guild && db.guilds[u.guild];
   return {
     friends: u.friends.map(card).filter(Boolean).sort((a, b) => b.online - a.online || a.name.localeCompare(b.name)),
     reqIn: u.freq.in.map(card).filter(Boolean), reqOut: u.freq.out.map(card).filter(Boolean),
     guild: g ? guildView(g, key) : null, guilds: g ? [] : guildList(), emblems: EMBLEMS, colors: COLORS, guildGp: GUILD_GP,
+    trades: tradeView(key),
   };
 }
 
@@ -307,6 +371,10 @@ function api(route, u, key, b) {
     case 'POST /api/friend/decline': return friendDrop(u, key, String(b.key || ''), 'decline');
     case 'POST /api/friend/cancel': return friendDrop(u, key, String(b.key || ''), 'cancel');
     case 'POST /api/friend/remove': return friendDrop(u, key, String(b.key || ''), 'remove');
+    case 'POST /api/trade/box': return tradeBox(u, key, String(b.key || ''));
+    case 'POST /api/trade/offer': return tradeOffer(u, key, b);
+    case 'POST /api/trade/accept': return tradeAnswer(u, key, String(b.id || ''), true);
+    case 'POST /api/trade/decline': return tradeAnswer(u, key, String(b.id || ''), false);
     case 'POST /api/guild/create': return guildCreate(u, key, b);
     case 'POST /api/guild/join': return guildJoin(u, key, String(b.id || ''));
     case 'POST /api/guild/leave': return guildLeave(u, key);
@@ -320,4 +388,4 @@ function api(route, u, key, b) {
   }
 }
 
-module.exports = { roleOf, roleOk, init, setDb, api, socialView, chatSend, chatHistory, afterBattle, guildClaimable, isFriend, GUILD_QUESTS };
+module.exports = { tradeIn, roleOf, roleOk, init, setDb, api, socialView, chatSend, chatHistory, afterBattle, guildClaimable, isFriend, GUILD_QUESTS };
