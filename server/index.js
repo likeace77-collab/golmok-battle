@@ -152,6 +152,7 @@ const EMERGENCY = { id: 'emg-20261111', until: Date.parse('2026-11-12T00:00:00+0
 const GIFTS = [
   EMERGENCY,
   { id: 'startup-20261112', before: Date.parse('2026-11-13T00:00:00+09:00'), title: '🏰 길드 창업 지원금 도착!', r: { gp: 3000, tickets: 1 } },
+  { id: 'night-20261113', until: Date.parse('2026-11-14T00:00:00+09:00'), title: '🌙 오늘 밤 접속 보상!', r: { gp: 15000 } },
 ];
 // 새 게임으로 바뀌기 전부터 있던 계정에 '차원을 넘어온 자' 칭호
 const DIMENSION_BEFORE = Date.parse('2026-11-12T00:00:00+09:00');
@@ -181,9 +182,10 @@ function pendingGifts(u) {
 const COUPONS = {
   'golmok-champions': { r: { mon: 'random', stones: 1, skips: 30, tickets: 2 }, title: '쿠폰 보상!' },
   'tikitikitikitikitiki': { r: { gp: 10000, tickets: 1 }, title: '티키티키 쿠폰 보상!' },
+  'ay yo what the f**k': { r: { gp: 20000, tickets: 5, skips: 100 }, title: '쿠폰 보상!' },
 };
 function useCoupon(u, code) {
-  const k = String(code || '').trim().toLowerCase(), c = COUPONS[k];
+  const k = String(code || '').trim().replace(/\s+/g, ' ').toLowerCase(), c = COUPONS[k];
   if (!k) return { error: '쿠폰 코드를 입력해 주세요.' };
   if (!c || (c.until && Date.now() > c.until)) return { error: '없거나 기간이 끝난 쿠폰이에요.' };
   u.coupons ||= [];
