@@ -754,17 +754,22 @@ function showDex() {
   const types = Object.keys(G.data.TYPES).filter((t) => t !== 'none');
   G.dexType ??= 'all';
   const render = () => {
-    const list = ids.filter((id) => G.dexType === 'all' || G.data.MONSTERS[id].types.includes(G.dexType));
+    const shinyOwn = new Set((G.user.mons || []).filter((m) => m.shiny).map((m) => m.species)); // 내가 가진 이로치
+    const list = ids.filter((id) => (G.dexType === 'all' || (G.dexType === 'shiny' ? shinyOwn.has(id) : G.data.MONSTERS[id].types.includes(G.dexType))));
     app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>도감</h1></div>
       <section class="panel">
-        <p class="muted" style="margin-bottom:8px">골목몬 ${list.length}마리</p>
+        <div class="dex-head"><p class="muted">골목몬 ${list.length}마리 · <b class="dex-shinyn">✨ 이로치 ${shinyOwn.size}종</b> 보유</p>
+          <button class="btn small ${G.dexShiny ? '' : 'paper'} dex-shinybtn" id="dex-shiny" aria-pressed="${!!G.dexShiny}">✨ ${G.dexShiny ? '원래 색으로 보기' : '이로치로 보기'}</button></div>
         <div class="chips">
           <button data-t="all" aria-pressed="${G.dexType === 'all'}">전체</button>
+          <button data-t="shiny" aria-pressed="${G.dexType === 'shiny'}" class="chip-shiny">✨ 내 이로치</button>
           ${types.map((t) => `<button data-t="${t}" aria-pressed="${G.dexType === t}" style="background:${G.data.TYPES[t].c};color:${['elec', 'ice', 'wind'].includes(t) ? 'var(--ink)' : '#fff'}">${G.data.TYPES[t].n}</button>`).join('')}
         </div>
+        ${G.dexType === 'shiny' && !list.length ? '<p class="wait">아직 이로치가 없어요. 스카우트에서 금빛 카드를 노려 보세요!</p>' : ''}
         <div class="grid">${list.map((id) => isSecret(id) ? `<button class="card secret" data-soon="${id}"><span class="soon-art" aria-hidden="true">?</span><span>${ids.indexOf(id) + 1}. ???</span><em class="bantag soon">곧 공개!</em></button>`
-          : `<button class="card" data-dex="${id}" style="--tc:${G.data.TYPES[G.data.MONSTERS[id].types[0]].c}">${monsterSVG(id)}<span>${ids.indexOf(id) + 1}. ${G.data.MONSTERS[id].n}</span>${(G.data.BANNED || []).includes(id) ? '<em class="bantag">개발자 전용</em>' : ''}</button>`).join('')}</div>
+          : `<button class="card${shinyOwn.has(id) ? ' has-shiny' : ''}" data-dex="${id}" style="--tc:${G.data.TYPES[G.data.MONSTERS[id].types[0]].c}">${shinyOwn.has(id) ? '<em class="shiny-dot" title="이로치 보유">✨</em>' : ''}${monArt(id, !!G.dexShiny)}<span>${ids.indexOf(id) + 1}. ${G.data.MONSTERS[id].n}</span>${(G.data.BANNED || []).includes(id) ? '<em class="bantag">개발자 전용</em>' : ''}</button>`).join('')}</div>
       </section>`;
+    app.querySelector('#dex-shiny').onclick = () => { G.dexShiny = !G.dexShiny; render(); };
     app.querySelector('#back').onclick = showLobby;
     app.querySelectorAll('[data-t]').forEach((b) => { b.onclick = () => { G.dexType = b.dataset.t; render(); }; });
     app.querySelectorAll('[data-dex]').forEach((b) => { b.onclick = () => openDexEntry(b.dataset.dex); });

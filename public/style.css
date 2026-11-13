@@ -1532,3 +1532,9 @@ svg[data-shiny] { filter: hue-rotate(var(--shue)) saturate(1.35) brightness(1.05
 .mon.is-shiny::after { inset: 0 10% auto; font-size: 18px; }
 .got-i.is-shiny { box-shadow: 0 0 16px #ffd23f; }
 .shinybox h3 { margin-bottom: 6px; } .shinybox .detail-pic { max-width: 150px; margin: 0 auto; }
+/* 도감 이로치 */
+.dex-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.dex-shinyn { color: #b8860b; }
+.dex-shinybtn[aria-pressed="true"] { background: linear-gradient(90deg, #fff6b0, #ffd23f, #ffb0e6, #b0f0ff); background-size: 200% 100%; animation: ttFlow 2s linear infinite; color: var(--ink); }
+.chips .chip-shiny { background: linear-gradient(90deg, #fff6b0, #ffd23f, #ffb0e6); color: var(--ink); }
+.card.has-shiny { position: relative; box-shadow: 3px 3px 0 var(--ink), 0 0 10px #ffd23f; }
