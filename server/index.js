@@ -255,8 +255,8 @@ const deckOf = (u) => u.decks[u.active] || { name: '', team: [] };
 const monOf = (u, uid) => u.mons.find((m) => m.uid === uid);
 // 대전에 나갈 팀: 덱의 칸(uid, 도구)을 내 골목몬(종류, 기술)으로 바꿉니다.
 const deckLive = (u) => { const away = P.awayUids(u), all = deckOf(u).team, left = all.filter((t) => !away.has(t.uid)); return left.length ? left : all; }; // 원정 간 골목몬은 빼고 (전부 원정이면 그대로)
-const battleTeam = (u) => deckLive(u).map((t) => { const m = monOf(u, t.uid); return m && { species: m.species, moves: m.moves, ...(m.shiny ? { shiny: true } : {}), ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean);
-const deckView = (u) => u.decks.map((d) => ({ name: d.name, team: d.team.map((t) => { const m = monOf(u, t.uid); return m && { uid: m.uid, species: m.species, moves: m.moves, ...(m.shiny ? { shiny: true } : {}), ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean) }));
+const battleTeam = (u) => deckLive(u).map((t) => { const m = monOf(u, t.uid); return m && { species: m.species, moves: m.moves, ...(m.shiny ? { shiny: true } : {}), ...(m.plus ? { plus: m.plus } : {}), ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean);
+const deckView = (u) => u.decks.map((d) => ({ name: d.name, team: d.team.map((t) => { const m = monOf(u, t.uid); return m && { uid: m.uid, species: m.species, moves: m.moves, ...(m.shiny ? { shiny: true } : {}), ...(m.plus ? { plus: m.plus } : {}), ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean) }));
 
 // 예전의 팀 하나짜리 계정을 덱 구조로 옮깁니다.
 function migrate() {
@@ -588,6 +588,10 @@ async function progressApi(req, res, route, auth, user) {
   if (route === 'POST /api/scout/reroll') return done(P.scoutReroll(user), { scout: P.scoutState(user) });
   if (route === 'POST /api/scout/skip') return done(P.scoutSkip(user), { scout: P.scoutState(user) });
   if (route === 'POST /api/scout/pick') { const r = P.scoutPick(user, String(body.species ?? ''), body.pay === 'ticket' ? 'ticket' : 'gp'); return done(r, { scout: P.scoutState(user) }); }
+  if (route === 'POST /api/mon/enhance') {
+    const busy = new Set([...P.awayUids(user), ...Object.values(db.trades || {}).filter((t) => t.from === auth.key || t.to === auth.key).flatMap((t) => [t.give, t.want])]);
+    return done(P.enhance(user, String(body.uid || ''), String(body.food || ''), busy));
+  }
   if (route === 'POST /api/mon/move') return done(P.changeMove(user, String(body.uid ?? ''), Number(body.slot), String(body.move ?? '')));
   if (route === 'POST /api/stone/buy') return done(P.buyStone(user, String(body.species ?? '')));
   // 상점 꾸미기 (칭호·전투카드·핀): ref = 'titles:id' 같은 꼴

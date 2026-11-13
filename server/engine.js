@@ -36,9 +36,10 @@ function calcStats(base) {
 
 function makeMon(spec) {
   const sp = MONSTERS[spec.species];
-  const stats = calcStats(sp.base);
+  const plus = Math.max(0, Math.min(5, spec.plus | 0)); // 강화: +1마다 능력치 4%
+  const stats = Object.fromEntries(Object.entries(calcStats(sp.base)).map(([k, v]) => [k, Math.round(v * (1 + plus * 0.04))]));
   return {
-    species: spec.species, name: sp.n, types: sp.types, stats, mega: false, shiny: !!spec.shiny,
+    species: spec.species, name: sp.n, types: sp.types, stats, mega: false, shiny: !!spec.shiny, plus,
     hp: stats.hp, maxHp: stats.hp,
     status: null, statusTurns: 0, item: ITEMS[spec.item] ? spec.item : null, itemUsed: false,
     moves: spec.moves.map((id) => ({ id, pp: MOVES[id].pp })),
@@ -438,7 +439,7 @@ function faintCheck(b, s, m, ev) {
 function publicMon(m) {
   return {
     species: m.species, slot: m.slot, name: m.name, types: m.types,
-    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega, gmax: m.gmax || 0, shiny: m.shiny || undefined, thirst: m.thirst, blaze: m.blaze || 0, hits: m.hits || 0, strip: stripOf(m), tier: tierOf(m) || formOf(m) || (m.blaze > 0 ? 1 : 0),
+    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega, gmax: m.gmax || 0, shiny: m.shiny || undefined, plus: m.plus || undefined, thirst: m.thirst, blaze: m.blaze || 0, hits: m.hits || 0, strip: stripOf(m), tier: tierOf(m) || formOf(m) || (m.blaze > 0 ? 1 : 0),
   };
 }
 

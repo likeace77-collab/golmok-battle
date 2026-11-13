@@ -237,11 +237,24 @@ function showBox() {
   const mons = [...G.user.mons].sort((a, b) => order.indexOf(a.species) - order.indexOf(b.species) || a.at - b.at);
   const uniq = new Set(mons.map((m) => m.species)).size;
   app.innerHTML = `${topbar('내 골목몬')}<p class="box-sum">${mons.length}마리 · ${uniq}종 / ${order.filter((id) => !(G.data.BANNED || []).includes(id)).length}종</p>
-    <div class="box-grid">${mons.map((m) => { const sp = G.data.MONSTERS[m.species]; return `<button class="box-card${m.shiny ? ' is-shiny' : ''}" data-uid="${m.uid}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? '<em class="shiny-dot" title="이로치">✨</em>' : ''}${monArt(m.species, m.shiny)}<b>${esc(sp.n)}</b>${G.user.stones.includes(m.species) ? `<span class="box-stone">${stoneSVG(m.species, 26)}</span>` : ''}</button>`; }).join('') || '<p class="wait">아직 골목몬이 없어요. 스카우트로 모아 보세요!</p>'}</div>`;
+    <div class="box-grid">${mons.map((m) => { const sp = G.data.MONSTERS[m.species]; return `<button class="box-card${m.shiny ? ' is-shiny' : ''}" data-uid="${m.uid}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? '<em class="shiny-dot" title="이로치">✨</em>' : ''}${m.plus ? `<em class="plus-dot">+${m.plus}</em>` : ''}${monArt(m.species, m.shiny)}<b>${esc(sp.n)}</b>${G.user.stones.includes(m.species) ? `<span class="box-stone">${stoneSVG(m.species, 26)}</span>` : ''}</button>`; }).join('') || '<p class="wait">아직 골목몬이 없어요. 스카우트로 모아 보세요!</p>'}</div>`;
   app.querySelector('#back').onclick = showLobby;
   app.querySelectorAll('[data-uid]').forEach((b) => { b.onclick = () => openMon(b.dataset.uid, showBox); });
 }
 // 골목몬 한 마리: 기술 바꾸기(500GP), 메가스톤 사기(상점 가격)
+// 강화 칸: 같은 골목몬(덱·원정·교환에 안 걸린 것)을 먹여 +1
+function enhanceBox(m) {
+  const n = m.plus || 0, sp = G.data.MONSTERS[m.species];
+  const deckUids = new Set((G.user.decks[G.user.active]?.team || []).map((t) => t.uid));
+  const food = G.user.mons.filter((x) => x.uid !== m.uid && x.species === m.species);
+  return `<section class="enh"><h3 class="dex-h">강화 <b class="plus-tag">${n ? `+${n}` : '+0'}</b> <small class="muted">+1마다 모든 능력치 4% (최대 +5)</small></h3>
+    <div class="enh-bar">${[1, 2, 3, 4, 5].map((i) => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</div>
+    ${n >= 5 ? '<p class="muted">최대로 강화했어요! 🔥</p>' : food.length ? `<p class="muted" style="font-size:13px">같은 ${esc(sp.n)}을(를) 먹이면 +1. 비용 ${ICON.gp(14)} ${fmt((n + 1) * 1000)}GP</p>
+      <div class="enh-food">${food.map((f) => `<button class="tr-pick" data-food="${f.uid}"><div class="tr-mon${f.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${f.plus ? `<em class="plus-dot">+${f.plus}</em>` : ''}${f.shiny ? '<em class="shiny-dot">✨</em>' : ''}${monArt(f.species, f.shiny)}<b>${deckUids.has(f.uid) ? '덱에 있음' : '먹이기'}</b></div></button>`).join('')}</div>`
+      : `<p class="muted" style="font-size:13px">같은 골목몬이 한 마리 더 있으면 먹여서 강화할 수 있어요. 스카우트나 교환으로 모아 보세요!</p>`}
+  </section>`;
+}
+
 function openMon(uid, after) {
   const m = G.user.mons.find((x) => x.uid === uid);
   if (!m) return;
@@ -250,11 +263,17 @@ function openMon(uid, after) {
     <div class="row" style="align-items:flex-start;margin-bottom:10px"><div class="detail-pic${m.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? SHINY_TAG : ''}${monArt(m.species, m.shiny)}</div>
       <div style="flex:1;min-width:0"><p style="margin-bottom:4px">${typesOf(m.species)}</p>${Object.entries(sp.base).map(([k, v]) => `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${v}</span><i style="width:${Math.min(100, v / 1.3)}%"></i></div>`).join('')}</div></div>
     ${sp.trait ? `<p class="trait"><b>특성 ${sp.trait.n}</b> ${sp.trait.d}</p>` : ''}
+    ${enhanceBox(m)}
     <section class="mon-stone ${stone ? 'have' : ''}">${stoneSVG(m.species, 64, { lock: !stone })}<div><b>${esc(sp.n)} 메가스톤</b><p>${stone ? `있어요! 대전에서 <b>${esc(sp.mega.n)}</b>(으)로 메가진화할 수 있어요.` : '없으면 이 골목몬은 메가진화를 못 해요.'}</p>
       ${stone ? '' : `<button class="btn small" data-stone>${ICON.gp(16)} ${fmt(STONE_PRICE)}GP로 사기</button>`}</div></section>
     <h3 class="dex-h">기술 <small class="muted">하나 바꿀 때마다 500GP</small></h3>
     ${[0, 1, 2, 3].map((i) => { const id = m.moves[i]; return id ? `<div class="mv mvrow">${typeChip(G.data.MOVES[id].type)}<b>${G.data.MOVES[id].n}</b>${sigTag(id)}<small>${moveLine(id)}</small><button class="btn small paper" data-slot="${i}">바꾸기</button></div>` : `<div class="mv mvrow"><b class="muted">빈 칸</b><button class="btn small paper" data-slot="${i}">기술 넣기</button></div>`; }).join('')}`);
   bg.querySelector('[data-x]').onclick = () => { closeSheet(); after?.(); };
+  bg.querySelectorAll('[data-food]').forEach((b) => { b.onclick = async () => {
+    const f = G.user.mons.find((x) => x.uid === b.dataset.food);
+    if (!confirm(`${sp.n}${f?.plus ? ` +${f.plus}` : ''}${f?.shiny ? ' (이로치)' : ''}을(를) 먹여서 강화할까요? 먹인 골목몬은 사라져요.`)) return;
+    try { const r = await api('POST', '/api/mon/enhance', { uid, food: b.dataset.food }); setUser(r); toast(`✨ ${sp.n} +${r.plus} 강화 성공!${r.shinyMoved ? ' 이로치가 옮겨 붙었어요!' : ''}`); openMon(uid, after); } catch (e) { toast(e.message); }
+  }; });
   bg.querySelector('[data-stone]')?.addEventListener('click', async () => {
     buyStoneSheet(m.species, () => openMon(uid, after));
   });

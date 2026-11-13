@@ -212,7 +212,7 @@ const Battle = (() => {
     const stages = Object.entries(m.stages || {}).filter(([, v]) => v);
     const lb = { atk: '공', def: '방', spa: '특공', spd: '특방', spe: '속', acc: '명' };
     const owner = view.doubles ? esc(key === 'me' ? view.me.name : seatOf(key).name) : '';
-    $(`#p-${key}`).innerHTML = `${owner ? `<div class="owner">${owner}</div>` : ''}<div class="nm">${m.name}
+    $(`#p-${key}`).innerHTML = `${owner ? `<div class="owner">${owner}</div>` : ''}<div class="nm">${m.name}${m.plus ? `<b class="plus-tag">+${m.plus}</b>` : ''}
       ${m.status ? `<span class="badge">${STATUS[m.status]}</span>` : ''}
       ${m.seeded ? `<span class="badge">${m.seeded === 'hair' ? '머리카락' : '씨앗'}</span>` : ''}
       ${m.strip ? `<span class="badge strip">각성${m.strip}</span>` : ''}

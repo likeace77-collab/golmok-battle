@@ -120,6 +120,26 @@ function scoutPick(u, species, pay) {
 }
 
 /* ---------- 기술 바꾸기, 메가스톤 사기 ---------- */
+/* ---------- 강화: 같은 골목몬을 먹여 +1 (최대 +5), +1마다 능력치 4% ---------- */
+const PLUS_MAX = 5, PLUS_PCT = 0.04, plusCost = (n) => (n + 1) * 1000;
+function enhance(u, uid, food, busy) {
+  const m = u.mons.find((x) => x.uid === uid), f = u.mons.find((x) => x.uid === food);
+  if (!m || !f || uid === food) return { error: '강화할 골목몬과 먹일 골목몬을 다시 골라 주세요.' };
+  if (m.species !== f.species) return { error: '같은 골목몬만 먹일 수 있어요.' };
+  const n = m.plus || 0;
+  if (n >= PLUS_MAX) return { error: `이미 최대 강화(+${PLUS_MAX})예요.` };
+  if (busy.has(food)) return { error: '원정 중이거나 교환에 걸린 골목몬은 먹일 수 없어요.' };
+  const cost = plusCost(n);
+  if (u.gp < cost) return { error: `GP가 모자라요. (${cost.toLocaleString('ko-KR')}GP 필요)` };
+  u.gp -= cost;
+  u.mons = u.mons.filter((x) => x !== f);
+  (u.decks || []).forEach((d) => { d.team = d.team.filter((t) => t.uid !== food); });
+  m.plus = n + 1 + Math.min(PLUS_MAX - n - 1, f.plus || 0); // 강화된 골목몬을 먹이면 그만큼 더
+  const shinyMoved = f.shiny && !m.shiny; if (shinyMoved) m.shiny = true; // 이로치를 먹이면 이로치가 옮겨 붙음
+  u.counts.enhance = (u.counts.enhance || 0) + 1;
+  return { ok: true, plus: m.plus, shinyMoved };
+}
+
 function changeMove(u, uid, slot, move) {
   const m = u.mons.find((x) => x.uid === uid);
   if (!m) return { error: '없는 골목몬이에요.' };
@@ -339,6 +359,6 @@ function afterBattle(u, kind, won, side) {
 
 module.exports = {
   SCOUT_HOURS, SKIP_GP, SCOUT_GP, STONE_GP, STONE_DUPE_GP, MOVE_GP, STARTERS, TUTORIAL_REWARD, ATTEND, DAILY, WEEKLY,
-  newProgress, addMon, grant, finishTutorial, scoutState, scoutSkip, scoutReroll, expeState, expeSend, expeClaim, expeRecall, awayUids, scoutPick, changeMove, buyStone,
+  newProgress, addMon, grant, finishTutorial, scoutState, scoutSkip, scoutReroll, enhance, PLUS_MAX, PLUS_PCT, plusCost, expeState, expeSend, expeClaim, expeRecall, awayUids, scoutPick, changeMove, buyStone,
   bump, attendState, attend, questState, claimQuest, achState, claimAch, passState, claimPass, claimable, afterBattle, seasonOf, passBook, dayKey, released,
 };
