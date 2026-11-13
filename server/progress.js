@@ -270,6 +270,49 @@ function claimPass(u, lv, track) {
   return { got: grant(u, r) };
 }
 // 받을 수 있는 보상 개수 (로비 배지)
+/* ---------- 원정: 골목몬을 보내 두면 시간이 지나 보상을 들고 와요 ---------- */
+const EXPE_SLOTS = 3;
+const EXPE = [
+  { id: 'cvs', n: '편의점 골목', icon: '🏪', hours: 1, like: ['elec', 'steel'], r: { gp: 1200, skips: 3 }, luck: {} },
+  { id: 'hill', n: '뒷산 약수터', icon: '⛰️', hours: 4, like: ['grass', 'earth', 'water'], r: { gp: 5000, skips: 10 }, luck: { tickets: 0.15 } },
+  { id: 'night', n: '야시장', icon: '🏮', hours: 8, like: ['fire', 'spirit', 'poison'], r: { gp: 10000, skips: 20 }, luck: { tickets: 0.35, stones: 0.12 } },
+  { id: 'sea', n: '바닷가 방파제', icon: '🌊', hours: 12, like: ['water', 'ice', 'wind'], r: { gp: 16000, skips: 30, tickets: 1 }, luck: { stones: 0.25, gpt: 0.3 } },
+];
+const expeOf = (u) => (u.expe ||= []);
+const awayUids = (u) => new Set(expeOf(u).map((e) => e.uid));
+function expeBonus(u, e) { const m = u.mons.find((x) => x.uid === e.uid), d = EXPE.find((x) => x.id === e.dest); if (!m || !d) return 1; const sp = Data.MONSTERS[m.species]; return (sp.types.some((t) => d.like.includes(t)) ? 1.5 : 1) * (m.shiny ? 1.2 : 1); }
+function expeState(u, now = Date.now()) {
+  return { slots: EXPE_SLOTS, dests: EXPE.map(({ id, n, icon, hours, like, r, luck }) => ({ id, n, icon, hours, like, r, luck })),
+    list: expeOf(u).map((e) => ({ ...e, done: now >= e.end, left: Math.max(0, e.end - now), bonus: expeBonus(u, e) })) };
+}
+function expeSend(u, uid, dest, inDeck) {
+  const d = EXPE.find((x) => x.id === dest), m = u.mons.find((x) => x.uid === uid);
+  if (!d || !m) return { error: '골목몬과 원정지를 다시 골라 주세요.' };
+  if (expeOf(u).length >= EXPE_SLOTS) return { error: `원정은 동시에 ${EXPE_SLOTS}마리까지예요.` };
+  if (awayUids(u).has(uid)) return { error: '이미 원정 중인 골목몬이에요.' };
+  if (inDeck.has(uid)) return { error: '지금 쓰는 덱에 있는 골목몬은 보낼 수 없어요. 다른 덱으로 바꾸거나 다른 골목몬을 골라 주세요.' };
+  const now = Date.now();
+  expeOf(u).push({ uid, species: m.species, dest, start: now, end: now + d.hours * HOUR });
+  return { ok: true };
+}
+function expeClaim(u, uid) {
+  const list = expeOf(u), now = Date.now(), all = uid === 'all';
+  const ready = list.filter((e) => now >= e.end && (all || e.uid === uid));
+  if (!ready.length) return { error: '아직 돌아온 골목몬이 없어요.' };
+  const got = [];
+  for (const e of ready) {
+    const d = EXPE.find((x) => x.id === e.dest), k = expeBonus(u, e), r = {};
+    for (const [key, v] of Object.entries(d.r)) r[key] = key === 'tickets' ? v : Math.round(v * k);
+    for (const [key, p] of Object.entries(d.luck)) if (Math.random() < p * k) r[key] = (key === 'gpt' ? 100 : 1) + (r[key] || 0);
+    got.push(...grant(u, r));
+    u.counts.expe = (u.counts.expe || 0) + 1;
+  }
+  u.expe = list.filter((e) => !ready.includes(e));
+  const sum = []; for (const x of got) { const s = sum.find((y) => y.k === x.k && !x.id && !y.id); if (s) s.n += x.n; else sum.push({ ...x }); }
+  return { ok: true, got: sum, n: ready.length };
+}
+function expeRecall(u, uid) { const before = expeOf(u).length; u.expe = expeOf(u).filter((e) => e.uid !== uid); return before === u.expe.length ? { error: '원정 중이 아니에요.' } : { ok: true }; }
+
 function claimable(u) {
   const q = questState(u), a = achState(u), ps = passState(u);
   return {
@@ -277,6 +320,7 @@ function claimable(u) {
     quest: [...q.daily, ...q.weekly].filter((x) => !x.done && x.prog >= x.goal).length,
     ach: a.filter((x) => !x.done && x.prog >= x.goal).length,
     pass: ps.levels.filter((l) => l.lv <= ps.lv && (!l.freeGot || (ps.premium && !l.premGot))).length,
+    expe: expeOf(u).filter((e) => Date.now() >= e.end).length,
   };
 }
 
@@ -295,6 +339,6 @@ function afterBattle(u, kind, won, side) {
 
 module.exports = {
   SCOUT_HOURS, SKIP_GP, SCOUT_GP, STONE_GP, STONE_DUPE_GP, MOVE_GP, STARTERS, TUTORIAL_REWARD, ATTEND, DAILY, WEEKLY,
-  newProgress, addMon, grant, finishTutorial, scoutState, scoutSkip, scoutReroll, scoutPick, changeMove, buyStone,
+  newProgress, addMon, grant, finishTutorial, scoutState, scoutSkip, scoutReroll, expeState, expeSend, expeClaim, expeRecall, awayUids, scoutPick, changeMove, buyStone,
   bump, attendState, attend, questState, claimQuest, achState, claimAch, passState, claimPass, claimable, afterBattle, seasonOf, passBook, dayKey, released,
 };

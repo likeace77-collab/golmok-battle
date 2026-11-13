@@ -1584,3 +1584,20 @@ svg[data-shiny] { filter: hue-rotate(var(--shue)) saturate(1.35) brightness(1.05
 .cp-row { display: flex; gap: 8px; align-items: center; padding: 8px 10px; background: #fff; border: 2px solid var(--ink); border-radius: 10px; }
 .cp-row > div:first-child { flex: 1; min-width: 0; display: grid; } .cp-row small { font-size: 12px; color: #6b6380; }
 .cp-row.over { opacity: .55; }
+/* 원정 */
+.g2b.expe { background: linear-gradient(160deg, #ffe680, #3FA34D); }
+.ex-hero { position: relative; overflow: hidden; padding: 16px; color: #fff; text-align: center; background: linear-gradient(120deg, #3FA34D, #2EA8E0 55%, #2340A8); border: var(--line); border-radius: 16px; box-shadow: 4px 4px 0 var(--ink); }
+.ex-hero s { position: absolute; inset: -60%; background: repeating-conic-gradient(#fff1 0 8deg, transparent 8deg 22deg); animation: ttSpin 30s linear infinite; }
+.ex-hero h2 { position: relative; font-family: var(--display); font-weight: 400; font-size: 26px; text-shadow: 2px 2px 0 var(--ink); } .ex-hero p { position: relative; font-size: 13px; }
+.ex-run { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 2px dashed #1a143330; } .ex-run:first-of-type { border-top: 0; }
+.ex-run .ex-mon { width: 54px; flex: none; } .ex-run .ex-mon svg { width: 100%; display: block; }
+.ex-inf { flex: 1; min-width: 0; display: grid; gap: 2px; } .ex-inf small { color: #6b6380; font-size: 12px; }
+.ex-run.done .qbar i { background: linear-gradient(90deg, #ffd23f, #3FD45A); }
+.ex-dests { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+.ex-dest { display: grid; justify-items: center; gap: 1px; padding: 8px 2px; font: inherit; background: #fff; border: 2px solid var(--ink); border-radius: 12px; cursor: pointer; }
+.ex-dest span { font-size: 24px; } .ex-dest b { font-size: 12px; } .ex-dest small { font-size: 11px; color: #6b6380; }
+.ex-dest.on { background: #FFD23F; box-shadow: 2px 2px 0 var(--ink); transform: translateY(-1px); }
+.ex-info { margin: 8px 0; font-size: 14px; line-height: 1.6; } .ex-info small { color: #6b6380; display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.ex-h { font-size: 15px; margin: 6px 0; } .ex-h small { font-size: 12px; color: #6b6380; font-weight: 400; }
+.tr-mon.like { outline: 3px solid #3FD45A; } .ex-like, .ex-deck { position: absolute; top: 4px; left: 4px; z-index: 3; font-style: normal; font-size: 11px; padding: 0 6px; border: 2px solid var(--ink); border-radius: 99px; background: #3FD45A; color: #fff; }
+.ex-deck { left: auto; right: 4px; background: #6b6380; } .ex-pick:disabled { opacity: .5; cursor: default; }

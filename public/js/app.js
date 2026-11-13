@@ -355,6 +355,7 @@ function renderLobby() {
         <button class="g2b stones" id="go-stones"><span>💎</span><b>메가스톤</b><small>${u.stones.length}개</small></button>
         <button class="g2b friends" id="go-friends"><span>👥</span><b>친구</b>${u.badges.social ? `<em class="mailbadge">${u.badges.social}</em>` : ''}<small>${u.friendsN}명</small></button>
         <button class="g2b guild" id="go-guild"><span>${u.guild ? u.guild.emblem : '🏰'}</span><b>${u.guild ? esc(u.guild.name) : '길드'}</b>${u.guild ? '' : '<small>만들기·가입</small>'}</button>
+        <button class="g2b expe" id="go-expe"><span>🧭</span><b>원정</b>${u.badges.expe ? `<em class="mailbadge">${u.badges.expe}</em>` : ''}</button>
         <button class="g2b chat" id="go-chat"><span>💬</span><b>채팅</b><em class="mailbadge" data-chatbadge hidden></em></button>
       </div>
       <div class="nav">
@@ -417,6 +418,7 @@ function renderLobby() {
   app.querySelector('#go-friends').onclick = () => showFriends();
   app.querySelector('#go-guild').onclick = () => showGuild();
   app.querySelector('#go-chat').onclick = () => showChat(Social.cur, showLobby);
+  app.querySelector('#go-expe').onclick = () => showExpe();
   refreshChatBadge();
   app.querySelectorAll('[data-watch]').forEach((b) => { b.onclick = () => wsSend({ t: 'spectate', id: b.dataset.watch }); });
   app.querySelector('#tag-new')?.addEventListener('click', () => wsSend({ t: 'tag_create' }));

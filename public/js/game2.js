@@ -499,6 +499,54 @@ function shinify(svg, id) {
 const monArt = (id, shiny, ...rest) => (shiny ? shinify(monsterSVG(id, ...rest), id) : monsterSVG(id, ...rest));
 const SHINY_TAG = '<em class="shiny-tag">✨ 이로치</em>';
 
+/* ---------- 원정 ---------- */
+async function showExpe(back = showLobby) {
+  G.screen = 'expe'; app.className = '';
+  app.innerHTML = `${topbar('원정')}<p class="wait">불러오는 중…</p>`;
+  app.querySelector('#back').onclick = back;
+  let st; try { st = (await api('GET', '/api/expe')).expe; } catch (e) { return toast(e.message); }
+  let pickDest = st.dests[0].id, tick;
+  const T = G.data.TYPES;
+  const hms = (ms) => { const s = Math.ceil(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? `${h}시간 ${m}분` : m ? `${m}분 ${s % 60}초` : `${s % 60}초`; };
+  const rwText = (d) => [`${ICON.gp(14)} ${fmt(d.r.gp)}`, `${ICON.skip(14)} ${d.r.skips}`, d.r.tickets && `${ICON.ticket(14)} ${d.r.tickets}`, d.luck.tickets && `입수권 ${Math.round(d.luck.tickets * 100)}%`, d.luck.stones && `💎 ${Math.round(d.luck.stones * 100)}%`, d.luck.gpt && `길P ${Math.round(d.luck.gpt * 100)}%`].filter(Boolean).join(' · ');
+  const draw = () => {
+    clearInterval(tick);
+    if (G.screen !== 'expe') return;
+    const away = new Set(st.list.map((e) => e.uid)), deck = new Set((G.user.decks[G.user.active]?.team || []).map((t) => t.uid));
+    const done = st.list.filter((e) => e.done).length, free = st.slots - st.list.length, d = st.dests.find((x) => x.id === pickDest);
+    app.innerHTML = `${topbar('원정')}
+      <section class="ex-hero"><s aria-hidden="true"></s><h2>🧭 골목몬 원정</h2><p>쉬는 골목몬을 골목 곳곳에 보내 두면, 시간이 지나 보상을 들고 돌아와요. 원정지가 좋아하는 타입이면 <b>보상 1.5배</b>!</p></section>
+      <section class="panel"><h2>원정 중 <small class="muted">${st.list.length} / ${st.slots}</small></h2>
+        ${st.list.map((e) => { const dd = st.dests.find((x) => x.id === e.dest), m = G.user.mons.find((x) => x.uid === e.uid); const pct = Math.min(100, ((Date.now() - e.start) / (e.end - e.start)) * 100);
+          return `<div class="ex-run ${e.done ? 'done' : ''}"><div class="ex-mon">${monArt(e.species, m?.shiny)}</div><div class="ex-inf"><b>${dd.icon} ${esc(dd.n)}</b><small>${esc(G.data.MONSTERS[e.species].n)}${e.bonus > 1 ? ` · 보너스 ×${e.bonus.toFixed(1)}` : ''}</small>
+            <div class="qbar"><i style="width:${pct}%"></i><span data-left="${e.end}">${e.done ? '돌아왔어요!' : hms(e.end - Date.now())}</span></div></div>
+            ${e.done ? `<button class="btn small" data-exc="${e.uid}">받기</button>` : `<button class="btn small paper" data-exr="${e.uid}" title="불러오기 (보상 없음)">↩</button>`}</div>`; }).join('') || '<p class="wait">원정 간 골목몬이 없어요.</p>'}
+        ${done > 1 ? '<button class="btn wide" id="ex-all">돌아온 골목몬 보상 모두 받기</button>' : ''}
+      </section>
+      ${free ? `<section class="panel"><h2>원정 보내기</h2>
+        <div class="ex-dests">${st.dests.map((x) => `<button class="ex-dest ${x.id === pickDest ? 'on' : ''}" data-dest="${x.id}"><span>${x.icon}</span><b>${esc(x.n)}</b><small>${x.hours}시간</small></button>`).join('')}</div>
+        <p class="ex-info"><b>${d.icon} ${esc(d.n)}</b> · ${d.hours}시간 · 좋아하는 타입 ${d.like.map((t) => typeChip(t)).join('')}<br><small>${rwText(d)}</small></p>
+        <h3 class="ex-h">보낼 골목몬 <small>지금 덱에 있는 골목몬은 못 보내요</small></h3>
+        <div class="tr-grid">${G.user.mons.filter((m) => !away.has(m.uid)).map((m) => { const sp = G.data.MONSTERS[m.species], like = sp.types.some((t) => d.like.includes(t)), off = deck.has(m.uid);
+          return `<button class="tr-pick ex-pick" data-exs="${m.uid}" ${off ? 'disabled' : ''}><div class="tr-mon${m.shiny ? ' is-shiny' : ''}${like ? ' like' : ''}" style="--tc:${T[sp.types[0]].c}">${like ? '<em class="ex-like">×1.5</em>' : ''}${off ? '<em class="ex-deck">덱</em>' : ''}${monArt(m.species, m.shiny)}<b>${esc(sp.n)}</b></div></button>`; }).join('')}</div>
+      </section>` : '<p class="wait">원정 자리가 꽉 찼어요. 돌아오면 다시 보낼 수 있어요.</p>'}`;
+    app.querySelector('#back').onclick = () => { clearInterval(tick); back(); };
+    app.querySelectorAll('[data-dest]').forEach((b) => { b.onclick = () => { pickDest = b.dataset.dest; const y = scrollY; draw(); scrollTo(0, y); }; });
+    const call = async (path, body, title) => { try { const r = await api('POST', path, body); setUser(r); st = r.expe; if (r.got) showGot(r.got, title, draw); else draw(); } catch (e) { toast(e.message); } };
+    app.querySelectorAll('[data-exs]').forEach((b) => { b.onclick = () => call('/api/expe/send', { uid: b.dataset.exs, dest: pickDest }); });
+    app.querySelectorAll('[data-exc]').forEach((b) => { b.onclick = () => call('/api/expe/claim', { uid: b.dataset.exc }, '원정에서 돌아왔어요!'); });
+    app.querySelector('#ex-all')?.addEventListener('click', () => call('/api/expe/claim', { uid: 'all' }, '원정에서 돌아왔어요!'));
+    app.querySelectorAll('[data-exr]').forEach((b) => { b.onclick = () => { if (confirm('지금 불러오면 보상을 못 받아요. 불러올까요?')) call('/api/expe/recall', { uid: b.dataset.exr }); }; });
+    tick = setInterval(() => {
+      if (G.screen !== 'expe') return clearInterval(tick);
+      let flip = false;
+      app.querySelectorAll('[data-left]').forEach((el) => { const left = +el.dataset.left - Date.now(); if (left <= 0) flip = true; else el.textContent = hms(left); });
+      if (flip) { st.list.forEach((e) => { e.done = Date.now() >= e.end; }); draw(); }
+    }, 1000);
+  };
+  draw();
+}
+
 /* ---------- 메가스톤 ---------- */
 const STONE_PRICE = 5000;
 const megaIds = () => Object.keys(G.data.MONSTERS).filter((id) => G.data.MONSTERS[id].mega && !(G.data.BANNED || []).includes(id));
