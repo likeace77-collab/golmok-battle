@@ -341,7 +341,7 @@ function renderLobby() {
       </div>
       <h2 style="margin-top:12px">사용할 덱</h2>
       <div class="chips deckpick">${u.decks.map((d, i) => `<button data-deck="${i}" aria-pressed="${i === u.active}">${esc(d.name)}</button>`).join('')}</div>
-      <div class="mini big">${(u.decks[u.active]?.team || []).map((m, i) => `<span class="${i < G.size ? '' : 'off'}">${monsterSVG(m.species)}</span>`).join('')}</div>
+      <div class="mini big">${(u.decks[u.active]?.team || []).map((m, i) => `<span class="${i < G.size ? '' : 'off'}">${monArt(m.species, m.shiny)}</span>`).join('')}</div>
       <p class="muted">${G.size === 1 ? '덱 맨 앞의 골목몬 1마리끼리 맞붙습니다. 교체 없는 진검승부!' : `덱 앞에서부터 ${G.size}마리가 나갑니다. 대전 전에 상대 덱을 보고 먼저 낼 골목몬을 고릅니다.`}</p>
     </section>
     <section class="panel">
@@ -525,7 +525,7 @@ function showDecks() {
     ${decks.map((d, i) => `<div class="deck ${i === G.user.active ? 'on' : ''}">
       <button class="deck-main" data-open="${i}">
         <b>${esc(d.name)}</b>${i === G.user.active ? '<em>대전에 사용</em>' : ''}
-        <span class="mini">${d.team.map((m) => monsterSVG(m.species)).join('')}</span>
+        <span class="mini">${d.team.map((m) => monArt(m.species, m.shiny)).join('')}</span>
       </button>
       <div class="deck-acts">
         <button class="btn small mint" data-use="${i}" ${i === G.user.active ? 'disabled' : ''}>사용</button>
@@ -566,7 +566,7 @@ function showTeam(index, draft) {
       ${team.map((m, i) => {
         const sp = G.data.MONSTERS[m.species];
         return `<div class="slot">
-          <div class="pic">${monsterSVG(m.species)}</div>
+          <div class="pic">${monArt(m.species, m.shiny)}</div>
           <button class="inf" data-edit="${i}" style="background:none;border:0;text-align:left;padding:0">
             <div class="nm">${i + 1}. ${sp.n} ${typesOf(m.species)}</div>
             <div class="mvs">${m.moves.map((id) => G.data.MOVES[id].n).join(', ')}</div>
@@ -618,7 +618,7 @@ function pickMonster(team, done) {
   const bg = openSheet(`<div class="row"><h2>내 골목몬 고르기</h2><button class="btn small paper" data-x>닫기</button></div>
     <p class="muted" style="margin-bottom:8px">같은 골목몬도 여러 마리 넣을 수 있어요. 더 모으려면 스카우트!</p>
     <div class="grid">${mons.map((m) => { const sp = G.data.MONSTERS[m.species]; const off = usedUid.has(m.uid) || isBanned(m.species);
-      return `<button class="card" data-uid="${m.uid}" ${off ? 'disabled' : ''} style="--tc:${G.data.TYPES[sp.types[0]].c}">${monsterSVG(m.species)}<span>${sp.n}</span><small class="cmoves">${m.moves.map((id) => G.data.MOVES[id].n).join(' · ')}</small></button>`; }).join('') || '<p class="muted">골목몬이 없어요.</p>'}</div>`);
+      return `<button class="card" data-uid="${m.uid}" ${off ? 'disabled' : ''} style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? '<em class="shiny-dot">✨</em>' : ''}${monArt(m.species, m.shiny)}<span>${sp.n}</span><small class="cmoves">${m.moves.map((id) => G.data.MOVES[id].n).join(' · ')}</small></button>`; }).join('') || '<p class="muted">골목몬이 없어요.</p>'}</div>`);
   bg.querySelector('[data-x]').onclick = closeSheet;
   bg.querySelectorAll('[data-uid]').forEach((b) => {
     b.onclick = () => {
@@ -648,7 +648,7 @@ function editMon(team, i, done) {
     const stone = G.user.stones.includes(slot.species);
     const bg = openSheet(`<div class="row" style="margin-bottom:10px"><h2>${sp.n}</h2><button class="btn small" data-x>완료</button></div>
       <div class="row" style="align-items:flex-start;margin-bottom:12px">
-        <div class="detail-pic" style="--tc:${G.data.TYPES[sp.types[0]].c}">${monsterSVG(slot.species)}</div>
+        <div class="detail-pic" style="--tc:${G.data.TYPES[sp.types[0]].c}">${monArt(slot.species, slot.shiny)}</div>
         <div style="flex:1;min-width:0">
           <p style="margin-bottom:4px">${typesOf(slot.species)}</p>
           ${Object.entries(sp.base).map(([k, v]) => `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${v}</span><i style="width:${Math.min(100, v / 1.3)}%"></i></div>`).join('')}
@@ -1190,6 +1190,7 @@ function openDexEntry(id) {
       </div>
       <p style="margin-top:8px;font-size:15px;line-height:1.4">${sp.mega.d}</p>
     </section>
+    <section class="panel shinybox"><h3>✨ 이로치</h3><div class="detail-pic is-shiny" style="--tc:${G.data.TYPES[sp.types[0]].c}">${monArt(id, true)}</div><p class="muted" style="font-size:13px;margin-top:6px">스카우트 후보로 나올 때 1/40, 보상으로 받을 때 1/64 확률로 나오는 색이 다른 ${esc(sp.n)}. 능력은 똑같고 반짝여요!</p></section>
     ${gmaxBox(id)}
     ${sp.z ? `<section class="zbox" style="--zc:${G.data.TYPES[G.data.MOVES[sp.z].type].c}"><span>Z기술</span><b>${G.data.MOVES[sp.z].n}</b>
       <small>${typeChip(G.data.MOVES[sp.z].type)}${G.data.MOVES[sp.z].cat === 'p' ? '물리' : '특수'}, 위력 ${G.data.MOVES[sp.z].pow}, 반드시 명중. ${G.data.MOVES[sp.z].d}</small></section>` : ''}

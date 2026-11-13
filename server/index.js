@@ -232,8 +232,8 @@ function validDecks(u, list) {
 const deckOf = (u) => u.decks[u.active] || { name: '', team: [] };
 const monOf = (u, uid) => u.mons.find((m) => m.uid === uid);
 // 대전에 나갈 팀: 덱의 칸(uid, 도구)을 내 골목몬(종류, 기술)으로 바꿉니다.
-const battleTeam = (u) => deckOf(u).team.map((t) => { const m = monOf(u, t.uid); return m && { species: m.species, moves: m.moves, ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean);
-const deckView = (u) => u.decks.map((d) => ({ name: d.name, team: d.team.map((t) => { const m = monOf(u, t.uid); return m && { uid: m.uid, species: m.species, moves: m.moves, ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean) }));
+const battleTeam = (u) => deckOf(u).team.map((t) => { const m = monOf(u, t.uid); return m && { species: m.species, moves: m.moves, ...(m.shiny ? { shiny: true } : {}), ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean);
+const deckView = (u) => u.decks.map((d) => ({ name: d.name, team: d.team.map((t) => { const m = monOf(u, t.uid); return m && { uid: m.uid, species: m.species, moves: m.moves, ...(m.shiny ? { shiny: true } : {}), ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean) }));
 
 // 예전의 팀 하나짜리 계정을 덱 구조로 옮깁니다.
 function migrate() {

@@ -1520,3 +1520,15 @@ button.ev-card h2 { margin: 6px 0 2px; font-size: 24px; } button.ev-card p { mar
 .gmax-dai { display: grid; gap: 4px; } .gmax-dai > div { display: grid; grid-template-columns: auto auto 1fr; gap: 6px; align-items: center; font-size: 14px; } .gmax-dai small { opacity: .8; }
 .sc-reroll { position: relative; margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; }
 .sc-reroll span { color: var(--ink); display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px; background: #fff8e0; border: 2px solid var(--ink); border-radius: 99px; font-size: 13px; }
+/* 이로치 */
+svg[data-shiny] { filter: hue-rotate(var(--shue)) saturate(1.35) brightness(1.05); animation: shinyGlow 2.4s ease-in-out infinite; }
+@keyframes shinyGlow { 0%, 100% { filter: hue-rotate(var(--shue)) saturate(1.35) brightness(1.05) drop-shadow(0 0 0 #fff0); } 50% { filter: hue-rotate(var(--shue)) saturate(1.5) brightness(1.15) drop-shadow(0 0 6px #fff); } }
+.is-shiny { position: relative; }
+.is-shiny::after { content: '✦  ✧    ✦\A   ✧  ✦  ✧\A ✦    ✧  ✦'; white-space: pre; position: absolute; inset: 8% 6% auto; text-align: center; font-size: 13px; line-height: 1.9; color: #fff; text-shadow: 0 0 4px #ffe680, 0 0 8px #ffd23f; pointer-events: none; animation: shinyTwinkle 1.6s steps(2) infinite; z-index: 2; }
+@keyframes shinyTwinkle { 50% { opacity: .35; transform: translateY(-2px); } }
+.shiny-tag { position: absolute; top: 6px; left: 6px; z-index: 3; font-style: normal; font: 11px var(--ui); color: #1a1433; padding: 1px 8px; background: linear-gradient(90deg, #fff6b0, #ffd23f, #ffb0e6, #b0f0ff); background-size: 200% 100%; border: 2px solid var(--ink); border-radius: 99px; box-shadow: 0 0 8px #ffd23f; animation: ttFlow 2s linear infinite; }
+.shiny-dot { position: absolute; top: 4px; right: 6px; z-index: 3; font-style: normal; font-size: 14px; filter: drop-shadow(0 0 3px #ffd23f); }
+.sc-card.is-shiny, .box-card.is-shiny { box-shadow: 3px 3px 0 var(--ink), 0 0 14px #ffd23f; border-color: #c8a000; }
+.mon.is-shiny::after { inset: 0 10% auto; font-size: 18px; }
+.got-i.is-shiny { box-shadow: 0 0 16px #ffd23f; }
+.shinybox h3 { margin-bottom: 6px; } .shinybox .detail-pic { max-width: 150px; margin: 0 auto; }

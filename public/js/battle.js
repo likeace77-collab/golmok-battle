@@ -286,6 +286,7 @@ const Battle = (() => {
     const box = $(`#m-${key}`);
     box.className = `mon ${key}${m.mega ? ' mega' : ''}${m.gmax ? ' giant' : ''}${auraClass(m)}`;
     box.innerHTML = m.gmax ? gmaxSVG(m.species) : monsterSVG(m.species, '', m.mega, m.hits, m.tier);
+    if (m.shiny) { box.innerHTML = shinify(box.innerHTML, m.species); box.classList.add('is-shiny'); }
   }
 
   const dispMon = (key) => (key === 'me' ? mine() : seatOf(key).active);

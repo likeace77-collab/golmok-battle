@@ -92,7 +92,7 @@ function gotItem(x) {
   if (x.k === 'stone') return `<div class="got-i">${stoneSVG(x.id, 60)}<b>${esc(G.data.MONSTERS[x.id].n)} 메가스톤</b></div>`;
   if (x.k === 'gpt') return `<div class="got-i">${ICON.gpt(52)}<b>길P +${fmt(x.n)}</b></div>`;
   if (x.k === 'pass') return `<div class="got-i">${ICON.pass(50)}<b>패스 포인트 +${x.n}</b></div>`;
-  if (x.k === 'mon') return `<div class="got-i got-mon" style="--tc:${G.data.TYPES[G.data.MONSTERS[x.id].types[0]].c}">${monsterSVG(x.id)}<b>${esc(G.data.MONSTERS[x.id].n)}</b></div>`;
+  if (x.k === 'mon') return `<div class="got-i got-mon${x.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[G.data.MONSTERS[x.id].types[0]].c}">${x.shiny ? SHINY_TAG : ''}${monArt(x.id, x.shiny)}<b>${esc(G.data.MONSTERS[x.id].n)}</b></div>`;
   return '';
 }
 function showGot(got, title = '받았어요!', then) {
@@ -172,7 +172,7 @@ async function showScout() {
       app.innerHTML = `${topbar('스카우트')}<section class="sc-head"><s aria-hidden="true"></s><h2>오늘의 후보 8마리</h2><p>1마리를 골라 <b>${ICON.gp(16)} 2500GP</b> 또는 <b>${ICON.ticket(14)} 입수권 1장</b>으로 데려와요.</p>
         <button class="btn small sc-reroll" id="sc-reroll" ${G.user.gp < (st.reroll || 500) ? 'disabled' : ''}>🎲 후보 다시 뽑기 <span>${ICON.gp(14)} ${fmt(st.reroll || 500)}</span></button></section>
         <div class="sc-grid">${st.cands.map((id, i) => { const sp = G.data.MONSTERS[id], n = ownCount(id); const tot = Object.values(sp.base).reduce((a, b) => a + b, 0);
-          return `<button class="sc-card" data-pick="${id}" style="--tc:${G.data.TYPES[sp.types[0]].c};--d:${i * 70}ms">${n ? `<em class="sc-own">보유 ${n}</em>` : '<em class="sc-new">NEW</em>'}${monsterSVG(id)}<b>${esc(sp.n)}</b><span>${typesOf(id)}</span><small>능력치 합계 ${tot}</small></button>`; }).join('')}</div>`;
+          const sh = (st.shiny || []).includes(id); return `<button class="sc-card${sh ? ' is-shiny' : ''}" data-pick="${id}" style="--tc:${G.data.TYPES[sp.types[0]].c};--d:${i * 70}ms">${sh ? SHINY_TAG : n ? `<em class="sc-own">보유 ${n}</em>` : '<em class="sc-new">NEW</em>'}${monArt(id, sh)}<b>${esc(sp.n)}</b><span>${typesOf(id)}</span><small>능력치 합계 ${tot}</small></button>`; }).join('')}</div>`;
     } else {
       const left = Math.max(0, st.next - Date.now()), need = Math.ceil(left / 36e5);
       const have = Math.min(u.skips, need), gp = Math.max(0, need - u.skips) * 100;
@@ -196,7 +196,7 @@ async function showScout() {
   const pickSheet = (id) => {
     const sp = G.data.MONSTERS[id], u = G.user;
     const bg = openSheet(`<div class="row" style="margin-bottom:8px"><h2>${esc(sp.n)}</h2><button class="btn small paper" data-x>닫기</button></div>
-      <div class="row" style="align-items:flex-start;margin-bottom:10px"><div class="detail-pic" style="--tc:${G.data.TYPES[sp.types[0]].c}">${monsterSVG(id)}</div>
+      <div class="row" style="align-items:flex-start;margin-bottom:10px"><div class="detail-pic${(st.shiny || []).includes(id) ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${(st.shiny || []).includes(id) ? SHINY_TAG : ''}${monArt(id, (st.shiny || []).includes(id))}</div>
         <div style="flex:1;min-width:0"><p style="margin-bottom:4px">${typesOf(id)}</p>${Object.entries(sp.base).map(([k, v]) => `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${v}</span><i style="width:${Math.min(100, v / 1.3)}%"></i></div>`).join('')}</div></div>
       <p class="muted" style="margin-bottom:8px">${sp.flavor}</p>${sp.trait ? `<p class="trait"><b>특성 ${sp.trait.n}</b> ${sp.trait.d}</p>` : ''}
       <p class="muted">처음 기술: ${(window.defaultMoves?.(id) || []).map((m) => G.data.MOVES[m].n).join(', ')}</p>
@@ -237,7 +237,7 @@ function showBox() {
   const mons = [...G.user.mons].sort((a, b) => order.indexOf(a.species) - order.indexOf(b.species) || a.at - b.at);
   const uniq = new Set(mons.map((m) => m.species)).size;
   app.innerHTML = `${topbar('내 골목몬')}<p class="box-sum">${mons.length}마리 · ${uniq}종 / ${order.filter((id) => !(G.data.BANNED || []).includes(id)).length}종</p>
-    <div class="box-grid">${mons.map((m) => { const sp = G.data.MONSTERS[m.species]; return `<button class="box-card" data-uid="${m.uid}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${monsterSVG(m.species)}<b>${esc(sp.n)}</b>${G.user.stones.includes(m.species) ? `<span class="box-stone">${stoneSVG(m.species, 26)}</span>` : ''}</button>`; }).join('') || '<p class="wait">아직 골목몬이 없어요. 스카우트로 모아 보세요!</p>'}</div>`;
+    <div class="box-grid">${mons.map((m) => { const sp = G.data.MONSTERS[m.species]; return `<button class="box-card${m.shiny ? ' is-shiny' : ''}" data-uid="${m.uid}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? '<em class="shiny-dot" title="이로치">✨</em>' : ''}${monArt(m.species, m.shiny)}<b>${esc(sp.n)}</b>${G.user.stones.includes(m.species) ? `<span class="box-stone">${stoneSVG(m.species, 26)}</span>` : ''}</button>`; }).join('') || '<p class="wait">아직 골목몬이 없어요. 스카우트로 모아 보세요!</p>'}</div>`;
   app.querySelector('#back').onclick = showLobby;
   app.querySelectorAll('[data-uid]').forEach((b) => { b.onclick = () => openMon(b.dataset.uid, showBox); });
 }
@@ -247,7 +247,7 @@ function openMon(uid, after) {
   if (!m) return;
   const sp = G.data.MONSTERS[m.species], stone = G.user.stones.includes(m.species);
   const bg = openSheet(`<div class="row" style="margin-bottom:8px"><h2>${esc(sp.n)}</h2><button class="btn small paper" data-x>닫기</button></div>
-    <div class="row" style="align-items:flex-start;margin-bottom:10px"><div class="detail-pic" style="--tc:${G.data.TYPES[sp.types[0]].c}">${monsterSVG(m.species)}</div>
+    <div class="row" style="align-items:flex-start;margin-bottom:10px"><div class="detail-pic${m.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? SHINY_TAG : ''}${monArt(m.species, m.shiny)}</div>
       <div style="flex:1;min-width:0"><p style="margin-bottom:4px">${typesOf(m.species)}</p>${Object.entries(sp.base).map(([k, v]) => `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${v}</span><i style="width:${Math.min(100, v / 1.3)}%"></i></div>`).join('')}</div></div>
     ${sp.trait ? `<p class="trait"><b>특성 ${sp.trait.n}</b> ${sp.trait.d}</p>` : ''}
     <section class="mon-stone ${stone ? 'have' : ''}">${stoneSVG(m.species, 64, { lock: !stone })}<div><b>${esc(sp.n)} 메가스톤</b><p>${stone ? `있어요! 대전에서 <b>${esc(sp.mega.n)}</b>(으)로 메가진화할 수 있어요.` : '없으면 이 골목몬은 메가진화를 못 해요.'}</p>
@@ -487,6 +487,17 @@ function showSunfish() {
   cv.addEventListener('pointermove', aim);
   app.querySelector('#sf-go').onclick = start;
 }
+
+/* ---------- 이로치: 색이 다른 희귀한 골목몬 ---------- */
+// 골목몬마다 정해진 색 바꿈 각도 (항상 같은 이로치 색)
+const shinyHue = (id) => { let h = 7; for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 9973; return 100 + (h % 160); };
+function shinify(svg, id) {
+  const st = `--shue:${shinyHue(id)}deg`;
+  const head = svg.slice(0, svg.indexOf('>'));
+  return /\sstyle="/.test(head) ? svg.replace(/\sstyle="/, ` data-shiny="1" style="${st};`) : svg.replace('<svg', `<svg data-shiny="1" style="${st}"`);
+}
+const monArt = (id, shiny, ...rest) => (shiny ? shinify(monsterSVG(id, ...rest), id) : monsterSVG(id, ...rest));
+const SHINY_TAG = '<em class="shiny-tag">✨ 이로치</em>';
 
 /* ---------- 메가스톤 ---------- */
 const STONE_PRICE = 5000;

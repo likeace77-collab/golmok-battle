@@ -31,9 +31,13 @@ const STARTERS = [
 const newProgress = () => ({ gp: 0, tickets: 0, skips: 0, stones: [], mons: [], decks: [], active: 0, tutorial: false, scout: { next: 0, cands: null }, attend: { last: '', streak: 0 }, daily: null, weekly: null, achieved: [], pass: null, counts: { scouts: 0, wins: 0, games: 0, pvpWins: 0 } });
 
 const newUid = () => crypto.randomBytes(5).toString('hex');
-function addMon(u, species, moves) {
+// 이로치: 색이 다른 희귀한 골목몬 (능력은 같음)
+const SHINY_SCOUT = 1 / 40, SHINY_GIFT = 1 / 64;
+const rollShiny = (p) => Math.random() < p;
+function addMon(u, species, moves, shiny = false) {
   const sp = Data.MONSTERS[species];
-  const m = { uid: newUid(), species, moves: moves || E.smartMoves(species, []), at: Date.now() };
+  const m = { uid: newUid(), species, moves: moves || E.smartMoves(species, []), at: Date.now(), ...(shiny ? { shiny: true } : {}) };
+  if (shiny) u.counts.shiny = (u.counts.shiny || 0) + 1;
   m.moves = m.moves.filter((id) => sp.moves.includes(id)).slice(0, 4);
   u.mons.push(m);
   return m;
@@ -54,7 +58,7 @@ function grant(u, r) {
   if (r.tickets) { u.tickets += r.tickets; got.push({ k: 'ticket', n: r.tickets }); }
   if (r.skips) { u.skips += r.skips; got.push({ k: 'skip', n: r.skips }); }
   if (r.stones) addStones(u, r.stones, got);
-  if (r.mon) { const m = addMon(u, r.mon === 'random' ? released()[rnd(released().length)] : r.mon); got.push({ k: 'mon', id: m.species }); }
+  if (r.mon) { const m = addMon(u, r.mon === 'random' ? released()[rnd(released().length)] : r.mon, null, r.shiny || (r.mon === 'random' && rollShiny(SHINY_GIFT))); got.push({ k: 'mon', id: m.species, ...(m.shiny ? { shiny: true } : {}) }); }
   if (r.pass) { addPass(u, r.pass); got.push({ k: 'pass', n: r.pass }); }
   if (r.gpt) { u.gpt = (u.gpt || 0) + r.gpt; got.push({ k: 'gpt', n: r.gpt }); } // 길드 포인트(길P)
   return got;
@@ -77,10 +81,10 @@ function finishTutorial(u, starter) {
 /* ---------- 스카우트 ---------- */
 function scoutState(u, now = Date.now()) {
   const s = u.scout;
-  if (!s.cands && now >= s.next) s.cands = shuffle(released()).slice(0, 8);
+  if (!s.cands && now >= s.next) { s.cands = shuffle(released()).slice(0, 8); s.shiny = s.cands.filter(() => rollShiny(SHINY_SCOUT)); }
   const left = s.cands ? 0 : Math.max(0, s.next - now);
   const need = Math.ceil(left / HOUR);
-  return { cands: s.cands, next: s.next, left, skipNeed: need, skipHave: Math.min(u.skips, need), skipGp: Math.max(0, need - u.skips) * SKIP_GP, cost: SCOUT_GP, reroll: REROLL_GP };
+  return { cands: s.cands, next: s.next, left, skipNeed: need, skipHave: Math.min(u.skips, need), skipGp: Math.max(0, need - u.skips) * SKIP_GP, cost: SCOUT_GP, reroll: REROLL_GP, shiny: s.cands ? s.shiny || [] : [] };
 }
 function scoutSkip(u) {
   const st = scoutState(u);
@@ -99,6 +103,7 @@ function scoutReroll(u) {
   u.gp -= REROLL_GP;
   const fresh = shuffle(released().filter((x) => !st.cands.includes(x)));
   u.scout.cands = [...fresh, ...shuffle(st.cands)].slice(0, 8);
+  u.scout.shiny = u.scout.cands.filter(() => rollShiny(SHINY_SCOUT));
   u.counts.rerolls = (u.counts.rerolls || 0) + 1;
   return { ok: true };
 }
@@ -107,7 +112,7 @@ function scoutPick(u, species, pay) {
   if (!st.cands?.includes(species)) return { error: '스카우트 후보가 아니에요.' };
   if (pay === 'ticket') { if (u.tickets < 1) return { error: '골목몬 입수권이 없어요.' }; u.tickets--; }
   else { if (u.gp < SCOUT_GP) return { error: `GP가 모자라요. (${SCOUT_GP}GP 필요)` }; u.gp -= SCOUT_GP; }
-  const m = addMon(u, species);
+  const m = addMon(u, species, null, (u.scout.shiny || []).includes(species));
   u.scout = { next: Date.now() + SCOUT_HOURS * HOUR, cands: null };
   u.counts.scouts++;
   bump(u, 'scout');
@@ -200,6 +205,7 @@ const ACH = [
   ...[[1, { gp: 2000 }], [10, { gp: 4000 }], [50, { skips: 100 }], [100, { tickets: 1 }], [300, { tickets: 2, stones: 1 }]].map(([n, r]) => ({ id: `win${n}`, n: `대전 ${n}번 이기기`, val: (u) => u.counts.wins, goal: n, r })),
   ...[[5, { stones: 1 }], [30, { tickets: 1 }]].map(([n, r]) => ({ id: `pvp${n}`, n: `친구와의 대전 ${n}번 이기기`, val: (u) => u.counts.pvpWins, goal: n, r })),
   ...[[1, { gp: 2000 }], [30, { stones: 1 }]].map(([n, r]) => ({ id: `mega${n}`, n: `메가진화 ${n}번`, val: (u) => u.stats.megas, goal: n, r })),
+  ...[[1, { gp: 5000, tickets: 1 }], [5, { tickets: 3, stones: 1 }]].map(([n, r]) => ({ id: `shiny${n}`, n: `✨ 이로치 골목몬 ${n}마리 만나기`, val: (u) => u.counts.shiny || 0, goal: n, r })),
   ...[[1, { gp: 2000 }], [30, { stones: 1 }]].map(([n, r]) => ({ id: `z${n}`, n: `Z기술 ${n}번`, val: (u) => u.stats.zmoves, goal: n, r })),
   ...[[5, { tickets: 1 }], [20, { tickets: 2 }]].map(([n, r]) => ({ id: `scout${n}`, n: `스카우트 ${n}번`, val: (u) => u.counts.scouts, goal: n, r })),
   { id: 'stone30', n: '메가스톤 30종 모으기', val: (u) => u.stones.length, goal: 30, r: { tickets: 2 } },
