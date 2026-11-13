@@ -174,6 +174,23 @@ function showSettings() {
       <h2>🎟️ 쿠폰 코드</h2>
       <form id="cpform" class="fr-add"><input name="code" placeholder="쿠폰 코드 입력" autocomplete="off" autocapitalize="off" spellcheck="false" required><button class="btn">사용</button></form>
     </section>
+    ${u.dev ? `<section class="panel cp-admin"><h2>🛠️ 쿠폰 만들기 <small class="muted">개발자</small></h2>
+      <form id="cpmake" class="cp-form">
+        <input name="code" placeholder="쿠폰 코드" required autocomplete="off" autocapitalize="off">
+        <input name="title" placeholder="받을 때 뜨는 제목 (예: 주말 선물!)" maxlength="30">
+        <div class="cp-grid">
+          <label>GP<input type="number" name="gp" min="0" placeholder="0"></label>
+          <label>입수권<input type="number" name="tickets" min="0" placeholder="0"></label>
+          <label>스킵권<input type="number" name="skips" min="0" placeholder="0"></label>
+          <label>메가스톤<input type="number" name="stones" min="0" placeholder="0"></label>
+          <label>길P<input type="number" name="gpt" min="0" placeholder="0"></label>
+          <label>골목몬<select name="mon"><option value="">없음</option><option value="random">랜덤 1마리</option>${Object.keys(G.data.MONSTERS).map((id) => `<option value="${id}">${esc(G.data.MONSTERS[id].n)}</option>`).join('')}</select></label>
+        </div>
+        <label class="toggle"><input type="checkbox" name="shiny"> 골목몬을 이로치로</label>
+        <label class="cp-until">기한 (비우면 무기한)<input type="datetime-local" name="until"></label>
+        <button class="btn">쿠폰 만들기</button>
+      </form>
+      <div id="cplist" class="cp-list"><p class="wait">불러오는 중…</p></div></section>` : ''}
     <section class="panel">
       <h2>비밀번호 바꾸기</h2>
       ${u.tempPw ? '<p class="pw-warn">지금 임시 비밀번호를 쓰고 있어요. 새 비밀번호로 바꿔 주세요!</p>' : ''}
@@ -185,6 +202,24 @@ function showSettings() {
       </form>
     </section>`;
   app.querySelector('#back').onclick = showLobby;
+  if (u.dev) {
+    const rw = (r) => [r.gp && `${fmt(r.gp)}GP`, r.tickets && `입수권 ${r.tickets}`, r.skips && `스킵권 ${r.skips}`, r.stones && `메가스톤 ${r.stones}`, r.gpt && `길P ${r.gpt}`, r.mon && `${r.shiny ? '✨이로치 ' : ''}${r.mon === 'random' ? '랜덤 골목몬' : G.data.MONSTERS[r.mon]?.n}`].filter(Boolean).join(' · ');
+    const drawList = (list) => {
+      const box = app.querySelector('#cplist'); if (!box) return;
+      box.innerHTML = list.map((c) => { const over = c.until && c.until < Date.now(); return `<div class="cp-row ${over ? 'over' : ''}"><div><b>${esc(c.code)}</b><small>${esc(rw(c.r))}</small>
+        <small>${c.used}명 사용 · ${c.until ? (over ? '끝남' : `${new Date(c.until).toLocaleString('ko-KR')}까지`) : '무기한'}${c.fixed ? ' · 기본 쿠폰' : ''}</small></div>
+        <div class="fr-btns">${over ? '' : `<button class="btn small paper" data-cpend="${esc(c.code)}">끝내기</button>`}${c.fixed ? '' : `<button class="btn small paper" data-cpdel="${esc(c.code)}">지우기</button>`}</div></div>`; }).join('') || '<p class="wait">쿠폰이 없어요.</p>';
+      box.querySelectorAll('[data-cpdel]').forEach((b) => { b.onclick = async () => { if (!confirm('이 쿠폰을 지울까요?')) return; try { drawList((await api('POST', '/api/dev/coupon/delete', { code: b.dataset.cpdel })).list); } catch (err) { toast(err.message); } }; });
+      box.querySelectorAll('[data-cpend]').forEach((b) => { b.onclick = async () => { try { drawList((await api('POST', '/api/dev/coupon/end', { code: b.dataset.cpend })).list); toast('쿠폰을 끝냈어요.'); } catch (err) { toast(err.message); } }; });
+    };
+    api('GET', '/api/dev/coupons').then((r) => drawList(r.list)).catch(() => {});
+    app.querySelector('#cpmake').onsubmit = async (e) => {
+      e.preventDefault(); const f = e.target;
+      const r = { gp: f.gp.value, tickets: f.tickets.value, skips: f.skips.value, stones: f.stones.value, gpt: f.gpt.value, ...(f.mon.value ? { mon: f.mon.value, shiny: f.shiny.checked } : {}) };
+      try { const x = await api('POST', '/api/dev/coupon', { code: f.code.value, title: f.title.value, r, until: f.until.value ? new Date(f.until.value).toISOString() : '' }); drawList(x.list); toast(`쿠폰 「${f.code.value.trim()}」을 만들었어요!`); f.reset(); }
+      catch (err) { toast(err.message); }
+    };
+  }
   app.querySelector('#cpform').onsubmit = async (e) => {
     e.preventDefault();
     try { const r = await api('POST', '/api/coupon', { code: e.target.code.value }); setUser(r); showGot(r.got, r.title, showSettings); }

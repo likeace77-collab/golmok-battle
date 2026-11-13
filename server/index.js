@@ -184,8 +184,28 @@ const COUPONS = {
   'tikitikitikitikitiki': { r: { gp: 10000, tickets: 1 }, title: '티키티키 쿠폰 보상!' },
   'ay yo what the f**k': { r: { gp: 20000, tickets: 5, skips: 100 }, title: '쿠폰 보상!' },
 };
+const couponKey = (code) => String(code || '').trim().replace(/\s+/g, ' ').toLowerCase();
+// 개발자 화면: 코드에 들어 있는 쿠폰 + 개발자가 만든 쿠폰(db.coupons)
+function couponList() {
+  const used = (k) => Object.values(db.users).filter((u) => (u.coupons || []).includes(k)).length;
+  const all = { ...COUPONS, ...(db.coupons || {}) };
+  return Object.entries(all).map(([code, c]) => ({ code, title: c.title, r: c.r, until: c.until || null, used: used(code), fixed: !!COUPONS[code] && !(db.coupons || {})[code], at: c.at || 0 })).sort((a, b) => b.at - a.at);
+}
+function couponMake(b) {
+  const code = couponKey(b.code);
+  if (code.length < 2 || code.length > 60) return { error: '쿠폰 코드는 2~60자로 정해 주세요.' };
+  const n = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
+  const r = {}; for (const [k, max] of [['gp', 10000000], ['tickets', 1000], ['skips', 10000], ['stones', 60], ['gpt', 100000]]) { const v = n(b.r?.[k], max); if (v) r[k] = v; }
+  if (b.r?.mon === 'random' || Data.MONSTERS[b.r?.mon]) r.mon = b.r.mon;
+  if (b.r?.mon && b.r?.shiny) r.shiny = true;
+  if (!Object.keys(r).length) return { error: '보상을 하나 이상 넣어 주세요.' };
+  const until = b.until ? Date.parse(b.until) : 0;
+  if (b.until && !until) return { error: '기한 날짜가 이상해요.' };
+  (db.coupons ||= {})[code] = { r, title: String(b.title || '쿠폰 보상!').slice(0, 30), ...(until ? { until } : {}), at: Date.now() };
+  return { ok: true, list: couponList() };
+}
 function useCoupon(u, code) {
-  const k = String(code || '').trim().replace(/\s+/g, ' ').toLowerCase(), c = COUPONS[k];
+  const k = couponKey(code), c = (db.coupons || {})[k] || COUPONS[k];
   if (!k) return { error: '쿠폰 코드를 입력해 주세요.' };
   if (!c || (c.until && Date.now() > c.until)) return { error: '없거나 기간이 끝난 쿠폰이에요.' };
   u.coupons ||= [];
@@ -581,6 +601,22 @@ async function progressApi(req, res, route, auth, user) {
   if (route === 'POST /api/quest/claim') return done(P.claimQuest(user, String(body.id ?? '')), rewardsView(user));
   if (route === 'POST /api/ach/claim') return done(P.claimAch(user, String(body.id ?? '')), rewardsView(user));
   if (route === 'POST /api/pass/claim') return done(P.claimPass(user, Number(body.lv), body.track === 'prem' ? 'prem' : 'free'), rewardsView(user));
+  if (route === 'GET /api/dev/coupons') { if (!isDev(user)) return json(res, 403, { error: '개발자만 할 수 있어요.' }); return json(res, 200, { list: couponList() }); }
+  if (route === 'POST /api/dev/coupon') { if (!isDev(user)) return json(res, 403, { error: '개발자만 할 수 있어요.' }); return done(couponMake(body)); }
+  if (route === 'POST /api/dev/coupon/delete') {
+    if (!isDev(user)) return json(res, 403, { error: '개발자만 할 수 있어요.' });
+    const k = couponKey(body.code);
+    if (!(db.coupons || {})[k]) return json(res, 400, { error: COUPONS[k] ? '코드에 들어 있는 쿠폰이라 여기서는 못 지워요. 기한 끝내기를 쓰세요.' : '없는 쿠폰이에요.' });
+    delete db.coupons[k];
+    return done({ ok: true, list: couponList() });
+  }
+  if (route === 'POST /api/dev/coupon/end') { // 코드에 든 쿠폰도 지금 끝내기 (db에 같은 이름으로 덮어씀)
+    if (!isDev(user)) return json(res, 403, { error: '개발자만 할 수 있어요.' });
+    const k = couponKey(body.code), c = (db.coupons || {})[k] || COUPONS[k];
+    if (!c) return json(res, 400, { error: '없는 쿠폰이에요.' });
+    (db.coupons ||= {})[k] = { ...c, until: Date.now() - 1, at: c.at || Date.now() };
+    return done({ ok: true, list: couponList() });
+  }
   if (route === 'POST /api/dev/premium') {
     if (!isDev(user)) return json(res, 403, { error: '개발자만 줄 수 있어요.' });
     const t = db.users[keyOf(String(body.name ?? ''))];
