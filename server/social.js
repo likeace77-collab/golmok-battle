@@ -292,7 +292,8 @@ function chatDelete(u, key, c, at) {
 /* ---------- 골목몬 교환 (친구끼리 1:1) ----------
    보낸 사람이 '내 골목몬 하나 ↔ 친구 골목몬 하나'를 제안하고, 받은 사람이 수락하면 맞바꿔요.
    교환으로 받은 골목몬은 일정 확률로 반짝반짝 이로치가 돼요. */
-const TRADE_SHINY = 0.1, TRADE_DAY = 5, TRADE_TTL = 24 * 3600e3, KSTD = (t = Date.now()) => new Date(t + KST).toISOString().slice(0, 10);
+const TRADE_SHINY = 0.1, TRADE_DAY = Infinity, // 교환 횟수 제한 없음
+  TRADE_TTL = 24 * 3600e3, KSTD = (t = Date.now()) => new Date(t + KST).toISOString().slice(0, 10);
 const monLite = (m) => m && { uid: m.uid, species: m.species, ...(m.shiny ? { shiny: true } : {}) };
 const tradesOf = (key) => Object.values(db.trades || {}).filter((t) => t.from === key || t.to === key);
 function cleanTrades() { db.trades ||= {}; const now = Date.now(); for (const [id, t] of Object.entries(db.trades)) if (now - t.at > TRADE_TTL || !userOf(t.from) || !userOf(t.to)) delete db.trades[id]; }
@@ -302,7 +303,7 @@ function tradeView(key) {
   cleanTrades();
   const show = (t) => ({ id: t.id, from: t.from, to: t.to, fromName: nameOf(t.from), toName: nameOf(t.to), give: monLite(userOf(t.from).mons.find((m) => m.uid === t.give)), want: monLite(userOf(t.to).mons.find((m) => m.uid === t.want)), at: t.at });
   const list = tradesOf(key).map(show).filter((t) => t.give && t.want);
-  return { in: list.filter((t) => t.to === key), out: list.filter((t) => t.from === key), left: TRADE_DAY - tradeUsed(userOf(key)), shinyPct: Math.round(TRADE_SHINY * 100) };
+  return { in: list.filter((t) => t.to === key), out: list.filter((t) => t.from === key), left: Number.isFinite(TRADE_DAY) ? TRADE_DAY - tradeUsed(userOf(key)) : null, shinyPct: Math.round(TRADE_SHINY * 100) };
 }
 function tradeBox(u, key, fk) {
   if (!isFriend(key, fk)) return err('친구의 골목몬만 볼 수 있어요.');

@@ -70,7 +70,7 @@ async function showFriends(back = showLobby) {
 const tmon = (m) => { if (!m) return ''; const sp = G.data.MONSTERS[m.species]; return `<div class="tr-mon${m.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? '<em class="shiny-dot">✨</em>' : ''}${monArt(m.species, m.shiny)}<b>${esc(sp.n)}</b></div>`; };
 function tradeSection(T) {
   if (!T || (!T.in.length && !T.out.length)) return '';
-  return `<section class="panel"><h2>🔄 골목몬 교환 <small class="muted">오늘 ${T.left}번 남음</small></h2>
+  return `<section class="panel"><h2>🔄 골목몬 교환${T.left != null ? ` <small class="muted">오늘 ${T.left}번 남음</small>` : ''}</h2>
     ${T.in.map((t) => `<div class="tr-row"><p><b>${esc(t.fromName)}</b>님의 제안</p><div class="tr-pair">${tmon(t.give)}<span class="tr-arrow">⇄</span>${tmon(t.want)}</div>
       <p class="muted" style="font-size:12px">왼쪽을 받고, 내 오른쪽 골목몬을 줘요. 받은 골목몬은 ${T.shinyPct}% 확률로 반짝반짝 이로치가 돼요!</p>
       <div class="fr-btns"><button class="btn small" data-tacc="${t.id}">교환하기</button><button class="btn small paper" data-tdec="${t.id}">거절</button></div></div>`).join('')}
