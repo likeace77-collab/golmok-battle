@@ -285,6 +285,8 @@ function migrate() {
     if (isDev(u)) {
       const have = new Set(u.mons.map((m) => m.species));
       for (const sp of Object.keys(Data.MONSTERS)) if (!have.has(sp)) { P.addMon(u, sp); changed = true; }
+      const shinyHave = new Set(u.mons.filter((m) => m.shiny).map((m) => m.species)); // 이로치도 1마리씩
+      for (const sp of Object.keys(Data.MONSTERS)) if (!shinyHave.has(sp)) { P.addMon(u, sp, null, true); changed = true; }
       for (const sp of Object.keys(Data.MONSTERS)) if (Data.MONSTERS[sp].mega && !u.stones.includes(sp)) { u.stones.push(sp); changed = true; }
     }
   }
@@ -840,9 +842,10 @@ const isPractice = (room) => !room.tag && !room.raid && room.keys.includes(BOT);
 const BOT_LEVELS = ['쉬움', '보통', '어려움', '지옥'];
 
 // 훈련장: 더미와 1대1. 시간 제한, 승패, 기록 없음. 더미에게 준 피해만 쌓입니다.
+const shinyOwned = (u) => [...new Set(u.mons.filter((m) => m.shiny).map((m) => m.species))];
 function startTraining(key) {
   const u = db.users[key];
-  const room = { id: crypto.randomUUID(), keys: [key, BOT], b: E.createTraining({ name: u.name, avatar: u.avatar, style: u.style, deck: '모든 골목몬' }, undefined, bannedFor(u)), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: 0, tag: false, training: true, counted: 0, spectators: new Set() };
+  const room = { id: crypto.randomUUID(), keys: [key, BOT], b: E.createTraining({ name: u.name, avatar: u.avatar, style: u.style, deck: '모든 골목몬' }, undefined, bannedFor(u), shinyOwned(u)), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: 0, tag: false, training: true, counted: 0, spectators: new Set() };
   battles.set(room.id, room);
   inBattle.set(key, room); clearChallenges(key); removeFromTag(key); stopWatching(key);
   syncBattle(room, 0);
@@ -1259,6 +1262,14 @@ function onMessage(key, msg) {
       if (bk) return toast(key, `${db.users[bk].name}님의 덱에 공개 전 골목몬이 있습니다.`);
       tagRooms.delete(r.id);
       startBattle(r.slots.map((k) => k || BOT), 3, r.level, true);
+      break;
+    }
+    case 'train_shiny': { // 훈련장: 가진 이로치로 바꾸기·되돌리기
+      if (!room?.training) return;
+      const m = room.b.sides[0].mons[Number(msg.slot)];
+      if (!m || !shinyOwned(db.users[key]).includes(m.species)) return toast(key, '이 골목몬의 이로치를 아직 갖고 있지 않아요.');
+      m.shiny = !m.shiny;
+      syncBattle(room, 0);
       break;
     }
     case 'training': {

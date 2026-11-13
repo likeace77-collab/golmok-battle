@@ -1691,3 +1691,16 @@ svg[data-shiny] { filter: hue-rotate(var(--shue)) saturate(1.35) brightness(1.05
 .raid-res { display: grid; justify-items: center; gap: 4px; width: 240px; padding: 10px; color: #fff; background: linear-gradient(150deg, #2a0f1f, #b3122e); border: var(--line); border-radius: 16px; } .raid-res.dark { background: linear-gradient(150deg, #0d0618, #6a1fb0); }
 .raid-res svg { width: 170px; height: auto; } .raid-res.dark svg { filter: saturate(.55) brightness(.8) hue-rotate(250deg) drop-shadow(0 0 10px #b44bff); }
 .vs.raid-dark .vs-side:last-child .bc-ava { filter: saturate(.5) brightness(.7) hue-rotate(250deg) drop-shadow(0 0 8px #b44bff); }
+/* 대전 기록 */
+.result { overflow-y: auto; justify-content: safe center; } .result > * { flex: none; }
+.score { width: min(420px, 100%); padding: 10px; color: var(--ink); text-align: left; background: var(--paper); border: var(--line); border-radius: 14px; box-shadow: 3px 3px 0 var(--ink); }
+.score h3 { margin: 0 0 6px; font-size: 16px; } .score h4 { margin: 10px 0 4px; font-size: 14px; }
+.sc-wrap { overflow-x: auto; } .score table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.score th, .score td { padding: 4px 3px; text-align: right; white-space: nowrap; } .score thead th { font-size: 11px; color: #6a6480; }
+.score tbody th { text-align: left; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+.score tr.mate { background: #e6f7ff; } .score tr.foe { background: #ffe9ea; } .score tr.me { background: #fff3b0; font-weight: 800; }
+.score tbody tr { border-top: 2px solid #1a143320; }
+.mvp { display: inline-block; margin-right: 3px; padding: 0 4px; font: 900 9px var(--ui); font-style: normal; color: #fff; background: #ff3e9a; border-radius: 4px; vertical-align: 1px; }
+.sc-mons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; } .sc-mons > div { display: grid; justify-items: center; padding: 4px; background: #fff; border: 2px solid #1a143330; border-radius: 10px; font-size: 12px; text-align: center; }
+.sc-mons svg { width: 52px; height: 52px; } .sc-mons small { font-size: 10px; color: #6a6480; } .sc-mons .out svg { filter: grayscale(1); opacity: .6; }
+.sc-best { margin: 8px 0 0; font-size: 12px; }

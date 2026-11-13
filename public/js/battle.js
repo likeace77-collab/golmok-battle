@@ -728,6 +728,7 @@ const Battle = (() => {
         <button class="btn mega ${armed ? 'on' : ''}" id="to-mega" ${view.canMega && !gArmed ? '' : 'disabled'} aria-pressed="${armed}">${view.megaUsed ? '메가 사용함' : armed ? '메가 취소' : view.noStone && !view.megaUsed ? '메가스톤 없음' : '메가진화'}</button>
         <button class="btn zbtn" id="to-z" ${view.canZ && !gArmed && zLockTurn !== view.turn ? '' : 'disabled'}>${view.zUsed ? 'Z 사용함' : zLockTurn === view.turn ? '다음 턴에' : 'Z기술'}<small>${G.data.MOVES[G.data.MONSTERS[cur.species].z].n}</small></button>
         <button class="btn paper" id="to-sw" ${armed || gArmed ? 'disabled' : ''}>교체</button>
+        ${training ? `<button class="btn paper" id="to-shiny" ${G.user.mons.some((x) => x.shiny && x.species === cur.species) ? '' : 'disabled'}>${cur.shiny ? '원래 색' : '✨ 이로치'}</button>` : ''}
         <button class="btn paper" id="ff">${tag || training ? '나가기' : '기권'}</button>
       </div>`;
     panel.querySelectorAll('[data-mv]').forEach((b) => {
@@ -768,6 +769,7 @@ const Battle = (() => {
       act({ type: 'move', index, mega: armed, z: true, target: live[0]?.seat });
     };
     panel.querySelector('#to-sw').onclick = () => { menu = 'switch'; renderPanel(); };
+    const ts = panel.querySelector('#to-shiny'); if (ts) ts.onclick = () => { ts.disabled = true; wsSend({ t: 'train_shiny', slot: cur.slot }); };
     bindForfeit();
   }
 
@@ -811,6 +813,25 @@ const Battle = (() => {
     panel.querySelector('#sw-back')?.addEventListener('click', () => { menu = 'moves'; renderPanel(); });
   }
 
+  // 대전 기록: 딜량·받은 피해·회복·킬·어시·데스, 내 골목몬별 기록
+  function scoreHTML() {
+    const sc = view.score;
+    if (!sc) return '';
+    const f = (n) => Number(n || 0).toLocaleString('ko-KR');
+    const myTeam = sc.find((x) => x.seat === view.you)?.team ?? view.team;
+    const rows = [...sc].sort((a, b) => (a.team === myTeam ? 0 : 1) - (b.team === myTeam ? 0 : 1) || (a.seat === view.you ? -1 : b.seat === view.you ? 1 : 0));
+    const mvp = sc.reduce((a, b) => (b.dmg + b.kills * 150 > a.dmg + a.kills * 150 ? b : a), sc[0]);
+    const me = sc.find((x) => x.seat === view.you);
+    const row = (x) => `<tr class="${x.seat === view.you ? 'me' : ''} ${x.team === myTeam ? 'mate' : 'foe'}"><th>${x.seat === mvp.seat ? '<i class="mvp">MVP</i>' : ''}${esc(x.name)}</th>
+      <td>${f(x.dmg)}</td><td>${f(x.taken)}</td><td>${f(x.heal)}</td><td>${x.kills}</td><td>${x.assists}</td><td>${x.deaths}</td></tr>`;
+    return `<section class="score">
+      <h3>📊 대전 기록</h3>
+      <div class="sc-wrap"><table><thead><tr><th></th><th>딜량</th><th>받은 피해</th><th>회복</th><th>킬</th><th>어시</th><th>데스</th></tr></thead><tbody>${rows.map(row).join('')}</tbody></table></div>
+      ${me && !spectating ? `<h4>내 골목몬</h4><div class="sc-mons">${me.mons.map((m) => `<div class="${m.out ? 'out' : ''}">${monArt(m.species, m.shiny, '', m.mega)}<b>${esc(m.name)}</b><small>딜 ${f(m.dealt)}${m.healed ? ` · 회복 ${f(m.healed)}` : ''}${m.kills ? ` · ${m.kills}킬` : ''}</small></div>`).join('')}</div>
+        <p class="sc-best">한 방 최고 피해 <b>${f(me.best)}</b></p>` : ''}
+    </section>`;
+  }
+
   function showResult() {
     clearInterval(tick);
     const c = $('#clock'); if (c) c.textContent = '';
@@ -824,6 +845,7 @@ const Battle = (() => {
     div.innerHTML = `<div class="result-card">${rb && !win ? `<div class="raid-res ${view.raid.dark ? 'dark' : ''}">${view.raid.gmax ? gmaxSVG(rb.species) : monsterSVG(rb.species, '', true)}<b>${esc(view.raid.title)}</b></div>` : battleCard({ name: champ.name, avatar: champ.avatar, style: champ.style }, 'big')}</div>
       <h1 class="title ${spectating ? 'small' : ''}">${draw ? '무승부' : spectating ? `${esc(winners)} 승리` : win ? '승리' : '패배'}</h1>
       <p style="color:#fff">${esc(myNames())} 대 ${esc(oppNames())}, ${view.turn - 1}턴${practice && !view.raid ? ' (연습)' : ''}${spectating ? ' (관전)' : ''}</p>
+      ${scoreHTML()}
       <button class="btn" id="to-lobby">로비로 돌아가기</button>`;
     app.appendChild(div);
     div.querySelector('#to-lobby').onclick = () => { view = null; showLobby(); };

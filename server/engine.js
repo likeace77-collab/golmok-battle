@@ -87,8 +87,8 @@ function makeDummy() {
   };
 }
 // 훈련장: 모든 골목몬이 기술 10개를 다 가진 채로 나옵니다.
-function createTraining(player, seed, exclude = []) {
-  const team = Object.entries(MONSTERS).filter(([species]) => !exclude.includes(species)).map(([species, m]) => ({ species, moves: m.moves }));
+function createTraining(player, seed, exclude = [], shiny = []) {
+  const team = Object.entries(MONSTERS).filter(([species]) => !exclude.includes(species)).map(([species, m]) => ({ species, moves: m.moves, shiny: shiny.includes(species) }));
   const b = createBattle([{ ...player, team }, { name: '훈련장', avatar: null, style: null, deck: '더미', team: [] }], seed);
   b.training = true;
   b.sides[1].mons = [makeDummy()];
@@ -353,7 +353,9 @@ function runTurn(b, ev) {
   for (const { s, a } of movers) {
     if (b.phase === 'over') break;
     const mon = activeOf(b, s);
+    b.actor = s;
     if (alive(mon)) useMove(b, s, a.index, ev, a.target, a.z);
+    b.actor = null;
     if (checkOver(b, ev)) break;
   }
   if (b.phase !== 'over') endOfTurn(b, ev);
@@ -406,10 +408,40 @@ function formCheck(b, s, m, before, ev) {
 }
 const tierHp = (m) => Math.round(m.stats.hp * TIERS.hp) * tierOf(m);
 
+/* ---------- 전투 기록: 딜량·받은 피해·회복·킬·어시스트·데스 ----------
+   지금 기술을 쓰는 쪽(b.actor)이 상대에게 준 피해를 그쪽 몫으로 셈. 독·화상처럼 주인 없는 피해는 마지막으로 때린 상대 몫 */
+const stOf = (b, s) => ((b.st ||= b.sides.map(() => ({ dmg: 0, taken: 0, heal: 0, kills: 0, assists: 0, deaths: 0, best: 0 })))[s]);
+function tally(b, s, m, dmg) {
+  if (b.training && m.species === 'dummy') return;
+  stOf(b, s).taken += dmg;
+  let by = b.actor ?? null;
+  if (by === null || teamOf(b, by) === teamOf(b, s)) by = by === null ? m.lastBy ?? null : null;
+  if (by === null || teamOf(b, by) === teamOf(b, s)) return;
+  const st = stOf(b, by), atk = activeOf(b, by);
+  st.dmg += dmg; if (b.actor === by) st.best = Math.max(st.best, dmg);
+  if (atk) atk.dealt = (atk.dealt || 0) + dmg;
+  m.lastBy = by; m.lastMon = atk?.slot;
+  (m.hitBy ||= []).includes(by) || m.hitBy.push(by);
+}
+function tallyFaint(b, s, m) {
+  if (b.training) return;
+  stOf(b, s).deaths++;
+  const k = m.lastBy;
+  if (k == null || teamOf(b, k) === teamOf(b, s)) return;
+  stOf(b, k).kills++;
+  const km = b.sides[k].mons.find((x) => x.slot === m.lastMon); if (km) km.kills = (km.kills || 0) + 1;
+  for (const a of m.hitBy || []) if (a !== k && teamOf(b, a) !== teamOf(b, s)) stOf(b, a).assists++;
+}
+function scoreOf(b) {
+  return b.sides.map((sd, i) => ({ seat: i, name: sd.name, team: teamOf(b, i), ...stOf(b, i),
+    mons: sd.mons.map((m) => ({ species: m.species, name: m.name, shiny: !!m.shiny, mega: !!m.mega, dealt: m.dealt || 0, healed: m.healed || 0, kills: m.kills || 0, out: m.hp <= 0 })) }));
+}
+
 function hurt(b, s, m, amount, ev, extra) {
   const dmg = Math.min(m.hp, Math.max(1, Math.floor(amount)));
   const form0 = formOf(m);
   m.hp -= dmg;
+  tally(b, s, m, dmg);
   const before = stripOf(m);
   if (extra?.moveType) m.hits = (m.hits || 0) + 1; // 공격에 맞은 횟수 (옷이 바뀌는 골목몬용)
   hpEvent(b, s, m, ev, { dmg, ...extra, ...(extra?.moveType ? { hits: m.hits } : {}) });
@@ -457,6 +489,7 @@ function heal(b, s, m, amount, ev) {
   if (v <= 0) return 0;
   const form0 = formOf(m);
   m.hp += v;
+  if (!b.training) { stOf(b, s).heal += v; m.healed = (m.healed || 0) + v; }
   hpEvent(b, s, m, ev, { healed: v });
   formCheck(b, s, m, form0, ev);
   return v;
@@ -465,6 +498,7 @@ function faintCheck(b, s, m, ev) {
   if (m.hp === 0 && !m.faintedShown) {
     m.faintedShown = true;
     m.status = null;
+    tallyFaint(b, s, m);
     if (m.gmax) endGmax(b, s, m, null, true);
     ev.push({ t: 'faint', side: s, text: `${josa(m.name, '은/는')} 쓰러졌다!` });
     if (m.species === 'yeonji' && !m.markDone) { // 연지곤지: 공격 말고 다른 이유로 쓰러져도 상대에게 자국
@@ -1301,6 +1335,7 @@ function viewFor(b, s) {
   const allies = matesOf(b, s).filter((i) => i !== s).map(seatView), ally = allies[0] ?? null;
   return {
     you: s, team: teamOf(b, s), doubles: multi(b), allies,
+    score: b.phase === 'over' && !b.training ? scoreOf(b) : null,
     raid: b.raid ? { boss: b.raid.boss, limit: b.raid.limit, dark: !!b.raid.dark, gmax: !!b.raid.gmax, title: b.raid.title || '' } : null, turn: b.turn, phase: b.phase, winner: b.winner,
     weather: b.weather, weatherTurns: b.weatherTurns, terrain: b.terrain, terrainTurns: b.terrainTurns, terrainMine: b.terrain ? b.terrainTeam === teamOf(b, s) : null,
     mustAct: b.needs[s] && !lock,
