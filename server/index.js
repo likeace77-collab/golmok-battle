@@ -740,6 +740,7 @@ const challenges = new Map(); // 신청자 키 → { to, size }
 const notices = new Map();    // 다음 접속 때 알려 줄 말
 const tagRooms = new Map();   // 태그 방 id → { id, host, level, slots }
 const spectating = new Map(); // 유저 키 → 관전 중인 room
+const REACTS = new Set(['kk', 'gg', 'nice', 'wow', 'oops', 'sorry', 'hi', 'gl', 'fire', 'cry', 'clap', 'think']), reactAt = new Map();
 
 const send = (ws, msg) => { if (ws?.readyState === 1) ws.send(JSON.stringify(msg)); };
 const toast = (key, text) => send(online.get(key), { t: 'toast', text });
@@ -1001,6 +1002,17 @@ function onMessage(key, msg) {
       break;
     }
     case 'unspectate': stopWatching(key); broadcastLobby(); break;
+    case 'react': { // 대전 응원·이모티콘: 같은 방 사람과 관전자에게
+      const r = String(msg.r || '');
+      if (!REACTS.has(r) && !(r.startsWith('s:') && Data.MONSTERS[r.slice(2)])) break;
+      const now = Date.now(); if (now - (reactAt.get(key) || 0) < 1200) break; reactAt.set(key, now);
+      const room = inBattle.get(key) || spectating.get(key);
+      if (!room || room.training || room.ended) break;
+      const out = { t: 'react', r, name: db.users[key].name, seat: room.keys.indexOf(key) };
+      for (const k of room.keys) if (k !== BOT) send(online.get(k), out);
+      for (const k of room.spectators) send(online.get(k), out);
+      break;
+    }
     case 'chat': S.chatSend(key, msg.ch, msg.text); break;
     case 'chat_hist': send(online.get(key), { t: 'chat_hist', ch: String(msg.ch || ''), list: S.chatHistory(key, msg.ch) }); break;
     case 'tag_create': {

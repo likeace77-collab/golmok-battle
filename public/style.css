@@ -1538,3 +1538,23 @@ svg[data-shiny] { filter: hue-rotate(var(--shue)) saturate(1.35) brightness(1.05
 .dex-shinybtn[aria-pressed="true"] { background: linear-gradient(90deg, #fff6b0, #ffd23f, #ffb0e6, #b0f0ff); background-size: 200% 100%; animation: ttFlow 2s linear infinite; color: var(--ink); }
 .chips .chip-shiny { background: linear-gradient(90deg, #fff6b0, #ffd23f, #ffb0e6); color: var(--ink); }
 .card.has-shiny { position: relative; box-shadow: 3px 3px 0 var(--ink), 0 0 10px #ffd23f; }
+/* 대전 응원·이모티콘 */
+.react-btn { position: absolute; right: 8px; top: 44%; z-index: 7; width: 40px; height: 40px; font-size: 22px; line-height: 1; background: #fff8e0; border: var(--line); border-radius: 50%; box-shadow: 2px 2px 0 var(--ink); cursor: pointer; }
+.react-pal { position: absolute; right: 8px; top: calc(44% + 46px); z-index: 8; width: min(300px, calc(100% - 16px)); padding: 8px; background: #fff8e0; border: var(--line); border-radius: 14px; box-shadow: 3px 3px 0 var(--ink); }
+.react-pal[hidden] { display: none; }
+.rp-txt { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.rp-txt button { font: 14px var(--ui); padding: 6px 2px; background: #fff; border: 2px solid var(--ink); border-radius: 10px; cursor: pointer; }
+.rp-stk { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 6px; }
+.rp-stk button { padding: 2px; background: #fff; border: 2px solid var(--ink); border-radius: 10px; cursor: pointer; } .rp-stk svg { width: 100%; display: block; }
+.rp-mute { display: flex; gap: 6px; align-items: center; font-size: 12px; margin-top: 6px; color: #6b6380; }
+.react-layer { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+.rbub { position: absolute; display: grid; justify-items: center; gap: 1px; animation: rbPop 2.6s ease-out forwards; }
+.rbub small { font: 11px var(--ui); color: #fff; background: #1a1433cc; padding: 0 6px; border-radius: 99px; }
+.rbub.me { left: 8%; bottom: 34%; } .rbub.ally { left: 32%; bottom: 40%; } .rbub.opp { right: 12%; top: 6%; } .rbub.opp2 { right: 36%; top: 10%; } .rbub.spec { right: 56px; }
+.rb-txt { font: 900 20px var(--display, sans-serif); color: var(--ink); padding: 6px 14px; background: #fff; border: var(--line); border-radius: 18px 18px 18px 4px; box-shadow: 3px 3px 0 var(--ink); }
+.rbub.opp .rb-txt, .rbub.opp2 .rb-txt { border-radius: 18px 18px 4px 18px; }
+.rb-stk { display: grid; justify-items: center; width: 74px; padding: 4px; background: #fff; border: var(--line); border-radius: 14px; box-shadow: 3px 3px 0 var(--ink); }
+.rb-stk svg { width: 60px; display: block; } .rb-stk b { font: 12px var(--ui); }
+@keyframes rbPop { 0% { transform: scale(.3) translateY(10px); opacity: 0; } 10% { transform: scale(1.15); opacity: 1; } 18% { transform: scale(1); } 80% { opacity: 1; transform: translateY(-10px); } 100% { opacity: 0; transform: translateY(-24px); } }
+.react-pal { top: 8px; right: 54px; max-height: calc(100% - 16px); overflow-y: auto; width: min(280px, calc(100% - 70px)); } /* 화면 안에 다 보이게 */
+.rp-stk { grid-template-columns: repeat(4, 1fr); } .rp-stk button { padding: 0; } .rp-txt button { padding: 4px 2px; font-size: 13px; }

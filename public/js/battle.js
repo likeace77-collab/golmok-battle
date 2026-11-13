@@ -156,6 +156,8 @@ const Battle = (() => {
         <canvas class="fxc" id="fxc"></canvas>
         ${keysNow().map((k) => `<div class="plate ${k}" id="p-${k}"></div>`).join('')}
         <div class="fieldbar" id="field"></div>
+        <div class="react-layer" id="react-layer" aria-live="polite"></div>
+        ${training ? '' : '<button class="react-btn" id="react-btn" aria-label="응원·이모티콘">😀</button><div class="react-pal" id="react-pal" hidden></div>'}
       </section>
       <div class="say" id="say" role="status"></div>
       <div id="panel"></div>`;
@@ -165,6 +167,7 @@ const Battle = (() => {
       trainers.me = Avatar3D.mount($('#tr-me'), view.me.avatar, { facing: .75 });
       if (!training) trainers.opp = Avatar3D.mount($('#tr-opp'), view.opps[0].avatar, { facing: -.6 });
     }
+    bindReact();
   }
 
   function say(text) { const s = $('#say'); if (s) s.textContent = text; }
@@ -818,5 +821,43 @@ const Battle = (() => {
     div.querySelector('#to-lobby').onclick = () => { view = null; showLobby(); };
   }
 
-  return { enter, onTurn, onChosen, setNote, onNoBattle, exit };
+  /* ---------- 응원·이모티콘 ---------- */
+  const REACT_TXT = { kk: 'ㅋㅋㅋ', gg: 'GG', nice: '나이스!', wow: 'ㄷㄷ', oops: '아…', sorry: '미안 ㅠ', hi: '안녕!', gl: '잘 부탁해!', fire: '🔥', cry: '😭', clap: '👏', think: '🤔' };
+  const STICKERS = ['yeontan', 'kkaebi', 'bungbbang', 'deungsin', 'malrang', 'chijeu', 'horong', 'mimik'];
+  const STICKER_MOOD = { yeontan: '화났다!', kkaebi: '킥킥', bungbbang: '헉!', deungsin: '등신…', malrang: '말랑~', chijeu: '냥!', horong: '으스스', mimik: '와구와구' };
+  const reactMuted = () => { try { return localStorage.getItem('reactMute') === '1'; } catch { return false; } };
+  let reactLock = 0;
+  function bindReact() {
+    const btn = document.getElementById('react-btn'), pal = document.getElementById('react-pal');
+    if (!btn || !pal) return;
+    const draw = () => {
+      pal.innerHTML = `<div class="rp-txt">${Object.entries(REACT_TXT).map(([k, t]) => `<button data-r="${k}">${t}</button>`).join('')}</div>
+        <div class="rp-stk">${STICKERS.filter((id) => G.data.MONSTERS[id]).map((id) => `<button data-r="s:${id}" title="${esc(G.data.MONSTERS[id].n)}">${monsterSVG(id)}</button>`).join('')}</div>
+        <label class="rp-mute"><input type="checkbox" ${reactMuted() ? 'checked' : ''}> 다른 사람 이모티콘 숨기기</label>`;
+      pal.querySelectorAll('[data-r]').forEach((b) => { b.onclick = () => {
+        if (Date.now() < reactLock) return toast('잠깐만요! 조금 있다 보내요.');
+        reactLock = Date.now() + 1300; wsSend({ t: 'react', r: b.dataset.r }); pal.hidden = true;
+      }; });
+      pal.querySelector('.rp-mute input').onchange = (e) => { try { localStorage.setItem('reactMute', e.target.checked ? '1' : '0'); } catch {} };
+    };
+    btn.onclick = (e) => { e.stopPropagation(); if (pal.hidden) draw(); pal.hidden = !pal.hidden; };
+    if (!bindReact.outside) { bindReact.outside = true; document.addEventListener('click', (e) => { const p = document.getElementById('react-pal'); if (p && !p.hidden && !p.contains(e.target) && e.target.id !== 'react-btn') p.hidden = true; }); }
+  }
+  function onReact(m) {
+    const layer = document.getElementById('react-layer');
+    if (!layer || !view) return;
+    const mine = m.name === G.user.name;
+    if (!mine && reactMuted()) return;
+    const side = m.seat >= 0 ? sideKey(m.seat) : 'spec';
+    const body = m.r.startsWith('s:') ? `<span class="rb-stk">${monsterSVG(m.r.slice(2))}<b>${esc(STICKER_MOOD[m.r.slice(2)] || '')}</b></span>` : `<span class="rb-txt">${esc(REACT_TXT[m.r] || '')}</span>`;
+    const el = document.createElement('div');
+    el.className = `rbub ${side}`;
+    el.innerHTML = `${m.seat < 0 || view.doubles ? `<small>${esc(m.name)}</small>` : ''}${body}`;
+    if (side === 'spec') el.style.top = `${18 + Math.random() * 40}%`;
+    layer.appendChild(el);
+    setTimeout(() => el.remove(), 2600);
+    while (layer.children.length > 8) layer.firstChild.remove();
+  }
+
+  return { enter, onTurn, onChosen, setNote, onNoBattle, exit, onReact };
 })();
