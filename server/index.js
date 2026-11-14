@@ -341,6 +341,11 @@ function migrate() {
       apply: (u) => sendMail(u, { from: '골목대전 운영팀', title: '선생님을 만들어 주셔서 감사합니다', body: '신캐 공모전 출시작 "선생님"을 만들어 주셔서 감사합니다. 오늘도 교실을 지키는 모든 선생님께 경의를 표하며, 신화 등급 칭호 "이놈의 아이들"을 드립니다!', reward: ['titles:kids'] }) },
     { id: 'kkaak-title', user: '티키티키펑크', why: '까모 제작', notice: '우편함에 신화 등급 칭호가 도착했습니다!',
       apply: (u) => sendMail(u, { from: '골목대전 운영팀', title: '까모를 만들어 주셔서 감사합니다', body: '신캐 공모전 출시작 "까모"를 만들어 주셔서 감사합니다. 골목길 전선 위에서 세상을 내려다보는 까마귀처럼, 신화 등급 칭호 "까악까악"을 드립니다!', reward: ['titles:kkaak'] }) },
+    // 2026-11-15 운영 선물: 이로치 등신·까모, 50000GP
+    { id: 'gift-1115-shiny', user: 'pshrocket', why: '이로치 등신·까모 선물', notice: '운영팀 선물: 이로치 등신과 이로치 까모가 내 골목몬에 들어왔어요! 우편함을 확인해 보세요.',
+      apply: (u) => { P.grant(u, { mon: 'deungsin', shiny: true }); P.grant(u, { mon: 'kkamo', shiny: true }); sendMail(u, { from: '골목대전 운영팀', title: '이로치 선물이 도착했어요', body: '운영팀이 이로치 등신과 이로치 까모를 보내 드렸어요. 내 골목몬에서 확인해 보세요!' }); } },
+    ...['pshrocket', 'suho'].map((name) => ({ id: 'gift-1115-gp', user: name, why: '50000GP 선물', notice: '운영팀 선물: 50,000GP가 지갑에 들어왔어요!',
+      apply: (u) => { P.grant(u, { gp: 50000 }); sendMail(u, { from: '골목대전 운영팀', title: '50,000GP 선물', body: '운영팀이 50,000GP를 보내 드렸어요. 지갑을 확인해 보세요!' }); } })),
   ];
   for (const g of GRANTS) {
     const u = db.users[keyOf(g.user)];
