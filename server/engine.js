@@ -55,6 +55,7 @@ const freshVolatile = () => ({
   stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0 },
   seeded: false, flinched: false, protecting: false, spiky: null, feared: false, lastMove: null, protectStreak: 0, reflecting: null, distracted: false, disabled: null, fieldTurns: 0, choiceLock: null,
   lastUsed: null, diving: null, caged: null, jail: 0, probation: null, whileFrom: null, hurtFrom: [], // 까모·선생님
+  charmed: false, heartbreak: false, // 여우비: 유혹 표식, 마음의 상처
 });
 
 // ===== 등신 (개복치): 돌연사와 갈증 =====
@@ -265,9 +266,10 @@ function gmaxMoves(m) {
   const sp0 = MONSTERS[m.species], baseT = sp0.gmaxTypes || sp0.types;
   const types = sp0.gmaxTypes ? [...sp0.gmaxTypes] : [...new Set(m.moves.map((x) => MOVES[x.id]).filter((v) => v && v.cat !== 'x' && TYPES[v.type] && v.type !== 'none').map((v) => v.type))];
   for (const t of [...baseT, 'normal', ...Object.keys(TYPES)]) if (types.length < 3 && !types.includes(t) && TYPES[t] && t !== 'none') types.push(t); // 모자라면 다른 타입으로 채워 항상 3개
-  const dai = types.slice(0, 3).map((t) => ({ n: `다이${TYPES[t].n}`, type: t, cat, pow: DAI_POW, acc: 100, pp: 1, pri: 0, ...DAI_FX[t], dai: true }));
+  const gb = sp0.gmaxBuff;
+  const dai = types.slice(0, 3).map((t) => ({ n: `다이${TYPES[t].n}`, type: t, cat, pow: Math.round(DAI_POW * (gb?.dpow || 1)), acc: 100, pp: 1, pri: 0, ...DAI_FX[t], dai: true }));
   const gt = baseT[0];
-  const g = { n: GMAX_MOVES[m.species] || `거다이 ${sp.n}`, type: gt, cat, pow: G_POW, acc: 100, pp: 1, pri: 0, ...strongFx(DAI_FX[gt] || DAI_FX.normal), breakGuard: true, gmaxMove: true };
+  const g = { n: GMAX_MOVES[m.species] || `거다이 ${sp.n}`, type: gt, cat, pow: gb?.gpow || G_POW, acc: 100, pp: 1, pri: 0, ...strongFx(DAI_FX[gt] || DAI_FX.normal), breakGuard: true, gmaxMove: true, ...(gb?.heart ? { heart: true } : {}) };
   return [g, ...dai];
 }
 // 도감에 보여 줄 거다이맥스 정보
@@ -276,7 +278,8 @@ const canGmax = (b, s) => { const m = activeOf(b, s); return b.phase === 'choose
 function doGmax(b, s, ev) {
   const m = activeOf(b, s);
   m.preMax = m.maxHp;
-  m.maxHp = Math.round(m.maxHp * GMAX_HP); m.hp = Math.round(m.hp * GMAX_HP);
+  const gmul = MONSTERS[m.species].gmaxBuff?.hp || GMAX_HP; m.gmaxMul = gmul;
+  m.maxHp = Math.round(m.maxHp * gmul); m.hp = Math.round(m.hp * gmul);
   m.gmax = GMAX_TURNS;
   b.sides[s].gmaxUsed = true;
   const gt = MONSTERS[m.species].gmaxTypes;
@@ -288,8 +291,9 @@ function endGmax(b, s, m, ev, quiet = false) {
   if (!m.gmax) return;
   m.gmax = 0;
   if (m.preTypes) { m.types = m.preTypes; delete m.preTypes; }
-  const old = m.preMax || Math.round(m.maxHp / GMAX_HP);
-  if (m.hp > 0) m.hp = Math.max(1, Math.min(old, Math.ceil(m.hp / GMAX_HP)));
+  const gmul = m.gmaxMul || GMAX_HP;
+  const old = m.preMax || Math.round(m.maxHp / gmul);
+  if (m.hp > 0) m.hp = Math.max(1, Math.min(old, Math.ceil(m.hp / gmul)));
   m.maxHp = old;
   if (!quiet && ev) ev.push({ t: 'gmaxEnd', side: s, mon: publicMon(m), text: `${josa(m.name, '은/는')} 원래 크기로 돌아왔다.` });
 }
@@ -331,6 +335,7 @@ function resolve(b) {
 function speedOf(b, s) {
   const m = activeOf(b, s);
   let v = m.stats.spe * stageMul(m.stages.spe) * stripMul(m);
+  if (m.gmax && MONSTERS[m.species]?.gmaxBuff) v *= MONSTERS[m.species].gmaxBuff.stat;
   if (m.species === 'godeuri' && m.hp * 2 <= m.maxHp) v *= 1.5 + pv(m); // 특성 녹아내림
   if (has(m, 'scarf')) v *= 1.5; // 털 목도리
   if (m.status === 'par') v *= .5;
@@ -613,6 +618,14 @@ function canAct(b, s, m, mv, ev) {
     msg(ev, `${josa(m.name, '은/는')} 불타는 개복치가 무서워서 공격하지 못했다!`);
     return false;
   }
+  if (m.heartbreak && chance(b, 10)) { // 여우비 꼬리치기: 마음의 상처
+    msg(ev, `${josa(m.name, '은/는')} 마음의 상처 때문에 풀이 죽어 움직이지 못했다!`);
+    return false;
+  }
+  if (m.charmed && mv && mv.cat !== 'x' && chance(b, 30)) { // 여우비 유혹 표식
+    msg(ev, `${josa(m.name, '은/는')} 유혹에 넋이 나가 공격하지 못했다!`);
+    return false;
+  }
   if (m.flinched) {
     m.flinched = false;
     msg(ev, `${josa(m.name, '은/는')} 풀이 죽어 움직이지 못했다!`);
@@ -645,6 +658,8 @@ function damageOf(b, atk, def, mv, crit, roll) {
   let ds = phys ? def.stages.def : def.stages.spd;
   if (crit) { as = Math.max(as, 0); ds = Math.min(ds, 0); } // 급소는 불리한 변화 무시
   a *= stageMul(as) * stripMul(atk) * (phys ? tierAtk(atk) : 1) * formMul(atk); d *= stageMul(ds) * tierDef(def) * formMul(def);
+  const gbA = atk.gmax && MONSTERS[atk.species]?.gmaxBuff, gbD = def.gmax && MONSTERS[def.species]?.gmaxBuff; // 거다이맥스 강화 (여우비)
+  if (gbA) a *= gbA.stat; if (gbD) d *= gbD.stat;
   if (def.species === 'daeya' && (mv.type === 'ice' || b.weather === 'snow')) d *= 2; // 특성 김장
   if (phys) a *= has(atk, 'band') ? 1.5 : has(atk, 'gloves') ? 1.1 : 1; else a *= has(atk, 'specs') ? 1.5 : has(atk, 'book') ? 1.1 : 1;
   if (phys && has(def, 'padding')) d *= 1.3;
@@ -897,6 +912,26 @@ function hitOne(b, s, me, o, mv, ev) {
     }
   }
 
+  if (mv.foxcharm) { // 여우비: 유혹하기 → (표식이 있으면) 꼬리치기
+    if (foe.charmed) {
+      foe.charmed = false;
+      msg(ev, `${me.name}의 꼬리치기! 살랑~ ${foe.name}의 유혹 표식이 터졌다!`);
+      hurt(b, o, foe, 50, ev, { eff: 1, moveType: 'fairy' });
+      if (alive(foe) && !foe.heartbreak) { foe.heartbreak = true; msg(ev, `${foe.name}에게 마음의 상처가 남았다...`); }
+      faintCheck(b, o, foe, ev);
+      return;
+    }
+    msg(ev, `${josa(me.name, '은/는')} ${josa(foe.name, '을/를')} 유혹했다!`);
+    for (const k of ['atk', 'acc', 'spa']) changeStage(b, o, foe, k, -1, ev);
+    foe.charmed = true; msg(ev, `${foe.name}에게 유혹 표식이 남았다! 💗`);
+    return;
+  }
+  if (mv.sway) { // 여우비: 살랑살랑 — 재우거나 명중률 50%
+    msg(ev, `${josa(me.name, '은/는')} 꼬리를 살랑살랑 흔들었다~`);
+    if (!foe.status && chance(b, 50)) applyStatus(b, o, foe, 'slp', ev, true);
+    else changeStage(b, o, foe, 'acc', -2, ev);
+    return;
+  }
   if (mv.cat === 'x') return statusMove(b, s, me, o, foe, mv, ev);
   if (foe.spiky && mv.cat === 'p' && !mv.z) { // 가시복: 물리 공격을 막고 찌름
     foe.spiky.used = true;
@@ -979,6 +1014,7 @@ function hitOne(b, s, me, o, mv, ev) {
     if (mv.loop && alive(foe) && foe.whileFrom !== me) { foe.whileFrom = me; msg(ev, `while(${me.name} 살아 있음) { ${foe.name} 체력 -= 10; } 무한 루프가 걸렸다!`); }
     if (mv.cage && alive(foe)) { foe.caged = me; msg(ev, `칠흑의 깃털이 ${josa(foe.name, '을/를')} 가뒀다! 이제 교체할 수 없다!`); }
     if (mv.record) { for (const i of foesOf(b, s)) { b.sides[i].zUsed = true; b.sides[i].megaUsed = true; } msg(ev, `생기부에 나쁜 말이 적혔다! 상대는 이제 Z기술도 메가진화도 쓸 수 없다!`); }
+    if (mv.heart && alive(foe)) { foe.charmed = true; if (!foe.heartbreak) { foe.heartbreak = true; msg(ev, `가면 아래의 눈들이 ${josa(foe.name, '을/를')} 바라본다... 유혹 표식과 마음의 상처가 새겨졌다!`); } }
     if (mv.heal3 && heal(b, s, me, me.maxHp / 3, ev)) msg(ev, `${josa(me.name, '은/는')} 소나무 그늘에서 기운을 차렸다!`);
   }
   if (eff > 1) msg(ev, '효과가 굉장했다!');
@@ -1372,6 +1408,7 @@ function endOfTurn(b, ev) {
     }
     if (has(m, 'leftover') && m.hp < m.maxHp) { useItem(b, s, m, ev, '조금 먹고 체력을 회복했다.'); heal(b, s, m, m.maxHp / 16, ev); }
     if (m.whileFrom && alive(m)) { if (alive(m.whileFrom)) { msg(ev, `while문이 돈다... ${josa(m.name, '은/는')} 10 피해!`); hurt(b, s, m, 10, ev); faintCheck(b, s, m, ev); } else { m.whileFrom = null; msg(ev, `선생님이 쓰러져 while문이 끝났다. (break;)`); } }
+    if (m.heartbreak && alive(m)) { msg(ev, `${josa(m.name, '은/는')} 마음의 상처가 아프다... 25 피해!`); hurt(b, s, m, 25, ev); faintCheck(b, s, m, ev); }
     if (m.yeonjiMark && alive(m)) { msg(ev, `${m.name}의 연지 자국이 화끈거린다!`); hurt(b, s, m, m.maxHp * (m.yeonjiMark === true ? .25 : m.yeonjiMark), ev); faintCheck(b, s, m, ev); }
   }
   if (b.terrain && --b.terrainTurns <= 0) { b.terrain = null; ev.push({ t: 'terrain', terrain: null, text: '그래스필드가 사라졌다.' }); }
@@ -1567,6 +1604,8 @@ function smartAction(b, s, level, o) {
   const left = b.sides[o].mons.filter(alive).length;
   const support = (mv) => {
     const acc = (mv.acc ?? 100) / 100;
+    if (mv.foxcharm) return foe.charmed ? (Math.min(50, foe.hp) / foe.maxHp) * 100 + (foe.heartbreak ? 0 : 40) : foe.hp > foe.maxHp * .35 ? 55 : 15;
+    if (mv.sway) return foe.status || foe.stages.acc <= -2 || foe.hp < foe.maxHp * .4 ? 0 : 40;
     if (mv.protect) return (foe.seeded || foe.status === 'psn' || foe.status === 'brn') && me.protectStreak === 0 ? 30 : 0;
     if (mv.heal) return me.hp < me.maxHp * .5 && threat < me.maxHp * mv.heal * 1.2 ? 80 : 0;
     if (mv.nap) return me.hp < me.maxHp * .35 && threat < me.hp ? 60 : 0;

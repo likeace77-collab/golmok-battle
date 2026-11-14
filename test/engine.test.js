@@ -829,7 +829,7 @@ test('거다이맥스: 체력 1.5배, 거다이·다이기술 4칸, 5턴 뒤 원
   const ev = E.choose(b, 1, E.botAction(b, 1, 0)).events;
   assert.ok(ev.some((e) => e.t === 'gmax'));
   if (me.hp > 0 && E.activeOf(b, 0) === me) { // 상대 기술로 강제 교체되면 바로 돌아옴
-    assert.equal(me.maxHp, Math.round(max * 1.5));
+    assert.equal(me.maxHp, Math.round(max * (MONSTERS[me.species].gmaxBuff?.hp || 1.5)));
     assert.ok(ev.some((e) => e.t === 'move' && e.side === 0 && e.gmax === 2));
     assert.equal(E.viewFor(b, 0).canGmax, false); assert.equal(E.viewFor(b, 0).canZ, false);
   }
@@ -883,7 +883,7 @@ test('강화 고유 효과: 능력치형은 그 능력치만 더 오르고, 등�
   assert.equal(D.PERKS.deungsin.v, -1);
 });
 
-test('여우비: 나오면 비, 거다이맥스하면 혼·독 타입이 되었다가 끝나면 물·노말로 돌아온다', () => {
+test('여우비: 나오면 비, 거다이맥스하면 혼·독 타입이 되었다가 끝나면 물·페어리로 돌아온다', () => {
   const b = E.createBattle([{ name: '가', team: [{ species: 'yeoubi', moves: ['foxrain', 'hose', 'charm', 'guard'] }] }, { name: '나', team: Array.from({ length: 6 }, () => ({ species: 'bonaeng', moves: ['guard'] })) }], 3, { preview: true });
   const m = b.sides[0].mons[0];
   E.choose(b, 0, { type: 'lead', index: 0 }); const r0 = E.choose(b, 1, { type: 'lead', index: 0 });
@@ -897,5 +897,17 @@ test('여우비: 나오면 비, 거다이맥스하면 혼·독 타입이 되었�
     E.choose(b, 0, { type: 'move', index: 1 }); E.choose(b, 1, { type: 'move', index: 0 });
   }
   assert.equal(m.gmax, 0);
-  assert.deepEqual(m.types, ['water', 'normal']);
+  assert.deepEqual(m.types, ['water', 'fairy']);
+});
+
+test('여우비 유혹하기 → 꼬리치기: 표식, 50 피해, 마음의 상처 매 턴 25', () => {
+  const b = battle(custom('yeoubi', ['foxcharm', 'swish', 'foxscratch', 'guard']), custom('maetdol', ['tackle']), 4);
+  const foe = b.sides[1].mons[0];
+  const turn = (i) => { E.choose(b, 0, { type: 'move', index: i }); return E.choose(b, 1, { type: 'move', index: 0 }); };
+  turn(0);
+  assert.equal(foe.charmed, true); assert.equal(foe.stages.atk, -1); assert.equal(foe.stages.acc, -1); assert.equal(foe.stages.spa, -1);
+  const hp = foe.hp; const r = turn(0);
+  assert.equal(foe.charmed, false); assert.equal(foe.heartbreak, true);
+  assert.ok(JSON.stringify(r).includes('꼬리치기'));
+  assert.equal(hp - foe.hp, 75, '꼬리치기 50 + 마음의 상처 25');
 });
