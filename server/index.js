@@ -10,7 +10,8 @@ const P = require('./progress');
 const S = require('./social'); // 친구·길드·채팅·협업 퀘스트
 const R = require('./rank'); // 랭크전
 const DG = require('./dungeon'); // 이벤트 던전
-const RD = require('./raid'); // 레이드·흑화 메가배틀
+const RD = require('./raid');
+const BUILD = Date.now().toString(36); // 서버가 켜질 때마다 바뀌는 판 번호 // 레이드·흑화 메가배틀
 
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
@@ -781,6 +782,11 @@ const server = http.createServer(async (req, res) => {
     const a = userFromReq(req);
     if (!(a && uncensored(db.users[a.key]))) serve = file.replace(/\.webp$/, '-m.webp');
     res.setHeader('Cache-Control', 'private, no-store'); res.setHeader('Vary', 'Cookie');
+  }
+  if (path.basename(serve) === 'index.html') { // 배포할 때마다 css·js 주소가 바뀌어 옛 파일을 붙들고 있지 않게
+    const html = fs.readFileSync(serve, 'utf8').replace(/(href="style\.css|src="(?:js|vendor)\/[\w.-]+\.js)"/g, `$1?v=${BUILD}"`);
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    return res.end(html);
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(serve)] || 'application/octet-stream', ...(res.getHeader('Cache-Control') ? {} : { 'Cache-Control': 'no-cache' }) });
   fs.createReadStream(serve).pipe(res);

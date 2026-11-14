@@ -511,8 +511,20 @@ function showSunfish() {
 /* ---------- 이로치: 색이 다른 희귀한 골목몬 ---------- */
 // 골목몬마다 정해진 색 바꿈 각도 (항상 같은 이로치 색)
 const shinyHue = (id) => { let h = 7; for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 9973; return 100 + (h % 160); };
+// 모습이 바뀌는 골목몬은 모습마다 이로치 색이 따로 (단조: 재질마다 다른 금속 빛)
+const SHINY_FORM = {
+  danjo: {
+    base: 'sepia(.7) hue-rotate(55deg) saturate(1.8) brightness(1.05)', // 나무 → 이끼 낀 초록 나무
+    t1: 'sepia(1) saturate(4.5) hue-rotate(8deg) brightness(1.2)', // 철 → 노란 철
+    t2: 'hue-rotate(295deg) saturate(1.5) brightness(1.05)', // 금 → 장밋빛 금
+    t3: 'sepia(.6) hue-rotate(215deg) saturate(3.5) brightness(1.05)', // 다이아 → 보랏빛 자수정
+    t4: 'hue-rotate(85deg) saturate(1.8) brightness(1.1)', // 네더라이트 → 핏빛
+    mega: 'hue-rotate(180deg) saturate(1.3)',
+  },
+};
 function shinify(svg, id) {
-  const st = `--shue:${shinyHue(id)}deg`;
+  const form = (svg.match(/img\/mon\/[a-z]+(?:-(t\d|f\d|s\d|mega))?(?:-m)?\.webp/) || [])[1] || 'base';
+  const st = `--shue:${shinyHue(id)}deg;--sf:${SHINY_FORM[id]?.[form] || `hue-rotate(${shinyHue(id)}deg) saturate(1.35) brightness(1.05)`}`;
   const head = svg.slice(0, svg.indexOf('>'));
   return /\sstyle="/.test(head) ? svg.replace(/\sstyle="/, ` data-shiny="1" style="${st};`) : svg.replace('<svg', `<svg data-shiny="1" style="${st}"`);
 }
