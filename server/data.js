@@ -574,12 +574,12 @@ MONSTERS.bungbbang.moves = MONSTERS.bungbbang.moves.map((m) => (m === 'ember' ? 
 
 const AVATAR_OPTIONS = {
   skin: 10, hair: 20, hairColor: 16, brow: 8, eyes: 12, eyeColor: 12, eyeSize: 4, lashes: 4, mouth: 10, face: 7,
-  glasses: 8, hat: 14, outfit: 17, outfitColor: 16, bottom: 6, bg: 14,
-  body: 6, pose: 16, pantsColor: 12, shoes: 10, shoeColor: 12, gloves: 6, neck: 6, back: 10, hand: 10, aura: 12,
+  glasses: 8, hat: 14, outfit: 17, outfitColor: 16, bottom: 6, bg: 30,
+  body: 6, pose: 32, pantsColor: 12, shoes: 10, shoeColor: 12, gloves: 6, neck: 6, back: 10, hand: 10, aura: 16,
 };
 // 유료 꾸미기: GP로 한 번 사면 계속 씁니다. { 항목: { 번호: 가격 } }
 const AVATAR_PAID = {
-  pose: { 12: 3000, 13: 3000, 14: 8000, 15: 10000 },
+  pose: { 12: 3000, 13: 3000, 14: 8000, 15: 10000, 28: 5000, 29: 6000, 30: 7000, 31: 8000 },
   aura: { 8: 6000, 9: 6000, 10: 12000, 11: 12000 },
 };
 

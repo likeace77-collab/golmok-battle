@@ -189,6 +189,7 @@ const Avatar3D = (() => {
       ho.add(at(new T.Mesh(shapeGeo('hup', [[-.35, -.1], [0, .3], [.35, -.1], [.18, -.1], [0, .1], [-.18, -.1]]), g('#FFE45C', .95)), 0, .35, .01));
       for (const [x, y, w] of [[-1.25, .55, .7], [1.25, .2, .6], [-1.15, -.35, .55]]) { const pn = new T.Group(); pn.add(new T.Mesh(box(w, .3, .005), g('#2EF2FF', .3))); pn.add(at(new T.Mesh(box(w, .02, .005), g('#ffffff', .9)), 0, .14, .005)); pn.add(at(new T.Mesh(box(w * .6, .05, .005), g('#FFE45C', .9)), -w * .15, -.04, .005)); ho.add(at(pn, x, y, 0)); }
       ho.visible = false; root.add(at(ho, 0, 2.0, -.7)); J.holo = ho; }
+    { const ki = new T.Group(); ki.add(new T.Mesh(sph(.2, 16, 12), new T.MeshBasicMaterial({ color: '#7fe8ff', transparent: true, opacity: .55, blending: T.AdditiveBlending, depthWrite: false }))); ki.add(new T.Mesh(sph(.11, 12, 8), new T.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: .9, blending: T.AdditiveBlending, depthWrite: false }))); ki.visible = false; torso.add(at(ki, 0, .35, .75)); J.ki = ki; }
     // 손에 든 것 (오른손)
     const hand = J.handR, H = (o) => hand.add(o);
     ({
@@ -376,7 +377,11 @@ const Avatar3D = (() => {
       }
       if (conf[1] === 'dark' || conf[1] === 'flame') aura.add(at(new T.Mesh(cyl(.9, .9, .02, 30), flat(conf[1] === 'dark' ? '#3B1A6E' : '#FF8A1A', T.DoubleSide, .35)), 0, .02, 0));
     }
-    if (auraKind >= 8) paidAura(aura, auraKind);
+    if (auraKind >= 8 && auraKind < 12) paidAura(aura, auraKind);
+    if (auraKind >= 12) {
+      const kinds = { 12: ['#FFE45C', () => shapeGeo('str12', [[0, .07], [.02, .02], [.07, 0], [.02, -.02], [0, -.07], [-.02, -.02], [-.07, 0], [-.02, .02]])], 13: ['#BFE4FF', () => sph(.07, 10, 8)], 14: ['#9A4FB8', () => shapeGeo('note', [[-.03, -.06], [.01, -.06], [.01, .08], [.06, .05], [.06, .08], [.01, .11], [-.01, .11], [-.01, -.02], [-.03, -.02]], .02)], 15: ['#3FA34D', () => shapeGeo('leaf', [[0, .08], [.05, .02], [0, -.08], [-.05, .02]], .01)] }[auraKind];
+      for (let i = 0; i < 18; i++) { const m = new T.Mesh(kinds[1](), auraKind === 13 ? new T.MeshToonMaterial({ color: kinds[0], gradientMap: grad, transparent: true, opacity: .55 }) : flat(i % 3 && auraKind === 14 ? '#2F7DE1' : kinds[0], T.DoubleSide)); m.userData = { a: (i / 18) * Math.PI * 2, y: (i % 6) * .45 + .1, r: .75 + (i % 3) * .12 }; aura.add(m); }
+    }
     J.aura = aura;
     root.scale.setScalar(kid ? .95 : 1);
     return J;
@@ -440,6 +445,39 @@ const Avatar3D = (() => {
     (t) => ({ armL: [-.25, -1.5, .28], foreL: [-1.7, 0, 0], armR: [-.38, 1.5, -.28], foreR: [-1.78, 0, 0], head: [-.18, 0, .06], legL: [0, 0, -.12], legR: [0, 0, .12], holo: true }),
     // 15 챔피언 (트로피 들기)
     (t) => ({ armR: [-.2, 0, -2.75], foreR: [0, 0, -.1], trophy: true, armL: [0, 0, .75], foreL: [0, 0, -1.7], head: [-.2, 0, .05], legL: [0, 0, -.14], legR: [0, 0, .14], dy: Math.max(0, Math.sin(t * 3)) * .03 }),
+    // ---- 추가 포즈 (16~27 무료, 28~31 유료) ----
+    // 16 꾸벅 인사
+    (t) => { const b = Math.max(0, Math.sin(t * 1.6)); return { torso: [.55 * b, 0, 0], head: [.25 * b, 0, 0], armL: [-.2 * b, 0, .08], armR: [-.2 * b, 0, -.08], dy: -.02 * b }; },
+    // 17 경례
+    (t) => ({ armR: [-.3, 0, -2.2], foreR: [0, 0, -2.0], armL: [0, 0, .05], head: [-.05, 0, 0], legL: [0, 0, -.04], legR: [0, 0, .04] }),
+    // 18 생각 중
+    (t) => ({ armR: [-1.2, 0, -.2], foreR: [-1.9, 0, 0], armL: [-.6, 0, .35], foreL: [-1.5, 0, 0], head: [.05, Math.sin(t * .8) * .15, .18], gR: 'point' }),
+    // 19 기지개
+    (t) => ({ armL: [0, 0, 2.9], armR: [0, 0, -2.9], foreL: [0, 0, .2], foreR: [0, 0, -.2], torso: [-.1, 0, Math.sin(t * 1.2) * .12], head: [-.25, 0, 0], dy: .02 }),
+    // 20 으쓱
+    (t) => ({ armL: [0, 0, .35], foreL: [-1.3, 0, .9], armR: [0, 0, -.35], foreR: [-1.3, 0, -.9], head: [0, 0, Math.sin(t * 2) * .12], dy: Math.abs(Math.sin(t * 2)) * .03 }),
+    // 21 박수
+    (t) => { const c = Math.abs(Math.sin(t * 8)); return { armL: [-1.25, 0, .1], foreL: [0, 0, -.35 - c * .35], armR: [-1.25, 0, -.1], foreR: [0, 0, .35 + c * .35], head: [-.08, 0, 0] }; },
+    // 22 달리기 준비
+    (t) => ({ torso: [.4, 0, 0], head: [-.3, 0, 0], legL: [-.7, 0, 0], legR: [.45, 0, 0], armL: [.6, 0, .1], armR: [-.9, 0, -.1], foreR: [-.6, 0, 0], dy: -.1 }),
+    // 23 앉기
+    (t) => ({ dy: -.42, legL: [-1.45, 0, -.15], legR: [-1.45, 0, .15], armL: [-.9, 0, .25], foreL: [-.4, 0, 0], armR: [-.9, 0, -.25], foreR: [-.4, 0, 0], torso: [-.05, 0, 0], head: [0, Math.sin(t * .8) * .12, 0] }),
+    // 24 주머니 손 흔들기
+    (t) => ({ armL: [.25, 0, .15], foreL: [-.5, 0, 0], armR: [0, 0, -2.5], foreR: [0, 0, Math.sin(t * 8) * .5], legR: [0, 0, .12], head: [0, 0, -.1] }),
+    // 25 셀카 브이
+    (t) => ({ armR: [-1.4, 0, -.7], foreR: [-.2, 0, 0], armL: [-.5, 0, .4], foreL: [-2.1, 0, 0], gL: 'v', head: [0, .25, .2] }),
+    // 26 두 손 모음
+    (t) => ({ armL: [-.8, 0, .2], foreL: [-1.0, 0, -.7], armR: [-.8, 0, -.2], foreR: [-1.0, 0, .7], head: [.25, 0, 0], dy: Math.sin(t * 1.5) * .01 }),
+    // 27 어흥!
+    (t) => ({ armL: [-2.0, 0, .45], foreL: [-.7, 0, 0], armR: [-2.0, 0, -.45], foreR: [-.7, 0, 0], torso: [.2, 0, 0], legL: [-.3, 0, -.1], legR: [.2, 0, .1], dy: -.05 + Math.abs(Math.sin(t * 4)) * .05 }),
+    // 28 문워크 (유료)
+    (t) => { const k = Math.sin(t * 5); return { turn: .9, legL: [k * .35, 0, 0], legR: [-k * .35, 0, 0], armL: [-k * .4, 0, .15], armR: [k * .4, 0, -.15], foreL: [-.6, 0, 0], foreR: [-.6, 0, 0], head: [0, -.6, 0], dy: Math.abs(k) * .03 }; },
+    // 29 회전 점프 (유료)
+    (t) => { const p = (t * .8) % 1, j = Math.sin(Math.min(1, p * 1.6) * Math.PI); return { turn: p < .625 ? p * 1.6 * Math.PI * 2 : 0, dy: Math.max(0, j) * .45, armL: [0, 0, .3 + j * 2.3], armR: [0, 0, -.3 - j * 2.3], legL: [-j * .4, 0, 0], legR: [j * .2, 0, 0] }; },
+    // 30 기 모으기 (유료)
+    (t) => { const k = Math.sin(t * 30) * .015; return { dy: -.14, legL: [0, 0, -.38], legR: [0, 0, .38], torso: [.2 + k, 0, 0], armL: [-.6, 0, .3], foreL: [-1.1, 0, -.7], armR: [-.6, 0, -.3], foreR: [-1.1, 0, .7], head: [-.15, 0, 0], ki: .8 + Math.sin(t * 6) * .2 }; },
+    // 31 공중부양 (유료)
+    (t) => ({ dy: .35 + Math.sin(t * 1.5) * .07, legL: [-1.4, 0, -.55], legR: [-1.4, 0, .55], armL: [0, 0, .85], foreL: [0, 0, .5], armR: [0, 0, -.85], foreR: [0, 0, -.5], gL: 'v', gR: 'v', head: [.08, 0, 0], ki: .5 }),
   ];
   // 오른손에 물건을 들면 손가락 포즈는 왼손으로 바꿉니다.
   const mirror = (p) => {
@@ -494,6 +532,7 @@ const Avatar3D = (() => {
       if (J.ball) { J.ball.visible = pose.ball !== undefined; if (J.ball.visible) J.ball.position.set(0, -.22 - pose.ball, .02); }
       if (J.trophy) J.trophy.visible = !!pose.trophy;
       if (J.holo) J.holo.visible = !!pose.holo;
+      if (J.ki) { J.ki.visible = !!pose.ki; if (pose.ki) J.ki.scale.setScalar(pose.ki); }
     }
     for (const j of JOINTS) {
       const r = pose[j] || [0, 0, 0];
@@ -540,8 +579,8 @@ const Avatar3D = (() => {
     const key = JSON.stringify(a) + w;
     if (snaps.has(key)) return snaps.get(key);
     const J = build(a);
-    J.root.rotation.y = .38;
-    applyPose(J, idle(a, 0));
+    J.root.rotation.y = .38 + (idle(a, .3).turn || 0);
+    applyPose(J, idle(a, .3));
     J.root.position.y = idle(a, 0).dy || 0;
     animateAura(J, 0);
     snapScene.add(J.root);
@@ -628,7 +667,7 @@ const Avatar3D = (() => {
         }
       }
       applyPose(J, pose, w);
-      J.root.rotation.y = v.facing + v.extraRot + spin;
+      J.root.rotation.y = v.facing + v.extraRot + spin + (v.action ? 0 : (pose.turn || 0));
       J.root.rotation.x = lean * w;
       J.root.position.z = dz;
       animateAura(J, t);

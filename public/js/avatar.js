@@ -20,16 +20,18 @@ const AVATAR_LABELS = {
   glasses: '안경', hat: '모자', outfit: '상의', outfitColor: '상의 색', bg: '배경',
 };
 const EYE_SW = ['#1a1433', '#2F7DE1', '#18c8e0', '#3FA34D', '#9A4FB8', '#E8402C', '#8a1030', '#F2B705', '#F27FA5', '#7C8798', '#6b3f1f', '#B8C2CC'];
-const AVATAR_SWATCH = { eyeColor: EYE_SW, skin: SKIN, hairColor: HAIR_C, outfitColor: CLOTH_C, bg: BG_SWATCH, pantsColor: PANTS_C, shoeColor: SHOE_C };
+const AVATAR_SWATCH = { eyeColor: EYE_SW, skin: SKIN, hairColor: HAIR_C, outfitColor: CLOTH_C, pantsColor: PANTS_C, shoeColor: SHOE_C };
 const AVATAR_ORDER = ['body', 'pose', 'skin', 'hair', 'hairColor', 'brow', 'eyes', 'eyeColor', 'eyeSize', 'lashes', 'mouth', 'face', 'glasses', 'hat', 'outfit', 'outfitColor', 'bottom', 'pantsColor', 'shoes', 'shoeColor', 'gloves', 'neck', 'back', 'hand', 'aura', 'bg'];
 const AVATAR_NAMES = {
-  body: ['보통', '날씬', '듬직', '꼬마', '탄탄', '모델'], pose: ['차렷', '허리에 손', '팔짱', '브이', '손 흔들기', '근육 자랑', '엄지척', '손가락질', '파이팅', '손하트', '뒷짐', '만세 점프', '공 던지기', '모자 챙 잡기', '승리 팔짱', '챔피언'],
+  body: ['보통', '날씬', '듬직', '꼬마', '탄탄', '모델'], pose: ['차렷', '허리에 손', '팔짱', '브이', '손 흔들기', '근육 자랑', '엄지척', '손가락질', '파이팅', '손하트', '뒷짐', '만세 점프', '공 던지기', '모자 챙 잡기', '승리 팔짱', '챔피언',
+    '꾸벅 인사', '경례', '생각 중', '기지개', '으쓱', '박수', '달리기 준비', '앉기', '주머니 손 흔들기', '셀카 브이', '두 손 모음', '어흥!', '문워크', '회전 점프', '기 모으기', '공중부양'],
   brow: ['없음', '동그란', '굵은', '화난', '처진', '일자 연결', '날렵한', '아치형'], eyeSize: ['보통', '작게', '크게', '아주 크게'], lashes: ['없음', '단선', '긴 컬', '풍성하게'],
   outfit: ['티셔츠', '후드티', '정장', '트레이닝', '멜빵', '조끼', '띠', '갑옷', '단추 셔츠', '물방울', '민소매', '마법사', '줄무늬', '등번호', '후드 집업', '테크웨어 재킷', '야구 점퍼'],
   bottom: ['기본 바지', '카고 조거', '데님', '트레이닝', '반바지', '스커트'],
   shoes: ['운동화', '부츠', '슬리퍼', '구두', '하이탑', '장화', '롤러', '쪼리', '형광 하이탑', '버클 워커'], gloves: ['없음', '흰 장갑', '권투', '가죽', '고무장갑', '메카'],
   neck: ['없음', '목도리', '금목걸이', '나비넥타이', '두건', '메달'], back: ['없음', '망토', '천사 날개', '악마 날개', '책가방', '제트팩', '등검', '나비 날개', '기타', '깃발'],
-  hand: ['없음', '검', '지팡이', '깃발', '마이크', '아이스크림', '국자', '뚫어뻥', '빗자루', '연탄집게'], aura: ['없음', '불꽃', '번개', '반짝', '얼음', '하트', '어둠', '무지개', '레드·블랙 에너지', '네온 링', '랭크업 홀로그램', '불사조 날개'],
+  hand: ['없음', '검', '지팡이', '깃발', '마이크', '아이스크림', '국자', '뚫어뻥', '빗자루', '연탄집게'], aura: ['없음', '불꽃', '번개', '반짝', '얼음', '하트', '어둠', '무지개', '레드·블랙 에너지', '네온 링', '랭크업 홀로그램', '불사조 날개', '별가루', '비눗방울', '음표', '나뭇잎'],
+  bg: ['파랑', '빨강', '노랑', '민트', '보라', '분홍', '집중선', '물방울', '햇살', '체스판', '달밤', '노을 도시', '네온 무대', '하트', '벽돌담', '노을 바다', '오로라', '벚꽃길', '눈 오는 밤', '사이버 그리드', '교실', '편의점', '지하철', '우주', '사막', '숲', '무지개', '파랑 체크', '경기장', '용암'],
 };
 
 // 3D가 되면 3D로, 안 되면 2D로 그립니다. 배경은 2D 그림을 깝니다.
@@ -50,6 +52,38 @@ function avatarBg(i) {
     base('#F27A4B') + '<rect y="30" width="100" height="40" fill="#F7A24B"/><circle cx="70" cy="40" r="14" fill="#FFD23F"/><path d="M0 125V70l12-6 12 6V56h20v10l14-8 14 8V60h28v65z" fill="#3B2A78"/>' + rng(6, (j) => `<rect x="${6 + j * 16}" y="${80 + (j % 3) * 10}" width="5" height="5" fill="#FFD23F"/>`),
     base('#2a1450') + '<circle cx="50" cy="66" r="28" fill="#FF6FB5"/><circle cx="50" cy="66" r="28" fill="#FFD23F" opacity=".55"/>' + rng(4, (j) => `<rect x="20" y="${70 + j * 6}" width="60" height="2.5" fill="#2a1450"/>`) + '<rect y="86" width="100" height="39" fill="#1a0a3a"/>' + rng(7, (j) => `<path d="M50 86L${j * 25 - 25} 125" stroke="#ff4fc0" stroke-width="1"/>`) + rng(4, (j) => `<path d="M0 ${90 + j * 9}h100" stroke="#ff4fc0" stroke-width="1"/>`),
     base('#FFB3CC') + rng(12, (j) => { const x = (j % 4) * 28 + ((Math.floor(j / 4) % 2) * 14) + 6, y = Math.floor(j / 4) * 42 + 14; return `<path d="M${x} ${y + 5}c-7-5-4-11 0-7 4-4 7 2 0 7z" fill="#F27FA5"/>`; }),
+    // 14 골목 벽돌담
+    base('#B5523B') + rng(13, (r) => rng(5, (c) => `<rect x="${c * 24 - (r % 2) * 12}" y="${r * 10}" width="22" height="8" rx="1" fill="#C9674D"/>`)) + '<rect y="100" width="100" height="25" fill="#5b5560"/><path d="M0 100h100" stroke="#3b3640" stroke-width="2"/>',
+    // 15 노을 바다
+    '<defs><linearGradient id="bgs1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF7A59"/><stop offset=".55" stop-color="#FFC371"/><stop offset=".56" stop-color="#2F6FB5"/><stop offset="1" stop-color="#1B3E7A"/></linearGradient></defs><rect width="100" height="125" fill="url(#bgs1)"/><circle cx="50" cy="69" r="16" fill="#FFE27A"/><rect y="69" width="100" height="56" fill="#2F6FB5"/>' + rng(6, (j) => `<rect x="${30 + (j % 2) * 6}" y="${74 + j * 6}" width="${40 - j * 5}" height="2" fill="#FFE27A" opacity=".7"/>`),
+    // 16 오로라 밤하늘
+    base('#0b1033') + '<path d="M-10 40Q20 10 50 35T110 25V55Q80 70 50 55T-10 65z" fill="#3cf0a0" opacity=".45"/><path d="M-10 55Q30 30 60 50T110 45V70Q70 85 40 70T-10 80z" fill="#7b5cff" opacity=".35"/>' + rng(20, (j) => `<circle cx="${(j * 37) % 100}" cy="${(j * 23) % 60}" r="${j % 4 ? .7 : 1.3}" fill="#fff"/>`) + '<path d="M0 125V105l20-8 18 6 22-10 20 8 20-4v28z" fill="#060818"/>',
+    // 17 벚꽃길
+    base('#FFE4EE') + '<path d="M0 125L40 70h20l40 55z" fill="#E9C8A8"/>' + rng(26, (j) => `<circle cx="${(j * 41) % 100}" cy="${(j * 29) % 70}" r="${4 + (j % 3) * 2}" fill="${j % 2 ? '#FFB3CC' : '#FF8FB4'}"/>`) + rng(10, (j) => `<ellipse cx="${(j * 53) % 100}" cy="${75 + (j * 17) % 50}" rx="2" ry="1.2" fill="#FF8FB4"/>`),
+    // 18 눈 내리는 밤
+    base('#1d2a5a') + '<rect y="95" width="100" height="30" fill="#E8F1FF"/><path d="M0 95q25-8 50 0t50 0" fill="#E8F1FF"/>' + rng(30, (j) => `<circle cx="${(j * 31) % 100}" cy="${(j * 43) % 95}" r="${1 + (j % 3) * .6}" fill="#fff" opacity=".9"/>`),
+    // 19 사이버 그리드
+    base('#0a0620') + '<rect y="0" width="100" height="60" fill="#140a3a"/>' + rng(9, (j) => `<path d="M50 60L${-60 + j * 27.5} 125" stroke="#2EF2FF" stroke-width=".8" opacity=".8"/>`) + rng(6, (j) => `<path d="M0 ${62 + j * j * 2}h100" stroke="#FF3DCB" stroke-width=".8" opacity=".8"/>`) + '<circle cx="50" cy="48" r="20" fill="#FF3DCB" opacity=".75"/>' + rng(4, (j) => `<rect x="28" y="${44 + j * 5}" width="44" height="2" fill="#0a0620"/>`),
+    // 20 교실 칠판
+    base('#E9D8B4') + '<rect x="6" y="14" width="88" height="56" rx="3" fill="#2E5E43" stroke="#8B5A2B" stroke-width="4"/><path d="M14 30h30M14 40h22M56 28l8 10 12-16" stroke="#fff" stroke-width="2" fill="none" opacity=".8"/><text x="50" y="62" font-size="9" text-anchor="middle" fill="#fff" opacity=".85" font-weight="700">1+1=2</text><rect y="98" width="100" height="27" fill="#B98A55"/>',
+    // 21 편의점
+    base('#EAF6FF') + '<rect y="0" width="100" height="16" fill="#3FA34D"/><rect y="16" width="100" height="5" fill="#F28A1E"/>' + rng(3, (r) => `<rect x="4" y="${30 + r * 22}" width="92" height="3" fill="#B8C2CC"/>` + rng(9, (c) => `<rect x="${7 + c * 10}" y="${20 + r * 22}" width="7" height="10" rx="1" fill="${['#E8402C', '#2F7DE1', '#F2B705', '#9A4FB8', '#3CC9A7'][(r + c) % 5]}"/>`)) + '<rect y="100" width="100" height="25" fill="#cfd8e0"/>',
+    // 22 지하철
+    base('#d9dee6') + '<rect y="0" width="100" height="12" fill="#2a2a33"/>' + rng(3, (j) => `<rect x="${6 + j * 32}" y="22" width="24" height="30" rx="4" fill="#1b2a44"/><rect x="${6 + j * 32}" y="22" width="24" height="30" rx="4" fill="none" stroke="#7C8798" stroke-width="2"/>`) + '<rect y="56" width="100" height="5" fill="#3FA34D"/><rect y="64" width="100" height="16" fill="#8a8f98"/><rect y="100" width="100" height="25" fill="#5b5560"/>' + rng(5, (j) => `<path d="M${10 + j * 20} 12v10" stroke="#C7CDD6" stroke-width="1.5"/><circle cx="${10 + j * 20}" cy="24" r="3" fill="none" stroke="#C7CDD6" stroke-width="1.5"/>`),
+    // 23 우주
+    base('#090620') + rng(28, (j) => `<circle cx="${(j * 37) % 100}" cy="${(j * 53) % 125}" r="${j % 5 ? .6 : 1.4}" fill="#fff"/>`) + '<circle cx="78" cy="26" r="14" fill="#F28A1E"/><ellipse cx="78" cy="26" rx="24" ry="5" fill="none" stroke="#FFE27A" stroke-width="2.5" transform="rotate(-18 78 26)"/><circle cx="16" cy="96" r="22" fill="#5B9BF0"/><path d="M4 90q8-6 16 0t16 2" stroke="#3FA34D" stroke-width="5" fill="none"/>',
+    // 24 사막
+    '<defs><linearGradient id="bgs2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB86B"/><stop offset="1" stop-color="#FFE3A3"/></linearGradient></defs><rect width="100" height="125" fill="url(#bgs2)"/><circle cx="70" cy="30" r="12" fill="#FFF3C4"/><path d="M0 95q30-14 60-4t40-6v40H0z" fill="#E7B76B"/><path d="M0 110q40-10 100 2v13H0z" fill="#D9A04F"/><path d="M14 98V70q0-5 4-5t4 5v28M14 82h-6v-10M22 78h6v-8" stroke="#3FA34D" stroke-width="5" stroke-linecap="round" fill="none"/>',
+    // 25 숲
+    base('#BFE8B0') + rng(7, (j) => `<path d="M${j * 16 - 4} 100l12-${44 + (j % 3) * 10}l12 ${44 + (j % 3) * 10}z" fill="${j % 2 ? '#2E7D4F' : '#3FA34D'}"/>`) + '<rect y="98" width="100" height="27" fill="#7FBF5A"/>' + rng(8, (j) => `<circle cx="${(j * 29) % 100}" cy="${105 + (j * 7) % 18}" r="2" fill="${j % 2 ? '#FFE45C' : '#fff'}"/>`),
+    // 26 구름 위 무지개
+    base('#A9DBFF') + rng(6, (j) => `<path d="M-10 110a60 60 0 0 1 120 0" fill="none" stroke="${['#E8402C', '#F28A1E', '#F2B705', '#3FA34D', '#2F7DE1', '#9A4FB8'][j]}" stroke-width="5" transform="translate(0 ${j * 5})"/>`) + rng(5, (j) => `<circle cx="${j * 25}" cy="118" r="14" fill="#fff"/>`),
+    // 27 파랑 체크
+    base('#EAF3FF') + rng(10, (j) => `<rect x="${j * 10}" y="0" width="5" height="125" fill="#5B9BF0" opacity=".35"/>`) + rng(13, (j) => `<rect x="0" y="${j * 10}" width="100" height="5" fill="#5B9BF0" opacity=".35"/>`),
+    // 28 경기장 조명
+    base('#0f1a3a') + '<rect y="80" width="100" height="45" fill="#2E7D4F"/><path d="M0 80h100" stroke="#fff" stroke-width="1.5"/><ellipse cx="50" cy="104" rx="20" ry="6" fill="none" stroke="#fff" stroke-width="1.2"/>' + rng(2, (j) => `<path d="M${j ? 90 : 10} 4l${j ? -40 : 40} 76h${j ? 22 : -22}z" fill="#fff" opacity=".18"/><rect x="${j ? 82 : 2}" y="0" width="16" height="7" rx="2" fill="#FFE45C"/>`) + rng(14, (j) => `<circle cx="${4 + j * 7}" cy="${60 + (j % 3) * 5}" r="2.5" fill="${['#E8402C', '#2F7DE1', '#F2B705'][j % 3]}"/>`),
+    // 29 용암
+    base('#2a0a0a') + '<path d="M0 90q20-12 40 0t40-4 20 0v39H0z" fill="#E8402C"/><path d="M0 100q25-8 50 2t50-6v29H0z" fill="#FF8A1A"/><path d="M0 112q30-6 60 2t40-4v15H0z" fill="#FFD23F"/>' + rng(8, (j) => `<path d="M${8 + j * 12} 20l6 22-10-6z" fill="#3b1a1a"/>`) + rng(8, (j) => `<circle cx="${(j * 23) % 100}" cy="${60 + (j * 11) % 25}" r="1.5" fill="#FFB13B"/>`),
   ][i - 6] || base(BG_C[0]);
 }
 
