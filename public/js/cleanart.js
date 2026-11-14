@@ -2,9 +2,9 @@
 // 원본은 서버의 출품작 그림 그대로라서, 그림을 받을 때마다 브라우저에서 한 번 다듬어 둡니다.
 const CLEAN_KEY = {}; // 거꾸로: 주소 → 'kkamo-mega' (이로치 색을 모습별로 고를 때)
 const CLEAN_ART = {}; // 'kkamo' / 'kkamo-mega' → 다듬은 그림 주소(blob:)
-const ART_CLOSE = { seonsaeng: 0.035, 'seonsaeng-mega': 0.035, 'kkamo-mega': 0.004 }; // 선 사이 틈을 얼마나 메울지 (손그림은 크게)
+const ART_CLOSE = { seonsaeng: 0.035, 'seonsaeng-mega': 0.035, kkamo: 0, 'kkamo-mega': 0 }; // 선 사이 틈을 얼마나 메울지 (손그림은 크게)
 
-function cleanPixels(img, { watermark = false, close = 0.008 } = {}) {
+function cleanPixels(img, { watermark = false, close = 0.008, allWhite = false } = {}) {
   const { data: d, width: W, height: H } = img;
   const N = W * H, lum = (i) => (d[i * 4] * 299 + d[i * 4 + 1] * 587 + d[i * 4 + 2] * 114) / 1000;
   const sat = (i) => Math.max(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]) - Math.min(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]);
@@ -12,7 +12,7 @@ function cleanPixels(img, { watermark = false, close = 0.008 } = {}) {
   for (let i = 0; i < N; i++) isBg[i] = d[i * 4 + 3] < 20 || (lum(i) > 226 && sat(i) < 30) ? 1 : 0;
   // 선이 끊겨 있어도 안쪽(흰 옷 등)이 같이 지워지지 않게: 선을 close만큼 부풀린 벽으로 바깥을 채우고,
   // 그 바깥을 다시 close만큼 넓혀서 그 안의 흰색만 투명하게 (손그림은 크게, 매끈한 그림은 작게)
-  const R = Math.max(2, Math.round(Math.min(W, H) * close));
+  const R = close > 0 ? Math.max(2, Math.round(Math.min(W, H) * close)) : 0; // 0이면 선 틈을 안 메움 (흰 속이 없는 매끈한 그림)
   const dist = (src) => { // 3-4 거리 변환: src(1)까지의 거리 ×3
     const D = new Float32Array(N).fill(1e9);
     for (let i = 0; i < N; i++) if (src[i]) D[i] = 0;
@@ -63,19 +63,38 @@ function cleanPixels(img, { watermark = false, close = 0.008 } = {}) {
       if (hit < 7) out[i] = 1;
     }
   }
-  // 바깥과 맞닿은 밝은 가장자리는 반투명으로 (흰 테두리 줄이기)
+  if (allWhite) { // 흰 속이 없는 그림: 날개 사이·팔다리 사이에 갇힌 흰 배경도 지움 (눈 같은 작은 흰 점은 남김)
+    const seen = new Uint8Array(N);
+    for (let s0 = 0; s0 < N; s0++) {
+      if (seen[s0] || out[s0] || !isBg[s0]) continue;
+      const comp = [s0]; seen[s0] = 1;
+      for (let k = 0; k < comp.length; k++) {
+        const i = comp[k], x = i % W;
+        for (const j of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, i - W, i + W]) if (j >= 0 && j < N && !seen[j] && !out[j] && isBg[j]) { seen[j] = 1; comp.push(j); }
+      }
+      if (comp.length > N * 0.0015) for (const i of comp) out[i] = 1;
+    }
+  }
+  // 흰 테두리 없애기: 투명한 곳에서 2~3픽셀 안쪽 가장자리는 흰색을 빼고 그만큼 투명하게 (color to alpha)
+  for (let i = 0; i < N; i++) if (out[i]) d[i * 4 + 3] = 0;
+  const dEdge = dist(out);
   for (let i = 0; i < N; i++) {
-    if (out[i]) { d[i * 4 + 3] = 0; continue; }
-    const x = i % W;
-    const edge = (x > 0 && out[i - 1]) || (x < W - 1 && out[i + 1]) || (i >= W && out[i - W]) || (i < N - W && out[i + W]);
-    if (edge && lum(i) > 180 && sat(i) < 40) d[i * 4 + 3] = Math.round(d[i * 4 + 3] * (255 - lum(i)) / 75);
+    if (out[i] || dEdge[i] > 9) continue;
+    const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
+    const a = Math.max(255 - r, 255 - g, 255 - b) / 255;
+    if (a >= 0.98) continue;
+    if (a < 0.25) { d[i * 4 + 3] = 0; continue; } // 거의 흰색이면 배경 찌꺼기
+    d[i * 4] = Math.round((r - 255 * (1 - a)) / a); d[i * 4 + 1] = Math.round((g - 255 * (1 - a)) / a); d[i * 4 + 2] = Math.round((b - 255 * (1 - a)) / a);
+    d[i * 4 + 3] = Math.round(d[i * 4 + 3] * a);
   }
 
   if (watermark) {
     // 몸 색: 불투명하고 어두운 무채색 픽셀의 평균
-    let n = 0, R = 0, Gc = 0, B = 0;
-    for (let i = 0; i < N; i++) if (!out[i] && lum(i) < 110 && sat(i) < 30) { n++; R += d[i * 4]; Gc += d[i * 4 + 1]; B += d[i * 4 + 2]; }
-    const body = n ? [R / n, Gc / n, B / n] : [70, 70, 70];
+    // 몸 색: 불투명한 어두운 무채색 중 가장 많은 색 (테두리 선 색에 끌려가지 않게)
+    const cnt = new Map();
+    for (let i = 0; i < N; i++) if (!out[i] && d[i * 4 + 3] > 250 && lum(i) < 130 && sat(i) < 30) { const k = (d[i * 4] >> 3) << 10 | (d[i * 4 + 1] >> 3) << 5 | (d[i * 4 + 2] >> 3); cnt.set(k, (cnt.get(k) || 0) + 1); }
+    let bk = -1, bn = 0; for (const [k, v] of cnt) if (v > bn) { bn = v; bk = k; }
+    const body = bk >= 0 ? [((bk >> 10) & 31) * 8 + 4, ((bk >> 5) & 31) * 8 + 4, (bk & 31) * 8 + 4] : [70, 70, 70];
     // 워터마크 띠: 몸 안의 밝은 무채색 덩어리 중 큰 것 → 그 네모 영역의 무채색을 몸 색으로
     const seen = new Uint8Array(N);
     const dOut = dist(out); // 가장자리 안티앨리어싱(밝은 회색 테두리)은 빼고 찾기
@@ -157,7 +176,7 @@ function cleanArtUrl(src, opts) {
 async function prepareContestArt(redraw) {
   const list = Object.entries(G.data?.MONSTERS || {}).filter(([, sp]) => sp.contest);
   await Promise.all(list.flatMap(([id]) => ['', '-mega'].map(async (v) => {
-    const url = await cleanArtUrl(`img/mon/${id}${v}.webp`, { watermark: !v && id === 'kkamo', close: ART_CLOSE[id + v] ?? 0.008 });
+    const url = await cleanArtUrl(`img/mon/${id}${v}.webp`, { watermark: !v && id === 'kkamo', close: ART_CLOSE[id + v] ?? 0.008, allWhite: id === 'kkamo' });
     if (url) { CLEAN_ART[id + v] = url; CLEAN_KEY[url] = id + v; }
   })));
   if (list.length && typeof redraw === 'function') redraw();
