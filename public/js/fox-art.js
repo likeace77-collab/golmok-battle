@@ -75,27 +75,63 @@
     ${drop(20, 42, .6)}${drop(32, 48, .5)}${drop(180, 38, .55)}
     ${spark(22, 160, 6)}${spark(180, 164, 7)}${spark(170, 70, 4, '#ffb3e0')}${spark(30, 84, 4, '#bfe8ff')}`);
 
-  /* ---------- 거다이맥스: 하늘을 덮는 여우비 ---------- */
-  const houses = [[-4, 22, 24, '#E8402C'], [18, 20, 34, '#4DABF7'], [162, 20, 30, '#69DB7C'], [182, 22, 22, '#FFA94D']].map(([x, w, h, c]) =>
-    `<path d="M${x} 200V${200 - h}h${w}V200z" fill="#f4ecdc" stroke-width="2.4"/><path d="M${x - 3} ${200 - h}L${x + w / 2} ${200 - h - 12}L${x + w + 3} ${200 - h}z" fill="${c}" stroke-width="2.4"/><rect x="${x + w / 2 - 4}" y="${200 - h + 8}" width="8" height="8" fill="#FFE45C" stroke-width="1.8"/>`).join('');
-  const bigTails = [-165, -138, -42, -15].map((a, i) => {
-    const r = (a * Math.PI) / 180, L = 104, cx = 100, cy = 120, x2 = cx + Math.cos(r) * L, y2 = cy + Math.sin(r) * L, w = 22, nx = -Math.sin(r) * w, ny = Math.cos(r) * w;
-    return `<path d="M${(cx + nx * .3).toFixed(1)} ${(cy + ny * .3).toFixed(1)}Q${(cx + Math.cos(r) * L * .55 + nx).toFixed(1)} ${(cy + Math.sin(r) * L * .55 + ny).toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}Q${(cx + Math.cos(r) * L * .55 - nx).toFixed(1)} ${(cy + Math.sin(r) * L * .55 - ny).toFixed(1)} ${(cx - nx * .3).toFixed(1)} ${(cy - ny * .3).toFixed(1)}Z" fill="url(#ybT)"/>`
-      + cloud(cx + Math.cos(r) * (L - 6), cy + Math.sin(r) * (L - 6), .55, 'url(#ybC)');
-  }).join('');
-  const GMAX = DEFS(`<linearGradient id="ybS" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fd3ff"/><stop offset="1" stop-color="#ffe2b8"/></linearGradient>`) + D(`
-    <rect x="-6" y="-10" width="212" height="212" rx="20" fill="url(#ybS)" stroke="none" opacity=".55"/>
-    ${[['#FF6B6B', 96], ['#FFA94D', 89], ['#FFD43B', 82], ['#69DB7C', 75], ['#4DABF7', 68], ['#B197FC', 61]].map(([c, r]) => `<path d="M${100 - r} 140A${r} ${r} 0 0 1 ${100 + r} 140" fill="none" stroke="${c}" stroke-width="7" opacity=".75"/>`).join('')}
-    ${bigTails}
-    <path d="M28 200Q20 150 52 128Q100 104 148 128Q180 150 172 200Z" fill="url(#ybF)"/>
-    <path d="M70 200Q66 158 100 146Q134 158 130 200Z" fill="#FFF6EA" stroke-width="2.8"/>
-    ${houses}
-    <path d="M44 200q-6-20 12-24q16 2 14 24zM130 200q-2-22 14-24q18 4 12 24z" fill="#FFF6EA" stroke-width="2.8"/>
-    ${ears(100, 96, 1.18, '#ffffff')}
-    ${face(100, 96, 1.18, 'ybE', true)}
-    ${sun(100, 8, 9)}
-    ${Array.from({ length: 16 }, (_, i) => drop(8 + (i * 37) % 190, 16 + ((i * 53) % 150), .6 + (i % 3) * .15)).join('')}
-    ${spark(16, 40, 6)}${spark(186, 50, 7)}${spark(186, 120, 4, '#bfe8ff')}`);
+  /* ---------- 거다이맥스: 반전! 피의 달 아래 깨어난 구미호 ----------
+     귀엽던 여우비가 거대한 요괴로. 붉은 달, 아홉 개의 불타는 꼬리(끝에 푸른 여우불), 귀까지 찢어진 이빨 가득한 웃음,
+     빛나는 세로 동공 눈 넷, 골목 지붕을 움켜쥔 발톱, 꼬리 끝 비구름은 시커먼 먹구름이 되어 번개를 친다. */
+  const H = (x, y, r, a = 0) => { const p = []; for (let k = 0; k < 7; k++) { const t = (a + k * 360 / 7) * Math.PI / 180, rr = k % 2 ? r * .55 : r; p.push(`${(x + Math.cos(t) * rr).toFixed(1)} ${(y + Math.sin(t) * rr).toFixed(1)}`); } return p.join(' '); };
+  // 여우불: 푸른 도깨비불
+  const wisp = (x, y, s) => `<path d="M${x} ${y - 16 * s}Q${x + 10 * s} ${y - 4 * s} ${x + 7 * s} ${y + 6 * s}Q${x} ${y + 12 * s} ${x - 7 * s} ${y + 6 * s}Q${x - 10 * s} ${y - 4 * s} ${x - 2 * s} ${y - 8 * s}Q${x + 2 * s} ${y - 12 * s} ${x} ${y - 16 * s}Z" fill="url(#ybW)" stroke-width="2" class="gx-eye"/><path d="M${x} ${y - 4 * s}Q${x + 4 * s} ${y + 2 * s} ${x} ${y + 6 * s}Q${x - 4 * s} ${y + 2 * s} ${x} ${y - 4 * s}Z" fill="#fff" stroke="none"/>`;
+  // 불꽃 꼬리: 톱날 가장자리, 끝에 여우불
+  const fireTail = (a, L, w) => {
+    const pts = [], n = 7;
+    for (let k = 0; k <= n; k++) { const t = k / n, ww = w * Math.sin(Math.PI * Math.min(1, t * 1.15)) * (1 - t * .25); pts.push([L * t, -ww - (k % 2 ? 5 : 0)]); }
+    for (let k = n; k >= 0; k--) { const t = k / n, ww = w * Math.sin(Math.PI * Math.min(1, t * 1.15)) * (1 - t * .25); pts.push([L * t + (k % 2 ? 3 : 0), ww + (k % 2 ? 5 : 0)]); }
+    return `<g transform="translate(100 150) rotate(${a})"><path d="M${pts.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join('L')}Z" fill="url(#ybR)" stroke="#ff6a2a" stroke-width="6" opacity=".35"/><path d="M${pts.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join('L')}Z" fill="url(#ybR)"/><path d="M${L * .2} 0Q${L * .55} ${-w * .3} ${L * .85} 0" fill="none" stroke="#ff5a2a" stroke-width="2.4" opacity=".8"/>${wisp(L + 4, 0, .9)}</g>`;
+  };
+  const fangs = (x, y, w, h, n) => { // 귀까지 찢어진 입
+    let top = '', bot = '';
+    for (let k = 0; k < n; k++) { const a = x - w / 2 + (w / n) * k, b = a + w / n, m = (a + b) / 2, cv = Math.sin(Math.PI * (k + .5) / n) * h * .35;
+      top += `<path d="M${a.toFixed(1)} ${(y - h * .2 + cv * .2).toFixed(1)}L${m.toFixed(1)} ${(y + h * .25 + cv).toFixed(1)}L${b.toFixed(1)} ${(y - h * .2 + cv * .2).toFixed(1)}Z"/>`;
+      bot += `<path d="M${(a + 2).toFixed(1)} ${(y + h * .9 + cv).toFixed(1)}L${(m + 2).toFixed(1)} ${(y + h * .35 + cv * .6).toFixed(1)}L${(b + 2).toFixed(1)} ${(y + h * .9 + cv).toFixed(1)}Z"/>`; }
+    return `<path d="M${x - w / 2 - 6} ${y - h * .45}Q${x} ${y - h * .05} ${x + w / 2 + 6} ${y - h * .45}Q${x + w * .44} ${y + h * 1.4} ${x} ${y + h * 1.35}Q${x - w * .44} ${y + h * 1.4} ${x - w / 2 - 6} ${y - h * .45}Z" fill="#2a0410"/>`
+      + `<path d="M${x - w * .3} ${y + h * .95}Q${x} ${y + h * .7} ${x + w * .3} ${y + h * .95}Q${x} ${y + h * 1.25} ${x - w * .3} ${y + h * .95}Z" fill="#8a0f2a" stroke="none"/>`
+      + `<g fill="#f6eedc" stroke-width="1.6">${top}${bot}</g>`;
+  };
+  const evil = (x, y, r, d) => `<path d="M${x - r * d} ${y - r * .55}L${x + r * d} ${y + r * .1}Q${x} ${y + r * .85} ${x - r * d} ${y + r * .15}Z" fill="#FFE14D" class="gx-eye"/><ellipse cx="${x + r * .15 * d}" cy="${y + r * .18}" rx="${r * .13}" ry="${r * .42}" fill="#1a0006" stroke="none"/><circle cx="${x - r * .3 * d}" cy="${y - r * .05}" r="${r * .12}" fill="#fff" stroke="none"/>`;
+  const ruins = [[-6, 24, 22, '#5a1a1a'], [16, 20, 32, '#2a3a5a'], [164, 20, 28, '#2a4a2a'], [182, 24, 20, '#5a3a1a']].map(([x, w, h, c]) =>
+    `<path d="M${x} 202V${202 - h}l${w * .3} 4 ${w * .2}-6 ${w * .5} 3V202z" fill="#4a4250" stroke-width="2.4"/><path d="M${x - 3} ${202 - h}L${x + w * .4} ${202 - h - 10}L${x + w + 3} ${202 - h + 4}z" fill="${c}" stroke-width="2.4"/><path d="M${x + w * .3} ${202 - h + 8}l4 6-3 5" fill="none" stroke="#ff5a2a" stroke-width="1.6"/>`).join('');
+  const claw = (x, y, d) => `<g transform="translate(${x} ${y}) scale(${d} 1)"><path d="M-22 6Q-24 -14 -6 -18Q12 -18 18 0Q20 10 10 12H-18Z" fill="url(#ybR)"/>${[-16, -6, 4, 13].map((cx, k) => `<path d="M${cx} -14Q${cx - 2} -30 ${cx + 6} -38Q${cx + 4} -26 ${cx + 6} -14Z" fill="#f6eedc" stroke-width="2"/>`).join('')}</g>`;
+  const GMAX = `<defs>
+    <radialGradient id="ybN" cx=".5" cy=".25" r=".9"><stop offset="0" stop-color="#5a0a1e"/><stop offset=".55" stop-color="#1e0820"/><stop offset="1" stop-color="#07040c"/></radialGradient>
+    <radialGradient id="ybMo" cx=".4" cy=".4" r=".7"><stop offset="0" stop-color="#ff8a6a"/><stop offset=".6" stop-color="#d1102a"/><stop offset="1" stop-color="#6a0012"/></radialGradient>
+    <linearGradient id="ybR" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7a2a"/><stop offset=".5" stop-color="#a8201a"/><stop offset="1" stop-color="#2a0608"/></linearGradient>
+    <linearGradient id="ybB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2602a"/><stop offset=".6" stop-color="#8a1c14"/><stop offset="1" stop-color="#3a0808"/></linearGradient>
+    <radialGradient id="ybW" cx=".5" cy=".7" r=".7"><stop offset="0" stop-color="#e8fbff"/><stop offset=".45" stop-color="#5ad8ff"/><stop offset="1" stop-color="#6a3aff"/></radialGradient>
+    <radialGradient id="ybG" cx=".5" cy=".5" r=".5"><stop offset=".4" stop-color="#ff2a4a" stop-opacity=".55"/><stop offset="1" stop-color="#ff2a4a" stop-opacity="0"/></radialGradient></defs>` + D(`
+    <rect x="-6" y="-10" width="212" height="212" rx="20" fill="url(#ybN)" stroke="none"/>
+    <circle cx="100" cy="40" r="80" fill="url(#ybG)" stroke="none"/><circle cx="70" cy="84" r="24" fill="url(#ybG)" stroke="none"/><circle cx="130" cy="84" r="24" fill="url(#ybG)" stroke="none"/>
+    <circle cx="100" cy="40" r="40" fill="url(#ybMo)" stroke-width="3"/><path d="M80 22l10 14-6 10M118 30l-8 12 6 8" fill="none" stroke="#5a0010" stroke-width="2.4"/>
+    ${[-182, -162, -142, -122, -58, -38, -18, 2, -100].map((a, k) => fireTail(a, k === 8 ? 112 : 118, 24)).join('')}
+    ${cloud(22, 22, .6, '#2a2236')}${cloud(178, 20, .6, '#2a2236')}
+    <path d="M24 32l-6 14 8-2-6 16M176 30l6 12-8-1 6 16" fill="none" stroke="#c8f0ff" stroke-width="3"/>
+    ${Array.from({ length: 14 }, (_, k) => drop(6 + (k * 41) % 192, 50 + ((k * 59) % 120), .55, '#3a1a4a')).join('')}
+    <path d="M18 202Q14 150 44 124L56 132 62 118 76 126 84 112 100 120 116 112 124 126 138 118 144 132 156 124Q186 150 182 202Z" fill="url(#ybB)"/>
+    <path d="M68 202L72 170 80 176 86 160 94 168 100 152 106 168 114 160 120 176 128 170 132 202Z" fill="#6a5a58" stroke-width="2.8"/><path d="M80 186h40M84 194h32" stroke="#3a2a2a" stroke-width="2.4"/>
+    ${ruins}
+    <!-- 귀: 길고 찢어진, 끝에 여우불 -->
+    <path d="M46 72L30 -2 52 20 58 12 64 26 90 46Z" fill="url(#ybB)"/><path d="M52 60L40 14 54 30 74 46Z" fill="#3a0612" stroke-width="2.2"/>${wisp(30, -4, .85)}
+    <path d="M154 72L170 -2 148 20 142 12 136 26 110 46Z" fill="url(#ybB)"/><path d="M148 60L160 14 146 30 126 46Z" fill="#3a0612" stroke-width="2.2"/>${wisp(170, -4, .85)}
+    <!-- 머리: 날카로운 볼털 -->
+    <path d="M100 40Q150 40 160 76L190 82 164 94 186 108 158 112 172 128 140 126Q120 150 100 150Q80 150 60 126L28 128 42 112 14 108 36 94 10 82 40 76Q50 40 100 40Z" fill="url(#ybB)"/>
+    <path d="M100 40l-6 14 6-4 6 4z" fill="#3a0808" stroke-width="2"/>
+    <path d="M72 58l-8 6M128 58l8 6M86 50l-2 8M114 50l2 8" stroke="#3a0808" stroke-width="2.4"/>
+    ${evil(70, 84, 16, 1)}${evil(130, 84, 16, -1)}${evil(82, 64, 7, 1)}${evil(118, 64, 7, -1)}
+    <path d="M48 70L90 82M152 70L110 82" stroke-width="5"/>
+    <path d="M96 98Q100 94 104 98Q100 104 96 98Z" fill="#1a0006"/>
+    ${fangs(100, 116, 104, 16, 10)}
+    <path d="M70 136q-2 10 2 18M128 136q2 8-1 14" fill="none" stroke="#ff4a6a" stroke-width="3" opacity=".9"/><circle cx="72" cy="156" r="2.6" fill="#ff4a6a" stroke="none"/>
+    ${claw(36, 178, 1)}${claw(164, 178, -1)}
+    ${wisp(12, 70, .8)}${wisp(190, 64, .9)}${wisp(22, 150, .7)}${wisp(182, 146, .7)}`);
 
   if (typeof NEW_ART !== 'undefined') NEW_ART.yeoubi = BASE;
   if (typeof MEGA_ART !== 'undefined') MEGA_ART.yeoubi = MEGA;
