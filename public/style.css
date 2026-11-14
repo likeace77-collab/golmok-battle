@@ -1713,3 +1713,15 @@ svg[data-shiny] { filter: var(--sf); animation: shinyGlow 2.4s ease-in-out infin
 .ct-dl { display: inline-block; margin: 4px 4px 0 0; padding: 1px 8px; font-size: 11px; color: var(--ink); background: #fff; border: 2px solid var(--ink); border-radius: 8px; text-decoration: none; }
 .got-dice { font-size: 46px; line-height: 1; }
 .sc-reroll.paper { color: var(--ink); text-shadow: none; } .sc-reroll span { white-space: nowrap; }
+/* 상점 아이템 */
+.it-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+.it-item { position: relative; overflow: hidden; display: grid; justify-items: center; gap: 2px; padding: 10px 6px; font: inherit; color: var(--ink); text-align: center; background: var(--paper); border: var(--line); border-radius: 14px; box-shadow: 3px 3px 0 var(--ink); cursor: pointer; }
+.it-item > * { position: relative; } .it-item small { font-size: 11px; color: #6a6480; min-height: 2.4em; }
+.it-ic { height: 44px; display: grid; place-items: center; } .it-emo { line-height: 1; }
+.it-item.rare { grid-column: 1 / -1; background: linear-gradient(150deg, #fff3b0, #ffd6f0 50%, #c9f2ff); }
+.it-item.rare s { position: absolute; inset: -60%; background: repeating-conic-gradient(#fff6 0 6deg, transparent 6deg 18deg); animation: ttSpin 20s linear infinite; }
+.it-item.rare b { font-size: 17px; }
+.it-look { width: 120px; margin: 0 auto; display: grid; place-items: center; } .it-look svg { width: 100%; height: auto; } .it-look.rare { filter: drop-shadow(0 0 12px #ffd23f); }
+.it-pick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-height: 55vh; overflow-y: auto; margin: 8px 0; }
+.it-pick button { position: relative; display: grid; justify-items: center; padding: 4px 2px; font: inherit; font-size: 11px; color: var(--ink); background: #fff; border: 2px solid #1a143340; border-radius: 10px; cursor: pointer; }
+.it-pick svg { width: 54px; height: 54px; } .it-pick em { position: absolute; top: 2px; right: 2px; font-style: normal; font-size: 9px; padding: 0 3px; background: #6CF2C2; border-radius: 4px; }

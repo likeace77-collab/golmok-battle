@@ -622,6 +622,8 @@ async function progressApi(req, res, route, auth, user) {
   if (route === 'POST /api/mon/move') return done(P.changeMove(user, String(body.uid ?? ''), Number(body.slot), String(body.move ?? '')));
   if (route === 'POST /api/stone/buy') return done(P.buyStone(user, String(body.species ?? '')));
   // 상점 꾸미기 (칭호·전투카드·핀): ref = 'titles:id' 같은 꼴
+  if (route === 'GET /api/shop/items') return json(res, 200, { items: P.SHOP_ITEMS });
+  if (route === 'POST /api/shop/item') { const r = P.buyItem(user, String(body.id ?? ''), String(body.species ?? '')); return done(r, r.ok ? { got: r.got } : {}); }
   if (route === 'POST /api/shop/cosmetic') {
     const ref = String(body.ref ?? ''), [kind, id] = ref.split(':');
     const item = (Data.COSMETICS[kind] || []).find((x) => x.id === id);

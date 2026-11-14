@@ -695,8 +695,8 @@ function showStones(back = showLobby) {
 }
 
 // 상점: 탭마다 물건 칸. 꾸미기는 data.js에서 cond: ['shop', 가격]만 달면 자동으로 진열돼요.
-let shopTab = 'stone';
-const SHOP_TABS = [['stone', '💎 스톤'], ['titles', '🏷️ 칭호'], ['cards', '🃏 카드'], ['pins', '📌 핀']];
+let shopTab = 'items', SHOP_ITEMS = null;
+const SHOP_TABS = [['items', '🛍️ 아이템'], ['stone', '💎 스톤'], ['titles', '🏷️ 칭호'], ['cards', '🃏 카드'], ['pins', '📌 핀']];
 const shopItems = (kind) => G.data.COSMETICS[kind].filter((x) => x.cond?.[0] === 'shop');
 function cosLook(kind, item, big) {
   if (kind === 'titles') return `<div class="sh-look sh-title">${titleTag(item.id)}</div>`;
@@ -725,7 +725,12 @@ function showShop(back = showLobby) {
   G.screen = 'shop'; app.className = '';
   const again = () => { const y = scrollY; showShop(back); scrollTo(0, y); };
   let body = '';
-  if (shopTab === 'stone') {
+  if (shopTab === 'items') {
+    if (!SHOP_ITEMS) { api('GET', '/api/shop/items').then((r) => { SHOP_ITEMS = r.items; if (G.screen === 'shop') again(); }).catch((e) => toast(e.message)); }
+    const ic = (x, s) => (ICON[x.icon] ? ICON[x.icon](s) : `<span class="it-emo" style="font-size:${s}px">${x.icon}</span>`);
+    body = `<h3 class="st-h">🛍️ 아이템 <small>GP로 사는 아이템</small></h3>
+    <div class="it-grid">${(SHOP_ITEMS || []).map((x) => `<button class="it-item${x.rare ? ' rare' : ''}" data-item="${x.id}">${x.rare ? '<s aria-hidden="true"></s>' : ''}<span class="it-ic">${ic(x, 40)}</span><b>${esc(x.n)}</b><small>${esc(x.d)}</small><span class="st-price">${ICON.gp(14)}${fmt(x.price)}</span></button>`).join('') || '<p class="wait">불러오는 중…</p>'}</div>`;
+  } else if (shopTab === 'stone') {
     const all = megaIds(), rest = all.filter((id) => !G.user.stones.includes(id)), mine = all.filter((id) => G.user.stones.includes(id));
     body = `<h3 class="st-h">💎 메가스톤 <small>하나에 ${fmt(STONE_PRICE)} GP</small></h3>
     <div class="st-grid">${rest.map((id) => stoneCard(id, true, `<span class="st-price">${ICON.gp(14)}${fmt(STONE_PRICE)}</span>`)).join('') || '<p class="wait">메가스톤을 전부 모았어요! 🎉</p>'}</div>
@@ -744,6 +749,31 @@ function showShop(back = showLobby) {
   app.querySelectorAll('[data-stab]').forEach((b) => { b.onclick = () => { shopTab = b.dataset.stab; showShop(back); }; });
   app.querySelectorAll('.st-grid [data-sid]').forEach((c) => { if (!c.closest('.st-owned')) c.onclick = () => buyStoneSheet(c.dataset.sid, again); });
   app.querySelectorAll('[data-cos]').forEach((b) => { b.onclick = () => buyCosSheet(shopTab, shopItems(shopTab).find((x) => x.id === b.dataset.cos), again); });
+  app.querySelectorAll('[data-item]').forEach((b) => { b.onclick = () => buyItemSheet(SHOP_ITEMS.find((x) => x.id === b.dataset.item), again); });
+}
+// 아이템 사기: 확인 → (골라서 골목몬이면 고르기) → 받은 것 보여 주기
+function buyItemSheet(it, after, species = '') {
+  const u = G.user, ok = u.gp >= it.price;
+  if (it.pick && !species) {
+    const ids = Object.keys(G.data.MONSTERS).filter((id) => !(G.data.BANNED || []).includes(id));
+    const bg = openSheet(`<div class="buy"><h2>🎯 어떤 골목몬을 데려올까요?</h2><p class="buy-price">${ICON.gp(18)} <b>${fmt(it.price)} GP</b></p>
+      <div class="it-pick">${ids.map((id) => `<button data-pk="${id}">${monArt(id)}<b>${esc(G.data.MONSTERS[id].n)}</b>${u.mons.some((m) => m.species === id) ? '<em>보유</em>' : ''}</button>`).join('')}</div>
+      <div class="sc-pay"><button class="btn paper" data-x>취소</button></div></div>`);
+    bg.querySelector('[data-x]').onclick = closeSheet;
+    bg.querySelectorAll('[data-pk]').forEach((b) => { b.onclick = () => { closeSheet(); buyItemSheet(it, after, b.dataset.pk); }; });
+    return;
+  }
+  const look = species ? monArt(species) : (ICON[it.icon] ? ICON[it.icon](64) : `<span class="it-emo" style="font-size:64px">${it.icon}</span>`);
+  const bg = openSheet(`<div class="buy"><div class="it-look${it.rare ? ' rare' : ''}">${look}</div><h2>${esc(species ? `${G.data.MONSTERS[species].n} 데려오기` : it.n)}</h2><p>${esc(it.d)}</p>
+    <p class="buy-price">${ICON.gp(22)} <b>${fmt(it.price)} GP</b> <small>보유 ${fmt(u.gp)} GP${ok ? ` → 남는 GP ${fmt(u.gp - it.price)}` : ''}</small></p>
+    ${ok ? '' : `<p class="buy-no">GP가 ${fmt(it.price - u.gp)} 모자라요.</p>`}
+    <div class="sc-pay"><button class="btn paper" data-x>취소</button><button class="btn" data-buy ${ok ? '' : 'disabled'}>사기</button></div></div>`);
+  bg.querySelector('[data-x]').onclick = closeSheet;
+  bg.querySelector('[data-buy]').onclick = async (e) => {
+    e.target.disabled = true;
+    try { const r = await api('POST', '/api/shop/item', { id: it.id, species }); setUser(r); closeSheet(); showGot(r.got, '샀어요! 🎉', after); }
+    catch (err) { toast(err.message); e.target.disabled = false; }
+  };
 }
 // 지갑의 💎를 누르면 어디서든 내 메가스톤으로
 document.addEventListener('click', (e) => {
