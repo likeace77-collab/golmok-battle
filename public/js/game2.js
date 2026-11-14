@@ -398,6 +398,7 @@ async function showPass() {
       <section class="ps-head ${p.premium ? 'prem' : ''}"><s aria-hidden="true"></s><small>SEASON ${p.season}</small><h2>골목대전 시즌 ${p.season}</h2><p>${days}일 뒤 끝나요 · 2주마다 새 시즌</p>
         <div class="ps-lv"><b>Lv.${p.lv}</b><div class="qbar"><i style="width:${p.lv >= p.max ? 100 : (into / p.per) * 100}%"></i><span>${p.lv >= p.max ? 'MAX' : `${into} / ${p.per}`}</span></div><b>${p.max}</b></div>
         <p class="ps-how">대전을 하면 패스 포인트가 쌓여요. 친구와 대전 승리 60 · 패배 30, 태그전 50/25, 연습전 30/15 (연습전은 하루 600점까지)</p>
+        ${p.over ? `<div class="ps-over"><b>🎁 패스 보너스</b><span>${p.lv >= p.max ? `패스를 다 채웠어요! 이제 ${p.over.per}점마다 ${fmt(p.over.gp)}GP를 바로 받아요${p.premium ? '' : ' (프리미엄은 500GP)'}` : `30단계를 다 채우면, 그 뒤로 ${p.over.per}점마다 ${fmt(p.over.gp)}GP를 받아요`}</span>${p.lv >= p.max ? `<div class="qbar"><i style="width:${(p.over.pts / p.over.per) * 100}%"></i><span>${p.over.pts} / ${p.over.per}</span></div>${p.over.total ? `<small>이번 시즌 보너스로 받은 GP: ${fmt(p.over.total)}</small>` : ''}` : ''}</div>` : ''}
         ${p.premium ? '<em class="ps-badge">👑 프리미엄 패스 보유</em>' : '<em class="ps-badge off">프리미엄 패스는 운영팀에게 잘 보이면 받을 수 있어요 😉</em>'}</section>
       <div class="ps-track">${p.levels.map((l) => { const open = l.lv <= p.lv;
         const cell = (track, r, got, lock) => `<div class="ps-cell ${track} ${got ? 'got' : ''} ${open && !got && !lock ? 'ready' : ''}">${track === 'prem' ? '<i class="ps-crown">👑</i>' : ''}<div class="rws">${rewardChips(r)}</div>

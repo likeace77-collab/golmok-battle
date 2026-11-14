@@ -60,7 +60,7 @@ function grant(u, r) {
   if (r.rerolls) { u.rerolls = (u.rerolls || 0) + r.rerolls; got.push({ k: 'reroll', n: r.rerolls }); } // 리롤권: 스카우트 후보 다시 뽑기 1번
   if (r.stones) addStones(u, r.stones, got);
   if (r.mon) { const m = addMon(u, r.mon === 'random' ? released()[rnd(released().length)] : r.mon, null, r.shiny || (r.mon === 'random' && rollShiny(SHINY_GIFT))); got.push({ k: 'mon', id: m.species, ...(m.shiny ? { shiny: true } : {}) }); }
-  if (r.pass) { addPass(u, r.pass); got.push({ k: 'pass', n: r.pass }); }
+  if (r.pass) { const bonus = addPass(u, r.pass); got.push({ k: 'pass', n: r.pass }); if (bonus) { passBook(u).newGp = 0; got.push({ k: 'gp', n: bonus }); } }
   if (r.gpt) { u.gpt = (u.gpt || 0) + r.gpt; got.push({ k: 'gpt', n: r.gpt }); } // 길드 포인트(길P)
   return got;
 }
@@ -365,7 +365,23 @@ function passBook(u) {
   u.pass.premium = !!u.premiumSeasons?.includes(s);
   return u.pass;
 }
-function addPass(u, n) { const p = passBook(u); p.pts = Math.min(PASS_LV * PASS_PER, p.pts + n); }
+// 패스를 다 채운 뒤에도 포인트가 쌓이면 100점마다 GP를 조금씩 (프리미엄은 더 많이)
+const OVER_PER = 100, OVER_GP = 300, OVER_GP_PREM = 500;
+function addPass(u, n) {
+  const p = passBook(u), max = PASS_LV * PASS_PER;
+  const over = Math.max(0, p.pts + n - max);
+  p.pts = Math.min(max, p.pts + n);
+  if (!over) return 0;
+  p.over = (p.over || 0) + over;
+  const k = Math.floor(p.over / OVER_PER);
+  if (!k) return 0;
+  p.over -= k * OVER_PER;
+  const gp = k * (p.premium ? OVER_GP_PREM : OVER_GP);
+  u.gp = (u.gp || 0) + gp; p.overGp = (p.overGp || 0) + gp; p.newGp = (p.newGp || 0) + gp;
+  return gp;
+}
+// 대전 뒤 알림용: 이번에 받은 보너스 GP를 꺼내고 비움
+function takePassGp(u) { const p = passBook(u), g = p.newGp || 0; p.newGp = 0; return g; }
 // 대전 결과로 패스 포인트 (연습전은 하루 600점까지)
 function battlePass(u, kind, won) {
   const pts = { pvp: won ? 60 : 30, tag: won ? 50 : 25, practice: won ? 30 : 15 }[kind] || 0;
@@ -385,6 +401,7 @@ function passState(u) {
   const lv = Math.floor(p.pts / PASS_PER);
   return {
     season: p.season, ends: seasonEnds(p.season), pts: p.pts, per: PASS_PER, max: PASS_LV, lv, premium: p.premium,
+    over: { pts: p.over || 0, per: OVER_PER, gp: p.premium ? OVER_GP_PREM : OVER_GP, total: p.overGp || 0 },
     levels: Array.from({ length: PASS_LV }, (_, i) => ({ lv: i + 1, free: freeReward(i + 1), prem: premReward(i + 1), freeGot: p.free.includes(i + 1), premGot: p.prem.includes(i + 1) })),
   };
 }
@@ -471,5 +488,5 @@ function afterBattle(u, kind, won, side) {
 module.exports = {
   SHOP_ITEMS, buyItem, shopView, claimFree, buyDeal, SCOUT_HOURS, SKIP_GP, SCOUT_GP, STONE_GP, STONE_DUPE_GP, MOVE_GP, STARTERS, TUTORIAL_REWARD, ATTEND, DAILY, WEEKLY,
   newProgress, addMon, grant, finishTutorial, scoutState, scoutSkip, scoutReroll, scoutAuto, enhance, PLUS_MAX, PLUS_PCT, plusCost, expeState, expeSend, expeClaim, expeRecall, awayUids, scoutPick, changeMove, buyStone,
-  bump, attendState, attend, questState, claimQuest, achState, claimAch, passState, claimPass, claimable, afterBattle, seasonOf, passBook, dayKey, released,
+  bump, attendState, attend, questState, claimQuest, achState, claimAch, passState, claimPass, takePassGp, claimable, afterBattle, seasonOf, passBook, dayKey, released,
 };

@@ -1076,7 +1076,7 @@ function finish(room) {
     const pts = P.afterBattle(db.users[k], room.tag || room.raid ? 'tag' : pvp ? 'pvp' : 'practice', won, room.b.sides[s]);
     { const team = E.teamOf(room.b, s); const mates = humans.filter(([k2, s2]) => k2 !== k && E.teamOf(room.b, s2) === team).map(([k2]) => k2), foes = humans.filter(([, s2]) => E.teamOf(room.b, s2) !== team).map(([k2]) => k2);
       S.afterBattle(k, { won, mega: !!room.b.sides[s].megaUsed, mates, foes, kind: room.tag || room.raid ? 'tag' : pvp ? 'pvp' : 'practice' }); }
-    if (pts) { if (online.has(k)) toast(k, `시즌 패스 포인트 +${pts}`); else notices.set(k, [notices.get(k), `시즌 패스 포인트 +${pts}`].filter(Boolean).join(' · ')); }
+    if (pts) { const bg = P.takePassGp(db.users[k]), msg = `시즌 패스 포인트 +${pts}${bg ? ` · 패스 보너스 +${bg.toLocaleString('ko-KR')}GP` : ''}`; if (online.has(k)) toast(k, msg); else notices.set(k, [notices.get(k), msg].filter(Boolean).join(' · ')); }
     if (room.dungeon) {
       const dr = DG.result(db.users[k], room.dungeon.floor, won, P.grant);
       if (dr) setTimeout(() => send(online.get(k), { t: 'gift', title: dr.cleared ? `🏆 ${room.dungeon.rule.n} 완전 정복!` : `${room.dungeon.floor + 1}층 돌파!`, got: dr.got }), 1800);

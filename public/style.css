@@ -1747,3 +1747,5 @@ svg[data-shiny] { filter: var(--sf); animation: shinyGlow 2.4s ease-in-out infin
 .avgrid button.paid { box-shadow: inset 0 0 0 2px #B44BFF; }
 .av-buybar { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
 .av-buybar small { margin-left: 6px; opacity: .8; }
+.ps-over { margin: 10px 0; padding: 10px 12px; border-radius: 12px; background: #ffffff1f; border: 2px dashed #FFD23F; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.ps-over b { font-size: 14px; } .ps-over small { opacity: .8; }
