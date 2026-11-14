@@ -54,6 +54,7 @@ function makeMon(spec) {
 const freshVolatile = () => ({
   stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0 },
   seeded: false, flinched: false, protecting: false, spiky: null, feared: false, lastMove: null, protectStreak: 0, reflecting: null, distracted: false, disabled: null, fieldTurns: 0, choiceLock: null,
+  lastUsed: null, diving: null, caged: null, jail: 0, probation: null, whileFrom: null, hurtFrom: [], // 까모·선생님
 });
 
 // ===== 등신 (개복치): 돌연사와 갈증 =====
@@ -185,7 +186,7 @@ function useItem(b, s, m, ev, text) {
   if (ITEMS[m.item]?.once) m.itemUsed = true;
 }
 // 호롱이 그림자밟기: 상대 자리에 호롱이가 서 있으면 교체할 수 없음
-const trapped = (b, s) => !b.training && foesOf(b, s).some((i) => { const m = activeOf(b, i); return (m.species === 'horong' || m.species === 'meokarak') && alive(m); }); // 그림자밟기, 엉킴
+const trapped = (b, s) => !b.training && (foesOf(b, s).some((i) => { const m = activeOf(b, i); return (m.species === 'horong' || m.species === 'meokarak' || activeOf(b, s).caged === m) && alive(m); })); // 그림자밟기, 엉킴, 칠흑의 날갯짓
 
 function legalActions(b, s) {
   const side = b.sides[s];
@@ -588,6 +589,15 @@ function changeStage(b, s, m, stat, delta, ev) {
 }
 
 function canAct(b, s, m, mv, ev) {
+  if (m.jail > 0) { // 선생님 재판: 징역
+    m.jail--;
+    msg(ev, `${josa(m.name, '은/는')} 징역을 살고 있다... (남은 ${m.jail}턴)`);
+    return false;
+  }
+  if (m.species === 'seonsaeng' && !b.training && chance(b, 100 / 365)) { // 특성 수능감독
+    msg(ev, `${josa(m.name, '은/는')} 수능 감독하러 갔다! 이번 턴은 쉰다.`);
+    return false;
+  }
   if (m.distracted) { // 오락이 돈지랄
     m.distracted = false;
     msg(ev, `${josa(m.name, '은/는')} 떨어진 돈을 줍느라 공격하지 못했다!`);
@@ -682,19 +692,24 @@ const isHot = (b) => b.turn % 2 === 1;
 // 등장할 때 발동하는 특성
 function onEntry(b, s, m, ev) {
   if (!alive(m) || b.phase === 'over') return;
+  if (m.techMega && !m.mega && MONSTERS[m.species].mega) { // 선생님 기술의 발전: 나오자마자 메가진화 (메가진화 횟수는 안 씀)
+    m.techMega = false;
+    msg(ev, `기술이 발전했다! ${josa(m.name, '이/가')} 메가진화한다!`);
+    doMega(b, s, ev);
+  }
   const sky = { hwangsari: ['dust', '황사 경보', '황사가 불기 시작했다!'], usan: ['rain', '폭우', '비가 쏟아지기 시작했다!'], bingsu: ['snow', '설경', '눈이 내리기 시작했다!'] }[m.species];
   if (sky && b.weather !== sky[0]) {
     b.weather = sky[0]; b.weatherTurns = 5;
     ev.push({ t: 'weather', weather: sky[0], trait: true, text: `${m.name}의 ${sky[1]}! ${sky[2]}` });
   }
-  const drop = { jangdok: ['acc', '발효'], jangseung: ['atk', '위협'], manhol: ['acc', '악취'], mimik: ['spe', '보물 미끼'] }[m.species];
+  const drop = { jangdok: ['acc', '발효'], jangseung: ['atk', '위협'], manhol: ['acc', '악취'], mimik: ['spe', '보물 미끼'], kkamo: ['acc', '불운', -2] }[m.species];
   if (drop) {
     msg(ev, `${m.name}의 ${drop[1]}!`);
     for (const o of foesOf(b, s)) {
       const f = activeOf(b, o);
       if (!alive(f)) continue;
       if (f.species === 'orak' && drop[1] === '위협') { msg(ev, `${josa(f.name, '은/는')} 돈 세느라 위협을 못 봤다! (특성 돈지랄)`); continue; }
-      changeStage(b, o, f, drop[0], -1, ev);
+      changeStage(b, o, f, drop[0], drop[2] ?? -1, ev);
     }
   }
   if (m.species === 'ssaribi') { // 정리정돈: 날씨와 압정을 모두 치움
@@ -757,6 +772,8 @@ function useMove(b, s, index, ev, want, z = false) {
   }
 }
 function useMoveCore(b, s, index, ev, want, z = false) {
+  let strike = false;
+  { const d0 = activeOf(b, s).diving; if (d0 && !z) { index = d0.index; want = d0.want; strike = true; activeOf(b, s).diving = null; } } // 섀도다이브 둘째 턴: 숨었다가 공격
   const o = targetOf(b, s, want);
   const me = activeOf(b, s);
   const gm = !z && me.gmax && index >= 0 ? gmaxMoves(me)[index] : null; // 거다이맥스 기술
@@ -773,7 +790,7 @@ function useMoveCore(b, s, index, ev, want, z = false) {
   }
   if (mv.bath) mv = isHot(b) ? { ...mv, type: 'fire', st: { s: 'brn', ch: 30 } } : { ...mv, type: 'ice', st: { s: 'frz', ch: 30 } };
   if (!canAct(b, s, me, mv, ev)) { me.protectStreak = 0; return; }
-  if (slot) slot.pp--;
+  if (slot && !strike) slot.pp--;
   if (me.blaze > 0 && mv.cat !== 'x') mv = { ...mv, st: { s: 'brn', ch: Math.max(50, mv.st?.ch || 0) } }; // 불타오르는 중: 화상 50%
   if (slot && !me.choiceLock && CHOICE.some((c) => has(me, c))) me.choiceLock = slot.id; // 고정 도구
   if (z) {
@@ -790,6 +807,19 @@ function useMoveCore(b, s, index, ev, want, z = false) {
     text: z ? `${josa(b.sides[s].name, '과/와')} ${me.name}의 Z기술! ${mv.n}!` : gm?.gmaxMove ? `${me.name}의 거다이기술! ${mv.n}!` : `${josa(me.name, '은/는')} ${josa(mv.n, '을/를')} 썼다!`,
   });
 
+  if (slot) me.lastUsed = slot.id; // 재귀용법이 돌려줄 기술
+  if (mv.dive && !strike) { me.diving = { index, want }; msg(ev, `${josa(me.name, '은/는')} 골목길 바닥의 어둠 속으로 스며들었다!`); return; }
+  if (mv.ouga) { // 오우가: 친구 다섯 중 하나
+    const F = [['물', { type: 'water' }, '물을 끼얹었다'], ['바위', { type: 'earth' }, '바위를 굴렸다'], ['소나무', { type: 'grass', heal3: true }, '솔잎을 날렸다'], ['대나무', { type: 'grass', drain: .5 }, '대나무가 양분을 빨아들인다'], ['달', { type: 'normal', breakGuard: true }, '달빛이 막기를 꿰뚫는다']][Math.floor(rand(b) * 5)];
+    msg(ev, `${F[0]} 친구가 왔다! ${F[2]}!`);
+    mv = { ...mv, ...F[1] };
+  }
+  if (mv.mirror) { // 재귀용법: 상대가 나에게 마지막으로 쓴 기술을 돌려줌
+    const id = activeOf(b, o)?.lastUsed, src = id && MOVES[id];
+    if (!src || src.z || src.mirror || src.dive) { me.protectStreak = 0; msg(ev, '그러나 돌려줄 기술이 없다!'); return; }
+    msg(ev, `${josa(me.name, '은/는')} ${josa(src.n, '을/를')} 그대로 돌려줬다!`);
+    mv = { ...src };
+  }
   if (fill) {
     const FILL = { pat: '팥붕', cream: '슈붕', pizza: '피붕' };
     msg(ev, `${josa(me.name, '은/는')} ${FILL[fill]}이었다!`);
@@ -822,6 +852,9 @@ function useMoveCore(b, s, index, ev, want, z = false) {
   me.protectStreak = 0;
 
   if (mv.overcome) return overcome(b, s, me, o, ev);
+  if (mv.trial) return trial(b, s, me, o, ev);
+  if (mv.heatEq) return heatEq(b, s, me, o, ev);
+  if (mv.techUp) return techUp(b, s, me, ev);
   if (mv.dice) return rollDice(b, s, me, o, ev);
   if (mv.self_) return selfMove(b, s, me, mv, ev);
 
@@ -837,6 +870,7 @@ function hitOne(b, s, me, o, mv, ev) {
   if (ref) ref.used = true;
   let counter = 0;
   if (!alive(foe)) { msg(ev, '그러나 맞힐 상대가 없었다!'); return; }
+  if (foe.diving && !mv.z) { ev.push({ t: 'miss', side: o, text: `${josa(foe.name, '은/는')} 어둠 속에 숨어 있어 공격이 닿지 않는다!` }); return; }
   if (foe.protecting && mv.kamikaze) { // 돌연사-들이박기가 막힘
     msg(ev, `${me.name}, ${foe.name}의 막기에 정면으로 들이박았다!`);
     suddenDeath(b, s, me, ev, `${josa(me.name, '은/는')} 혼자 죽었다...`);
@@ -892,7 +926,7 @@ function hitOne(b, s, me, o, mv, ev) {
   let total = 0, landed = 0;
   for (let i = 0; i < hits && alive(foe); i++) {
     const crit = (mv.critAll || rand(b) < (has(me, 'scope') ? (mv.crit ? 1 / 2 : 1 / 8) : (mv.crit ? 1 / 8 : 1 / 24))) && foe.species !== 'ppeondegi'; // 망원경, 뻔데기 단단한 껍질
-    let dmg = damageOf(b, me, foe, mv, crit, .85 + rand(b) * .15);
+    let dmg = mv.ohko ? (isBoss(b, o) ? foe.maxHp * .15 : foe.hp) : mv.pctDmg ? Math.max(1, Math.floor(foe.maxHp * mv.pctDmg * (isBoss(b, o) ? .3 : 1))) : damageOf(b, me, foe, mv, crit, .85 + rand(b) * .15); // 마왕 즉사, 셔틀런 1/3
     if (ref) {
       const full = dmg;
       dmg = Math.max(1, Math.floor(full * .5)); // 리플렉터: 피해를 반씩 나눠 가짐
@@ -922,10 +956,25 @@ function hitOne(b, s, me, o, mv, ev) {
     if (crit) msg(ev, '급소에 맞았다!');
   }
   if (hits > 1) msg(ev, `${landed}번 맞았다!`);
+  if (landed && total > 0) { foe.hurtFrom.includes(me) || foe.hurtFrom.push(me); }
+  if (landed && me.probation === foe && alive(me)) { me.probation = null; msg(ev, `집행유예 기간에 또 때렸다! ${josa(me.name, '은/는')} 같은 만큼 벌을 받는다!`); hurt(b, s, me, total, ev); }
+  if (landed && mv.ohko && foe.hp <= 0) msg(ev, '마왕이 아이를 데려갔다...');
   if (landed && foe.species === DS && alive(foe)) { thirst(b, o, foe, 5, ev); rollDeath(b, o, foe, ev); } // 등신: 맞으면 갈증 5%, 돌연사
   if (counter > 0 && alive(me) && alive(foe)) {
     ev.push({ t: 'counter', side: o, target: s, text: `${josa(foe.name, '이/가')} 검으로 찔러 피해를 돌려줬다!` });
     hurt(b, s, me, counter, ev, { counter: 1 });
+  }
+  if (landed && alive(me)) { // 까모·선생님 기술 효과
+    if (mv.steal && foe.item && !foe.itemUsed) {
+      const it = ITEMS[foe.item]?.n || '도구';
+      if (!me.item || me.itemUsed) { me.item = foe.item; me.itemUsed = false; msg(ev, `${josa(me.name, '은/는')} ${foe.name}의 ${josa(it, '을/를')} 빼앗았다!`); }
+      else msg(ev, `${josa(me.name, '은/는')} ${foe.name}의 ${josa(it, '을/를')} 떨어뜨렸다!`);
+      foe.item = null;
+    }
+    if (mv.loop && alive(foe) && foe.whileFrom !== me) { foe.whileFrom = me; msg(ev, `while(${me.name} 살아 있음) { ${foe.name} 체력 -= 10; } 무한 루프가 걸렸다!`); }
+    if (mv.cage && alive(foe)) { foe.caged = me; msg(ev, `칠흑의 깃털이 ${josa(foe.name, '을/를')} 가뒀다! 이제 교체할 수 없다!`); }
+    if (mv.record) { for (const i of foesOf(b, s)) { b.sides[i].zUsed = true; b.sides[i].megaUsed = true; } msg(ev, `생기부에 나쁜 말이 적혔다! 상대는 이제 Z기술도 메가진화도 쓸 수 없다!`); }
+    if (mv.heal3 && heal(b, s, me, me.maxHp / 3, ev)) msg(ev, `${josa(me.name, '은/는')} 소나무 그늘에서 기운을 차렸다!`);
   }
   if (eff > 1) msg(ev, '효과가 굉장했다!');
   else if (eff < 1) msg(ev, '효과가 별로인 듯하다...');
@@ -1099,6 +1148,37 @@ function rollDice(b, s, me, o, ev) {
   }
   if (n === 5) { if (me.hp < me.maxHp) heal(b, s, me, me.maxHp, ev); else msg(ev, '체력이 이미 가득하다!'); return; }
   for (const k of STAT6) changeStage(b, s, me, k, 1, ev);
+}
+
+// 선생님: 재판 (나를 때린 상대에게만)
+function trial(b, s, me, o, ev) {
+  const foe = activeOf(b, o);
+  if (!alive(foe) || !me.hurtFrom.includes(foe)) { msg(ev, `${josa(foe?.name || '상대', '은/는')} 나를 때린 적이 없다. 재판을 열 수 없다!`); return; }
+  msg(ev, `법정이 열렸다! 피고 ${foe.name}, 폭행죄!`);
+  const r = rand(b);
+  if (r < .5) { foe.probation = me; msg(ev, `판결: 집행유예! ${josa(foe.name, '이/가')} 또 때리면 그만큼 돌려받는다.`); }
+  else if (r < .85) { msg(ev, `판결: 벌금형! ${foe.name}의 체력 절반을 몰수한다!`); hurt(b, o, foe, isBoss(b, o) ? foe.maxHp * .1 : Math.max(1, foe.hp / 2), ev); faintCheck(b, o, foe, ev); }
+  else { foe.jail = isBoss(b, o) ? 1 : 5; msg(ev, `판결: 징역 ${foe.jail}턴! ${josa(foe.name, '은/는')} 감옥에 갇혔다! (교체하면 풀려남)`); }
+}
+// 선생님: 열평형 (둘의 체력 평균)
+function heatEq(b, s, me, o, ev) {
+  const foe = activeOf(b, o);
+  if (!alive(foe)) { msg(ev, '그러나 상대가 없다!'); return; }
+  if (isBoss(b, o)) { msg(ev, '보스의 열량이 너무 커서 평형에 이르지 못했다!'); return; }
+  const avg = Math.floor((me.hp + foe.hp) / 2);
+  msg(ev, `열평형! 두 골목몬의 체력이 같아진다!`);
+  for (const [side, m] of [[s, me], [o, foe]]) {
+    const v = Math.min(m.maxHp, avg) - m.hp;
+    if (v > 0) heal(b, side, m, v, ev); else if (v < 0) { hurt(b, side, m, -v, ev); faintCheck(b, side, m, ev); }
+  }
+}
+// 선생님: 기술의 발전 (대기 중인 전기 타입을 메가진화)
+function techUp(b, s, me, ev) {
+  const side = b.sides[s];
+  const x = side.mons.find((m, i) => i !== side.active && alive(m) && !m.mega && !m.techMega && m.types.includes('elec') && MONSTERS[m.species].mega);
+  if (!x) { msg(ev, '그러나 대기 중인 전기 타입 골목몬이 없다!'); return; }
+  x.techMega = true;
+  msg(ev, `기술이 발전했다! ${josa(x.name, '은/는')} 다음에 나오면 바로 메가진화한다!`);
 }
 
 function selfMove(b, s, me, mv, ev) {
@@ -1286,6 +1366,7 @@ function endOfTurn(b, ev) {
       ev.push({ t: 'item', side: s, item: m.item, back: true, text: `${m.name}의 리사이클! ${josa(ITEMS[m.item].n, '이/가')} 다시 생겼다!` });
     }
     if (has(m, 'leftover') && m.hp < m.maxHp) { useItem(b, s, m, ev, '조금 먹고 체력을 회복했다.'); heal(b, s, m, m.maxHp / 16, ev); }
+    if (m.whileFrom && alive(m)) { if (alive(m.whileFrom)) { msg(ev, `while문이 돈다... ${josa(m.name, '은/는')} 10 피해!`); hurt(b, s, m, 10, ev); faintCheck(b, s, m, ev); } else { m.whileFrom = null; msg(ev, `선생님이 쓰러져 while문이 끝났다. (break;)`); } }
     if (m.yeonjiMark && alive(m)) { msg(ev, `${m.name}의 연지 자국이 화끈거린다!`); hurt(b, s, m, m.maxHp * (m.yeonjiMark === true ? .25 : m.yeonjiMark), ev); faintCheck(b, s, m, ev); }
   }
   if (b.terrain && --b.terrainTurns <= 0) { b.terrain = null; ev.push({ t: 'terrain', terrain: null, text: '그래스필드가 사라졌다.' }); }

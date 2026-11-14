@@ -178,6 +178,12 @@ function pendingGifts(u) {
     u.flags[g.id] = true;
     out.push({ title: g.title, got: P.grant(u, g.r) });
   }
+  // 공모전 출시작을 만든 사람에게: 내가 만든 골목몬(이로치) + 10000GP
+  for (const [id, sp] of Object.entries(Data.MONSTERS)) {
+    if (!sp.contest || sp.contest.by !== u.name || u.flags[`creator-${id}`]) continue;
+    u.flags[`creator-${id}`] = true;
+    out.push({ title: `🎉 내가 만든 ${sp.n} 정식 출시! 기념 선물`, got: P.grant(u, { mon: id, shiny: true, gp: 10000 }) });
+  }
   return out;
 }
 
@@ -689,6 +695,18 @@ const SURVEY = { fun: ['대전', '골목몬 디자인', '꾸미기', '스카우�
 const SUNFISH_GOAL = 300; // 개복치 키우기: 300cm까지 키우면 등신
 
 /* ---------- 신캐 만들기 공모전 ---------- */
+// 출시된 공모전 골목몬 그림: 출품작에 올린 그림을 그대로 내보냄 (메가 그림이 없으면 기본 그림)
+function contestArt(res, info, mega) {
+  const e = contest.entries.find((x) => x.name === info.name && x.user === info.by) || contest.entries.find((x) => x.name === info.name);
+  const src = (mega && e?.mega?.image) || e?.image;
+  const m = /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/.exec(src || '');
+  if (!m) { // 출품작을 못 찾으면 물음표 그림
+    res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-cache' });
+    return res.end(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect x="30" y="30" width="140" height="140" rx="24" fill="#FFF3B0" stroke="#1a1433" stroke-width="6"/><text x="100" y="128" font-size="90" text-anchor="middle" font-family="sans-serif" fill="#1a1433">?</text></svg>`);
+  }
+  res.writeHead(200, { 'Content-Type': m[1], 'Cache-Control': 'public, max-age=3600' });
+  res.end(Buffer.from(m[2], 'base64'));
+}
 const CONTEST = { title: '신캐 만들기 공모전', ends: Date.parse(process.env.CONTEST_ENDS || '2026-11-13T23:59:59+09:00') };
 const PER_USER = 3, MAX_ENTRIES = 200, MAX_IMAGE = 400000;
 const cut = (v, n) => [...String(v ?? '').trim()].slice(0, n).join('');
@@ -773,6 +791,8 @@ const server = http.createServer(async (req, res) => {
     try { return await api(req, res, url); }
     catch { return json(res, 400, { error: '요청이 올바르지 않습니다.' }); }
   }
+  const cm = /^img\/mon\/([a-z]+)(-mega)?\.webp$/.exec(rel);
+  if (cm && Data.MONSTERS[cm[1]]?.contest) return contestArt(res, Data.MONSTERS[cm[1]].contest, !!cm[2]);
   const file = path.resolve(PUBLIC, rel);
   if (!file.startsWith(PUBLIC + path.sep) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     res.writeHead(404); return res.end('Not found');

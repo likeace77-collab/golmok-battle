@@ -197,6 +197,21 @@ const MOVES = {
   dice:      M('주사위 굴리기', 'wind', 'x', 0, null, 10, { dice: true, d: '주사위 눈에 따라: 1 즉사 / 2 능력치 2개 상승 / 3 상대에게 1~200 피해 / 4 능력치 4개 상승 / 5 체력 모두 회복 / 6 모든 능력치 상승' }),
   mockspit:  M('침뱉기', 'water', 'x', 0, 100, 15, { foe: { acc: -1, def: -1, spd: -1 }, sc: 70, d: '침을 뱉어 도발한다. 70% 확률로 도발에 걸려 상대의 명중률·방어·특방이 떨어짐' }),
   irontail:  M('아이언테일', 'steel', 'p', 150, 100, 5, { ironTail: true, d: '꼬리를 강철로 바꿔 내려친다. 33% 확률로 꼬리가 무거워 돌연사' }),
+  // ── 신캐 공모전 출시작: 까모 (만든 사람 티키티키펑크) ──
+  poopbomb:  M('새똥폭탄', 'wind', 'p', 100, 100, 10, { foe: { spe: -1 }, d: '새똥을 발사해 대미지를 주고 상대 스피드를 1단계 떨어뜨린다' }),
+  shadowdive:M('섀도다이브', 'spirit', 'p', 90, 95, 10, { dive: true, breakGuard: true, steal: true, d: '골목길 바닥의 어둠 속으로 들어가 1턴 숨은 뒤(그동안 공격을 안 받음) 공격한다. 막기를 뚫고, 상대 도구를 빼앗는다' }),
+  featherdance: M('깃털댄스', 'wind', 'p', 40, 100, 8, { self: { spe: 2 }, selfAfter: true, d: '깃털을 날려 공격하고 몸을 가볍게 해 스피드를 2단계 올린다' }),
+  // ── 신캐 공모전 출시작: 선생님 (만든 사람 pshrocket) ──
+  factorize: M('수학-인수분해', 'normal', 'p', 30, 80, 5, { hits: [2, 5], d: '상대에게 여러 번의 참격을 내 산산조각 낸다 (2~5번 연속 공격)' }),
+  linearcut: M('수학-일차함수 참격', 'normal', 'p', 100, 70, 1, { d: '파워를 담은 1방. 하지만 정직하게 딱 한 번의 참격이라 피하기 쉽다' }),
+  ouga:      M('국어-오우가·친구 부르기', 'normal', 'p', 75, 100, 3, { ouga: true, d: '친구 수석·송죽·달 중 하나를 랜덤으로 불러 공격. 물: 물 공격 / 바위: 땅 공격 / 소나무: 풀 공격, 체력 1/3 회복 / 대나무: 풀 공격, 양분 빼앗기 / 달: 노말, 막기 뚫음' }),
+  trial:     M('사회-법과 재판·폭행죄', 'normal', 'p', 0, null, 3, { trial: true, d: '나에게 피해를 준 상대에게만 쓸 수 있다. 재판을 열어 집행유예(다시 때리면 그만큼 돌려받음) / 벌금(체력 절반 몰수) / 징역(5턴 정지)의 형이 내려진다' }),
+  heateq:    M('과학-열평형', 'normal', 'p', 0, null, 3, { heatEq: true, d: '자신과 상대의 체력을 같게 만든다 (둘의 체력 평균으로)' }),
+  recursion: M('영어-재귀대명사·재귀용법', 'normal', 'p', 0, null, 5, { mirror: true, d: '상대가 나한테 가장 마지막으로 썼던 기술을 돌려준다' }),
+  erlking:   M('음악-슈베르트·마왕', 'normal', 'p', 0, 20, 3, { ohko: true, d: '마왕이 아이를 데려간다. 명중하면(20%) 상대를 즉사시킴' }),
+  whileloop: M('정보-while·죽을때까지', 'normal', 'p', 10, 90, 6, { loop: true, d: 'while문을 걸어, 선생님이 쓰러지기 전까지 상대는 매 턴 10 피해를 입는다' }),
+  techup:    M('기가-기술의 발전', 'normal', 'x', 0, null, 1, { techUp: true, self_: true, d: '대기 중인 우리 편 전기 타입 골목몬 하나를 메가진화시킨다 (나오면 바로 메가진화)' }),
+  shuttle:   M('체육-셔틀런', 'normal', 'p', 0, 100, 2, { pctDmg: 1 / 3, d: '상대 최대 체력의 1/3을 깎는다' }),
   // 보통
   tackle:    M('몸통 박치기', 'normal', 'p', 50, 100, 30, { d: '기본 공격' }),
   guard:     M('막기', 'normal', 'x', 0, null, 10, { protect: true, pri: 3, self_: true, d: '이번 턴 공격을 막음 (연속 사용 시 실패하기 쉬움)' }),
@@ -392,6 +407,12 @@ const MONSTERS = {
   deungsin: X('등신', ['water', 'normal'], 110, 120, 70, 130, 70, 100,
     ['glasscannon', 'ramdeath', 'vinyl', 'pufferspike', 'hydrate', 'ignite', 'overcome', 'dice', 'mockspit', 'irontail'],
     '바다의 개복치. 햇빛을 봐도, 물살이 세도, 깜짝 놀라도 죽는다. 그래도 능력치만큼은 최강이다.'),
+  kkamo: X('까모', ['spirit', 'wind'], 100, 150, 90, 50, 90, 120,
+    ['shadowdive', 'poopbomb', 'featherdance', 'razorwind', 'ambush', 'club', 'gust', 'windcut', 'snarearrow', 'guard'],
+    '등신을 잇는 2번째 600족으로 골목길 전선에 앉아 세상 돌아가는 걸 구경하는 게 취미이다. 수많은 미세먼지와 쓰레기들을 이겨 내고 세상의 모든 이치를 통달해 다시 태어났다.'),
+  seonsaeng: X('선생님', ['normal'], 100, 50, 70, 10, 10, 15,
+    ['factorize', 'linearcut', 'ouga', 'trial', 'heateq', 'recursion', 'erlking', 'whileloop', 'techup', 'shuttle'],
+    '학교 선생님. 과목은 전과목.'),
 };
 
 // 캐릭터별 전용기와 메가진화: [전용기, 메가 이름, 소개, [체력, 공격, 방어, 특공, 특방, 스피드 상승값]]
@@ -454,6 +475,8 @@ Object.assign(SIGNATURE, {
   dakdulgi: ['flutter', '광장왕 닭둘기', '비행 고글과 빨간 스카프를 둘렀다. 날개를 펼치면 거대하고, 부하 비둘기를 거느린다.', [15, 40, 15, 0, 10, 20]],
   chijeu: ['nyanpunch', '사미 치즈냥', '꼬리가 네 갈래 핑크 불꽃이 되고 보석 방울 목걸이를 찼다. 귀 끝에도 불꽃이 핀다.', [0, 40, 10, 10, 10, 30]],
   basaeng: ['roachrush', '교장 바선생', '학사모를 쓰고 날개를 펼쳤다. 날아오르는 순간 모두가 비명을 지른다.', [10, 35, 25, 0, 20, 10]],
+  kkamo: ['shadowdive', '까마귀 대왕', '까모가 메가진화하며 암흑의 힘이 까모를 인간 형태로 만들었다.', [0, 50, 0, 0, 0, 50]],
+  seonsaeng: ['factorize', '1타강사', '선생님이 부업으로 인강을 하셨는데 대박이 났다! 이제부터 선생님이 주시는 가르침의 깊이가 늘어났다.', [0, 100, 0, 0, 0, 0]],
   deungsin: ['glasscannon', '바다의 왕', '수많은 죽음을 넘어 바다의 왕이 되었다. 왕관과 삼지창, 망토를 둘렀다. 갈증 게이지가 사라지고, 돌연사와 다른 모든 죽을 확률이 절반이 된다.', [10, 20, 20, 20, 20, 10]],
   hwangsari: ['yellowgust', '대황사 황사리', '방독면과 고글을 쓴 거대 모래폭풍. 아래는 토네이도가 되었고 주변에 돌덩이가 돈다.', [10, 40, 25, 0, 15, 10]],
 });
@@ -527,6 +550,8 @@ const ZMOVES = {
   basaeng: ['전교생 집합', 'poison', 180, '바퀴벌레 전교생이 몰려온다. 반드시 독', { st: { s: 'psn', ch: 100 } }],
   deungsin: ['3억 개의 알', 'normal', 230, '개복치가 평생 낳는 3억 개의 알이 한꺼번에 부화해 상대를 덮친다. 맞은 상대는 공포에 질려 다음 행동을 못 한다', { fear: true }],
   hwangsari: ['누런 하늘', 'earth', 180, '하늘이 누렇게 덮인다. 상대 명중률 하락', { foe: { acc: -1 } }],
+  kkamo: ['종말을 부르는 칠흑의 날갯짓', 'spirit', 200, '반드시 명중. 상대를 교체 불가 상태로 만들고 자신은 모든 능력치가 1단계씩 오른다', { cage: true, self: { atk: 1, def: 1, spa: 1, spd: 1, spe: 1 }, selfAfter: true }],
+  seonsaeng: ['생기부 작성', 'normal', 170, '반드시 명중. 생기부를 나쁘게 적어 상대가 Z기술이나 메가진화를 못 쓰게 한다', { cat: 's', record: true }],
 };
 for (const [id, [n, type, pow, d, extra = {}]] of Object.entries(ZMOVES)) {
   const sp = MONSTERS[id];
@@ -716,6 +741,9 @@ Object.assign(MONSTERS.maemmaem, { trait: { n: '떼창', d: '소리 기술의 �
 Object.assign(MONSTERS.wengweng, { trait: { n: '파리채 내성', d: '전기 기술에 맞으면 피해를 받지 않고 특공이 1단계 올라간다.' } });
 Object.assign(MONSTERS.dakdulgi, { trait: { n: '빵 줍기', d: '체력이 절반 이하가 되면(한 번만) 바닥의 빵을 주워 먹고 체력을 1/3 회복한다.' } });
 Object.assign(MONSTERS.chijeu, { trait: { n: '그루밍', d: '턴이 끝날 때 상태이상이 있으면 50% 확률로 털을 핥아 낫는다.' } });
+MONSTERS.kkamo.trait = { n: '불운', d: '싸움에 나오면 울음소리를 내서 상대의 명중률을 2단계 떨어뜨린다.' };
+MONSTERS.seonsaeng.trait = { n: '수능감독', d: '매 턴 1/365 확률로 수능 감독하러 가서 한 턴 쉰다.' };
+for (const [id, by] of [['kkamo', '티키티키펑크'], ['seonsaeng', 'pshrocket']]) Object.assign(MONSTERS[id], { img: true, contest: { by, name: MONSTERS[id].n } }); // 그림은 공모전 출품작 그림을 서버가 그대로 내보냄
 Object.assign(MONSTERS.deungsin, { trait: { n: '돌연사 · 갈증', d: '돌연사: 턴이 시작될 때, 턴이 끝날 때, 공격할 때, 공격받을 때마다 10% 확률로 즉사한다. 갈증: 체력바 아래 갈증 게이지(100%에서 시작)가 기술을 쓰면 15%, 턴이 끝나면 5%, 공격받으면 5% 줄고, 0%가 되면 즉사한다. 메가진화(바다의 왕)하면 갈증 게이지가 사라지고 모든 죽을 확률이 절반이 된다.' } });
 Object.assign(MONSTERS.basaeng, { trait: { n: '불사신', d: '한 방에 쓰러질 공격을 맞아도 30% 확률로 체력 1을 남기고 버틴다.' } });
 // 하위권 상향: 기본 능력치에 더하는 값 [체력, 공격, 방어, 특공, 특방, 스피드]
@@ -866,6 +894,8 @@ const GMAX_MOVES = {
   chijeu: '거다이 치즈 화염포효',
   basaeng: '거다이 갑각 돌진',
   deungsin: '거다이 심해 압살',
+  kkamo: '거다이 칠흑 강림',
+  seonsaeng: '거다이 전과목 특강',
 };
 
 
@@ -911,7 +941,9 @@ const PERKS = {
   dakdulgi: { heal: 1, d: '빵 줍기 회복량 +10%' },
   chijeu: { v: 5, d: '그루밍 확률 +5%p' },
   basaeng: { v: 4, d: '불사신 버티기 확률 +4%p' },
-  deungsin: { v: -0.5, d: '돌연사 확률 -0.5%p' },
+  deungsin: { v: -1, d: '돌연사 확률 -1%p' },
+  kkamo: { type: 'spirit' },
+  seonsaeng: { stat: 'atk' },
 };
 const STAT_KO = { atk: '공격', def: '방어', spa: '특공', spd: '특방', spe: '스피드', hp: '체력' };
 for (const [id, p] of Object.entries(PERKS)) {

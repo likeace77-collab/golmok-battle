@@ -51,6 +51,7 @@ test('모든 골목몬에게 그림이 있고 스킬이 겹치지 않는다', ()
   const read = (f) => require('fs').readFileSync(require('path').join(__dirname, '../public/js', f), 'utf8');
   const art = read('art.js'), mega = read('mega-art.js'), newArt = read('new-art.js') + read('new-art2.js') + read('new-art3.js');
   for (const [id, m] of Object.entries(MONSTERS)) {
+    if (m.contest) { assert.equal(new Set(m.moves).size, m.moves.length, id); continue; } // 공모전 출시작: 그림은 서버가 출품작에서 내보냄
     if (m.img) { // 사진 그림
       for (const f of [id, `${id}-mega`, ...Array.from({ length: m.stages || 0 }, (_, i) => `${id}-s${i + 1}`), ...Array.from({ length: m.tierImgs ?? m.tiers ?? 0 }, (_, i) => `${id}-t${i + 1}`), ...Array.from({ length: m.forms || 0 }, (_, i) => `${id}-f${i + 1}`)]) assert.ok(require('fs').existsSync(require('path').join(__dirname, `../public/img/mon/${f}.webp`)), f);
       assert.equal(new Set(m.moves).size, m.moves.length, id);
@@ -60,7 +61,7 @@ test('모든 골목몬에게 그림이 있고 스킬이 겹치지 않는다', ()
     assert.match(mega + newArt, new RegExp(`\\b${id}: (L\\(|")`), `메가 ${id}`);
     assert.equal(new Set(m.moves).size, m.moves.length, id);
   }
-  assert.equal(Object.keys(MONSTERS).length, 57);
+  assert.equal(Object.keys(MONSTERS).length, 59);
 });
 
 test('역류는 소나기에서 2배, 뻥 뚫기는 막기를 뚫고 압정을 치운다', () => {
@@ -144,7 +145,7 @@ test('모든 골목몬에게 전용기가 있고 다른 골목몬은 배울 수 
     owner[m.sig] = (owner[m.sig] || 0) + 1;
     assert.equal(Object.values(m.mega.boost).reduce((a, c) => a + c), 100, id);
   }
-  assert.equal(Object.keys(owner).length, 57);
+  assert.equal(Object.keys(owner).length, 59);
   // 전용기는 한 골목몬만 배운다 (단조처럼 전용기가 여럿일 수는 있음)
   const who = {};
   for (const [id, m] of Object.entries(MONSTERS)) for (const mv of m.moves) if (MOVES[mv].sig) (who[mv] ||= new Set()).add(id);
@@ -860,15 +861,16 @@ test('레이드: 4명 대 보스 1마리, 보스는 거다이맥스 유지·광�
     assert.equal(E.teamOf(b, 0), E.teamOf(b, 3)); assert.notEqual(E.teamOf(b, 0), E.teamOf(b, 4));
     if (mode === 'gmax') assert.ok(boss.gmax > 100); else { assert.ok(boss.mega); assert.ok(boss.name.startsWith('흑화')); }
     const v = E.viewFor(b, 0); assert.equal(v.allies.length, 3); assert.equal(v.opps.length, 1); assert.ok(v.raid);
-    let guard = 0, spread = false;
+    let guard = 0, spread = false, bossHit = false;
     while (b.phase !== 'over' && ++guard < 3000) for (let s = 0; s < 5; s++) if (b.phase !== 'over' && b.needs[s] && !b.pending[s]) {
       const r = E.choose(b, s, E.botAction(b, s, 2));
       assert.ok(r.ok);
       if (r.events?.some((e) => e.t === 'msg' && e.text === '상대 모두를 공격했다!')) spread = true;
+      if (b.turn <= 3 && r.events?.some((e) => e.t === 'move' && e.side === 4 && e.cat !== 'x')) bossHit = true; // 초반(다 살아 있을 때) 보스가 공격했으면 광역이어야 함
     }
     assert.equal(b.phase, 'over'); assert.ok(b.turn <= 16);
     if (mode === 'gmax' && boss.hp > 0) assert.ok(boss.gmax > 0);
-    assert.ok(spread || b.turn < 3);
+    assert.ok(spread || !bossHit);
   }
 });
 
@@ -878,5 +880,5 @@ test('강화 고유 효과: 능력치형은 그 능력치만 더 오르고, 등�
   const mk = (plus) => E.createBattle([{ name: 'a', team: [{ species: 'usan', moves: E.smartMoves('usan', []), plus }] }, { name: 'b', team: E.botTeam(1, 1) }], 1).sides[0].mons[0];
   const p0 = mk(0), p5 = mk(5);
   assert.ok(p5.stats.spe / p0.stats.spe > p5.stats.atk / p0.stats.atk + 0.1);
-  assert.equal(D.PERKS.deungsin.v, -0.5);
+  assert.equal(D.PERKS.deungsin.v, -1);
 });
