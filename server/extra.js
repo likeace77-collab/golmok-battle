@@ -1,10 +1,10 @@
 'use strict';
-// 추가 시스템: 공지·패치노트, 관리자, 전적 통계, 도감 보상, 친구 선물, 코스튬, 기간 한정 이벤트
+// 추가 시스템: 공지·패치노트, 관리자, 전적 통계, 도감 보상, 친구 선물, 스킨, 기간 한정 이벤트
 const Data = require('./data');
 
 let db = null, H = null;
 function init(_db, helpers) { db = _db; H = helpers; fix(); }
-function fix() { db.news ||= []; }
+function fix() { if (!db) return; db.news ||= []; migrateSkins(); }
 
 const DAY = 864e5, KST = 9 * 3600e3;
 const dayKey = (t = Date.now()) => new Date(t + KST).toISOString().slice(0, 10);
@@ -14,7 +14,8 @@ const fmt = (n) => Number(n).toLocaleString('ko-KR');
 /* ---------- 공지·패치노트 ---------- */
 // 코드에 적어 두는 패치노트 (개발자가 화면에서 쓴 글은 db.news)
 const PATCH_NOTES = [
-  { id: 'p-1115b', kind: 'patch', at: Date.parse('2026-11-15T03:00:00+09:00'), title: '대형 업데이트: 토너먼트·밴픽·리플레이·코스튬·이벤트', body: '• 주간 토너먼트: 토요일 밤 9시, 신청한 사람들의 덱으로 자동 대진표 경기\n• 밴픽 대전: 친구 대전에서 서로 1마리씩 금지하고 시작\n• 리플레이: 최근 대전을 다시 보기\n• 골목몬 코스튬 13종 (왁뿌말랑왕 포함)\n• 기간 한정 이벤트 「말랑말랑 축제」: 말랑 젤리를 모아 이벤트 상점에서 교환\n• 전적 통계, 도감 수집 보상, 친구 선물(우정 포인트)\n• 푸시 알림: 스카우트 준비, 원정 귀환, 대전 신청\n• 앱 아이콘 변경' },
+  { id: 'p-1115c', kind: 'patch', at: Date.parse('2026-11-15T03:40:00+09:00'), title: '코스튬 → 골목몬 전용 스킨 + 스킨 공모전', body: '• 코스튬이 「스킨」으로 바뀌었어요. 스킨은 골목몬마다 전용이고, 외형 변화·이펙트·사운드가 함께 있어요.\n• 새 스킨: 왁뿌말랑왕(말랑왕), 빙하 연탄(연탄이), 황금 주전자(주전이), 네온 까마귀(까모), DJ 콩나물(콩시루)\n• 예전 모자 코스튬은 없어지고 값만큼 GP를 돌려 드렸어요.\n• EVENT 탭에 「스킨 공모전」이 열렸어요! 우승작은 실제 스킨으로 출시돼요.' },
+  { id: 'p-1115b', kind: 'patch', at: Date.parse('2026-11-15T03:00:00+09:00'), title: '대형 업데이트: 토너먼트·밴픽·리플레이·스킨·이벤트', body: '• 주간 토너먼트: 토요일 밤 9시, 신청한 사람들의 덱으로 자동 대진표 경기\n• 밴픽 대전: 친구 대전에서 서로 1마리씩 금지하고 시작\n• 리플레이: 최근 대전을 다시 보기\n• 골목몬 전용 스킨 (왁뿌말랑왕 등)\n• 기간 한정 이벤트 「말랑말랑 축제」: 말랑 젤리를 모아 이벤트 상점에서 교환\n• 전적 통계, 도감 수집 보상, 친구 선물(우정 포인트)\n• 푸시 알림: 스카우트 준비, 원정 귀환, 대전 신청\n• 앱 아이콘 변경' },
   { id: 'p-1115a', kind: 'patch', at: Date.parse('2026-11-15T01:30:00+09:00'), title: '저장이 되돌아가던 문제 수정', body: '• 배포할 때 데이터가 30분쯤 전으로 돌아가던 문제를 고쳤어요.\n• 길드 꾸미기: 문장 54종, 색 24종, 보조 색, 문장 모양, 배너 무늬, 길드 구호\n• 꾸미기: 배경 30종, 포즈 32종, 이펙트 16종' },
   { id: 'p-1114', kind: 'patch', at: Date.parse('2026-11-14T23:30:00+09:00'), title: '자동 리롤, 패스 보너스', body: '• 스카우트 자동 리롤: 원하는 골목몬·이로치가 나올 때까지\n• 시즌 패스를 다 채우면 100점마다 GP 보너스\n• 메가스톤은 패스 마지막 단계에서만' },
 ];
@@ -99,8 +100,8 @@ function statsView(u) {
 const released = () => Object.keys(Data.MONSTERS).filter((id) => !Data.BANNED.includes(id));
 const DEX_GOALS = [
   ...[[10, { gp: 3000, rerolls: 3 }], [20, { gp: 6000, rerolls: 5 }], [30, { tickets: 2, rerolls: 8 }], [40, { tickets: 3, rerolls: 10 }], [50, { tickets: 5, rerolls: 15, gp: 20000 }]].map(([n, r]) => ({ id: `dex${n}`, n: `골목몬 ${n}종 모으기`, k: 'species', goal: n, r })),
-  { id: 'dexall', n: '모든 골목몬 모으기 (도감 완성)', k: 'species', goal: 'all', r: { tickets: 10, gp: 50000, rerolls: 30, costume: 'crown' } },
-  ...[[1, { gp: 2000 }], [5, { tickets: 1, rerolls: 5 }], [10, { tickets: 3, rerolls: 10 }], [20, { tickets: 5, gp: 30000, costume: 'halo' }]].map(([n, r]) => ({ id: `shiny${n}`, n: `이로치 ${n}종 모으기`, k: 'shinies', goal: n, r })),
+  { id: 'dexall', n: '모든 골목몬 모으기 (도감 완성)', k: 'species', goal: 'all', r: { tickets: 12, gp: 60000, rerolls: 30 } },
+  ...[[1, { gp: 2000 }], [5, { tickets: 1, rerolls: 5 }], [10, { tickets: 3, rerolls: 10 }], [20, { tickets: 6, gp: 35000 }]].map(([n, r]) => ({ id: `shiny${n}`, n: `이로치 ${n}종 모으기`, k: 'shinies', goal: n, r })),
   ...Object.keys(Data.TYPES).map((t) => ({ id: `type-${t}`, n: `${Data.TYPES[t].n} 타입 전부 모으기`, k: 'type', t, goal: 'type', r: { rerolls: 5, gp: 3000 } })),
 ];
 function dexState(u) {
@@ -135,7 +136,7 @@ const FSHOP = [
   { id: 'f-skip', n: '1시간 스킵권 5장', fp: 30, r: { skips: 5 } },
   { id: 'f-gp', n: '1,500GP', fp: 50, r: { gp: 1500 } },
   { id: 'f-ticket', n: '골목몬 입수권 1장', fp: 300, r: { tickets: 1 } },
-  { id: 'f-costume', n: '코스튬: 우정 리본', fp: 500, costume: 'ribbon' },
+  { id: 'f-reroll10', n: '리롤권 12장', fp: 400, r: { rerolls: 12 } },
 ];
 function fgiftBook(u) { const d = dayKey(); if (u.fgift?.day !== d) u.fgift = { day: d, sent: [] }; return u.fgift; }
 function fgiftView(u) { const b = fgiftBook(u); return { sent: b.sent, max: FGIFT_MAX, left: FGIFT_MAX - b.sent.length, inbox: (u.fgiftIn || []).length, fp: u.fp || 0, shop: FSHOP, each: FP_EACH }; }
@@ -174,33 +175,37 @@ function fshopBuy(u, id) {
   return { ok: true, got: H.grant(u, it.r), fgift: fgiftView(u) };
 }
 
-/* ---------- 코스튬 (골목몬 머리 위에 씌우는 꾸미기) ---------- */
-// price: GP, jelly: 이벤트 젤리. 그림은 public/js/extra.js의 COSTUME_ART
+/* ---------- 스킨 (골목몬마다 전용: 외형 변화 + 이펙트 + 사운드) ---------- */
+// 그림·이펙트·소리는 public/js/extra.js의 SKIN_FX. 저장 필드 이름은 예전 그대로 costumes / m.costume
 const COSTUMES = {
-  wakppu: { n: '왁뿌말랑왕', only: 'malrang', d: '말랑왕 전용! 말랑왕이 알록달록 왁뿌볼 속에 쏙. 대전에서 맞을 때마다 왁스 껍질이 바삭바삭 부서지는 ASMR 소리가 나요.', price: 20000, jelly: 40, fx: 'wax' },
-  santa: { n: '산타 모자', price: 3000 },
-  crown: { n: '황금 왕관', price: 0, d: '도감 완성 보상' },
-  wizard: { n: '마법사 모자', price: 4000 },
-  catears: { n: '고양이 귀', price: 3000 },
-  halo: { n: '천사 링', price: 0, d: '이로치 20종 보상', fx: 'glow' },
-  pirate: { n: '해적 모자', price: 4000 },
-  party: { n: '파티 고깔', price: 2000 },
-  flower: { n: '꽃 화관', price: 3000 },
-  horns: { n: '악마 뿔', price: 4000 },
-  grad: { n: '학사모', price: 3000 },
-  headset: { n: '게이밍 헤드셋', price: 5000 },
-  ribbon: { n: '우정 리본', price: 0, d: '우정 포인트 상점' },
+  wakppu: { n: '왁뿌말랑왕', only: 'malrang', price: 20000, jelly: 40, d: '말랑왕이 알록달록 왁뿌볼 속에 쏙! 맞을 때마다 왁스 껍질이 조각조각 부서지며 바삭바삭 ASMR.', fx: ['외형: 왁뿌볼 껍질 (맞을수록 깨짐)', '이펙트: 왁스 파편이 튐', '사운드: 바삭 빠각 사각사각'] },
+  icecoal: { n: '빙하 연탄', only: 'yeontan', price: 12000, d: '불꽃 대신 얼음이 피어오르는 연탄. 공격할 때 눈꽃이 터지고, 맞으면 얼음이 쨍 갈라져요.', fx: ['외형: 얼음빛 몸 + 고드름 왕관', '이펙트: 눈꽃 폭발 · 서리 입김', '사운드: 쨍그랑 · 찰랑'] },
+  goldkettle: { n: '황금 주전자', only: 'kettle', price: 12000, d: '번쩍번쩍 황금 주전자. 공격하면 김이 삐익 뿜어져 나오고 금화가 쏟아져요.', fx: ['외형: 황금빛 몸 + 반짝임', '이펙트: 금화 · 김 뿜기', '사운드: 삐익 휘슬 · 댕그랑 종소리'] },
+  neoncrow: { n: '네온 까마귀', only: 'kkamo', price: 15000, d: '밤의 전선 위를 지배하는 사이버 까마귀. 네온 빛이 번쩍이고 글리치가 일어나요.', fx: ['외형: 어두운 몸 + 네온 윤곽 + 스캔라인', '이펙트: 글리치 칼날', '사운드: 신스 잽 · 디지털 삑'] },
+  djkong: { n: 'DJ 콩나물', only: 'kongsiru', price: 10000, d: '헤드폰을 쓴 콩시루가 비트를 떨궈요. 이퀄라이저가 들썩들썩!', fx: ['외형: 헤드폰 + 이퀄라이저', '이펙트: 음표 · 스피커 파동', '사운드: 쿵치 비트 · 스크래치'] },
 };
-const costumeList = (u) => Object.entries(COSTUMES).map(([id, c]) => ({ id, ...c, own: (u.costumes || []).includes(id) || !!u._dev }));
+// 예전 범용 코스튬(모자 등)은 없어졌으므로 돌려받은 GP (한 번만)
+const OLD_REFUND = { santa: 3000, crown: 10000, wizard: 4000, catears: 3000, halo: 5000, pirate: 4000, party: 2000, flower: 3000, horns: 4000, grad: 3000, headset: 5000, ribbon: 7000 };
+function migrateSkins() {
+  for (const u of Object.values(db.users || {})) {
+    if (u.skinMig) continue;
+    u.skinMig = 1;
+    let gp = 0;
+    u.costumes = (u.costumes || []).filter((id) => { if (COSTUMES[id]) return true; gp += OLD_REFUND[id] || 0; return false; });
+    for (const m of u.mons || []) if (m.costume && !COSTUMES[m.costume]) delete m.costume;
+    if (gp) { u.gp = (u.gp || 0) + gp; H.sendMail?.(u, { from: '골목대전 운영팀', title: '코스튬이 스킨으로 바뀌었어요', body: `모자 같은 범용 코스튬이 없어지고 골목몬 전용 스킨(외형·이펙트·사운드)으로 바뀌었어요. 가지고 있던 코스튬 값 ${fmt(gp)}GP를 돌려 드렸어요!` }); }
+  }
+}
+const costumeList = (u) => Object.entries(COSTUMES).map(([id, c]) => ({ id, ...c, onlyN: Data.MONSTERS[c.only]?.n || '', own: (u.costumes || []).includes(id) || !!u._dev }));
 function costumeBuy(u, id, pay) {
-  const c = COSTUMES[id]; if (!c) return err('없는 코스튬이에요.');
+  const c = COSTUMES[id]; if (!c) return err('없는 스킨이에요.');
   if ((u.costumes || []).includes(id)) return err('이미 가지고 있어요.');
   if (pay === 'jelly') {
     if (!c.jelly || !eventLive()) return err('지금은 젤리로 살 수 없어요.');
     if ((u.jelly || 0) < c.jelly) return err(`말랑 젤리가 모자라요. (${c.jelly}개 필요)`);
     u.jelly -= c.jelly;
   } else {
-    if (!c.price) return err('상점에서 팔지 않는 코스튬이에요. 보상으로 얻을 수 있어요.');
+    if (!c.price) return err('상점에서 팔지 않는 스킨이에요.');
     if ((u.gp || 0) < c.price) return err(`GP가 모자라요. (${fmt(c.price)}GP 필요)`);
     u.gp -= c.price;
   }
@@ -209,19 +214,19 @@ function costumeBuy(u, id, pay) {
 }
 function costumeWear(u, uid, id, dev) {
   const m = (u.mons || []).find((x) => x.uid === uid); if (!m) return err('없는 골목몬이에요.');
-  if (id && !COSTUMES[id]) return err('없는 코스튬이에요.');
-  if (id && !dev && !(u.costumes || []).includes(id)) return err('가지고 있지 않은 코스튬이에요.');
-  if (id && COSTUMES[id].only && m.species !== COSTUMES[id].only) return err(`${Data.MONSTERS[COSTUMES[id].only].n} 전용 코스튬이에요.`);
+  if (id && !COSTUMES[id]) return err('없는 스킨이에요.');
+  if (id && !dev && !(u.costumes || []).includes(id)) return err('가지고 있지 않은 스킨이에요.');
+  if (id && COSTUMES[id].only && m.species !== COSTUMES[id].only) return err(`${Data.MONSTERS[COSTUMES[id].only].n} 전용 스킨이에요.`);
   if (id) m.costume = id; else delete m.costume;
   return { ok: true };
 }
 
 /* ---------- 기간 한정 이벤트: 말랑말랑 축제 ---------- */
 const EVENT = { id: 'mallang', n: '말랑말랑 축제', start: Date.parse('2026-11-15T00:00:00+09:00'), end: Date.parse('2026-12-01T00:00:00+09:00'),
-  d: '대전을 하면 말랑 젤리가 나와요! 모은 젤리로 말랑왕 전용 코스튬 「왁뿌말랑왕」과 선물을 바꿔요. 맞을 때마다 왁스 껍질이 바삭바삭!', dailyCap: 40, login: 5 };
+  d: '대전을 하면 말랑 젤리가 나와요! 모은 젤리로 말랑왕 전용 스킨 「왁뿌말랑왕」과 선물을 바꿔요. 맞을 때마다 왁스 껍질이 바삭바삭!', dailyCap: 40, login: 5 };
 const eventLive = (t = Date.now()) => t >= EVENT.start && t < EVENT.end;
 const ESHOP = [
-  { id: 'e-wakppu', n: '코스튬: 왁뿌말랑왕 (말랑왕 전용)', jelly: 40, costume: 'wakppu' },
+  { id: 'e-wakppu', n: '스킨: 왁뿌말랑왕 (말랑왕 전용)', jelly: 40, costume: 'wakppu' },
   { id: 'e-reroll', n: '리롤권 3장', jelly: 10, r: { rerolls: 3 }, limit: 10 },
   { id: 'e-skip', n: '1시간 스킵권 10장', jelly: 8, r: { skips: 10 }, limit: 10 },
   { id: 'e-gp', n: '3,000GP', jelly: 10, r: { gp: 3000 }, limit: 20 },
@@ -291,4 +296,4 @@ function api(route, u, key, b) {
 // 로비 배지용
 const badges = (u) => ({ news: newsUnread(u), dex: dexClaimable(u), fgift: (u.fgiftIn || []).length });
 
-module.exports = { init, api, badges, recordBattle, eventBattle, eventLogin, eventLive, COSTUMES, EVENT };
+module.exports = { init, fix, api, badges, recordBattle, eventBattle, eventLogin, eventLive, COSTUMES, EVENT };

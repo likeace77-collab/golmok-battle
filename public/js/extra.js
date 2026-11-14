@@ -1,22 +1,5 @@
-// 추가 시스템 화면: 소식(공지·패치노트), 관리자, 전적 통계, 도감 보상, 친구 선물, 코스튬, 토너먼트, 밴픽, 리플레이, 이벤트, 푸시 알림
+// 추가 시스템 화면: 소식(공지·패치노트), 관리자, 전적 통계, 도감 보상, 친구 선물, 스킨, 스킨 공모전, 토너먼트, 밴픽, 리플레이, 이벤트, 푸시 알림
 
-/* ---------- 코스튬 그림 (골목몬 그림과 같은 200×200 좌표에 덧그림) ---------- */
-const COSTUME_ART = {
-  wakppu: '', // 왁뿌볼 껍질은 waxShell()로 그림 (부서진 단계가 있어서)
-  santa: `<path d="M60 48 Q72 6 112 10 Q146 14 150 48 Z" fill="#E8402C" stroke="#1a1433" stroke-width="4"/><path d="M112 10 Q150 -2 160 30" fill="none" stroke="#E8402C" stroke-width="14" stroke-linecap="round"/><circle cx="160" cy="32" r="11" fill="#fff" stroke="#1a1433" stroke-width="3"/><rect x="54" y="42" width="102" height="16" rx="8" fill="#fff" stroke="#1a1433" stroke-width="4"/>`,
-  crown: `<path d="M62 50 L58 12 L80 30 L100 4 L120 30 L142 12 L138 50 Z" fill="#FFD23F" stroke="#1a1433" stroke-width="4" stroke-linejoin="round"/><rect x="60" y="44" width="80" height="10" fill="#E7B23A" stroke="#1a1433" stroke-width="3"/><circle cx="100" cy="34" r="6" fill="#E8402C" stroke="#1a1433" stroke-width="2"/><circle cx="76" cy="38" r="4" fill="#2F7DE1"/><circle cx="124" cy="38" r="4" fill="#3FA34D"/>`,
-  wizard: `<path d="M56 54 Q100 40 144 54 L128 58 Q100 50 72 58 Z" fill="#3B2F8C" stroke="#1a1433" stroke-width="4"/><path d="M72 52 L112 -6 Q118 22 128 52 Z" fill="#3B2F8C" stroke="#1a1433" stroke-width="4" stroke-linejoin="round"/><path d="M78 44 Q100 38 124 44" stroke="#F2B705" stroke-width="6" fill="none"/><path d="M104 20l3 5 5 1-4 4 1 5-5-2-5 2 1-5-4-4 5-1z" fill="#FFE45C"/>`,
-  catears: `<path d="M50 54 L58 10 L88 38 Z" fill="#2B2B38" stroke="#1a1433" stroke-width="4" stroke-linejoin="round"/><path d="M150 54 L142 10 L112 38 Z" fill="#2B2B38" stroke="#1a1433" stroke-width="4" stroke-linejoin="round"/><path d="M60 42 L63 22 L78 37 Z" fill="#F27FA5"/><path d="M140 42 L137 22 L122 37 Z" fill="#F27FA5"/>`,
-  halo: `<ellipse cx="100" cy="16" rx="40" ry="10" fill="none" stroke="#FFE45C" stroke-width="9" class="cos-glow"/><ellipse cx="100" cy="16" rx="40" ry="10" fill="none" stroke="#fff" stroke-width="2" opacity=".8"/>`,
-  pirate: `<path d="M44 44 Q100 0 156 44 Q130 56 100 50 Q70 56 44 44 Z" fill="#1a1433" stroke="#000" stroke-width="3"/><path d="M48 44 Q100 30 152 44" fill="none" stroke="#F2B705" stroke-width="4"/><circle cx="100" cy="28" r="8" fill="#fff"/><path d="M92 40l16-8M92 32l16 8" stroke="#fff" stroke-width="3"/>`,
-  party: `<path d="M74 54 L104 -4 L130 54 Z" fill="#2EA8E0" stroke="#1a1433" stroke-width="4" stroke-linejoin="round"/><path d="M82 38 L118 38 M90 22 L112 22" stroke="#FFE45C" stroke-width="6"/><circle cx="104" cy="-2" r="8" fill="#F27FA5" stroke="#1a1433" stroke-width="3"/>`,
-  flower: `${[60, 80, 100, 120, 140].map((x, i) => `<circle cx="${x}" cy="${36 - Math.abs(x - 100) * .2}" r="11" fill="${['#F27FA5', '#FFE45C', '#fff', '#FFE45C', '#F27FA5'][i]}" stroke="#1a1433" stroke-width="3"/><circle cx="${x}" cy="${36 - Math.abs(x - 100) * .2}" r="4" fill="#F28A1E"/>`).join('')}<path d="M52 40 Q100 52 148 40" fill="none" stroke="#3FA34D" stroke-width="5"/>`,
-  horns: `<path d="M64 52 Q46 30 56 6 Q64 26 82 40 Z" fill="#B31220" stroke="#1a1433" stroke-width="4" stroke-linejoin="round"/><path d="M136 52 Q154 30 144 6 Q136 26 118 40 Z" fill="#B31220" stroke="#1a1433" stroke-width="4" stroke-linejoin="round"/>`,
-  grad: `<path d="M40 30 L100 8 L160 30 L100 52 Z" fill="#1a1433" stroke="#000" stroke-width="3"/><path d="M70 40 L70 58 Q100 70 130 58 L130 40" fill="#2B2B38" stroke="#000" stroke-width="3"/><path d="M100 30 L150 40 L150 66" stroke="#F2B705" stroke-width="4" fill="none"/><circle cx="150" cy="68" r="5" fill="#F2B705"/>`,
-  headset: `<path d="M40 96 Q40 18 100 18 Q160 18 160 96" fill="none" stroke="#1a1433" stroke-width="10"/><path d="M40 96 Q40 18 100 18 Q160 18 160 96" fill="none" stroke="#3CC9A7" stroke-width="5"/><rect x="26" y="80" width="24" height="40" rx="10" fill="#E8402C" stroke="#1a1433" stroke-width="4"/><rect x="150" y="80" width="24" height="40" rx="10" fill="#E8402C" stroke="#1a1433" stroke-width="4"/><path d="M38 118 Q50 146 80 146" fill="none" stroke="#1a1433" stroke-width="4"/><circle cx="82" cy="146" r="6" fill="#1a1433"/>`,
-  ribbon: `<path d="M126 26 L98 8 Q90 20 98 40 Z M134 26 L162 8 Q170 20 162 40 Z" fill="#FF5C8A" stroke="#1a1433" stroke-width="4" stroke-linejoin="round"/><circle cx="130" cy="26" r="9" fill="#FF8FB4" stroke="#1a1433" stroke-width="4"/>`,
-};
-// 골목몬 그림(svg 문자열)에 코스튬을 덧그림
 /* 왁뿌말랑왕: 말랑왕을 감싼 왁뿌볼(왁스 껍질). crack = 맞은 횟수 → 조각이 하나씩 떨어져 나감 (6번이면 다 깨짐) */
 const WAX_CHUNKS = [
   'M100 52L196 52L196 120L150 118L128 96L112 100Z', 'M4 100L70 92L84 118L62 140L4 150Z', 'M84 108L118 104L136 128L120 160L86 162L66 136Z',
@@ -47,13 +30,7 @@ function waxShell(crack = 0, big = false) {
     </g>
     </g>`;
 }
-// 골목몬 그림(svg 문자열)에 코스튬을 덧그림. opts.crack: 왁뿌볼이 맞은 횟수
-function cosArt(svg, costume, opts = {}) {
-  if (!costume || typeof svg !== 'string') return svg;
-  if (costume === 'wakppu') return svg.replace(/<svg\b/, '<svg data-cos="wakppu"').replace(/<\/svg>\s*$/, `<g class="cos cos-wakppu">${waxShell(opts.crack || 0, opts.big)}</g></svg>`);
-  if (!COSTUME_ART[costume]) return svg;
-  return svg.replace(/<svg\b/, `<svg data-cos="${costume}"`).replace(/<\/svg>\s*$/, `<g class="cos cos-${costume}">${COSTUME_ART[costume]}</g></svg>`);
-}
+// (스킨 그림은 아래 SKIN_FX / skinArt)
 /* 바삭바삭 왁스 부서지는 소리 (WebAudio로 직접 만듦) + 진동 */
 let WAX_AC = null;
 document.addEventListener('pointerdown', () => { try { WAX_AC ||= new (window.AudioContext || window.webkitAudioContext)(); if (WAX_AC.state === 'suspended') WAX_AC.resume(); } catch { /* 소리 없이 */ } }, { capture: true });
@@ -95,19 +72,107 @@ function waxShards(el, n = 9) {
     document.body.appendChild(s); setTimeout(() => s.remove(), 950);
   }
 }
-const costumeSVG = (id, size = 64) => (id === 'wakppu' ? `<svg viewBox="14 60 172 140" width="${size}" height="${size * .8}" aria-hidden="true">${waxShell(0)}</svg>` : `<svg viewBox="20 -10 160 90" width="${size}" height="${size * .56}" aria-hidden="true">${COSTUME_ART[id] || ''}</svg>`);
-(function patchArt() {
-  // 기존 그림 함수들에 코스튬을 끼워 넣기: monArt(id, shiny, cls, mega, ..., {costume})는 그대로 두고, 객체를 받는 곳만 감쌈
-  if (typeof gotItem === 'function') {
-    const orig = gotItem;
-    window.gotItem = gotItem = (x) => {
-      if (x.k === 'costume') return `<div class="got-i got-cos">${costumeSVG(x.id, 90)}<b>코스튬: ${esc(x.n || x.id)}</b><small>내 골목몬에서 입힐 수 있어요</small></div>`;
-      if (x.k === 'jelly') return `<div class="got-i"><span class="got-dice">🍮</span><b>말랑 젤리 ×${x.n}</b></div>`;
-      if (x.k === 'fp') return `<div class="got-i"><span class="got-dice">💝</span><b>우정 포인트 +${x.n}</b></div>`;
-      return orig(x);
-    };
+/* ---------- 스킨: 골목몬 전용 (외형 변화 + 이펙트 + 사운드) ---------- */
+let SKIN_UID = 0;
+// 소리: WebAudio로 직접 만든 짧은 효과음
+const Sfx = (() => {
+  const ac = () => { WAX_AC ||= new (window.AudioContext || window.webkitAudioContext)(); if (WAX_AC.state === 'suspended') WAX_AC.resume(); return WAX_AC; };
+  const noiseBuf = (a) => { if (!a.noise) { const b = a.createBuffer(1, a.sampleRate * .5, a.sampleRate); const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; a.noise = b; } return a.noise; };
+  function tone(freq, dur, { type = 'sine', vol = .2, at = 0, to = null, attack = .004 } = {}) {
+    const a = ac(), t = a.currentTime + .01 + at, o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t); if (to) o.frequency.exponentialRampToValueAtTime(to, t + dur);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + attack); g.gain.exponentialRampToValueAtTime(.0008, t + dur);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur + .05);
   }
+  function noise(dur, { freq = 3000, q = 1, vol = .2, at = 0, to = null, type = 'bandpass' } = {}) {
+    const a = ac(), t = a.currentTime + .01 + at, s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+    s.buffer = noiseBuf(a); f.type = type; f.frequency.setValueAtTime(freq, t); if (to) f.frequency.exponentialRampToValueAtTime(to, t + dur); f.Q.value = q;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .003); g.gain.exponentialRampToValueAtTime(.0008, t + dur);
+    s.connect(f); f.connect(g); g.connect(a.destination); s.start(t, Math.random() * .3, dur + .05);
+  }
+  const safe = (f) => (...x) => { try { f(...x); } catch { /* 소리 없이 */ } };
+  return {
+    ice: safe(() => { tone(2637, .5, { vol: .16 }); tone(3951, .4, { vol: .1, at: .04 }); tone(5274, .3, { vol: .06, at: .08 }); for (let i = 0; i < 6; i++) noise(.02, { freq: 7000, q: 3, vol: .08, at: i * .03 }); }),
+    iceCrack: safe(() => { noise(.06, { freq: 5200, q: 1.5, vol: .5 }); tone(1800, .18, { type: 'triangle', vol: .12, to: 900 }); for (let i = 0; i < 8; i++) noise(.015, { freq: 4000 + Math.random() * 5000, q: 4, vol: .12, at: .02 + Math.random() * .15 }); }),
+    frost: safe(() => noise(.6, { freq: 6000, q: .7, vol: .12, to: 2500 })),
+    whistle: safe(() => { tone(1900, .55, { vol: .12, to: 2800, attack: .05 }); tone(1910, .55, { vol: .06, to: 2820, attack: .05 }); noise(.6, { freq: 3500, q: .8, vol: .12, attack: .1 }); }),
+    bell: safe(() => { for (const [f, v] of [[880, .18], [1320, .1], [1760, .08], [2640, .05]]) tone(f, 1.3, { vol: v }); }),
+    coins: safe(() => { for (let i = 0; i < 6; i++) tone(2400 + Math.random() * 1600, .12, { vol: .07, at: i * .05, type: 'triangle' }); }),
+    zap: safe(() => { tone(1500, .2, { type: 'square', vol: .08, to: 110 }); tone(750, .2, { type: 'sawtooth', vol: .05, to: 60, at: .02 }); noise(.05, { freq: 8000, vol: .08 }); }),
+    bleep: safe(() => { tone(1250, .06, { type: 'square', vol: .07 }); tone(620, .08, { type: 'square', vol: .07, at: .07 }); noise(.04, { freq: 9000, vol: .05, at: .02 }); }),
+    glitch: safe(() => { for (let i = 0; i < 5; i++) tone(200 + Math.random() * 2400, .04, { type: 'square', vol: .05, at: i * .035 }); }),
+    beat: safe(() => { for (const at of [0, .28]) { tone(150, .18, { vol: .45, to: 40, at }); } for (const at of [.14, .42]) noise(.05, { freq: 9000, type: 'highpass', vol: .12, at }); noise(.12, { freq: 1800, q: .7, vol: .14, at: .28 }); }),
+    scratch: safe(() => { noise(.12, { freq: 700, q: 3, vol: .25, to: 2600 }); noise(.12, { freq: 2600, q: 3, vol: .2, to: 600, at: .12 }); }),
+    squish: safe(() => { tone(420, .2, { type: 'triangle', vol: .18, to: 140 }); noise(.1, { freq: 900, q: 2, vol: .08, type: 'lowpass' }); }),
+  };
 })();
+// 그림 상자(el) 주변으로 터지는 파티클. kinds: 글자/이모지 또는 색 조각
+function fxBurst(el, { chars = null, colors = ['#fff'], n = 10, spread = 90, rise = 0, size = [14, 24], dur = 900 } = {}) {
+  if (!el) return; const r = el.getBoundingClientRect();
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement('i'); s.className = 'skin-p';
+    const a = Math.random() * Math.PI * 2, d = spread * (.4 + Math.random() * .6), sz = size[0] + Math.random() * (size[1] - size[0]);
+    s.style.cssText = `left:${r.left + r.width / 2}px;top:${r.top + r.height * .5}px;--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d * .7 - rise}px;--rot:${(Math.random() - .5) * 540}deg;--dur:${dur}ms;font-size:${sz}px;color:${colors[i % colors.length]}`;
+    if (chars) s.textContent = chars[i % chars.length]; else s.style.cssText += `;width:${sz * .5}px;height:${sz * .4}px;background:${colors[i % colors.length]};border:2px solid #1a1433;border-radius:3px`;
+    document.body.appendChild(s); setTimeout(() => s.remove(), dur + 100);
+  }
+}
+function fxFlash(el, cls, ms = 600) { if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); setTimeout(() => el.classList.remove(cls), ms); }
+// 스킨 정의: filter(색 바꾸기 행렬), over(덧그림), attack/hit/enter(이펙트+사운드)
+const SKIN_FX = {
+  wakppu: { name: '왁뿌말랑왕', only: 'malrang', over: (o) => waxShell(o.crack || 0, o.big),
+    attack: (el) => { Sfx.squish(); fxBurst(el, { chars: ['●', '◆', '●'], colors: ['#FFB3D9', '#B9F3E4', '#D9C6FF', '#FFF1A8'], n: 10, spread: 70, size: [10, 18] }); },
+    hit: (el, m) => { const n = m?.hits || 1; waxCrunch(n >= 6 ? 1.3 : 1); waxShards(el, n >= 6 ? 18 : 10); fxFlash(el, 'wax-hit', 300); },
+    enter: (el) => { Sfx.squish(); fxFlash(el, 'wax-hit', 300); } },
+  icecoal: { name: '빙하 연탄', only: 'yeontan', filter: '0.35 0.35 0.2 0 0.12  0.35 0.45 0.25 0 0.2  0.4 0.45 0.4 0 0.38  0 0 0 1 0',
+    over: () => `<g class="sk-ice"><path d="M62 50 L70 14 L80 46 L92 4 L104 46 L116 10 L126 46 L138 18 L142 52 Q100 64 62 50Z" fill="#E8F7FF" stroke="#1a1433" stroke-width="4" stroke-linejoin="round"/><path d="M76 40l4-14M100 38l4-20M124 40l4-12" stroke="#fff" stroke-width="3"/>${[[40, 90], [162, 110], [52, 160], [150, 168]].map(([x, y], i) => `<path class="sk-tw" style="animation-delay:${i * .4}s" d="M${x} ${y - 9}v18M${x - 8} ${y - 5}l16 10M${x - 8} ${y + 5}l16-10" stroke="#BFF0FF" stroke-width="3" stroke-linecap="round"/>`).join('')}</g>`,
+    attack: (el) => { Sfx.ice(); fxBurst(el, { chars: ['❄', '❅', '✦'], colors: ['#BFF0FF', '#fff', '#7FD8FF'], n: 14, spread: 120 }); },
+    hit: (el) => { Sfx.iceCrack(); fxBurst(el, { colors: ['#E8F7FF', '#BFF0FF', '#7FD8FF'], n: 10, spread: 80, size: [10, 18] }); fxFlash(el, 'sk-frosthit', 400); },
+    enter: (el) => { Sfx.frost(); fxBurst(el, { chars: ['❄'], colors: ['#fff'], n: 8, spread: 60, rise: 40 }); } },
+  goldkettle: { name: '황금 주전자', only: 'kettle', filter: '0.45 0.6 0.15 0 0.18  0.35 0.5 0.1 0 0.08  0.1 0.15 0.05 0 0  0 0 0 1 0',
+    over: () => `<g class="sk-gold">${[[46, 70, 10], [156, 64, 8], [168, 140, 7], [36, 150, 6], [120, 40, 6]].map(([x, y, r], i) => `<path class="sk-tw" style="animation-delay:${i * .3}s" d="M${x} ${y - r}Q${x} ${y} ${x + r} ${y}Q${x} ${y} ${x} ${y + r}Q${x} ${y} ${x - r} ${y}Q${x} ${y} ${x} ${y - r}Z" fill="#FFF6C8" stroke="#E7B23A" stroke-width="1.5"/>`).join('')}</g>`,
+    attack: (el) => { Sfx.whistle(); fxBurst(el, { chars: ['☁', '☁'], colors: ['#fff', '#eef'], n: 8, spread: 60, rise: 80, size: [22, 34], dur: 1200 }); setTimeout(() => { Sfx.coins(); fxBurst(el, { chars: ['🪙', '✦'], colors: ['#FFD23F'], n: 10, spread: 110 }); }, 250); },
+    hit: (el) => { Sfx.bell(); fxBurst(el, { chars: ['✦'], colors: ['#FFD23F', '#FFF6C8'], n: 8, spread: 80 }); fxFlash(el, 'sk-goldhit', 400); },
+    enter: (el) => { Sfx.coins(); fxFlash(el, 'sk-shine', 900); } },
+  neoncrow: { name: '네온 까마귀', only: 'kkamo', cls: 'sk-neon', filter: '0.25 0.15 0.1 0 0.02  0.15 0.3 0.15 0 0.05  0.2 0.3 0.4 0 0.12  0 0 0 1 0',
+    over: () => `<g class="sk-scan" opacity=".35">${Array.from({ length: 16 }, (_, i) => `<rect x="10" y="${30 + i * 10}" width="180" height="2" fill="#2EF2FF"/>`).join('')}</g><g class="sk-tw"><path d="M150 40l8-14 4 10 10-6-6 14" fill="none" stroke="#FF3DCB" stroke-width="3"/></g>`,
+    attack: (el) => { Sfx.zap(); fxBurst(el, { chars: ['╱', '╲', '▮'], colors: ['#2EF2FF', '#FF3DCB', '#fff'], n: 12, spread: 120, size: [18, 30], dur: 500 }); fxFlash(el, 'sk-glitch', 450); },
+    hit: (el) => { Sfx.bleep(); fxFlash(el, 'sk-glitch', 450); fxBurst(el, { colors: ['#2EF2FF', '#FF3DCB'], n: 8, spread: 70, size: [8, 14], dur: 500 }); },
+    enter: (el) => { Sfx.glitch(); fxFlash(el, 'sk-glitch', 600); } },
+  djkong: { name: 'DJ 콩나물', only: 'kongsiru',
+    over: () => `<g class="sk-dj"><path d="M36 100 Q36 20 100 20 Q164 20 164 100" fill="none" stroke="#1a1433" stroke-width="12"/><path d="M36 100 Q36 20 100 20 Q164 20 164 100" fill="none" stroke="#FF3DCB" stroke-width="6"/><rect x="20" y="84" width="28" height="44" rx="12" fill="#2B2B38" stroke="#1a1433" stroke-width="4"/><rect x="152" y="84" width="28" height="44" rx="12" fill="#2B2B38" stroke="#1a1433" stroke-width="4"/><circle cx="34" cy="106" r="7" fill="#2EF2FF"/><circle cx="166" cy="106" r="7" fill="#2EF2FF"/>${[0, 1, 2, 3, 4, 5, 6].map((i) => `<rect class="sk-eq" style="animation-delay:${(i % 4) * .12}s" x="${58 + i * 13}" y="170" width="9" height="22" fill="${['#FF3DCB', '#FFD23F', '#2EF2FF', '#7CFF4F'][i % 4]}" stroke="#1a1433" stroke-width="2"/>`).join('')}</g>`,
+    attack: (el) => { Sfx.beat(); fxBurst(el, { chars: ['♪', '♫', '♬'], colors: ['#FF3DCB', '#2EF2FF', '#FFD23F', '#7CFF4F'], n: 12, spread: 110, rise: 30 }); fxFlash(el, 'sk-bump', 600); },
+    hit: (el) => { Sfx.scratch(); fxFlash(el, 'sk-bump', 400); fxBurst(el, { chars: ['♪'], colors: ['#FF3DCB'], n: 4, spread: 60 }); },
+    enter: (el) => { Sfx.beat(); fxBurst(el, { chars: ['♫'], colors: ['#2EF2FF', '#FF3DCB'], n: 6, spread: 70, rise: 40 }); } },
+};
+// 골목몬 그림(svg 문자열)에 스킨을 입힘. opts.crack: 맞은 횟수, opts.big: 메가진화
+function skinArt(svg, id, opts = {}) {
+  const k = SKIN_FX[id];
+  if (!k || typeof svg !== 'string') return svg;
+  const open = svg.indexOf('>') + 1, close = svg.lastIndexOf('</svg>');
+  if (open <= 0 || close < open) return svg;
+  let head = svg.slice(0, open).replace(/<svg\b/, `<svg data-skin="${id}"`), body = svg.slice(open, close);
+  if (k.cls) head = head.replace(/class="/, `class="${k.cls} `).replace(/<svg data-skin="([^"]+)"(?![^>]*class=)/, `<svg data-skin="$1" class="${k.cls}"`);
+  if (k.filter) { const fid = `skf${++SKIN_UID}`; body = `<defs><filter id="${fid}" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${k.filter}"/></filter></defs><g filter="url(#${fid})">${body}</g>`; }
+  const vb = /viewBox="([\d.\-]+) ([\d.\-]+) ([\d.]+) ([\d.]+)"/.exec(head), sc = vb ? +vb[3] / 200 : 1, ox = vb ? +vb[1] : 0, oy = vb ? +vb[2] : 0; // 그림 크기(120 또는 200)에 맞춰 덧그림 크기 조절
+  return `${head}${body}<g class="skin-over" transform="translate(${ox} ${oy}) scale(${sc})">${k.over ? k.over(opts) : ''}</g></svg>`;
+}
+const cosArt = skinArt; // 예전 이름
+// 스킨 이펙트 실행 (kind: attack | hit | enter)
+function skinFx(id, kind, el, m) { try { SKIN_FX[id]?.[kind]?.(el, m); } catch { /* 연출 실패는 무시 */ } }
+// 스킨 미리보기 그림 (그 골목몬 + 스킨)
+const skinIcon = (id, size = 64, opts = {}) => { const k = SKIN_FX[id]; if (!k) return ''; return `<span class="skin-ic" style="width:${size}px;height:${size}px">${skinArt(monArt(k.only, false), id, opts)}</span>`; };
+(function patchGot() {
+  if (typeof gotItem !== 'function') return;
+  const orig = gotItem;
+  window.gotItem = gotItem = (x) => {
+    if (x.k === 'costume') return `<div class="got-i got-cos">${skinIcon(x.id, 96)}<b>스킨: ${esc(x.n || x.id)}</b><small>${esc(G.data.MONSTERS[SKIN_FX[x.id]?.only]?.n || '')} 전용 · 내 골목몬에서 입혀요</small></div>`;
+    if (x.k === 'jelly') return `<div class="got-i"><span class="got-dice">🍮</span><b>말랑 젤리 ×${x.n}</b></div>`;
+    if (x.k === 'fp') return `<div class="got-i"><span class="got-dice">💝</span><b>우정 포인트 +${x.n}</b></div>`;
+    return orig(x);
+  };
+})();
+
 
 const timeAgo = (t) => { const s = Math.round((Date.now() - t) / 1000); if (s < 60) return '방금'; if (s < 3600) return `${Math.floor(s / 60)}분 전`; if (s < 86400) return `${Math.floor(s / 3600)}시간 전`; return `${Math.floor(s / 86400)}일 전`; };
 const dateStr = (t) => new Date(t).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -166,7 +231,7 @@ async function showAdmin(back = showLobby) {
         ${[['gp', 'GP'], ['tickets', '입수권'], ['skips', '스킵권'], ['rerolls', '리롤권'], ['stones', '메가스톤(랜덤)'], ['gpt', '길P']].map(([k, n]) => `<label>${n}<input type="number" name="${k}" value="0"></label>`).join('')}
         <label>골목몬<select name="mon"><option value="">없음</option><option value="random">랜덤</option>${Object.entries(G.data.MONSTERS).map(([id, m]) => `<option value="${id}">${esc(m.n)}</option>`).join('')}</select></label>
         <label class="ck"><input type="checkbox" name="shiny"> 이로치로</label>
-        <label>코스튬<select name="costume"><option value="">없음</option>${Object.keys(COSTUME_ART).map((id) => `<option value="${id}">${id}</option>`).join('')}</select></label>
+        <label>스킨<select name="costume"><option value="">없음</option>${Object.entries(SKIN_FX).map(([id, k]) => `<option value="${id}">${k.name} (${esc(G.data.MONSTERS[k.only]?.n || '')})</option>`).join('')}</select></label>
         <label class="wide">편지 내용 (비우면 기본 문구)<input name="note" maxlength="200" placeholder="예: 데이터 복구 보상이에요"></label>
         <button class="btn wide">🎁 지급하기</button></form></div>`;
     box.querySelector('#adm-give').onsubmit = async (e) => {
@@ -232,7 +297,7 @@ async function showDexRewards(back) {
     const can = v.filter((g) => g.can).length;
     const bg = openSheet(`<div class="row" style="margin-bottom:8px"><h2>📚 도감 수집 보상</h2><button class="btn small paper" data-x>닫기</button></div>
       ${can ? `<button class="btn wide" id="dx-all" style="margin-bottom:10px">받을 수 있는 보상 ${can}개 모두 받기</button>` : ''}
-      <div class="dx-list">${v.map((g) => `<div class="dx-row ${g.got ? 'got' : g.can ? 'can' : ''}"><div><b>${esc(g.n)}</b><div class="qbar"><i style="width:${(g.val / g.goal) * 100}%"></i><span>${g.val} / ${g.goal}</span></div><div class="rws">${rewardChips(g.r)}${g.r.costume ? `<span class="rw">👑 코스튬</span>` : ''}</div></div>${g.got ? '<em>✓ 받음</em>' : g.can ? `<button class="btn small" data-dx="${g.id}">받기</button>` : ''}</div>`).join('')}</div>`);
+      <div class="dx-list">${v.map((g) => `<div class="dx-row ${g.got ? 'got' : g.can ? 'can' : ''}"><div><b>${esc(g.n)}</b><div class="qbar"><i style="width:${(g.val / g.goal) * 100}%"></i><span>${g.val} / ${g.goal}</span></div><div class="rws">${rewardChips(g.r)}${g.r.costume ? `<span class="rw">🎨 스킨</span>` : ''}</div></div>${g.got ? '<em>✓ 받음</em>' : g.can ? `<button class="btn small" data-dx="${g.id}">받기</button>` : ''}</div>`).join('')}</div>`);
     bg.querySelector('[data-x]').onclick = closeSheet;
     const claim = async (id) => { try { const r = await api('POST', '/api/dex/claim', { id }); setUser(r); v = r.dex; closeSheet(); showGot(r.got, '도감 보상!', () => { draw(); }); } catch (e) { toast(e.message); } };
     bg.querySelector('#dx-all')?.addEventListener('click', () => claim('all'));
@@ -254,7 +319,7 @@ async function friendGiftPanel(el, friends) {
     el.querySelectorAll('[data-fg]').forEach((b) => { b.onclick = async () => { try { v = (await api('POST', '/api/fgift/send', { key: b.dataset.fg })).fgift; toast('보냈어요!'); draw(); } catch (e) { toast(e.message); } }; });
     el.querySelector('#fg-shop').onclick = () => {
       const bg = openSheet(`<div class="row" style="margin-bottom:8px"><h2>💝 우정 상점</h2><button class="btn small paper" data-x>닫기</button></div><p class="muted">우정 포인트 ${fmt(v.fp)}점</p>
-        ${v.shop.map((it) => `<div class="adm-row"><b>${it.costume ? costumeSVG(it.costume, 40) : ''}${esc(it.n)}</b><button class="btn small" data-fs="${it.id}" ${v.fp >= it.fp ? '' : 'disabled'}>💝 ${it.fp}</button></div>`).join('')}`);
+        ${v.shop.map((it) => `<div class="adm-row"><b>${it.costume ? skinIcon(it.costume, 40) : ''}${esc(it.n)}</b><button class="btn small" data-fs="${it.id}" ${v.fp >= it.fp ? '' : 'disabled'}>💝 ${it.fp}</button></div>`).join('')}`);
       bg.querySelector('[data-x]').onclick = closeSheet;
       bg.querySelectorAll('[data-fs]').forEach((b) => { b.onclick = async () => { try { const r = await api('POST', '/api/fgift/shop', { id: b.dataset.fs }); setUser(r); v = r.fgift; closeSheet(); showGot(r.got, '교환 완료!', draw); } catch (e) { toast(e.message); } }; });
     };
@@ -262,32 +327,138 @@ async function friendGiftPanel(el, friends) {
   draw();
 }
 
-/* ---------- 코스튬 ---------- */
+/* ---------- 스킨 입히기 / 스킨 도감 ---------- */
+let SKIN_LIST = null;
+const loadSkins = async () => (SKIN_LIST = (await api('GET', '/api/costumes')).list);
+// 미리보기 상자: 누르면 공격·맞기 연출과 소리 (왁뿌말랑왕은 맞을수록 깨짐)
+function bindSkinDemo(root, species, shiny, id) {
+  const box = root.querySelector('.sk-demo'); if (!box) return;
+  let hits = 0;
+  const draw = () => { box.innerHTML = skinArt(monArt(species, shiny), id, { crack: hits }); };
+  root.querySelector('[data-demo=attack]')?.addEventListener('click', () => skinFx(id, 'attack', box));
+  root.querySelector('[data-demo=hit]')?.addEventListener('click', () => { hits = hits >= 6 ? 0 : hits + 1; draw(); skinFx(id, 'hit', box, { hits }); });
+  root.querySelector('[data-demo=enter]')?.addEventListener('click', () => { hits = 0; draw(); skinFx(id, 'enter', box); });
+}
+const demoBtns = () => '<div class="sk-demo-btns"><button class="btn small paper" data-demo="attack">⚔️ 공격</button><button class="btn small paper" data-demo="hit">💥 맞기</button><button class="btn small paper" data-demo="enter">✨ 등장</button></div><p class="muted sk-sound">🔊 소리를 켜고 눌러 보세요</p>';
 async function costumeSheet(mon, after) {
-  let list; try { list = (await api('GET', '/api/costumes')).list; } catch (e) { return toast(e.message); }
-  const sp = G.data.MONSTERS[mon.species];
-  const draw = (preview = mon.costume || '') => {
-    const bg = openSheet(`<div class="row" style="margin-bottom:8px"><h2>👑 코스튬</h2><button class="btn small paper" data-x>닫기</button></div>
-      <div class="cos-prev${mon.shiny ? ' is-shiny' : ''}" id="cos-prev" style="--tc:${G.data.TYPES[sp.types[0]].c}">${cosArt(monArt(mon.species, mon.shiny), preview, { crack: 0 })}</div>
-      ${preview === 'wakppu' ? '<p class="muted" style="text-align:center;margin:-4px 0 8px">👆 그림을 톡톡 눌러 왁뿌볼을 부숴 보세요 (소리 켜기!)</p>' : ''}
-      <div class="cos-grid"><button class="cos-it ${!preview ? 'on' : ''}" data-cos=""><span class="cos-none">✕</span><b>벗기</b></button>
-        ${list.map((c) => `<button class="cos-it ${preview === c.id ? 'on' : ''} ${c.own ? 'own' : ''}" data-cos="${c.id}">${costumeSVG(c.id, 64)}<b>${esc(c.n)}</b><small>${c.only ? `${esc(G.data.MONSTERS[c.only].n)} 전용 · ` : ''}${c.own ? '보유' : c.price ? `${fmt(c.price)}GP` : esc(c.d || '보상')}</small></button>`).join('')}</div>
-      ${(() => { const c = list.find((x) => x.id === preview); if (!c) return ''; if (c.d) return `<p class="muted" style="margin:8px 0">${esc(c.d)}</p>`; return ''; })()}
-      <div class="sc-pay">${(() => { const c = list.find((x) => x.id === preview);
-        if (!preview) return '<button class="btn wide" id="cos-wear">코스튬 벗기</button>';
-        if (c?.only && c.only !== mon.species) return `<p class="muted">${esc(G.data.MONSTERS[c.only].n)} 전용 코스튬이라 이 골목몬은 입을 수 없어요.${c.own ? '' : ' (상점에서 미리 사 둘 수는 있어요)'}</p>${c.own ? '' : `${c.price ? `<button class="btn" id="cos-buy">${ICON.gp(18)} ${fmt(c.price)}GP에 사기</button>` : ''}${c.jelly ? `<button class="btn mint" id="cos-jelly">🍮 젤리 ${c.jelly}개로 사기</button>` : ''}`}`;
-        if (c?.own) return `<button class="btn wide" id="cos-wear">${esc(c.n)} 입히기</button>`;
-        return `${c?.price ? `<button class="btn" id="cos-buy">${ICON.gp(18)} ${fmt(c.price)}GP에 사기</button>` : ''}${c?.jelly ? `<button class="btn mint" id="cos-jelly">🍮 젤리 ${c.jelly}개로 사기</button>` : ''}${!c?.price && !c?.jelly ? '<p class="muted">보상으로만 얻을 수 있어요.</p>' : ''}`; })()}</div>`);
+  try { await loadSkins(); } catch (e) { return toast(e.message); }
+  const sp = G.data.MONSTERS[mon.species], mine = SKIN_LIST.filter((c) => c.only === mon.species);
+  const draw = (pick = mon.costume || mine[0]?.id || '') => {
+    const c = mine.find((x) => x.id === pick);
+    const bg = openSheet(`<div class="row" style="margin-bottom:8px"><h2>🎨 ${esc(sp.n)} 스킨</h2><button class="btn small paper" data-x>닫기</button></div>
+      ${mine.length ? `<div class="sk-demo cos-prev${mon.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${pick ? skinArt(monArt(mon.species, mon.shiny), pick) : monArt(mon.species, mon.shiny)}</div>
+        ${pick ? demoBtns() : ''}
+        <div class="cos-grid"><button class="cos-it ${!pick ? 'on' : ''}" data-sk=""><span class="cos-none">✕</span><b>기본 모습</b></button>
+          ${mine.map((x) => `<button class="cos-it ${pick === x.id ? 'on' : ''} ${x.own ? 'own' : ''}" data-sk="${x.id}">${skinIcon(x.id, 64)}<b>${esc(x.n)}</b><small>${x.own ? '보유' : `${fmt(x.price)}GP`}</small></button>`).join('')}</div>
+        ${c ? `<p class="sk-d">${esc(c.d)}</p><ul class="sk-fx">${(c.fx || []).map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}
+        <div class="sc-pay">${!pick ? (mon.costume ? '<button class="btn wide" id="sk-wear">기본 모습으로 돌리기</button>' : '') : c?.own ? (mon.costume === pick ? '<p class="muted">지금 입고 있어요!</p>' : `<button class="btn wide" id="sk-wear">${esc(c.n)} 입히기</button>`) : `${c?.price ? `<button class="btn" id="sk-buy">${ICON.gp(18)} ${fmt(c.price)}GP에 사기</button>` : ''}${c?.jelly ? `<button class="btn mint" id="sk-jelly">🍮 젤리 ${c.jelly}개로 사기</button>` : ''}`}</div>`
+      : `<p class="muted" style="margin:10px 0">${esc(sp.n)}은(는) 아직 스킨이 없어요. 스킨 공모전에 직접 만들어 내 보세요! 우승작은 진짜 스킨으로 나와요.</p><button class="btn wide" id="sk-contest">🎨 스킨 공모전 가기</button>`}
+      <button class="btn small paper" id="sk-all" style="margin-top:8px;width:100%">다른 골목몬 스킨 둘러보기</button>`);
     bg.querySelector('[data-x]').onclick = closeSheet;
-    bg.querySelectorAll('[data-cos]').forEach((b) => { b.onclick = () => { closeSheet(); draw(b.dataset.cos); }; });
-    bg.querySelector('#cos-wear')?.addEventListener('click', async () => { try { setUser(await api('POST', '/api/costume/wear', { uid: mon.uid, id: preview })); mon.costume = preview || undefined; closeSheet(); toast(preview ? '입혔어요!' : '벗겼어요.'); after?.(); } catch (e) { toast(e.message); } });
-    const buy = async (pay) => { try { const r = await api('POST', '/api/costume/buy', { id: preview, pay }); setUser(r); list = (await api('GET', '/api/costumes')).list; closeSheet(); showGot(r.got, '코스튬을 샀어요!', () => draw(preview)); } catch (e) { toast(e.message); } };
-    if (preview === 'wakppu') { let hits = 0; const box = bg.querySelector('#cos-prev'); box.style.cursor = 'pointer'; box.onclick = () => { hits = hits >= 6 ? 0 : hits + 1; box.innerHTML = cosArt(monArt(mon.species, mon.shiny), 'wakppu', { crack: hits }); box.classList.remove('wax-hit'); void box.offsetWidth; box.classList.add('wax-hit'); if (hits) { waxCrunch(hits >= 6 ? 1.3 : 1); waxShards(box, hits >= 6 ? 18 : 9); } }; }
-    bg.querySelector('#cos-buy')?.addEventListener('click', () => buy('gp'));
-    bg.querySelector('#cos-jelly')?.addEventListener('click', () => buy('jelly'));
+    bg.querySelectorAll('[data-sk]').forEach((b) => { b.onclick = () => { closeSheet(); draw(b.dataset.sk); }; });
+    if (pick) bindSkinDemo(bg, mon.species, mon.shiny, pick);
+    bg.querySelector('#sk-wear')?.addEventListener('click', async () => { try { setUser(await api('POST', '/api/costume/wear', { uid: mon.uid, id: pick })); mon.costume = pick || undefined; closeSheet(); toast(pick ? '스킨을 입혔어요!' : '기본 모습으로 돌렸어요.'); after?.(); } catch (e) { toast(e.message); } });
+    const buy = async (pay) => { try { const r = await api('POST', '/api/costume/buy', { id: pick, pay }); setUser(r); await loadSkins(); closeSheet(); showGot(r.got, '스킨을 샀어요!', () => { mine.splice(0, mine.length, ...SKIN_LIST.filter((x) => x.only === mon.species)); draw(pick); }); } catch (e) { toast(e.message); } };
+    bg.querySelector('#sk-buy')?.addEventListener('click', () => buy('gp'));
+    bg.querySelector('#sk-jelly')?.addEventListener('click', () => buy('jelly'));
+    bg.querySelector('#sk-contest')?.addEventListener('click', () => { closeSheet(); showSkinContest(); });
+    bg.querySelector('#sk-all').onclick = () => { closeSheet(); showSkins(() => { showBox(); }); };
   };
   draw();
 }
+const skinSheet = costumeSheet;
+// 스킨 도감: 모든 스킨 둘러보기 + 미리 듣기 + 사기
+async function showSkins(back = showLobby) {
+  G.screen = 'skins'; app.className = '';
+  app.innerHTML = `${topbar('🎨 스킨')}<p class="wait">불러오는 중…</p>`; app.querySelector('#back').onclick = back;
+  try { await loadSkins(); } catch (e) { return toast(e.message); }
+  const draw = () => {
+    app.innerHTML = `${topbar('🎨 스킨')}<p class="muted" style="margin:0 4px 10px">스킨은 골목몬마다 전용이에요. 외형이 바뀌고, 공격·맞기·등장할 때 전용 이펙트와 소리가 나요. 그림을 눌러 미리 보세요!</p>
+      ${SKIN_LIST.map((c) => `<section class="panel sk-card" data-id="${c.id}"><div class="sk-row"><div class="sk-demo cos-prev" style="--tc:${G.data.TYPES[G.data.MONSTERS[c.only].types[0]].c}">${skinArt(monArt(c.only, false), c.id)}</div>
+        <div class="sk-info"><b>${esc(c.n)}</b><small>${esc(c.onlyN)} 전용</small><p>${esc(c.d)}</p><ul class="sk-fx">${(c.fx || []).map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
+        ${c.own ? '<em class="sk-own">✓ 보유 · 내 골목몬에서 입혀요</em>' : `<div class="row" style="gap:6px;flex-wrap:wrap">${c.price ? `<button class="btn small" data-buy="${c.id}">${ICON.gp(14)} ${fmt(c.price)}</button>` : ''}${c.jelly ? `<button class="btn small mint" data-jelly="${c.id}">🍮 ${c.jelly}</button>` : ''}</div>`}</div></div>${demoBtns()}</section>`).join('')}
+      <button class="btn wide" id="sk-contest">🎨 스킨 공모전: 내가 만든 스킨 내기</button>`;
+    app.querySelector('#back').onclick = back;
+    app.querySelectorAll('.sk-card').forEach((card) => bindSkinDemo(card, SKIN_LIST.find((c) => c.id === card.dataset.id).only, false, card.dataset.id));
+    const buy = async (id, pay) => { try { const r = await api('POST', '/api/costume/buy', { id, pay }); setUser(r); await loadSkins(); showGot(r.got, '스킨을 샀어요!', draw); } catch (e) { toast(e.message); } };
+    app.querySelectorAll('[data-buy]').forEach((b) => { b.onclick = () => buy(b.dataset.buy, 'gp'); });
+    app.querySelectorAll('[data-jelly]').forEach((b) => { b.onclick = () => buy(b.dataset.jelly, 'jelly'); });
+    app.querySelector('#sk-contest').onclick = () => showSkinContest(() => showSkins(back));
+  };
+  draw();
+}
+
+/* ---------- 스킨 공모전 ---------- */
+async function showSkinContest(back = showEvents) {
+  G.screen = 'skincontest'; app.className = '';
+  app.innerHTML = `${topbar('🎨 스킨 공모전')}<p class="wait">불러오는 중…</p>`; app.querySelector('#back').onclick = back;
+  let v; try { v = await api('GET', '/api/skincontest'); } catch (e) { return toast(e.message); }
+  let tab = 'all';
+  const img = (e, n = 1) => `/api/skincontest/img?id=${e.id}&n=${n}&t=${e.editedAt || e.at}`;
+  const draw = () => {
+    const i = v.info, mine = v.list.filter((e) => e.mine), list = tab === 'mine' ? mine : v.list;
+    app.innerHTML = `${topbar('🎨 스킨 공모전')}
+      <section class="skc-hero"><s aria-hidden="true"></s><small>EVENT · ${dateStr(i.start)} ~ ${dateStr(i.ends)}</small><h2>골목몬 스킨 공모전</h2>
+        <p>좋아하는 골목몬의 <b>전용 스킨</b>을 디자인해 주세요! 스킨은 꼭 <b>외형 변화 · 이펙트 · 사운드</b> 세 가지가 있어야 해요. 우승작은 실제 게임에 스킨으로 출시되고, 만든 사람에게 그 스킨을 드려요.</p>
+        <p class="muted" style="color:#fffc">한 사람당 ${i.perUser}개 · 지금까지 ${i.count}개 · 마음에 드는 작품에 ❤️를 눌러 주세요</p>
+        ${i.closed ? '<b class="skc-closed">접수 마감</b>' : mine.length < i.perUser ? '<button class="btn wide" id="skc-new">✏️ 스킨 내기</button>' : '<p>최대 개수까지 냈어요. 고치거나 지우고 다시 낼 수 있어요.</p>'}</section>
+      <div class="tabs styletabs">${[['all', `전체 ${v.list.length}`], ['mine', `내 작품 ${mine.length}`]].map(([k, n]) => `<button data-tab="${k}" aria-selected="${tab === k}">${n}</button>`).join('')}</div>
+      ${list.map((e) => `<article class="skc-e ${e.winner ? 'win' : ''}">${e.winner ? '<em class="ct-win">🏆 출시 확정</em>' : ''}
+        <div class="skc-imgs"><img src="${img(e)}" alt="${esc(e.name)} 스킨" loading="lazy">${e.img2 ? `<img src="${img(e, 2)}" alt="변화한 모습" loading="lazy">` : ''}</div>
+        <div class="skc-b"><h3>${esc(e.name)} <small>· ${esc(G.data.MONSTERS[e.species]?.n || e.species)} 전용</small></h3><small class="muted">${esc(e.user)} · ${dateStr(e.at)}${e.editedAt ? ' (수정)' : ''}</small>
+          <dl><dt>👕 외형</dt><dd>${esc(e.look)}</dd><dt>✨ 이펙트</dt><dd>${esc(e.fx)}</dd><dt>🔊 사운드</dt><dd>${esc(e.sound)}</dd></dl>
+          <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn small ${e.liked ? '' : 'paper'}" data-like="${e.id}" ${e.mine ? 'disabled' : ''}>❤️ ${e.likes}</button>
+            ${e.mine && !i.closed ? `<button class="btn small paper" data-edit="${e.id}">고치기</button>` : ''}${(e.mine && !i.closed) || v.dev ? `<button class="btn small paper" data-del="${e.id}">지우기</button>` : ''}
+            ${v.dev ? `<button class="btn small ${e.winner ? 'paper' : ''}" data-win="${e.id}">${e.winner ? '우승 취소' : '🏆 우승'}</button>` : ''}</div></div></article>`).join('') || '<section class="panel"><p class="muted">아직 작품이 없어요. 첫 번째 스킨을 내 보세요!</p></section>'}`;
+    app.querySelector('#back').onclick = back;
+    app.querySelectorAll('[data-tab]').forEach((b) => { b.onclick = () => { tab = b.dataset.tab; draw(); }; });
+    app.querySelector('#skc-new')?.addEventListener('click', () => skinContestForm(null, (nv) => { v = nv; tab = 'mine'; draw(); }, () => showSkinContest(back)));
+    const post = async (path, body, msg) => { try { v = await api('POST', path, body); if (msg) toast(msg); draw(); } catch (e) { toast(e.message); } };
+    app.querySelectorAll('[data-like]').forEach((b) => { b.onclick = () => post('/api/skincontest/like', { id: b.dataset.like }); });
+    app.querySelectorAll('[data-del]').forEach((b) => { b.onclick = () => { if (confirm('이 작품을 지울까요?')) post('/api/skincontest/delete', { id: b.dataset.del }, '지웠어요.'); }; });
+    app.querySelectorAll('[data-win]').forEach((b) => { b.onclick = () => post('/api/skincontest/winner', { id: b.dataset.win }); });
+    app.querySelectorAll('[data-edit]').forEach((b) => { b.onclick = () => skinContestForm(v.list.find((e) => e.id === b.dataset.edit), (nv) => { v = nv; draw(); }, () => showSkinContest(back)); });
+  };
+  draw();
+}
+function skinContestForm(old, done, back) {
+  G.screen = 'skincontest-form';
+  const COLS = ['#1a1433', '#ffffff', '#E8402C', '#FF8A00', '#FFD23F', '#4CD964', '#2F7DE1', '#7FB8A4', '#9A4FB8', '#F27FA5', '#A9713A', '#7C8798'];
+  const pad = (id) => `<div class="pad" id="${id}"><canvas aria-label="그림판"></canvas>
+    <div class="pad-tools">${COLS.map((c, i) => `<button type="button" class="pc ${i ? '' : 'on'}" data-col="${c}" style="--c:${c}" aria-label="색"></button>`).join('')}</div>
+    <div class="pad-tools">${[3, 6, 12, 22].map((n) => `<button type="button" class="ps ${n === 6 ? 'on' : ''}" data-size="${n}" aria-label="굵기 ${n}"><i style="width:${n / 1.4 + 2}px;height:${n / 1.4 + 2}px"></i></button>`).join('')}
+      <button type="button" class="pt" data-tool="erase">지우개</button><button type="button" class="pt" data-tool="undo">되돌리기</button><button type="button" class="pt" data-tool="clear">전부 지우기</button>
+      <button type="button" class="pt pfile" data-tool="photo">📷 사진 넣기</button><input type="file" accept="image/*" class="vh"></div></div>`;
+  const ids = Object.keys(G.data.MONSTERS).filter((id) => !(G.data.BANNED || []).includes(id));
+  app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>${old ? '스킨 고치기' : '스킨 내기'}</h1></div>
+    <form id="skc-f">
+      <section class="panel"><h2>1. 어떤 골목몬의 스킨인가요?</h2><select name="species" required><option value="">골목몬 고르기</option>${ids.map((id) => `<option value="${id}" ${old?.species === id ? 'selected' : ''}>${esc(G.data.MONSTERS[id].n)}</option>`).join('')}</select>
+        <div class="skc-ref" id="skc-ref"></div>
+        <input name="name" maxlength="14" placeholder="스킨 이름 (예: 왁뿌말랑왕)" value="${esc(old?.name || '')}" required></section>
+      <section class="panel"><h2>2. 스킨 그림 (외형)</h2><p class="muted" style="font-size:13px">스킨을 입은 모습을 그려 주세요. 사진을 넣고 그 위에 그려도 돼요.${old ? ' 비워 두면 예전 그림 그대로예요.' : ''}</p>${pad('pad-1')}</section>
+      <section class="panel"><h2>3. 변화한 모습 (선택)</h2><p class="muted" style="font-size:13px">맞거나 공격할 때 모습이 바뀐다면 그 모습을 그려 주세요. (예: 왁스 껍질이 깨진 모습)</p>${pad('pad-2')}</section>
+      <section class="panel"><h2>4. 스킨 설명 (셋 다 필수)</h2>
+        <label class="skc-l">👕 외형 변화<textarea name="look" maxlength="400" rows="3" placeholder="어떻게 생겼는지, 맞으면 어떻게 바뀌는지">${esc(old?.look || '')}</textarea></label>
+        <label class="skc-l">✨ 이펙트<textarea name="fx" maxlength="400" rows="3" placeholder="공격·맞기·등장할 때 어떤 효과가 나는지">${esc(old?.fx || '')}</textarea></label>
+        <label class="skc-l">🔊 사운드<textarea name="sound" maxlength="400" rows="3" placeholder="어떤 소리가 나는지 (예: 바삭바삭 왁스 깨지는 ASMR)">${esc(old?.sound || '')}</textarea></label></section>
+      <button class="btn wide" id="skc-send">${old ? '고친 내용 저장' : '공모전에 내기'}</button></form>`;
+  app.querySelector('#back').onclick = back;
+  const p1 = drawPad(app.querySelector('#pad-1')), p2 = drawPad(app.querySelector('#pad-2'));
+  const sel = app.querySelector('[name=species]'), ref = app.querySelector('#skc-ref');
+  const showRef = () => { ref.innerHTML = sel.value ? `<span>참고: 지금 모습</span>${monArt(sel.value)}` : ''; };
+  sel.onchange = showRef; showRef();
+  app.querySelector('#skc-f').onsubmit = async (e) => {
+    e.preventDefault(); const f = e.target, btn = app.querySelector('#skc-send');
+    if (!old && !p1.used()) return toast('스킨 그림을 그려 주세요.');
+    btn.disabled = true; btn.textContent = '올리는 중…';
+    try {
+      const r = await api('POST', '/api/skincontest', { id: old?.id, species: f.species.value, name: f.name.value, look: f.look.value, fx: f.fx.value, sound: f.sound.value, image: p1.used() ? p1.data() : '', image2: p2.used() ? p2.data() : '' });
+      toast(old ? '고쳤어요!' : '공모전에 냈어요! 🎉'); done(r);
+    } catch (err) { toast(err.message); btn.disabled = false; btn.textContent = old ? '고친 내용 저장' : '공모전에 내기'; }
+  };
+}
+if (typeof EVENTS !== 'undefined') EVENTS.unshift({ id: 'skincontest', title: '🎨 스킨 공모전', period: '11월 15일 ~ 11월 29일', desc: '골목몬 전용 스킨(외형·이펙트·사운드)을 디자인해 주세요! 우승작은 실제 스킨으로 출시돼요.', ends: Date.parse('2026-11-29T23:59:59+09:00'), open: () => showSkinContest() });
+
 
 /* ---------- 주간 토너먼트 ---------- */
 async function showTourney(back = showLobby) {
@@ -339,16 +510,16 @@ async function showMallang(back = showEvents) {
   let v; try { v = (await api('GET', '/api/event')).event; } catch (e) { return toast(e.message); }
   const draw = () => {
     app.innerHTML = `${topbar('🍮 말랑말랑 축제')}
-      <section class="ml-hero"><s aria-hidden="true"></s><div class="ml-crown">${costumeSVG('wakppu', 150)}</div><small>기간 한정 이벤트 · ${dateStr(v.start)} ~ ${dateStr(v.end - 1)}</small><h2>말랑말랑 축제</h2><p>${esc(v.d)}</p>
+      <section class="ml-hero"><s aria-hidden="true"></s><div class="ml-crown">${skinIcon('wakppu', 150)}</div><small>기간 한정 이벤트 · ${dateStr(v.start)} ~ ${dateStr(v.end - 1)}</small><h2>말랑말랑 축제</h2><p>${esc(v.d)}</p>
         <div class="ml-jelly"><b>🍮 ${fmt(v.jelly)}</b><small>오늘 대전으로 ${v.today}/${v.dailyCap}개 · 매일 첫 접속 +${v.login}</small></div>
         <p class="muted" style="color:#fff9">친구 대전 승 4·패 2 · 태그·레이드 3·1 · 연습 2·1</p></section>
-      <section class="panel"><h2>🛍️ 이벤트 상점</h2>${v.shop.map((it) => `<div class="ml-item">${it.costume ? costumeSVG(it.costume, 54) : '<span class="ml-ic">🎁</span>'}<div><b>${esc(it.n)}</b><small>${it.left !== null ? `남은 교환 ${it.left}번` : ''}</small></div>${it.own ? '<em>✓ 보유</em>' : `<button class="btn small" data-eb="${it.id}" ${v.live && v.jelly >= it.jelly && (it.left === null || it.left > 0) ? '' : 'disabled'}>🍮 ${it.jelly}</button>`}</div>`).join('')}</section>`;
+      <section class="panel"><h2>🛍️ 이벤트 상점</h2>${v.shop.map((it) => `<div class="ml-item">${it.costume ? skinIcon(it.costume, 54) : '<span class="ml-ic">🎁</span>'}<div><b>${esc(it.n)}</b><small>${it.left !== null ? `남은 교환 ${it.left}번` : ''}</small></div>${it.own ? '<em>✓ 보유</em>' : `<button class="btn small" data-eb="${it.id}" ${v.live && v.jelly >= it.jelly && (it.left === null || it.left > 0) ? '' : 'disabled'}>🍮 ${it.jelly}</button>`}</div>`).join('')}</section>`;
     app.querySelector('#back').onclick = back;
     app.querySelectorAll('[data-eb]').forEach((b) => { b.onclick = async () => { try { const r = await api('POST', '/api/event/buy', { id: b.dataset.eb }); setUser(r); v = r.event; showGot(r.got, '교환 완료!', draw); } catch (e) { toast(e.message); } }; });
   };
   draw();
 }
-if (typeof EVENTS !== 'undefined') EVENTS.unshift({ id: 'mallang', title: '🍮 말랑말랑 축제', period: '11월 15일 ~ 11월 30일', desc: '대전하고 말랑 젤리를 모아 한정 코스튬 「왁뿌말랑왕」으로 바꿔요!', ends: Date.parse('2026-12-01T00:00:00+09:00') - 1, open: () => showMallang() });
+if (typeof EVENTS !== 'undefined') EVENTS.unshift({ id: 'mallang', title: '🍮 말랑말랑 축제', period: '11월 15일 ~ 11월 30일', desc: '대전하고 말랑 젤리를 모아 말랑왕 전용 스킨 「왁뿌말랑왕」으로 바꿔요!', ends: Date.parse('2026-12-01T00:00:00+09:00') - 1, open: () => showMallang() });
 
 /* ---------- 푸시 알림 ---------- */
 const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;

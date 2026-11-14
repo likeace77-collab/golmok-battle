@@ -275,10 +275,11 @@ function showBox() {
   const order = Object.keys(G.data.MONSTERS);
   const mons = [...G.user.mons].sort((a, b) => order.indexOf(a.species) - order.indexOf(b.species) || a.at - b.at);
   const uniq = new Set(mons.map((m) => m.species)).size;
-  app.innerHTML = `${topbar('내 골목몬')}<p class="box-sum">${mons.length}마리 · ${uniq}종 / ${order.filter((id) => !(G.data.BANNED || []).includes(id)).length}종</p>
-    <div class="box-grid">${mons.map((m) => { const sp = G.data.MONSTERS[m.species]; return `<button class="box-card${m.shiny ? ' is-shiny' : ''}" data-uid="${m.uid}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? '<em class="shiny-dot" title="이로치">✨</em>' : ''}${m.plus ? `<em class="plus-dot">+${m.plus}</em>` : ''}${cosArt(monArt(m.species, m.shiny), m.costume)}<b>${esc(sp.n)}</b>${G.user.stones.includes(m.species) ? `<span class="box-stone">${stoneSVG(m.species, 26)}</span>` : ''}</button>`; }).join('') || '<p class="wait">아직 골목몬이 없어요. 스카우트로 모아 보세요!</p>'}</div>`;
+  app.innerHTML = `${topbar('내 골목몬')}<button class="btn small paper box-skins" id="go-skins">🎨 스킨 둘러보기</button><p class="box-sum">${mons.length}마리 · ${uniq}종 / ${order.filter((id) => !(G.data.BANNED || []).includes(id)).length}종</p>
+    <div class="box-grid">${mons.map((m) => { const sp = G.data.MONSTERS[m.species]; return `<button class="box-card${m.shiny ? ' is-shiny' : ''}" data-uid="${m.uid}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? '<em class="shiny-dot" title="이로치">✨</em>' : ''}${m.plus ? `<em class="plus-dot">+${m.plus}</em>` : ''}${skinArt(monArt(m.species, m.shiny), m.costume)}<b>${esc(sp.n)}</b>${G.user.stones.includes(m.species) ? `<span class="box-stone">${stoneSVG(m.species, 26)}</span>` : ''}</button>`; }).join('') || '<p class="wait">아직 골목몬이 없어요. 스카우트로 모아 보세요!</p>'}</div>`;
   app.querySelector('#back').onclick = showLobby;
   app.querySelectorAll('[data-uid]').forEach((b) => { b.onclick = () => openMon(b.dataset.uid, showBox); });
+  app.querySelector('#go-skins')?.addEventListener('click', () => showSkins(showBox));
 }
 // 골목몬 한 마리: 기술 바꾸기(500GP), 메가스톤 사기(상점 가격)
 // 강화 칸: 같은 골목몬(덱·원정·교환에 안 걸린 것)을 먹여 +1
@@ -307,9 +308,9 @@ function openMon(uid, after) {
   if (!m) return;
   const sp = G.data.MONSTERS[m.species], stone = G.user.stones.includes(m.species);
   const bg = openSheet(`<div class="row" style="margin-bottom:8px"><h2>${esc(sp.n)}</h2><button class="btn small paper" data-x>닫기</button></div>
-    <div class="row" style="align-items:flex-start;margin-bottom:10px"><div class="detail-pic${m.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? SHINY_TAG : ''}${cosArt(monArt(m.species, m.shiny), m.costume)}</div>
+    <div class="row" style="align-items:flex-start;margin-bottom:10px"><div class="detail-pic${m.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? SHINY_TAG : ''}${skinArt(monArt(m.species, m.shiny), m.costume)}</div>
       <div style="flex:1;min-width:0"><p style="margin-bottom:4px">${typesOf(m.species)}</p>${Object.entries(sp.base).map(([k, v]) => `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${v}</span><i style="width:${Math.min(100, v / 1.3)}%"></i></div>`).join('')}</div></div>
-    <button class="btn small cos-open" id="cos-open">👑 코스튬 ${m.costume ? '바꾸기' : '입히기'}</button>
+    <button class="btn small cos-open" id="cos-open">🎨 스킨${m.costume ? ' 바꾸기' : ''}</button>
     ${sp.trait ? `<p class="trait"><b>특성 ${sp.trait.n}</b> ${sp.trait.d}</p>` : ''}
     ${m.shiny ? `<section class="shiny-forms"><h3 class="dex-h">✨ 이로치 변신 모습</h3><div><figure class="is-shiny">${monArt(m.species, true, '', true)}<figcaption>메가진화 · ${esc(sp.mega.n)}</figcaption></figure>${typeof GMAX_ART !== 'undefined' && GMAX_ART[m.species] ? `<figure class="is-shiny">${shinify(gmaxSVG(m.species), m.species)}<figcaption>거다이맥스</figcaption></figure>` : ''}</div></section>` : ''}
     ${enhanceBox(m)}

@@ -312,6 +312,7 @@ const deckView = (u) => u.decks.map((d) => ({ name: d.name, team: d.team.map((t)
 // 예전의 팀 하나짜리 계정을 덱 구조로 옮깁니다.
 function migrate() {
   let changed = false;
+  X.fix(); // 스킨 이전 등 (처음 켤 때는 아직 init 전이라 그냥 넘어감)
   for (const u of Object.values(db.users)) {
     for (const [k, n] of Object.entries(Data.AVATAR_OPTIONS)) if (!Number.isInteger(u.avatar[k]) || u.avatar[k] < 0 || u.avatar[k] >= n || !ownsPart(u, k, u.avatar[k])) { u.avatar[k] = 0; changed = true; }
     if (!u.stats) { u.stats = newStats(); changed = true; }
@@ -641,6 +642,7 @@ async function api(req, res, url) {
     return json(res, 200, { user: publicUser(user) });
   }
   if (route.endsWith(' /api/contest') || route.startsWith('POST /api/contest/')) return contestApi(req, res, route, auth, user);
+  if (route.includes(' /api/skincontest')) return skinContestApi(req, res, route, auth, user, new URL(req.url, 'http://x'));
   return progressApi(req, res, route, auth, user);
 }
 
@@ -799,6 +801,51 @@ const intIn = (v, lo, hi) => { const n = Math.round(Number(v)); return Number.is
 const statsIn = (o, hi) => Object.fromEntries(CT_STATS.map((k) => [k, intIn(o?.[k], 0, hi)]));
 const imageIn = (v) => (typeof v === 'string' && v ? v : '');
 const badImage = (v) => v && (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(v) || v.length > MAX_IMAGE);
+/* ---------- 스킨 공모전: 골목몬 전용 스킨(외형·이펙트·사운드)을 그려서 내기 ---------- */
+const SKIN_CONTEST = { title: '스킨 공모전', start: Date.parse('2026-11-15T00:00:00+09:00'), ends: Date.parse('2026-11-29T23:59:59+09:00') };
+const SKIN_PER_USER = 3;
+function skinEntryView(e, key, full) { return { id: e.id, user: e.user, mine: e.key === key, species: e.species, name: e.name, look: e.look, fx: e.fx, sound: e.sound, at: e.at, editedAt: e.editedAt, winner: !!e.winner, likes: (e.likes || []).length, liked: (e.likes || []).includes(key), img2: !!e.image2, ...(full ? {} : {}) }; }
+async function skinContestApi(req, res, route, auth, user, url) {
+  const dev = isDev(user), closed = Date.now() > SKIN_CONTEST.ends;
+  const list = (contest.skins ||= []);
+  const view = () => ({ info: { ...SKIN_CONTEST, closed, count: list.length, perUser: SKIN_PER_USER }, dev,
+    list: [...list].sort((a, b) => (b.winner ? 1 : 0) - (a.winner ? 1 : 0) || (b.likes || []).length - (a.likes || []).length || b.at - a.at).map((e) => skinEntryView(e, auth.key)) });
+  if (route === 'GET /api/skincontest') return json(res, 200, view());
+  if (route === 'GET /api/skincontest/img') {
+    const e = list.find((x) => x.id === url.searchParams.get('id')); const img = e && (url.searchParams.get('n') === '2' ? e.image2 : e.image);
+    const m = img && /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/.exec(img);
+    if (!m) return json(res, 404, { error: '그림이 없어요.' });
+    res.writeHead(200, { 'Content-Type': m[1], 'Cache-Control': 'private, max-age=600' }); return res.end(Buffer.from(m[2], 'base64'));
+  }
+  const body = await readBody(req);
+  const cut = (v, n) => String(v ?? '').trim().slice(0, n);
+  if (route === 'POST /api/skincontest') {
+    if (closed) return json(res, 403, { error: '스킨 공모전 접수가 끝났어요.' });
+    const old = body.id ? list.find((x) => x.id === String(body.id)) : null;
+    if (body.id && !(old && old.key === auth.key)) return json(res, 403, { error: '내 출품작만 고칠 수 있어요.' });
+    if (!old && list.filter((x) => x.key === auth.key).length >= SKIN_PER_USER) return json(res, 400, { error: `한 사람당 ${SKIN_PER_USER}개까지 낼 수 있어요.` });
+    if (!old && list.length >= 300) return json(res, 400, { error: '출품작이 너무 많아 더 받을 수 없어요.' });
+    const species = String(body.species || '');
+    if (!Data.MONSTERS[species] || Data.BANNED.includes(species)) return json(res, 400, { error: '스킨을 입힐 골목몬을 골라 주세요.' });
+    const name = cut(body.name, 14), look = cut(body.look, 400), fx = cut(body.fx, 400), sound = cut(body.sound, 400);
+    if (!name) return json(res, 400, { error: '스킨 이름을 넣어 주세요.' });
+    if (!look || !fx || !sound) return json(res, 400, { error: '외형 변화, 이펙트, 사운드를 모두 적어 주세요. (스킨은 셋 다 있어야 해요)' });
+    const image = imageIn(body.image), image2 = imageIn(body.image2);
+    if (!image && !old?.image) return json(res, 400, { error: '스킨 그림을 그려 주세요.' });
+    if (badImage(image) || badImage(image2)) return json(res, 400, { error: '그림이 너무 크거나 형식이 맞지 않아요.' });
+    const f = { species, name, look, fx, sound, ...(image ? { image } : {}), ...(image2 ? { image2 } : body.clear2 ? { image2: '' } : {}) };
+    if (old) Object.assign(old, f, { editedAt: Date.now() });
+    else list.push({ id: crypto.randomBytes(6).toString('hex'), key: auth.key, user: user.name, at: Date.now(), likes: [], ...f });
+    saveContest();
+    return json(res, 200, view());
+  }
+  const e = list.find((x) => x.id === String(body.id ?? ''));
+  if (!e) return json(res, 404, { error: '없는 출품작이에요.' });
+  if (route === 'POST /api/skincontest/like') { e.likes ||= []; const i = e.likes.indexOf(auth.key); if (i >= 0) e.likes.splice(i, 1); else if (e.key !== auth.key) e.likes.push(auth.key); else return json(res, 400, { error: '내 작품에는 좋아요를 못 눌러요.' }); saveContest(); return json(res, 200, view()); }
+  if (route === 'POST /api/skincontest/delete') { if (!dev && !(e.key === auth.key && !closed)) return json(res, 403, { error: '지울 수 없는 출품작이에요.' }); contest.skins = list.filter((x) => x !== e); saveContest(); return json(res, 200, view()); }
+  if (route === 'POST /api/skincontest/winner') { if (!dev) return json(res, 403, { error: '개발자만 뽑을 수 있어요.' }); e.winner = !e.winner; saveContest(); return json(res, 200, view()); }
+  return json(res, 404, { error: '없는 경로입니다.' });
+}
 async function contestApi(req, res, route, auth, user) {
   const dev = isDev(user), closed = Date.now() > CONTEST.ends;
   const mine = (e) => e.key === auth.key;

@@ -243,7 +243,7 @@ const Battle = (() => {
   // 루미나·실비아: 각성 단계 오라
   const AWAKEN = { lumina: true, silvia: true };
   // 골목몬 그림: 이로치면 메가진화·거다이맥스·옷 단계까지 이로치 색으로
-  const art = (m, cls = '') => { const svg = m.gmax ? gmaxSVG(m.species, cls) : monsterSVG(m.species, cls, m.mega, m.hits, m.tier); return cosArt(m.shiny ? shinify(svg, m.species) : svg, m.gmax ? '' : m.costume, { crack: m.hits || 0, big: !!m.mega }); };
+  const art = (m, cls = '') => { const svg = m.gmax ? gmaxSVG(m.species, cls) : monsterSVG(m.species, cls, m.mega, m.hits, m.tier); return skinArt(m.shiny ? shinify(svg, m.species) : svg, m.gmax ? '' : m.costume, { crack: m.hits || 0, big: !!m.mega }); };
   const auraClass = (m) => (AWAKEN[m.species] && m.strip ? ` aura-${m.species} aw${m.strip}` : '');
   async function awakenCut(key, m) {
     const sp = G.data.MONSTERS[m.species];
@@ -299,6 +299,7 @@ const Battle = (() => {
     box.className = `mon ${key}${m.mega ? ' mega' : ''}${m.gmax ? ' giant' : ''}${auraClass(m)}`;
     box.innerHTML = art(m);
     if (m.shiny) box.classList.add('is-shiny');
+    if (m.costume && !m.gmax && m.hp > 0 && box.dataset.skinIn !== `${m.species}${m.slot}`) { box.dataset.skinIn = `${m.species}${m.slot}`; setTimeout(() => skinFx(m.costume, 'enter', box, m), 250); }
   }
 
   const dispMon = (key) => (key === 'me' ? mine() : seatOf(key).active);
@@ -373,6 +374,7 @@ const Battle = (() => {
         if (e.z) { await zCinematic(e, key); break; }
         if (e.gmax === 2) { const sc = document.querySelector('.scene'); sc?.classList.add('gmax-quake'); setTimeout(() => sc?.classList.remove('gmax-quake'), 900); }
         trainer(key)?.play('command');
+        { const am = dispMon(key); if (am?.costume && !am.gmax) skinFx(am.costume, 'attack', $(`#m-${key}`), am); }
         await wait(Math.max(760, Fx.play(e.id, key, sideKey(e.target), e)));
         break;
       case 'item': {
@@ -405,9 +407,9 @@ const Battle = (() => {
           }
         }
         if (e.quiet) break;
-        if (e.dmg !== undefined && m.costume === 'wakppu' && e.moveType) { // 왁뿌말랑왕: 맞을 때마다 껍질이 부서짐
-          const box = $(`#m-${key}`), n = m.hits || 0;
-          if (box && n <= 6) { box.innerHTML = art(m, ''); waxCrunch(n >= 6 ? 1.3 : 1); waxShards(box, n >= 6 ? 18 : 10); }
+        if (e.dmg !== undefined && m.costume && !m.gmax && e.moveType) { // 스킨: 맞을 때 이펙트·소리 (왁뿌말랑왕은 껍질이 부서짐)
+          const box = $(`#m-${key}`);
+          if (box) { if (m.costume === 'wakppu' && (m.hits || 0) <= 6) box.innerHTML = art(m, ''); skinFx(m.costume, 'hit', box, m); }
         }
         if (e.dmg !== undefined) {
           if (e.moveType) {
