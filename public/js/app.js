@@ -366,6 +366,7 @@ function renderLobby() {
         <button class="g2b dungeon" id="go-dungeon"><span>🗼</span><b>이벤트 던전</b></button>
         <button class="g2b expe" id="go-expe"><span>🧭</span><b>원정</b>${u.badges.expe ? `<em class="mailbadge">${u.badges.expe}</em>` : ''}</button>
         <button class="g2b chat" id="go-chat"><span>💬</span><b>채팅</b><em class="mailbadge" data-chatbadge hidden></em></button>
+        <button class="g2b casino" id="go-casino"><span>🎰</span><b>도박장</b><small>극악의 대박</small></button>
         <button class="g2b tourney" id="go-tourney"><span>🏆</span><b>토너먼트</b><small>토요일 밤 9시</small></button>
         <button class="g2b news" id="go-news"><span>📢</span><b>소식</b>${u.badges.news ? `<em class="mailbadge">${u.badges.news}</em>` : ''}</button>
         <button class="g2b stats" id="go-stats"><span>📊</span><b>전적</b><small>리플레이</small></button>
@@ -436,6 +437,7 @@ function renderLobby() {
   app.querySelector('#go-rank').onclick = () => showRank();
   app.querySelector('#go-dungeon').onclick = () => showDungeon();
   app.querySelector('#go-raid').onclick = () => showRaid();
+  app.querySelector('#go-casino').onclick = () => showCasino();
   app.querySelector('#go-tourney').onclick = () => showTourney();
   app.querySelector('#go-news').onclick = () => showNews();
   app.querySelector('#news-band')?.addEventListener('click', () => showNews());

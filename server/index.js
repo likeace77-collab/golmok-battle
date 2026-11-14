@@ -10,6 +10,7 @@ const E = require('./engine');
 const P = require('./progress');
 const S = require('./social'); // 친구·길드·채팅·협업 퀘스트
 const WP = require('./push'); // 웹 푸시
+const C = require('./casino'); // 도박장 (게임 재화만)
 const X = require('./extra'); // 공지·관리자·통계·도감 보상·친구 선물·코스튬·이벤트
 const R = require('./rank'); // 랭크전
 const DG = require('./dungeon'); // 이벤트 던전
@@ -660,6 +661,7 @@ async function progressApi(req, res, route, auth, user) {
   if (!user.tutorial) return json(res, 403, { error: '튜토리얼을 먼저 끝내 주세요.', needTutorial: true });
   { const sr = S.api(route, user, auth.key, body); if (sr !== undefined) return done(sr); }
   { const xr = X.api(route, user, auth.key, body); if (xr !== undefined) return done(xr); }
+  if (route.includes(' /api/casino')) { const cr = C.api(route, user, auth.key, body); if (cr !== undefined) return done(cr); }
   if (route === 'POST /api/coupon') return done(useCoupon(user, body.code));
   if (route === 'GET /api/replay') { const r = replayOf(String(new URL(req.url, 'http://x').searchParams.get('id') || '')); return r ? json(res, 200, { replay: r }) : json(res, 404, { error: '리플레이가 없어요. 오래된 기록은 지워져요.' }); }
   if (route === 'GET /api/tourney') return json(res, 200, { tourney: tView(auth.key) });
@@ -1712,6 +1714,7 @@ setInterval(() => {
   migrate();
   db.meta ||= {}; if (!db.meta.vapid) { db.meta.vapid = WP.makeKeys(); save(); } // 푸시 알림 서명 키 (한 번 만들어 계속 씀)
   R.init({ seasonOf: P.seasonOf, grant: P.grant, sendMail });
+  C.init(db, { sysChat: (ch, t) => sysChatAll(t) });
   X.init(db, { keyOf, online, send, toast, publicUser, grant: P.grant, sendMail, isDev, battleCount: () => battles.size, gistInfo: () => ({ ...gistStat, dirty: gistDirty, on: !!GIST_ID, lastOkAgoSec: gistStat.lastOk ? Math.round((Date.now() - gistStat.lastOk) / 1000) : null }), push: (k, m) => typeof pushTo === 'function' && pushTo(k, m) });
   S.init(db, { keyOf, online, send, toast, publicUser, save, grant: P.grant, bump: P.bump, isDev, inBattle, sendMail, fixStyle, seasonOf: P.seasonOf, cosmetic: (kind, id) => Data.COSMETICS[kind]?.find((x) => x.id === id), owns });
   server.listen(PORT, () => console.log(`골목대전 서버 실행 중: http://localhost:${PORT}`));

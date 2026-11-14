@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node server/index.js",
-    "test": "node --test test/engine.test.js"
+    "test": "node --test test/engine.test.js test/casino.test.js"
   },
   "dependencies": {
     "ws": "^8.21.3"
