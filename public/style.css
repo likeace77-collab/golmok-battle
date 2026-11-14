@@ -1725,3 +1725,13 @@ svg[data-shiny] { filter: var(--sf); animation: shinyGlow 2.4s ease-in-out infin
 .it-pick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-height: 55vh; overflow-y: auto; margin: 8px 0; }
 .it-pick button { position: relative; display: grid; justify-items: center; padding: 4px 2px; font: inherit; font-size: 11px; color: var(--ink); background: #fff; border: 2px solid #1a143340; border-radius: 10px; cursor: pointer; }
 .it-pick svg { width: 54px; height: 54px; } .it-pick em { position: absolute; top: 2px; right: 2px; font-style: normal; font-size: 9px; padding: 0 3px; background: #6CF2C2; border-radius: 4px; }
+/* 무료 선물·특가 */
+.free-gift { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 12px; background: linear-gradient(150deg, #fff3b0, #d4f7e6); border: var(--line); border-radius: 14px; box-shadow: 3px 3px 0 var(--ink); }
+.free-gift > div { flex: 1; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; } .free-gift small { flex-basis: 100%; font-size: 11px; color: #6a6480; } .fg-ic { font-size: 34px; }
+.deal-list { display: grid; gap: 10px; margin-bottom: 16px; }
+.deal { position: relative; display: grid; gap: 6px; padding: 12px 10px 10px; font: inherit; color: var(--ink); text-align: left; background: var(--paper); border: var(--line); border-radius: 14px; box-shadow: 3px 3px 0 var(--ink); cursor: pointer; }
+.deal.done { opacity: .55; } .deal-r { display: flex; flex-wrap: wrap; gap: 4px; } .deal-r.big { justify-content: center; margin: 8px 0; }
+.deal-p { display: flex; align-items: center; gap: 8px; justify-content: flex-end; } .deal-p s, .buy-price s { color: #8a8399; }
+.deal-off { position: absolute; top: -10px; left: 10px; padding: 1px 8px; font: 900 12px var(--ui); font-style: normal; color: #fff; background: #ff3a4a; border: 2px solid var(--ink); border-radius: 8px; } .buy .deal-off { position: static; vertical-align: 3px; }
+.deal-off.free { background: linear-gradient(90deg, #ff3e9a, #ffd23f); color: var(--ink); }
+.it-left { font-style: normal; font-size: 11px; color: #6a6480; } .it-item.out { opacity: .5; }

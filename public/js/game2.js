@@ -695,7 +695,7 @@ function showStones(back = showLobby) {
 }
 
 // 상점: 탭마다 물건 칸. 꾸미기는 data.js에서 cond: ['shop', 가격]만 달면 자동으로 진열돼요.
-let shopTab = 'items', SHOP_ITEMS = null;
+let shopTab = 'items', SHOP = null, SHOP_AT = 0; // 상점 오늘 상태 (아이템·한도·무료 선물·특가)
 const SHOP_TABS = [['items', '🛍️ 아이템'], ['stone', '💎 스톤'], ['titles', '🏷️ 칭호'], ['cards', '🃏 카드'], ['pins', '📌 핀']];
 const shopItems = (kind) => G.data.COSMETICS[kind].filter((x) => x.cond?.[0] === 'shop');
 function cosLook(kind, item, big) {
@@ -726,10 +726,18 @@ function showShop(back = showLobby) {
   const again = () => { const y = scrollY; showShop(back); scrollTo(0, y); };
   let body = '';
   if (shopTab === 'items') {
-    if (!SHOP_ITEMS) { api('GET', '/api/shop/items').then((r) => { SHOP_ITEMS = r.items; if (G.screen === 'shop') again(); }).catch((e) => toast(e.message)); }
+    if (!SHOP || Date.now() - SHOP_AT > 60e3) { api('GET', '/api/shop/items').then((r) => { SHOP = r; SHOP_AT = Date.now(); if (G.screen === 'shop' && shopTab === 'items') again(); }).catch((e) => toast(e.message)); }
     const ic = (x, s) => (ICON[x.icon] ? ICON[x.icon](s) : `<span class="it-emo" style="font-size:${s}px">${x.icon}</span>`);
-    body = `<h3 class="st-h">🛍️ 아이템 <small>GP로 사는 아이템</small></h3>
-    <div class="it-grid">${(SHOP_ITEMS || []).map((x) => `<button class="it-item${x.rare ? ' rare' : ''}" data-item="${x.id}">${x.rare ? '<s aria-hidden="true"></s>' : ''}<span class="it-ic">${ic(x, 40)}</span><b>${esc(x.n)}</b><small>${esc(x.d)}</small><span class="st-price">${ICON.gp(14)}${fmt(x.price)}</span></button>`).join('') || '<p class="wait">불러오는 중…</p>'}</div>`;
+    const sh = SHOP, left = sh ? Math.max(0, sh.resets - Date.now()) : 0, hh = Math.floor(left / 36e5), mm = Math.floor((left % 36e5) / 6e4);
+    body = !sh ? '<p class="wait">불러오는 중…</p>' : `
+    <section class="free-gift"><span class="fg-ic">🎁</span><div><b>오늘의 무료 선물</b>${rewardChips(sh.free.r)}<small>${sh.free.premium ? '프리미엄 패스 보유: 하루 2번' : '하루 1번 · 프리미엄 패스가 있으면 2번'} (${sh.free.got}/${sh.free.max})</small></div>
+      <button class="btn small" id="sh-free" ${sh.free.got >= sh.free.max ? 'disabled' : ''}>${sh.free.got >= sh.free.max ? '받음' : '받기'}</button></section>
+    <h3 class="st-h">🔥 오늘의 특가 <small>나만의 특가 · ${hh}시간 ${mm}분 뒤 바뀜</small></h3>
+    <div class="deal-list">${sh.deals.map((d) => `<button class="deal${d.bought ? ' done' : ''}" data-deal="${d.i}" ${d.bought ? 'disabled' : ''}><em class="deal-off${d.off === 100 ? ' free' : ''}">${d.off === 100 ? '무료!' : `${d.off}% 할인`}</em>
+      <div class="deal-r">${rewardChips({ ...d.r, mon: undefined })}${d.r.mon ? '<span class="rw">🎁 랜덤 골목몬</span>' : ''}</div>
+      <div class="deal-p"><s>${fmt(d.value)}</s><span class="st-price">${ICON.gp(14)}${d.price ? fmt(d.price) : '0'}</span>${d.bought ? '<em class="st-ok">구매 완료</em>' : ''}</div></button>`).join('')}</div>
+    <h3 class="st-h">🛍️ 아이템 <small>하루 살 수 있는 수가 정해져 있어요</small></h3>
+    <div class="it-grid">${sh.items.map((x) => `<button class="it-item${x.rare ? ' rare' : ''}${x.left <= 0 ? ' out' : ''}" data-item="${x.id}" ${x.left <= 0 ? 'disabled' : ''}>${x.rare ? '<s aria-hidden="true"></s>' : ''}<span class="it-ic">${ic(x, 40)}</span><b>${esc(x.n)}</b><small>${esc(x.d)}</small><span class="st-price">${ICON.gp(14)}${fmt(x.price)}</span><i class="it-left">오늘 ${x.left}/${x.limit}</i></button>`).join('')}</div>`;
   } else if (shopTab === 'stone') {
     const all = megaIds(), rest = all.filter((id) => !G.user.stones.includes(id)), mine = all.filter((id) => G.user.stones.includes(id));
     body = `<h3 class="st-h">💎 메가스톤 <small>하나에 ${fmt(STONE_PRICE)} GP</small></h3>
@@ -749,7 +757,26 @@ function showShop(back = showLobby) {
   app.querySelectorAll('[data-stab]').forEach((b) => { b.onclick = () => { shopTab = b.dataset.stab; showShop(back); }; });
   app.querySelectorAll('.st-grid [data-sid]').forEach((c) => { if (!c.closest('.st-owned')) c.onclick = () => buyStoneSheet(c.dataset.sid, again); });
   app.querySelectorAll('[data-cos]').forEach((b) => { b.onclick = () => buyCosSheet(shopTab, shopItems(shopTab).find((x) => x.id === b.dataset.cos), again); });
-  app.querySelectorAll('[data-item]').forEach((b) => { b.onclick = () => buyItemSheet(SHOP_ITEMS.find((x) => x.id === b.dataset.item), again); });
+  app.querySelectorAll('[data-item]').forEach((b) => { b.onclick = () => buyItemSheet(SHOP.items.find((x) => x.id === b.dataset.item), again); });
+  app.querySelector('#sh-free')?.addEventListener('click', async (e) => {
+    e.currentTarget.disabled = true;
+    try { const r = await api('POST', '/api/shop/free'); setUser(r); SHOP = r.shop; SHOP_AT = Date.now(); showGot(r.got, '🎁 오늘의 무료 선물!', again); } catch (err) { toast(err.message); again(); }
+  });
+  app.querySelectorAll('[data-deal]').forEach((b) => { b.onclick = () => buyDealSheet(SHOP.deals.find((x) => x.i === Number(b.dataset.deal)), again); });
+}
+function buyDealSheet(d, after) {
+  const u = G.user, ok = u.gp >= d.price;
+  const bg = openSheet(`<div class="buy"><h2>🔥 오늘의 특가 <em class="deal-off${d.off === 100 ? ' free' : ''}">${d.off === 100 ? '무료!' : `${d.off}% 할인`}</em></h2>
+    <div class="deal-r big">${rewardChips({ ...d.r, mon: undefined })}${d.r.mon ? '<span class="rw">🎁 랜덤 골목몬</span>' : ''}</div>
+    <p class="buy-price"><s>${fmt(d.value)} GP</s> → ${ICON.gp(22)} <b>${fmt(d.price)} GP</b> <small>보유 ${fmt(u.gp)} GP</small></p>
+    ${ok ? '' : `<p class="buy-no">GP가 ${fmt(d.price - u.gp)} 모자라요.</p>`}
+    <div class="sc-pay"><button class="btn paper" data-x>취소</button><button class="btn" data-buy ${ok ? '' : 'disabled'}>${d.price ? '사기' : '받기'}</button></div></div>`);
+  bg.querySelector('[data-x]').onclick = closeSheet;
+  bg.querySelector('[data-buy]').onclick = async (e) => {
+    e.target.disabled = true;
+    try { const r = await api('POST', '/api/shop/deal', { i: d.i }); setUser(r); SHOP = r.shop; SHOP_AT = Date.now(); closeSheet(); showGot(r.got, '특가 구매 완료! 🎉', after); }
+    catch (err) { toast(err.message); e.target.disabled = false; }
+  };
 }
 // 아이템 사기: 확인 → (골라서 골목몬이면 고르기) → 받은 것 보여 주기
 function buyItemSheet(it, after, species = '') {
@@ -771,7 +798,7 @@ function buyItemSheet(it, after, species = '') {
   bg.querySelector('[data-x]').onclick = closeSheet;
   bg.querySelector('[data-buy]').onclick = async (e) => {
     e.target.disabled = true;
-    try { const r = await api('POST', '/api/shop/item', { id: it.id, species }); setUser(r); closeSheet(); showGot(r.got, '샀어요! 🎉', after); }
+    try { const r = await api('POST', '/api/shop/item', { id: it.id, species }); setUser(r); if (r.shop) { SHOP = r.shop; SHOP_AT = Date.now(); } closeSheet(); showGot(r.got, '샀어요! 🎉', after); }
     catch (err) { toast(err.message); e.target.disabled = false; }
   };
 }

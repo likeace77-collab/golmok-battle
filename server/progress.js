@@ -156,24 +156,79 @@ function changeMove(u, uid, slot, move) {
 }
 // 상점 아이템 (GP)
 const SHOP_ITEMS = [
-  { id: 'reroll1', n: '리롤권', icon: '🎲', d: '스카우트 후보 다시 뽑기 1번', price: 400, r: { rerolls: 1 } },
-  { id: 'reroll10', n: '리롤권 10장', icon: '🎲', d: '1장씩 사는 것보다 500GP 싸요', price: 3500, r: { rerolls: 10 } },
-  { id: 'skip1', n: '1시간 스킵권', icon: 'skip', d: '스카우트·원정 기다리는 시간 1시간 줄이기', price: 90, r: { skips: 1 } },
-  { id: 'skip10', n: '1시간 스킵권 10장', icon: 'skip', d: '1장씩 사는 것보다 100GP 싸요', price: 800, r: { skips: 10 } },
-  { id: 'ticket1', n: '골목몬 입수권', icon: 'ticket', d: '스카우트 후보 하나를 데려오는 권', price: 2400, r: { tickets: 1 } },
-  { id: 'ticket5', n: '골목몬 입수권 5장', icon: 'ticket', d: '1장씩 사는 것보다 1200GP 싸요', price: 10800, r: { tickets: 5 } },
-  { id: 'monrand', n: '랜덤 골목몬', icon: '🎁', d: '골목몬 한 마리를 무작위로 (이로치 확률도 그대로)', price: 4000, r: { mon: 'random' } },
-  { id: 'monpick', n: '골라서 골목몬', icon: '🎯', d: '원하는 골목몬 한 마리를 골라서 데려와요', price: 6000, pick: true },
-  { id: 'shinyrand', n: '✨ 이로치 확정 랜덤 골목몬', icon: '✨', d: '무조건 이로치! 어떤 골목몬이 나올지는 랜덤', price: 10000, r: { mon: 'random', shiny: true }, rare: true },
-  { id: 'shinypick', n: '✨ 이로치 확정 선택 골목몬', icon: '🌟', d: '원하는 골목몬을 골라서 이로치로 데려와요', price: 50000, pick: true, shiny: true, rare: true },
+  { id: 'reroll1', limit: 20, n: '리롤권', icon: '🎲', d: '스카우트 후보 다시 뽑기 1번', price: 400, r: { rerolls: 1 } },
+  { id: 'reroll10', limit: 3, n: '리롤권 10장', icon: '🎲', d: '1장씩 사는 것보다 500GP 싸요', price: 3500, r: { rerolls: 10 } },
+  { id: 'skip1', limit: 50, n: '1시간 스킵권', icon: 'skip', d: '스카우트·원정 기다리는 시간 1시간 줄이기', price: 90, r: { skips: 1 } },
+  { id: 'skip10', limit: 5, n: '1시간 스킵권 10장', icon: 'skip', d: '1장씩 사는 것보다 100GP 싸요', price: 800, r: { skips: 10 } },
+  { id: 'ticket1', limit: 5, n: '골목몬 입수권', icon: 'ticket', d: '스카우트 후보 하나를 데려오는 권', price: 2400, r: { tickets: 1 } },
+  { id: 'ticket5', limit: 1, n: '골목몬 입수권 5장', icon: 'ticket', d: '1장씩 사는 것보다 1200GP 싸요', price: 10800, r: { tickets: 5 } },
+  { id: 'monrand', limit: 5, n: '랜덤 골목몬', icon: '🎁', d: '골목몬 한 마리를 무작위로 (이로치 확률도 그대로)', price: 4000, r: { mon: 'random' } },
+  { id: 'monpick', limit: 2, n: '골라서 골목몬', icon: '🎯', d: '원하는 골목몬 한 마리를 골라서 데려와요', price: 6000, pick: true },
+  { id: 'shinyrand', limit: 1, n: '✨ 이로치 확정 랜덤 골목몬', icon: '✨', d: '무조건 이로치! 어떤 골목몬이 나올지는 랜덤', price: 10000, r: { mon: 'random', shiny: true }, rare: true },
+  { id: 'shinypick', limit: 1, n: '✨ 이로치 확정 선택 골목몬', icon: '🌟', d: '원하는 골목몬을 골라서 이로치로 데려와요', price: 50000, pick: true, shiny: true, rare: true },
 ];
+// 상점 하루 기록: 아이템별 산 개수, 무료 선물 받은 횟수, 오늘의 특가 (사람마다 다르고 매일 바뀜)
+const seeded = (str) => { let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; }; };
+const FREE_POOL = [ // 100~1000GP 쯤 되는 소소한 선물
+  { gp: 100 }, { gp: 300 }, { gp: 500 }, { gp: 800 }, { gp: 1000 }, { skips: 2 }, { skips: 5 }, { skips: 10 }, { rerolls: 1 }, { rerolls: 2 }, { gp: 200, skips: 3 }, { gp: 300, rerolls: 1 },
+];
+const VALUE = { stones: 5000, tickets: 2400, rerolls: 400, skips: 90, mon: 4000 }; // 특가 묶음 값 계산용 (GP)
+const DEAL_N = 3, DEAL_MAX = 10000;
+function makeDeals(rand) {
+  const out = [];
+  for (let n = 0; n < DEAL_N; n++) {
+    const r = {}; let value = 0;
+    const kinds = ['stones', 'tickets', 'rerolls', 'skips', 'mon'].sort(() => rand() - 0.5).slice(0, 2 + Math.floor(rand() * 3));
+    for (const k of kinds) {
+      const unit = VALUE[k], room = DEAL_MAX - value;
+      if (room < unit) continue;
+      const most = k === 'mon' ? 1 : Math.min(Math.floor(room / unit), { stones: 2, tickets: 3, rerolls: 10, skips: 40 }[k]);
+      const q = 1 + Math.floor(rand() * most);
+      if (k === 'mon') r.mon = 'random'; else r[k] = q;
+      value += unit * (k === 'mon' ? 1 : q);
+    }
+    if (!value) { r.rerolls = 5; value = 2000; }
+    const off = [10, 10, 20, 20, 30, 30, 40, 50, 60, 70, 80, 90, 100][Math.floor(rand() * 13)];
+    out.push({ i: n, r, value, off, price: Math.round((value * (100 - off)) / 100 / 10) * 10 });
+  }
+  return out;
+}
+function shopBook(u) {
+  const d = dayKey();
+  if (u.shopDay?.day !== d) {
+    const rand = seeded(`${u.name}|${d}`);
+    u.shopDay = { day: d, n: {}, free: 0, freeR: FREE_POOL[Math.floor(rand() * FREE_POOL.length)], deals: makeDeals(rand), dealt: [] };
+  }
+  return u.shopDay;
+}
+const freeMax = (u) => (passState(u).premium ? 2 : 1);
+function shopView(u) {
+  const b = shopBook(u);
+  return { items: SHOP_ITEMS.map((x) => ({ ...x, left: x.limit - (b.n[x.id] || 0) })), free: { r: b.freeR, got: b.free, max: freeMax(u), premium: passState(u).premium }, deals: b.deals.map((x) => ({ ...x, bought: b.dealt.includes(x.i) })), resets: Date.parse(`${dayKey()}T00:00:00+09:00`) + DAY };
+}
+function claimFree(u) {
+  const b = shopBook(u);
+  if (b.free >= freeMax(u)) return { error: passState(u).premium ? '오늘 무료 선물을 다 받았어요. 내일 또 와요!' : '오늘 무료 선물을 받았어요. 프리미엄 패스가 있으면 한 번 더 받을 수 있어요!' };
+  b.free++;
+  return { ok: true, got: grant(u, b.freeR) };
+}
+function buyDeal(u, i) {
+  const b = shopBook(u), d = b.deals.find((x) => x.i === i);
+  if (!d) return { error: '없는 특가예요.' };
+  if (b.dealt.includes(i)) return { error: '오늘 이미 산 특가예요.' };
+  if (u.gp < d.price) return { error: `GP가 ${(d.price - u.gp).toLocaleString('ko-KR')} 모자라요.` };
+  u.gp -= d.price; b.dealt.push(i);
+  return { ok: true, got: grant(u, d.r) };
+}
 function buyItem(u, id, species) {
   const it = SHOP_ITEMS.find((x) => x.id === id);
   if (!it) return { error: '상점에 없는 물건이에요.' };
+  const bk = shopBook(u);
+  if ((bk.n[it.id] || 0) >= it.limit) return { error: `오늘은 더 살 수 없어요. (하루 ${it.limit}번)` };
   if (u.gp < it.price) return { error: `GP가 ${(it.price - u.gp).toLocaleString('ko-KR')} 모자라요.` };
   let r = it.r;
   if (it.pick) { if (!released().includes(species)) return { error: '데려올 골목몬을 골라 주세요.' }; r = { mon: species, ...(it.shiny ? { shiny: true } : {}) }; }
-  u.gp -= it.price;
+  u.gp -= it.price; bk.n[it.id] = (bk.n[it.id] || 0) + 1;
   u.counts.shop = (u.counts.shop || 0) + 1;
   return { ok: true, got: grant(u, r), item: it.n };
 }
@@ -385,7 +440,7 @@ function afterBattle(u, kind, won, side) {
 }
 
 module.exports = {
-  SHOP_ITEMS, buyItem, SCOUT_HOURS, SKIP_GP, SCOUT_GP, STONE_GP, STONE_DUPE_GP, MOVE_GP, STARTERS, TUTORIAL_REWARD, ATTEND, DAILY, WEEKLY,
+  SHOP_ITEMS, buyItem, shopView, claimFree, buyDeal, SCOUT_HOURS, SKIP_GP, SCOUT_GP, STONE_GP, STONE_DUPE_GP, MOVE_GP, STARTERS, TUTORIAL_REWARD, ATTEND, DAILY, WEEKLY,
   newProgress, addMon, grant, finishTutorial, scoutState, scoutSkip, scoutReroll, enhance, PLUS_MAX, PLUS_PCT, plusCost, expeState, expeSend, expeClaim, expeRecall, awayUids, scoutPick, changeMove, buyStone,
   bump, attendState, attend, questState, claimQuest, achState, claimAch, passState, claimPass, claimable, afterBattle, seasonOf, passBook, dayKey, released,
 };
