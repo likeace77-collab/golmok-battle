@@ -244,7 +244,7 @@ function buyStone(u, species) {
 
 /* ---------- 출석 ---------- */
 // 보상량: GP 4배, 1시간 스킵권 5배로 올림 (2026-11-11)
-const ATTEND = [{ gp: 2000 }, { skips: 25, rerolls: 2 }, { gp: 4000 }, { tickets: 1 }, { gp: 6000, rerolls: 3 }, { skips: 50 }, { tickets: 1, stones: 'random', rerolls: 5 }];
+const ATTEND = [{ gp: 2000 }, { skips: 25, rerolls: 2 }, { gp: 4000 }, { tickets: 1 }, { gp: 6000, rerolls: 3 }, { skips: 50 }, { tickets: 2, rerolls: 5 }]; // 메가스톤은 패스 마지막 보상에서만
 function attendState(u) {
   const today = dayKey(), yest = dayKey(Date.now() - DAY);
   const a = u.attend;
@@ -269,7 +269,7 @@ const DAILY = [
 ];
 const WEEKLY = [
   { id: 'win10', n: '대전 10번 이기기', k: 'win', goal: 10, r: { tickets: 1, rerolls: 5, pass: 150 } },
-  { id: 'battle25', n: '대전 25판 하기', k: 'battle', goal: 25, r: { stones: 'random', rerolls: 5, pass: 150 } },
+  { id: 'battle25', n: '대전 25판 하기', k: 'battle', goal: 25, r: { tickets: 1, rerolls: 5, pass: 150 } },
   { id: 'pvp3', n: '친구와 대전 3판', k: 'pvp', goal: 3, r: { gp: 12000, pass: 100 } },
   { id: 'z5', n: 'Z기술 5번 쓰기', k: 'z', goal: 5, r: { skips: 50, pass: 100 } },
   { id: 'friendtag2', n: '🤝 친구와 같은 팀으로 태그전 2번 이기기', k: 'friendtag', goal: 2, r: { tickets: 1, gp: 4000, pass: 150 } },
@@ -303,12 +303,12 @@ function claimQuest(u, id) {
 /* ---------- 업적 ---------- */
 const uniqueSpecies = (u) => new Set(u.mons.map((m) => m.species)).size;
 const ACH = [
-  ...[[10, { gp: 8000 }], [20, { tickets: 1 }], [30, { tickets: 2, stones: 1 }], [45, { tickets: 3, stones: 2 }], [55, { tickets: 5, stones: 3 }]].map(([n, r]) => ({ id: `col${n}`, n: `골목몬 ${n}종 모으기`, val: uniqueSpecies, goal: n, r })),
-  ...[[1, { gp: 2000 }], [10, { gp: 4000 }], [50, { skips: 100 }], [100, { tickets: 1 }], [300, { tickets: 2, stones: 1 }]].map(([n, r]) => ({ id: `win${n}`, n: `대전 ${n}번 이기기`, val: (u) => u.counts.wins, goal: n, r })),
-  ...[[5, { stones: 1 }], [30, { tickets: 1 }]].map(([n, r]) => ({ id: `pvp${n}`, n: `친구와의 대전 ${n}번 이기기`, val: (u) => u.counts.pvpWins, goal: n, r })),
-  ...[[1, { gp: 2000 }], [30, { stones: 1 }]].map(([n, r]) => ({ id: `mega${n}`, n: `메가진화 ${n}번`, val: (u) => u.stats.megas, goal: n, r })),
-  ...[[1, { gp: 5000, tickets: 1 }], [5, { tickets: 3, stones: 1 }]].map(([n, r]) => ({ id: `shiny${n}`, n: `✨ 이로치 골목몬 ${n}마리 만나기`, val: (u) => u.counts.shiny || 0, goal: n, r })),
-  ...[[1, { gp: 2000 }], [30, { stones: 1 }]].map(([n, r]) => ({ id: `z${n}`, n: `Z기술 ${n}번`, val: (u) => u.stats.zmoves, goal: n, r })),
+  ...[[10, { gp: 8000 }], [20, { tickets: 1 }], [30, { tickets: 3 }], [45, { tickets: 5, rerolls: 10 }], [55, { tickets: 8, rerolls: 20 }]].map(([n, r]) => ({ id: `col${n}`, n: `골목몬 ${n}종 모으기`, val: uniqueSpecies, goal: n, r })),
+  ...[[1, { gp: 2000 }], [10, { gp: 4000 }], [50, { skips: 100 }], [100, { tickets: 1 }], [300, { tickets: 3, rerolls: 10 }]].map(([n, r]) => ({ id: `win${n}`, n: `대전 ${n}번 이기기`, val: (u) => u.counts.wins, goal: n, r })),
+  ...[[5, { tickets: 1 }], [30, { tickets: 2 }]].map(([n, r]) => ({ id: `pvp${n}`, n: `친구와의 대전 ${n}번 이기기`, val: (u) => u.counts.pvpWins, goal: n, r })),
+  ...[[1, { gp: 2000 }], [30, { tickets: 1, rerolls: 5 }]].map(([n, r]) => ({ id: `mega${n}`, n: `메가진화 ${n}번`, val: (u) => u.stats.megas, goal: n, r })),
+  ...[[1, { gp: 5000, tickets: 1 }], [5, { tickets: 4 }]].map(([n, r]) => ({ id: `shiny${n}`, n: `✨ 이로치 골목몬 ${n}마리 만나기`, val: (u) => u.counts.shiny || 0, goal: n, r })),
+  ...[[1, { gp: 2000 }], [30, { tickets: 1, rerolls: 5 }]].map(([n, r]) => ({ id: `z${n}`, n: `Z기술 ${n}번`, val: (u) => u.stats.zmoves, goal: n, r })),
   ...[[5, { tickets: 1, rerolls: 5 }], [20, { tickets: 2, rerolls: 10 }]].map(([n, r]) => ({ id: `scout${n}`, n: `스카우트 ${n}번`, val: (u) => u.counts.scouts, goal: n, r })),
   ...[[10, { rerolls: 5 }], [50, { rerolls: 15, gp: 5000 }]].map(([n, r]) => ({ id: `reroll${n}`, n: `🎲 스카우트 후보 ${n}번 다시 뽑기`, val: (u) => u.counts.rerolls || 0, goal: n, r })),
   { id: 'stone30', n: '메가스톤 30종 모으기', val: (u) => u.stones.length, goal: 30, r: { tickets: 2 } },
@@ -329,8 +329,9 @@ function claimAch(u, id) {
 const SEASON_EPOCH = Date.parse('2026-11-09T00:00:00+09:00'), SEASON_LEN = 14 * DAY, PASS_LV = 30, PASS_PER = 80;
 const seasonOf = (t = Date.now()) => Math.floor((t - SEASON_EPOCH) / SEASON_LEN) + 1;
 const seasonEnds = (s) => SEASON_EPOCH + s * SEASON_LEN;
-const freeReward = (lv) => (lv % 10 === 0 ? { tickets: 1, stones: 'random' } : lv % 5 === 0 ? { tickets: 1 } : lv % 3 === 0 ? { stones: 'random' } : lv % 2 ? { gp: 2000 } : { skips: 15, rerolls: lv % 4 === 0 ? 2 : 1 });
-const premReward = (lv) => (lv % 10 === 0 ? { tickets: 2, stones: 2, gp: 12000 } : lv % 5 === 0 ? { tickets: 1, stones: 'random' } : lv % 3 === 0 ? { tickets: 1 } : lv % 2 ? { gp: 4000 } : { skips: 30, rerolls: 3, stones: lv % 4 === 0 ? 'random' : 0 });
+// 메가스톤은 패스 마지막 단계(30)에서만
+const freeReward = (lv) => (lv === 30 ? { tickets: 1, stones: 'random' } : lv % 10 === 0 ? { tickets: 1, rerolls: 3 } : lv % 5 === 0 ? { tickets: 1 } : lv % 3 === 0 ? { gp: 3000 } : lv % 2 ? { gp: 2000 } : { skips: 15, rerolls: lv % 4 === 0 ? 2 : 1 });
+const premReward = (lv) => (lv === 30 ? { tickets: 2, stones: 2, gp: 12000 } : lv % 10 === 0 ? { tickets: 2, gp: 12000, rerolls: 5 } : lv % 5 === 0 ? { tickets: 1, rerolls: 3 } : lv % 3 === 0 ? { tickets: 1 } : lv % 2 ? { gp: 4000 } : { skips: 30, rerolls: 3 });
 function passBook(u) {
   const s = seasonOf();
   if (u.pass?.season !== s) u.pass = { season: s, pts: 0, free: [], prem: [], premium: !!u.premiumSeasons?.includes(s), practiceDay: '', practicePts: 0 };

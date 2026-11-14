@@ -13,14 +13,15 @@ const COLORS = ['#E8402C', '#ff8a00', '#FFD23F', '#3FA34D', '#2EA8E0', '#2340A8'
 const GUILD_QUESTS = [
   { id: 'g-games', n: '길드원 모두 합쳐 대전 40판', k: 'games', goal: 40, r: { gp: 8000, pass: 120, gpt: 200 } },
   { id: 'g-wins', n: '길드원 모두 합쳐 20번 이기기', k: 'wins', goal: 20, r: { tickets: 1, pass: 150, gpt: 200 } },
-  { id: 'g-mega', n: '길드원 모두 합쳐 메가진화 25번', k: 'megas', goal: 25, r: { skips: 40, stones: 'random', gpt: 200 } },
+  { id: 'g-mega', n: '길드원 모두 합쳐 메가진화 25번', k: 'megas', goal: 25, r: { skips: 40, tickets: 1, gpt: 200 } },
   { id: 'g-friend', n: '길드원끼리 같은 팀으로 태그전 5번 이기기', k: 'mateWins', goal: 5, r: { tickets: 2, gp: 5000, pass: 200, gpt: 300 } },
 ];
 
 // 길드 패스: 시즌(2주)마다. 길드원 모두의 대전으로 길드 패스 포인트가 쌓이고, 레벨마다 각자 보상(길P 등)을 받아요.
 const GPASS_LV = 30, GPASS_PER = 300, VICE_MAX = 2;
 const GPASS_PTS = { pvp: [20, 10], tag: [16, 8], practice: [6, 3] }; // [이김, 짐]
-const gpassReward = (lv) => (lv % 10 === 0 ? { gpt: 600, tickets: 1, stones: 'random' } : lv % 5 === 0 ? { gpt: 300, tickets: 1 } : lv % 2 ? { gpt: 100, gp: 1500 } : { gpt: 150, skips: 10 });
+// 메가스톤은 길드 패스 마지막 단계(30)에서만
+const gpassReward = (lv) => (lv === 30 ? { gpt: 600, tickets: 1, stones: 'random' } : lv % 10 === 0 ? { gpt: 600, tickets: 1, rerolls: 5 } : lv % 5 === 0 ? { gpt: 300, tickets: 1 } : lv % 2 ? { gpt: 100, gp: 1500 } : { gpt: 150, skips: 10 });
 const RANK = { master: 3, vice: 2, member: 1 };
 
 let db, H; // H: { keyOf, online, send, toast, publicUser, save, grant, bump, isDev, inBattle, sendMail }
