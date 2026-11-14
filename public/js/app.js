@@ -1224,7 +1224,7 @@ function openDexEntry(id) {
   const own = (G.user.mons || []).some((m) => m.shiny && m.species === id), sh = own && G.dexShiny; // 이로치를 가지고 있으면 이로치로 볼 수 있음
   const pic = (svg) => (sh ? shinify(svg, id) : svg);
   const bg = openSheet(`<div class="row" style="margin-bottom:10px"><h2>${no}. ${sp.n}</h2>${own ? `<button class="btn small ${sh ? '' : 'paper'}" data-shiny>${sh ? '원래 색으로' : '✨ 이로치로'}</button>` : ''}<button class="btn small paper" data-x>닫기</button></div>
-    ${sp.contest ? `<p class="ct-by">🏆 신캐 공모전 출시작 · 만든 사람 ${esc(sp.contest.by)}</p>` : ''}
+    ${sp.contest ? `<p class="ct-by">🏆 신캐 공모전 출시작 · 만든 사람 ${esc(sp.contest.by)} <a class="ct-dl" href="img/mon/${id}.webp?dl=1" download>🖼 그림 받기</a> <a class="ct-dl" href="img/mon/${id}-mega.webp?dl=1" download>메가 그림 받기</a></p>` : ''}
     <div class="row" style="align-items:flex-start;margin-bottom:12px">
       <div class="detail-pic${sh ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${pic(monsterSVG(id))}</div>
       <div style="flex:1;min-width:0">

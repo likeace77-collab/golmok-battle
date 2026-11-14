@@ -701,7 +701,7 @@ const SUNFISH_GOAL = 300; // 개복치 키우기: 300cm까지 키우면 등신
 
 /* ---------- 신캐 만들기 공모전 ---------- */
 // 출시된 공모전 골목몬 그림: 출품작에 올린 그림을 그대로 내보냄 (메가 그림이 없으면 기본 그림)
-function contestArt(res, info, mega) {
+function contestArt(res, info, mega, dl = false) {
   const e = contest.entries.find((x) => x.name === info.name && x.user === info.by) || contest.entries.find((x) => x.name === info.name);
   const src = (mega && e?.mega?.image) || e?.image;
   const m = /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/.exec(src || '');
@@ -709,7 +709,8 @@ function contestArt(res, info, mega) {
     res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-cache' });
     return res.end(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect x="30" y="30" width="140" height="140" rx="24" fill="#FFF3B0" stroke="#1a1433" stroke-width="6"/><text x="100" y="128" font-size="90" text-anchor="middle" font-family="sans-serif" fill="#1a1433">?</text></svg>`);
   }
-  res.writeHead(200, { 'Content-Type': m[1], 'Cache-Control': 'public, max-age=3600' });
+  const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }[m[1]];
+  res.writeHead(200, { 'Content-Type': m[1], 'Cache-Control': 'public, max-age=3600', ...(dl ? { 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(`${info.name}${mega ? '-메가' : ''}.${ext}`)}` } : {}) }); // ?dl=1이면 내려받기
   res.end(Buffer.from(m[2], 'base64'));
 }
 const CONTEST = { title: '신캐 만들기 공모전', ends: Date.parse(process.env.CONTEST_ENDS || '2026-11-13T23:59:59+09:00') };
@@ -797,7 +798,7 @@ const server = http.createServer(async (req, res) => {
     catch { return json(res, 400, { error: '요청이 올바르지 않습니다.' }); }
   }
   const cm = /^img\/mon\/([a-z]+)(-mega)?\.webp$/.exec(rel);
-  if (cm && Data.MONSTERS[cm[1]]?.contest) return contestArt(res, Data.MONSTERS[cm[1]].contest, !!cm[2]);
+  if (cm && Data.MONSTERS[cm[1]]?.contest) return contestArt(res, Data.MONSTERS[cm[1]].contest, !!cm[2], url.searchParams.has('dl'));
   const file = path.resolve(PUBLIC, rel);
   if (!file.startsWith(PUBLIC + path.sep) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     res.writeHead(404); return res.end('Not found');

@@ -1710,3 +1710,4 @@ svg[data-shiny] { filter: var(--sf); animation: shinyGlow 2.4s ease-in-out infin
 .shiny-forms svg { width: 100%; max-width: 150px; height: auto; } .shiny-forms figcaption { font-size: 12px; font-weight: 800; }
 .perk { margin: 6px 0; padding: 6px 8px; font-size: 13px; background: #fff3b0; border: 2px solid #1a143330; border-radius: 10px; } .perk b { color: #c2410c; margin-right: 4px; } .perk em { display: block; font-style: normal; font-weight: 800; color: #6a1fb0; }
 .ct-by { margin: -4px 0 10px; font-size: 12px; color: #c2410c; font-weight: 800; }
+.ct-dl { display: inline-block; margin: 4px 4px 0 0; padding: 1px 8px; font-size: 11px; color: var(--ink); background: #fff; border: 2px solid var(--ink); border-radius: 8px; text-decoration: none; }
