@@ -49,7 +49,7 @@ test('2배 상성은 1배보다 약 2배 피해를 주고, 절반 상성은 약 
 
 test('모든 골목몬에게 그림이 있고 스킬이 겹치지 않는다', () => {
   const read = (f) => require('fs').readFileSync(require('path').join(__dirname, '../public/js', f), 'utf8');
-  const art = read('art.js'), mega = read('mega-art.js'), newArt = read('new-art.js') + read('new-art2.js') + read('new-art3.js');
+  const art = read('art.js'), mega = read('mega-art.js'), newArt = read('new-art.js') + read('new-art2.js') + read('new-art3.js') + read('fox-art.js');
   for (const [id, m] of Object.entries(MONSTERS)) {
     if (m.contest) { assert.equal(new Set(m.moves).size, m.moves.length, id); continue; } // 공모전 출시작: 그림은 서버가 출품작에서 내보냄
     if (m.img) { // 사진 그림
@@ -57,11 +57,11 @@ test('모든 골목몬에게 그림이 있고 스킬이 겹치지 않는다', ()
       assert.equal(new Set(m.moves).size, m.moves.length, id);
       continue;
     }
-    assert.match(art + newArt, new RegExp(`\\b${id}: (wrap|L\\(|")`), id);
-    assert.match(mega + newArt, new RegExp(`\\b${id}: (L\\(|")`), `메가 ${id}`);
+    assert.match(art + newArt, new RegExp(`\\b${id}: (wrap|L\\(|")|NEW_ART\\.${id} =`), id);
+    assert.match(mega + newArt, new RegExp(`\\b${id}: (L\\(|")|MEGA_ART\\.${id} =`), `메가 ${id}`);
     assert.equal(new Set(m.moves).size, m.moves.length, id);
   }
-  assert.equal(Object.keys(MONSTERS).length, 59);
+  assert.equal(Object.keys(MONSTERS).length, 60);
 });
 
 test('역류는 소나기에서 2배, 뻥 뚫기는 막기를 뚫고 압정을 치운다', () => {
@@ -145,7 +145,7 @@ test('모든 골목몬에게 전용기가 있고 다른 골목몬은 배울 수 
     owner[m.sig] = (owner[m.sig] || 0) + 1;
     assert.equal(Object.values(m.mega.boost).reduce((a, c) => a + c), 100, id);
   }
-  assert.equal(Object.keys(owner).length, 59);
+  assert.equal(Object.keys(owner).length, 60);
   // 전용기는 한 골목몬만 배운다 (단조처럼 전용기가 여럿일 수는 있음)
   const who = {};
   for (const [id, m] of Object.entries(MONSTERS)) for (const mv of m.moves) if (MOVES[mv].sig) (who[mv] ||= new Set()).add(id);
@@ -881,4 +881,21 @@ test('강화 고유 효과: 능력치형은 그 능력치만 더 오르고, 등�
   const p0 = mk(0), p5 = mk(5);
   assert.ok(p5.stats.spe / p0.stats.spe > p5.stats.atk / p0.stats.atk + 0.1);
   assert.equal(D.PERKS.deungsin.v, -1);
+});
+
+test('여우비: 나오면 비, 거다이맥스하면 혼·독 타입이 되었다가 끝나면 물·노말로 돌아온다', () => {
+  const b = E.createBattle([{ name: '가', team: [{ species: 'yeoubi', moves: ['foxrain', 'hose', 'charm', 'guard'] }] }, { name: '나', team: Array.from({ length: 6 }, () => ({ species: 'bonaeng', moves: ['guard'] })) }], 3, { preview: true });
+  const m = b.sides[0].mons[0];
+  E.choose(b, 0, { type: 'lead', index: 0 }); const r0 = E.choose(b, 1, { type: 'lead', index: 0 });
+  assert.ok(JSON.stringify(r0).includes('여우비!'), '등장 특성 여우비'); assert.equal(b.weather, 'rain');
+  E.choose(b, 0, { type: 'move', index: 0, gmax: true }); const r = E.choose(b, 1, { type: 'move', index: 0 });
+  assert.ok(JSON.stringify(r).includes('가면이었다'));
+  assert.deepEqual(m.types, ['spirit', 'poison']);
+  assert.deepEqual(E.gmaxMoves(m).map((x) => x.type), ['spirit', 'spirit', 'poison', 'normal']);
+  for (let i = 0; i < 20 && m.gmax && b.phase !== 'over'; i++) {
+    if (b.phase === 'switch') { const sw = E.legalActions(b, 1)[0]; E.choose(b, 1, sw); continue; }
+    E.choose(b, 0, { type: 'move', index: 1 }); E.choose(b, 1, { type: 'move', index: 0 });
+  }
+  assert.equal(m.gmax, 0);
+  assert.deepEqual(m.types, ['water', 'normal']);
 });

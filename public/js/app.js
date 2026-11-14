@@ -1238,12 +1238,13 @@ function matchups(id) {
 function gmaxBox(id, shiny = false) {
   const sp = G.data.MONSTERS[id], X = G.data.GMAX;
   if (!X || typeof GMAX_ART === 'undefined' || !GMAX_ART[id]) return '';
-  const gt = sp.types[0];
-  const types = [...new Set(sp.moves.map((m) => G.data.MOVES[m]).filter((v) => v && v.cat !== 'x' && v.type !== 'none').map((v) => v.type))];
-  for (const t of [...sp.types, 'normal']) if (!types.includes(t)) types.push(t);
+  const baseT = sp.gmaxTypes || sp.types, gt = baseT[0];
+  const types = sp.gmaxTypes ? [...sp.gmaxTypes, 'normal'] : [...new Set(sp.moves.map((m) => G.data.MOVES[m]).filter((v) => v && v.cat !== 'x' && v.type !== 'none').map((v) => v.type))];
+  for (const t of [...baseT, 'normal']) if (!types.includes(t)) types.push(t);
   return `<section class="gmaxbox" style="--gc:${G.data.TYPES[gt].c}">
     <h3>거다이맥스</h3>
     <div class="gmax-pic${shiny ? ' is-shiny' : ''}">${shiny ? shinify(gmaxSVG(id), id) : gmaxSVG(id)}</div>
+    ${sp.gmaxTypes ? `<p class="gmax-rule" style="color:#ff6a8a;font-weight:800">⚠ 거다이맥스하면 타입이 바뀌어요: ${sp.types.map(typeChip).join('')} → ${sp.gmaxTypes.map(typeChip).join('')}</p>` : ''}
     <p class="gmax-rule">한 판에 한 번, ${X.turns}턴 동안 거대한 괴수가 돼요. 체력 ${X.hp}배, 기술은 거다이기술 1개와 다이기술 3개만 쓸 수 있어요.</p>
     <div class="gmax-g">${typeChip(gt)}<b>★ ${esc(X.names[id] || `거다이 ${sp.n}`)}</b><small>거다이기술 · 위력 ${X.gpow}, 반드시 명중. ${X.gfx[gt] || ''}</small></div>
     <p class="muted" style="margin:8px 0 4px;font-size:13px">다이기술 (위력 ${X.dpow}) — 이 골목몬 기술의 타입에 따라 3개가 정해져요. 될 수 있는 것:</p>

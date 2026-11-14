@@ -123,7 +123,7 @@ function setupBoss(b) {
   const r = b.raid, side = b.sides[r.boss], m = side.mons[0];
   side.mons = [m];
   if (r.mega) { doMega(b, r.boss, []); side.megaUsed = true; }
-  if (r.gmax) { m.preMax = m.maxHp; m.gmax = 999; side.gmaxUsed = true; }
+  if (r.gmax) { m.preMax = m.maxHp; m.gmax = 999; side.gmaxUsed = true; const gt = MONSTERS[m.species].gmaxTypes; if (gt) { m.preTypes = m.types; m.types = gt; } }
   side.zUsed = !r.z;
   m.maxHp = m.hp = Math.round(m.maxHp * (r.hpMul || 4));
   if (r.dark) m.name = `흑화 ${m.name}`;
@@ -262,10 +262,11 @@ const strongFx = (fx) => {
 };
 function gmaxMoves(m) {
   const sp = MONSTERS[m.species], cat = m.stats.atk >= m.stats.spa ? 'p' : 's';
-  const types = [...new Set(m.moves.map((x) => MOVES[x.id]).filter((v) => v && v.cat !== 'x' && TYPES[v.type] && v.type !== 'none').map((v) => v.type))];
-  for (const t of [...sp.types, 'normal', ...Object.keys(TYPES)]) if (types.length < 3 && !types.includes(t) && TYPES[t] && t !== 'none') types.push(t); // 모자라면 다른 타입으로 채워 항상 3개
+  const sp0 = MONSTERS[m.species], baseT = sp0.gmaxTypes || sp0.types;
+  const types = sp0.gmaxTypes ? [...sp0.gmaxTypes] : [...new Set(m.moves.map((x) => MOVES[x.id]).filter((v) => v && v.cat !== 'x' && TYPES[v.type] && v.type !== 'none').map((v) => v.type))];
+  for (const t of [...baseT, 'normal', ...Object.keys(TYPES)]) if (types.length < 3 && !types.includes(t) && TYPES[t] && t !== 'none') types.push(t); // 모자라면 다른 타입으로 채워 항상 3개
   const dai = types.slice(0, 3).map((t) => ({ n: `다이${TYPES[t].n}`, type: t, cat, pow: DAI_POW, acc: 100, pp: 1, pri: 0, ...DAI_FX[t], dai: true }));
-  const gt = sp.types[0];
+  const gt = baseT[0];
   const g = { n: GMAX_MOVES[m.species] || `거다이 ${sp.n}`, type: gt, cat, pow: G_POW, acc: 100, pp: 1, pri: 0, ...strongFx(DAI_FX[gt] || DAI_FX.normal), breakGuard: true, gmaxMove: true };
   return [g, ...dai];
 }
@@ -278,11 +279,15 @@ function doGmax(b, s, ev) {
   m.maxHp = Math.round(m.maxHp * GMAX_HP); m.hp = Math.round(m.hp * GMAX_HP);
   m.gmax = GMAX_TURNS;
   b.sides[s].gmaxUsed = true;
+  const gt = MONSTERS[m.species].gmaxTypes;
+  if (gt) { m.preTypes = m.types; m.types = gt; }
   ev.push({ t: 'gmax', side: s, mon: publicMon(m), text: `${josa(m.name, '이/가')} 거다이맥스했다! 거대한 괴수가 되어 골목을 뒤덮는다!` });
+  if (gt) msg(ev, m.species === 'yeoubi' ? `귀여운 얼굴은 가면이었다…! ${josa(m.name, '은/는')} ${gt.map((t) => TYPES[t].n).join('·')} 타입이 되었다!` : `${josa(m.name, '은/는')} ${gt.map((t) => TYPES[t].n).join('·')} 타입이 되었다!`);
 }
 function endGmax(b, s, m, ev, quiet = false) {
   if (!m.gmax) return;
   m.gmax = 0;
+  if (m.preTypes) { m.types = m.preTypes; delete m.preTypes; }
   const old = m.preMax || Math.round(m.maxHp / GMAX_HP);
   if (m.hp > 0) m.hp = Math.max(1, Math.min(old, Math.ceil(m.hp / GMAX_HP)));
   m.maxHp = old;
@@ -697,7 +702,7 @@ function onEntry(b, s, m, ev) {
     msg(ev, `기술이 발전했다! ${josa(m.name, '이/가')} 메가진화한다!`);
     doMega(b, s, ev);
   }
-  const sky = { hwangsari: ['dust', '황사 경보', '황사가 불기 시작했다!'], usan: ['rain', '폭우', '비가 쏟아지기 시작했다!'], bingsu: ['snow', '설경', '눈이 내리기 시작했다!'] }[m.species];
+  const sky = { hwangsari: ['dust', '황사 경보', '황사가 불기 시작했다!'], usan: ['rain', '폭우', '비가 쏟아지기 시작했다!'], yeoubi: ['rain', '여우비', '해가 떠 있는데 비가 내리기 시작했다!'], bingsu: ['snow', '설경', '눈이 내리기 시작했다!'] }[m.species];
   if (sky && b.weather !== sky[0]) {
     b.weather = sky[0]; b.weatherTurns = 5;
     ev.push({ t: 'weather', weather: sky[0], trait: true, text: `${m.name}의 ${sky[1]}! ${sky[2]}` });

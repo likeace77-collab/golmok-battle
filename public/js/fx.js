@@ -1127,6 +1127,17 @@ const Fx = (() => {
       bang(above(T, 80), '빵빵!!', { delay: 330, color: '#FFE14D', size: 38 });
       return 340;
     },
+    // 여우비 내리기: 해님이 반짝 + 상대 머리 위 구름에서 비가 쏟아지고 무지개
+    foxrain(A, T, k) {
+      act(k, 'cast', 460);
+      burst('sparkle', above(A, 60), { n: 10, dist: 50, size: 9 });
+      fall('drop', T, { delay: 260, n: 22, gap: 14, dur: 260, height: 110, spread: 40, size: 8 });
+      ring(T, { color: '#FFD23F', delay: 300, r1: 70, w: 6, squash: .6 });
+      ring(T, { color: '#4DABF7', delay: 420, r1: 90, w: 6, squash: .6 });
+      burst('drop', ground(T), { delay: 700, n: 12, dist: 64, size: 6 });
+      bang(above(T, 80), '여우비!', { delay: 520, color: '#7fd0ff', size: 34 });
+      return 980;
+    },
     jellypress(A, T, k, t) {
       act(k, 'jump', 700); prop('slime', { from: above(A, 30), to: T, delay: 120, dur: 380, size: 60 });
       frame(500); burst('slime', T, { delay: 500, n: 22, dist: 120, size: 11 }); shockwave(T, '#6be3a4', { delay: 500 });
