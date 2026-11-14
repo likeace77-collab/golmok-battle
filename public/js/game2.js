@@ -756,15 +756,15 @@ function buyItemSheet(it, after, species = '') {
   const u = G.user, ok = u.gp >= it.price;
   if (it.pick && !species) {
     const ids = Object.keys(G.data.MONSTERS).filter((id) => !(G.data.BANNED || []).includes(id));
-    const bg = openSheet(`<div class="buy"><h2>🎯 어떤 골목몬을 데려올까요?</h2><p class="buy-price">${ICON.gp(18)} <b>${fmt(it.price)} GP</b></p>
-      <div class="it-pick">${ids.map((id) => `<button data-pk="${id}">${monArt(id)}<b>${esc(G.data.MONSTERS[id].n)}</b>${u.mons.some((m) => m.species === id) ? '<em>보유</em>' : ''}</button>`).join('')}</div>
+    const bg = openSheet(`<div class="buy"><h2>${it.shiny ? '🌟 어떤 골목몬을 이로치로 데려올까요?' : '🎯 어떤 골목몬을 데려올까요?'}</h2><p class="buy-price">${ICON.gp(18)} <b>${fmt(it.price)} GP</b></p>
+      <div class="it-pick">${ids.map((id) => `<button data-pk="${id}">${monArt(id, !!it.shiny)}<b>${esc(G.data.MONSTERS[id].n)}</b>${u.mons.some((m) => m.species === id) ? '<em>보유</em>' : ''}</button>`).join('')}</div>
       <div class="sc-pay"><button class="btn paper" data-x>취소</button></div></div>`);
     bg.querySelector('[data-x]').onclick = closeSheet;
     bg.querySelectorAll('[data-pk]').forEach((b) => { b.onclick = () => { closeSheet(); buyItemSheet(it, after, b.dataset.pk); }; });
     return;
   }
-  const look = species ? monArt(species) : (ICON[it.icon] ? ICON[it.icon](64) : `<span class="it-emo" style="font-size:64px">${it.icon}</span>`);
-  const bg = openSheet(`<div class="buy"><div class="it-look${it.rare ? ' rare' : ''}">${look}</div><h2>${esc(species ? `${G.data.MONSTERS[species].n} 데려오기` : it.n)}</h2><p>${esc(it.d)}</p>
+  const look = species ? monArt(species, !!it.shiny) : (ICON[it.icon] ? ICON[it.icon](64) : `<span class="it-emo" style="font-size:64px">${it.icon}</span>`);
+  const bg = openSheet(`<div class="buy"><div class="it-look${it.rare ? ' rare' : ''}">${look}</div><h2>${esc(species ? `${it.shiny ? '✨ 이로치 ' : ''}${G.data.MONSTERS[species].n} 데려오기` : it.n)}</h2><p>${esc(it.d)}</p>
     <p class="buy-price">${ICON.gp(22)} <b>${fmt(it.price)} GP</b> <small>보유 ${fmt(u.gp)} GP${ok ? ` → 남는 GP ${fmt(u.gp - it.price)}` : ''}</small></p>
     ${ok ? '' : `<p class="buy-no">GP가 ${fmt(it.price - u.gp)} 모자라요.</p>`}
     <div class="sc-pay"><button class="btn paper" data-x>취소</button><button class="btn" data-buy ${ok ? '' : 'disabled'}>사기</button></div></div>`);

@@ -158,20 +158,21 @@ function changeMove(u, uid, slot, move) {
 const SHOP_ITEMS = [
   { id: 'reroll1', n: '리롤권', icon: '🎲', d: '스카우트 후보 다시 뽑기 1번', price: 400, r: { rerolls: 1 } },
   { id: 'reroll10', n: '리롤권 10장', icon: '🎲', d: '1장씩 사는 것보다 500GP 싸요', price: 3500, r: { rerolls: 10 } },
-  { id: 'skip1', n: '1시간 스킵권', icon: 'skip', d: '스카우트·원정 기다리는 시간 1시간 줄이기', price: 150, r: { skips: 1 } },
-  { id: 'skip10', n: '1시간 스킵권 10장', icon: 'skip', d: '1장씩 사는 것보다 300GP 싸요', price: 1200, r: { skips: 10 } },
-  { id: 'ticket1', n: '골목몬 입수권', icon: 'ticket', d: '스카우트 후보 하나를 데려오는 권', price: 3000, r: { tickets: 1 } },
-  { id: 'ticket5', n: '골목몬 입수권 5장', icon: 'ticket', d: '1장씩 사는 것보다 1500GP 싸요', price: 13500, r: { tickets: 5 } },
+  { id: 'skip1', n: '1시간 스킵권', icon: 'skip', d: '스카우트·원정 기다리는 시간 1시간 줄이기', price: 90, r: { skips: 1 } },
+  { id: 'skip10', n: '1시간 스킵권 10장', icon: 'skip', d: '1장씩 사는 것보다 100GP 싸요', price: 800, r: { skips: 10 } },
+  { id: 'ticket1', n: '골목몬 입수권', icon: 'ticket', d: '스카우트 후보 하나를 데려오는 권', price: 2400, r: { tickets: 1 } },
+  { id: 'ticket5', n: '골목몬 입수권 5장', icon: 'ticket', d: '1장씩 사는 것보다 1200GP 싸요', price: 10800, r: { tickets: 5 } },
   { id: 'monrand', n: '랜덤 골목몬', icon: '🎁', d: '골목몬 한 마리를 무작위로 (이로치 확률도 그대로)', price: 4000, r: { mon: 'random' } },
-  { id: 'monpick', n: '골라서 골목몬', icon: '🎯', d: '원하는 골목몬 한 마리를 골라서 데려와요', price: 15000, pick: true },
-  { id: 'shinyrand', n: '✨ 이로치 확정 랜덤 골목몬', icon: '✨', d: '무조건 이로치! 어떤 골목몬이 나올지는 랜덤', price: 150000, r: { mon: 'random', shiny: true }, rare: true },
+  { id: 'monpick', n: '골라서 골목몬', icon: '🎯', d: '원하는 골목몬 한 마리를 골라서 데려와요', price: 6000, pick: true },
+  { id: 'shinyrand', n: '✨ 이로치 확정 랜덤 골목몬', icon: '✨', d: '무조건 이로치! 어떤 골목몬이 나올지는 랜덤', price: 10000, r: { mon: 'random', shiny: true }, rare: true },
+  { id: 'shinypick', n: '✨ 이로치 확정 선택 골목몬', icon: '🌟', d: '원하는 골목몬을 골라서 이로치로 데려와요', price: 50000, pick: true, shiny: true, rare: true },
 ];
 function buyItem(u, id, species) {
   const it = SHOP_ITEMS.find((x) => x.id === id);
   if (!it) return { error: '상점에 없는 물건이에요.' };
   if (u.gp < it.price) return { error: `GP가 ${(it.price - u.gp).toLocaleString('ko-KR')} 모자라요.` };
   let r = it.r;
-  if (it.pick) { if (!released().includes(species)) return { error: '데려올 골목몬을 골라 주세요.' }; r = { mon: species }; }
+  if (it.pick) { if (!released().includes(species)) return { error: '데려올 골목몬을 골라 주세요.' }; r = { mon: species, ...(it.shiny ? { shiny: true } : {}) }; }
   u.gp -= it.price;
   u.counts.shop = (u.counts.shop || 0) + 1;
   return { ok: true, got: grant(u, r), item: it.n };
