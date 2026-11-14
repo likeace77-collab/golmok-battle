@@ -206,7 +206,7 @@ function couponMake(b) {
   const code = couponKey(b.code);
   if (code.length < 2 || code.length > 60) return { error: '쿠폰 코드는 2~60자로 정해 주세요.' };
   const n = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
-  const r = {}; for (const [k, max] of [['gp', 10000000], ['tickets', 1000], ['skips', 10000], ['stones', 60], ['gpt', 100000]]) { const v = n(b.r?.[k], max); if (v) r[k] = v; }
+  const r = {}; for (const [k, max] of [['gp', 10000000], ['tickets', 1000], ['skips', 10000], ['rerolls', 10000], ['stones', 60], ['gpt', 100000]]) { const v = n(b.r?.[k], max); if (v) r[k] = v; }
   if (b.r?.mon === 'random' || Data.MONSTERS[b.r?.mon]) r.mon = b.r.mon;
   if (b.r?.mon && b.r?.shiny) r.shiny = true;
   if (!Object.keys(r).length) return { error: '보상을 하나 이상 넣어 주세요.' };
