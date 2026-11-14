@@ -617,7 +617,7 @@ async function showExpe(back = showLobby) {
   let pickDest = st.dests[0].id, tick;
   const T = G.data.TYPES;
   const hms = (ms) => { const s = Math.ceil(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? `${h}시간 ${m}분` : m ? `${m}분 ${s % 60}초` : `${s % 60}초`; };
-  const rwText = (d) => [`${ICON.gp(14)} ${fmt(d.r.gp)}`, `${ICON.skip(14)} ${d.r.skips}`, d.r.tickets && `${ICON.ticket(14)} ${d.r.tickets}`, d.luck.tickets && `입수권 ${Math.round(d.luck.tickets * 100)}%`, d.luck.stones && `💎 ${Math.round(d.luck.stones * 100)}%`, d.luck.gpt && `길P ${Math.round(d.luck.gpt * 100)}%`].filter(Boolean).join(' · ');
+  const rwText = (d) => [`${ICON.gp(14)} ${fmt(d.r.gp)}`, `${ICON.skip(14)} ${d.r.skips}`, d.r.tickets && `${ICON.ticket(14)} ${d.r.tickets}`, d.luck.tickets && `입수권 ${Math.round(d.luck.tickets * 100)}%`, d.luck.stones && `💎 ${Math.round(d.luck.stones * 100)}%`, d.luck.gpt && `길P ${Math.round(d.luck.gpt * 100)}%`, d.luck.rerolls && `🎲 ${Math.round(d.luck.rerolls * 100)}%`].filter(Boolean).join(' · ');
   const draw = () => {
     clearInterval(tick);
     if (G.screen !== 'expe') return;

@@ -17,8 +17,8 @@ const RULES = [
   { day: 6, id: 'solo', n: '1대1 연전', icon: '🥊', d: '한 마리씩 붙는 1대1 다섯 판이에요.', size: 1, plus: 1 },
 ];
 const FLOORS = 5;
-const FLOOR_R = [{ gp: 1500 }, { gp: 2000, skips: 3 }, { gp: 2500 }, { gp: 3000, skips: 5 }, { gp: 4000 }];
-const CLEAR_R = { gp: 10000, tickets: 2, stones: 1, gpt: 100 };
+const FLOOR_R = [{ gp: 1500 }, { gp: 2000, skips: 3, rerolls: 1 }, { gp: 2500 }, { gp: 3000, skips: 5, rerolls: 2 }, { gp: 4000 }];
+const CLEAR_R = { gp: 10000, tickets: 2, stones: 1, gpt: 100, rerolls: 5 };
 const LEVELS = [1, 1, 2, 2, 3]; // 층별 골목대장 수준
 
 const today = () => RULES.find((r) => r.day === weekday());

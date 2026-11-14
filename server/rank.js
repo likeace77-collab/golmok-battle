@@ -1,13 +1,13 @@
 'use strict';
 // 랭크전: 점수(시작 1000)와 티어, 시즌(시즌 패스와 같은 2주) 보상
 const TIERS = [
-  { id: 'bronze', n: '브론즈', min: 0, icon: '🥉', c: '#c8873a', r: { gp: 3000 } },
-  { id: 'silver', n: '실버', min: 1100, icon: '🥈', c: '#b8c4d0', r: { gp: 6000, skips: 20 } },
-  { id: 'gold', n: '골드', min: 1250, icon: '🥇', c: '#FFD23F', r: { gp: 10000, tickets: 1 } },
-  { id: 'plat', n: '플래티넘', min: 1400, icon: '💠', c: '#6CF2C2', r: { gp: 15000, tickets: 2, stones: 1 } },
-  { id: 'dia', n: '다이아', min: 1550, icon: '💎', c: '#2EF2FF', r: { gp: 20000, tickets: 3, stones: 1 } },
-  { id: 'master', n: '마스터', min: 1700, icon: '👑', c: '#B44BFF', r: { gp: 30000, tickets: 4, stones: 2 } },
-  { id: 'boss', n: '골목대장', min: 1850, icon: '🔥', c: '#ff3a4a', r: { gp: 50000, tickets: 6, stones: 3 } },
+  { id: 'bronze', n: '브론즈', min: 0, icon: '🥉', c: '#c8873a', r: { gp: 3000, rerolls: 5 } },
+  { id: 'silver', n: '실버', min: 1100, icon: '🥈', c: '#b8c4d0', r: { gp: 6000, skips: 20, rerolls: 10 } },
+  { id: 'gold', n: '골드', min: 1250, icon: '🥇', c: '#FFD23F', r: { gp: 10000, tickets: 1, rerolls: 15 } },
+  { id: 'plat', n: '플래티넘', min: 1400, icon: '💠', c: '#6CF2C2', r: { gp: 15000, tickets: 2, stones: 1, rerolls: 20 } },
+  { id: 'dia', n: '다이아', min: 1550, icon: '💎', c: '#2EF2FF', r: { gp: 20000, tickets: 3, stones: 1, rerolls: 25 } },
+  { id: 'master', n: '마스터', min: 1700, icon: '👑', c: '#B44BFF', r: { gp: 30000, tickets: 4, stones: 2, rerolls: 30 } },
+  { id: 'boss', n: '골목대장', min: 1850, icon: '🔥', c: '#ff3a4a', r: { gp: 50000, tickets: 6, stones: 3, rerolls: 40 } },
 ];
 const START = 1000, WIN = 25, LOSS = 20, BOT_WIN = 12, BOT_LOSS = 10, SIZE = 3;
 const tierOf = (pts) => { let t = 0; TIERS.forEach((x, i) => { if (pts >= x.min) t = i; }); return t; };
@@ -24,7 +24,7 @@ function book(u) {
     if (r.w + r.l > 0) {
       const t = TIERS[r.best];
       const got = H.grant(u, t.r);
-      H.sendMail(u, { from: '골목대전 랭크전', title: `시즌 ${r.season} 랭크 보상: ${t.icon} ${t.n}`, body: `지난 시즌 최고 티어 ${t.n}! 보상이 지갑에 들어왔어요. (${got.map((x) => x.k === 'gp' ? `${x.n}GP` : x.k === 'ticket' ? `입수권 ${x.n}` : x.k === 'skip' ? `스킵권 ${x.n}` : x.k === 'stone' ? '메가스톤' : '').filter(Boolean).join(', ')})` });
+      H.sendMail(u, { from: '골목대전 랭크전', title: `시즌 ${r.season} 랭크 보상: ${t.icon} ${t.n}`, body: `지난 시즌 최고 티어 ${t.n}! 보상이 지갑에 들어왔어요. (${got.map((x) => x.k === 'gp' ? `${x.n}GP` : x.k === 'ticket' ? `입수권 ${x.n}` : x.k === 'skip' ? `스킵권 ${x.n}` : x.k === 'reroll' ? `리롤권 ${x.n}` : x.k === 'stone' ? '메가스톤' : '').filter(Boolean).join(', ')})` });
     }
     r.season = s; r.pts = Math.round(START + Math.max(0, r.pts - START) / 2); r.w = 0; r.l = 0; r.streak = 0; r.best = tierOf(r.pts);
   }

@@ -11,8 +11,8 @@ const MAX = 4, SIZE = 3, DAILY = 3, LIMIT = 15;
 // 사람 수(봇 동료 포함)별 보스 체력 배수: 봇끼리 300판씩 돌려 승률 55~70%쯤
 const HP = { gmax: [0, 1.6, 6.5, 10, 17], dark: [0, 1.9, 7.5, 11.5, 19.5] };
 const REWARD = {
-  gmax: { gp: 6000, tickets: 1, stones: 1, gpt: 60 },
-  dark: { gp: 8000, tickets: 1, stones: 1, gpt: 80 },
+  gmax: { gp: 6000, tickets: 1, stones: 1, gpt: 60, rerolls: 3 },
+  dark: { gp: 8000, tickets: 1, stones: 1, gpt: 80, rerolls: 3 },
   lose: { gp: 1000 },
   target: { gp: 2000 }, // 흑화했던 친구에게 (정화 선물)
 };
