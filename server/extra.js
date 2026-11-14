@@ -179,7 +179,7 @@ function fshopBuy(u, id) {
 /* ---------- 스킨 (골목몬마다 전용: 외형 변화 + 이펙트 + 사운드) ---------- */
 // 그림·이펙트·소리는 public/js/extra.js의 SKIN_FX. 저장 필드 이름은 예전 그대로 costumes / m.costume
 const COSTUMES = {
-  wakppu: { n: '왁뿌말랑왕', only: 'malrang', price: 20000, jelly: 40, d: '말랑왕이 알록달록 왁뿌볼 속에 쏙! 맞을 때마다 왁스 껍질이 조각조각 부서지며 바삭바삭 ASMR.', fx: ['외형: 왁뿌볼 껍질 (맞을수록 깨짐)', '이펙트: 왁스 파편이 튐', '사운드: 바삭 빠각 사각사각'] },
+  wakppu: { n: '왁뿌말랑왕', only: 'malrang', price: 0, jelly: 100, d: '말랑왕이 알록달록 왁뿌볼 속에 쏙! 맞을 때마다 왁스 껍질이 조각조각 부서지며 바삭바삭 ASMR.', fx: ['외형: 왁뿌볼 껍질 (맞을수록 깨짐)', '이펙트: 왁스 파편이 튐', '사운드: 바삭 빠각 사각사각'] },
   icecoal: { n: '빙하 연탄', only: 'yeontan', price: 12000, d: '불꽃 대신 얼음이 피어오르는 연탄. 공격할 때 눈꽃이 터지고, 맞으면 얼음이 쨍 갈라져요.', fx: ['외형: 얼음빛 몸 + 고드름 왕관', '이펙트: 눈꽃 폭발 · 서리 입김', '사운드: 쨍그랑 · 찰랑'] },
   goldkettle: { n: '황금 주전자', only: 'kettle', price: 12000, d: '번쩍번쩍 황금 주전자. 공격하면 김이 삐익 뿜어져 나오고 금화가 쏟아져요.', fx: ['외형: 황금빛 몸 + 반짝임', '이펙트: 금화 · 김 뿜기', '사운드: 삐익 휘슬 · 댕그랑 종소리'] },
   neoncrow: { n: '네온 까마귀', only: 'kkamo', price: 15000, d: '밤의 전선 위를 지배하는 사이버 까마귀. 네온 빛이 번쩍이고 글리치가 일어나요.', fx: ['외형: 어두운 몸 + 네온 윤곽 + 스캔라인', '이펙트: 글리치 칼날', '사운드: 신스 잽 · 디지털 삑'] },
@@ -227,12 +227,12 @@ const EVENT = { id: 'mallang', n: '말랑말랑 축제', start: Date.parse('2026
   d: '대전을 하면 말랑 젤리가 나와요! 모은 젤리로 말랑왕 전용 스킨 「왁뿌말랑왕」과 선물을 바꿔요. 맞을 때마다 왁스 껍질이 바삭바삭!', dailyCap: 40, login: 5 };
 const eventLive = (t = Date.now()) => t >= EVENT.start && t < EVENT.end;
 const ESHOP = [
-  { id: 'e-wakppu', n: '스킨: 왁뿌말랑왕 (말랑왕 전용)', jelly: 40, costume: 'wakppu' },
-  { id: 'e-reroll', n: '리롤권 3장', jelly: 10, r: { rerolls: 3 }, limit: 10 },
+  { id: 'e-wakppu', n: '스킨: 왁뿌말랑왕 (말랑왕 전용 · 젤리로만)', jelly: 100, costume: 'wakppu' },
+  { id: 'e-reroll', n: '리롤권 10장', jelly: 20, r: { rerolls: 10 }, limit: 10 },
   { id: 'e-skip', n: '1시간 스킵권 10장', jelly: 8, r: { skips: 10 }, limit: 10 },
-  { id: 'e-gp', n: '3,000GP', jelly: 10, r: { gp: 3000 }, limit: 20 },
-  { id: 'e-ticket', n: '골목몬 입수권 1장', jelly: 25, r: { tickets: 1 }, limit: 5 },
-  { id: 'e-shiny', n: '이로치 골목몬 랜덤 1마리', jelly: 120, r: { mon: 'random', shiny: true }, limit: 1 },
+  { id: 'e-gp', n: '5,100GP', jelly: 20, r: { gp: 5100 }, limit: 20 },
+  { id: 'e-ticket', n: '골목몬 입수권 1장', jelly: 18, r: { tickets: 1 }, limit: 5 },
+  { id: 'e-shiny', n: '이로치 골목몬 랜덤 1마리', jelly: 50, r: { mon: 'random', shiny: true }, limit: 1 },
 ];
 function eventBook(u) { if (u.ev?.id !== EVENT.id) u.ev = { id: EVENT.id, day: '', today: 0, login: '', bought: {} }; const d = dayKey(); if (u.ev.day !== d) { u.ev.day = d; u.ev.today = 0; } return u.ev; }
 function eventLogin(u) {

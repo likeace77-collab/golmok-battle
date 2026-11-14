@@ -349,7 +349,7 @@ async function costumeSheet(mon, after) {
       ${mine.length ? `<div class="sk-demo cos-prev${mon.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${pick ? skinArt(monArt(mon.species, mon.shiny), pick) : monArt(mon.species, mon.shiny)}</div>
         ${pick ? demoBtns() : ''}
         <div class="cos-grid"><button class="cos-it ${!pick ? 'on' : ''}" data-sk=""><span class="cos-none">✕</span><b>기본 모습</b></button>
-          ${mine.map((x) => `<button class="cos-it ${pick === x.id ? 'on' : ''} ${x.own ? 'own' : ''}" data-sk="${x.id}">${skinIcon(x.id, 64)}<b>${esc(x.n)}</b><small>${x.own ? '보유' : `${fmt(x.price)}GP`}</small></button>`).join('')}</div>
+          ${mine.map((x) => `<button class="cos-it ${pick === x.id ? 'on' : ''} ${x.own ? 'own' : ''}" data-sk="${x.id}">${skinIcon(x.id, 64)}<b>${esc(x.n)}</b><small>${x.own ? '보유' : x.price ? `${fmt(x.price)}GP` : `🍮 ${x.jelly}`}</small></button>`).join('')}</div>
         ${c ? `<p class="sk-d">${esc(c.d)}</p><ul class="sk-fx">${(c.fx || []).map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}
         <div class="sc-pay">${!pick ? (mon.costume ? '<button class="btn wide" id="sk-wear">기본 모습으로 돌리기</button>' : '') : c?.own ? (mon.costume === pick ? '<p class="muted">지금 입고 있어요!</p>' : `<button class="btn wide" id="sk-wear">${esc(c.n)} 입히기</button>`) : `${c?.price ? `<button class="btn" id="sk-buy">${ICON.gp(18)} ${fmt(c.price)}GP에 사기</button>` : ''}${c?.jelly ? `<button class="btn mint" id="sk-jelly">🍮 젤리 ${c.jelly}개로 사기</button>` : ''}`}</div>`
       : `<p class="muted" style="margin:10px 0">${esc(sp.n)}은(는) 아직 스킨이 없어요. 스킨 공모전에 직접 만들어 내 보세요! 우승작은 진짜 스킨으로 나와요.</p><button class="btn wide" id="sk-contest">🎨 스킨 공모전 가기</button>`}
