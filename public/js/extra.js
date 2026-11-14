@@ -543,10 +543,16 @@ async function pushDisable() {
   toast('푸시 알림을 껐어요.');
 }
 function pushSettingsHTML() {
-  return `<section class="panel"><h2>🔔 푸시 알림</h2><p class="muted" style="font-size:13px">스카우트 준비, 원정 귀환, 대전 신청, 레이드 초대, 우정 선물, 토너먼트 결과를 휴대폰 알림으로 받아요. 게임을 보고 있을 때는 알림이 뜨지 않아요.</p>
+  return `<section class="panel"><h2>🔊 대전 효과음</h2><p class="muted" style="font-size:13px">기술마다 다른 소리가 나요. 무음 모드면 안 들릴 수 있어요.</p>
+    <div class="row"><button class="btn small ${MoveSfx.off() ? 'paper' : ''}" id="sfx-on">켜기</button><button class="btn small ${MoveSfx.off() ? '' : 'paper'}" id="sfx-off">끄기</button><button class="btn small paper" id="sfx-test">들어보기</button></div></section>
+    <section class="panel"><h2>🔔 푸시 알림</h2><p class="muted" style="font-size:13px">스카우트 준비, 원정 귀환, 대전 신청, 레이드 초대, 우정 선물, 토너먼트 결과를 휴대폰 알림으로 받아요. 게임을 보고 있을 때는 알림이 뜨지 않아요.</p>
     <div class="row"><button class="btn small" id="push-on">알림 켜기</button><button class="btn small paper" id="push-off">끄기</button><button class="btn small paper" id="push-test">시험 알림</button></div></section>`;
 }
 function bindPushSettings(root = app) {
+  const sfxBtns = () => { root.querySelector('#sfx-on')?.classList.toggle('paper', MoveSfx.off()); root.querySelector('#sfx-off')?.classList.toggle('paper', !MoveSfx.off()); };
+  root.querySelector('#sfx-on')?.addEventListener('click', () => { MoveSfx.toggle(true); sfxBtns(); toast('효과음을 켰어요.'); });
+  root.querySelector('#sfx-off')?.addEventListener('click', () => { MoveSfx.toggle(false); sfxBtns(); toast('효과음을 껐어요.'); });
+  root.querySelector('#sfx-test')?.addEventListener('click', () => { const ids = Object.keys(G.data.MOVES); let i = 0; const go = () => { const id = ids[Math.floor(Math.random() * ids.length)], mv = G.data.MOVES[id]; MoveSfx.attack({ id, type: mv.type, cat: mv.cat }); toast(`${mv.n} (${G.data.TYPES[mv.type]?.n || mv.type})`); if (++i < 4) setTimeout(go, 1100); }; go(); });
   root.querySelector('#push-on')?.addEventListener('click', () => pushEnable().catch((e) => toast(e.message)));
   root.querySelector('#push-off')?.addEventListener('click', () => pushDisable());
   root.querySelector('#push-test')?.addEventListener('click', () => api('POST', '/api/push/test').then(() => toast('시험 알림을 보냈어요.')).catch((e) => toast(e.message)));

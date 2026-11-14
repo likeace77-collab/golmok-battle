@@ -371,6 +371,7 @@ const Battle = (() => {
       case 'turn': { const l = $('#raid-lim'); if (l && view.raid) { const n = Math.max(0, view.raid.limit - e.turn + 1); l.textContent = `${n}턴 남음`; l.classList.toggle('low', n <= 3); } break; }
       case 'msg': await wait(850); break;
       case 'move':
+        MoveSfx.attack(e);
         if (e.z) { await zCinematic(e, key); break; }
         if (e.gmax === 2) { const sc = document.querySelector('.scene'); sc?.classList.add('gmax-quake'); setTimeout(() => sc?.classList.remove('gmax-quake'), 900); }
         trainer(key)?.play('command');
@@ -413,6 +414,7 @@ const Battle = (() => {
         }
         if (e.dmg !== undefined) {
           if (e.moveType) {
+            if (!m.costume || m.gmax) MoveSfx.hit(e);
             trainer(key)?.play('flinch');
             anim(key, 'hit', 800);
             burst(key, G.data.TYPES[e.moveType].c);
@@ -426,7 +428,7 @@ const Battle = (() => {
         const box = $(`#m-${key}`);
         if (dispMon(key).species === 'deungsin') { await wasted(key); break; }
         box.classList.remove('hit', 'lunge', 'enter');
-        box.classList.add('faint');
+        box.classList.add('faint'); MoveSfx.faint();
         trainer(key)?.play('sad');
         const r = rosterEntry(key, dispMon(key));
         if (r) { r.out = true; drawPips(); }
