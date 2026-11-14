@@ -175,7 +175,7 @@ function cleanArtUrl(src, opts) {
 // 데이터를 받은 뒤 한 번: 공모전 출시작 그림을 다듬어 두고, 다 되면 지금 화면을 다시 그림
 async function prepareContestArt(redraw) {
   const list = Object.entries(G.data?.MONSTERS || {}).filter(([, sp]) => sp.contest);
-  await Promise.all(list.flatMap(([id]) => ['', '-mega'].map(async (v) => {
+  await Promise.all(list.flatMap(([id, sp]) => ['', '-mega'].filter((v) => !(sp.contest.own || []).includes(v)).map(async (v) => {
     const url = await cleanArtUrl(`img/mon/${id}${v}.webp`, { watermark: !v && id === 'kkamo', close: ART_CLOSE[id + v] ?? 0.008, allWhite: id === 'kkamo' });
     if (url) { CLEAN_ART[id + v] = url; CLEAN_KEY[url] = id + v; }
   })));

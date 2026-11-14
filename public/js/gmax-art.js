@@ -876,21 +876,23 @@ function gmaxSVG(id, cls = '') {
     <g fill="#2c2836" stroke-width="2">${[[18, 128, 30], [184, 120, -30], [30, 160, 60], [172, 156, -60], [150, 18, 20]].map(([x, y, a]) => `<path transform="translate(${x} ${y}) rotate(${a})" d="M0 -9Q5 0 0 9Q-5 0 0 -9Z"/>`).join('')}</g>`);
 
   // 전과목 특강 거신: 등에 거대한 칠판, 한 손엔 칼처럼 든 대형 자, 한 손엔 분필, 분노한 얼굴, 날아다니는 교과서
-  GMAX_ART.seonsaeng = W(`${ground('#F2C230')}
+  GMAX_ART.seonsaeng = W(`${ground('#8a6046')}
     <path d="M14 30H186V120H14Z" fill="#2e6b4f"/><path d="M14 30H186V120H14Z" fill="none" stroke="#8a5a2b" stroke-width="7"/>
     <g fill="none" stroke="#f4f1e6" stroke-width="2" opacity=".85"><path d="M26 50q8-10 16 0t16 0M26 70h30M30 92l14-12M30 80l14 12M140 48h30M150 40v16M136 80q12-16 24 0q12 16 24 0M140 104h34"/></g>
     <text x="22" y="113" font-size="12" font-weight="900" fill="#f4f1e6" stroke="none" font-family="sans-serif">E=mc²</text>
-    <path d="M176 26L196 6 200 12 182 32Z" fill="#f4f1e6"/>
-    <path d="M150 128L196 66 186 60 140 122Z" fill="#e8c35a"/><path d="M160 112l6 4M168 102l6 4M176 92l6 4M184 82l6 4" stroke-width="2"/>
-    <path d="M60 116Q100 104 140 116L150 168H50Z" fill="#fbfaf4"/>
-    <path d="M60 116L40 150 30 160M140 116L156 132" fill="none" stroke-width="10"/><path d="M60 116L40 150 30 160M140 116L156 132" fill="none" stroke="#fbfaf4" stroke-width="5"/>
-    <ellipse cx="26" cy="162" rx="10" ry="8" fill="#F2C230"/><path d="M18 156l-10-10 6-4 10 10z" fill="#fff"/>
-    <ellipse cx="156" cy="132" rx="10" ry="9" fill="#F2C230"/>
-    <path d="M62 168L58 196H86L90 170M110 170L114 196H142L138 168Z" fill="#2F7DE1"/>
-    <path d="M58 46Q60 20 100 18Q142 20 142 50Q144 96 100 102Q56 98 58 46Z" fill="#F2C230"/>
-    <path d="M56 46Q52 14 80 16Q90 4 106 14Q124 6 132 22Q150 26 144 50Q134 32 116 34Q100 22 86 32Q66 28 56 46Z" fill="#1a1433"/>
-    ${eye(82, 58, 12, '#fff', 1, '#c81e3a')}${eye(118, 58, 12, '#fff', -1, '#c81e3a')}
-    <path d="M66 46L94 54M134 46L106 54" stroke-width="6"/>
-    ${maw(100, 82, 40, 20, 6, '#7a1a0a', '#fffaf0')}
-    <g stroke-width="2.4">${[[30, 140, -20, '#c81e3a'], [176, 148, 15, '#2F7DE1'], [176, 18, -10, '#39a96b']].map(([x, y, a, c]) => `<g transform="translate(${x} ${y}) rotate(${a})"><path d="M-12 -8H12V8H-12Z" fill="${c}"/><path d="M0 -8V8" /><path d="M-9 -4H-3M3 -4H9" stroke="#fff" stroke-width="1.6"/></g>`).join('')}</g>`);
+    <path d="M150 126L198 58" stroke-width="9"/><path d="M150 126L198 58" stroke="#3a2a22" stroke-width="5"/>
+    <path d="M58 118Q100 104 142 118L150 170H50Z" fill="#8a6046"/>
+    <path d="M86 112L100 140 114 112Z" fill="#fbfaf4"/><path d="M96 116L100 146 104 116Z" fill="#2b2433" stroke-width="2"/>
+    <path d="M100 140V168M70 128l10 40M130 128l-10 40" stroke-width="2.4"/><circle cx="106" cy="150" r="2.4" fill="#1a1433"/><circle cx="106" cy="160" r="2.4" fill="#1a1433"/>
+    <path d="M58 120L36 150M142 120L160 142" stroke-width="13"/><path d="M58 120L36 150M142 120L160 142" stroke="#8a6046" stroke-width="8"/>
+    <circle cx="150" cy="128" r="10" fill="#f6dcc4"/>
+    <path d="M18 146L40 136 50 166 28 176Z" fill="#2b3a6b"/><path d="M22 150L42 141" stroke="#fff" stroke-width="2"/><circle cx="40" cy="156" r="10" fill="#f6dcc4"/>
+    <path d="M60 170L56 196H86L92 170M108 170L114 196H144L140 170Z" fill="#2b2433"/>
+    <path d="M58 52Q58 20 100 18Q142 20 142 52Q144 98 100 104Q56 98 58 52Z" fill="#f6dcc4"/>
+    <path d="M50 64Q42 22 76 12Q90 0 110 10Q118 -2 124 10Q156 16 152 64Q146 46 136 40Q128 52 116 40Q106 54 96 42Q84 54 76 42Q66 52 60 42Q54 50 50 64Z" fill="#2b2433"/>
+    ${eye(80, 64, 11, '#fff', 1, '#c81e3a')}${eye(120, 64, 11, '#fff', -1, '#c81e3a')}
+    <path d="M64 52H96V76H64ZM104 52H136V76H104ZM96 62H104" fill="none" stroke-width="4"/>
+    <path d="M64 50L94 58M136 50L106 58" stroke-width="5"/>
+    ${maw(100, 90, 34, 16, 6, '#7a1a0a', '#fffaf0')}
+    <g stroke-width="2.4">${[[176, 150, 15, '#2F7DE1'], [176, 18, -10, '#39a96b'], [28, 18, 12, '#c81e3a']].map(([x, y, a, c]) => `<g transform="translate(${x} ${y}) rotate(${a})"><path d="M-12 -8H12V8H-12Z" fill="${c}"/><path d="M0 -8V8" /><path d="M-9 -4H-3M3 -4H9" stroke="#fff" stroke-width="1.6"/></g>`).join('')}</g>`);
 })();

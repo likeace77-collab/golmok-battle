@@ -798,7 +798,8 @@ const server = http.createServer(async (req, res) => {
     catch { return json(res, 400, { error: '요청이 올바르지 않습니다.' }); }
   }
   const cm = /^img\/mon\/([a-z]+)(-mega)?\.webp$/.exec(rel);
-  if (cm && Data.MONSTERS[cm[1]]?.contest) return contestArt(res, Data.MONSTERS[cm[1]].contest, !!cm[2], url.searchParams.has('dl'));
+  if (cm && Data.MONSTERS[cm[1]]?.contest && !fs.existsSync(path.join(PUBLIC, rel))) return contestArt( // 새로 그린 그림 파일이 있으면 그 파일을 씀
+    res, Data.MONSTERS[cm[1]].contest, !!cm[2], url.searchParams.has('dl'));
   const file = path.resolve(PUBLIC, rel);
   if (!file.startsWith(PUBLIC + path.sep) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     res.writeHead(404); return res.end('Not found');

@@ -410,7 +410,7 @@ const MONSTERS = {
   kkamo: X('까모', ['spirit', 'wind'], 100, 150, 90, 50, 90, 120,
     ['shadowdive', 'poopbomb', 'featherdance', 'razorwind', 'ambush', 'club', 'gust', 'windcut', 'snarearrow', 'guard'],
     '등신을 잇는 2번째 600족으로 골목길 전선에 앉아 세상 돌아가는 걸 구경하는 게 취미이다. 수많은 미세먼지와 쓰레기들을 이겨 내고 세상의 모든 이치를 통달해 다시 태어났다.'),
-  seonsaeng: X('선생님', ['normal'], 100, 50, 70, 10, 10, 15,
+  seonsaeng: X('선생님', ['normal'], 200, 100, 100, 50, 50, 50,
     ['factorize', 'linearcut', 'ouga', 'trial', 'heateq', 'recursion', 'erlking', 'whileloop', 'techup', 'shuttle'],
     '학교 선생님. 과목은 전과목.'),
 };
@@ -745,7 +745,8 @@ Object.assign(MONSTERS.dakdulgi, { trait: { n: '빵 줍기', d: '체력이 절�
 Object.assign(MONSTERS.chijeu, { trait: { n: '그루밍', d: '턴이 끝날 때 상태이상이 있으면 50% 확률로 털을 핥아 낫는다.' } });
 MONSTERS.kkamo.trait = { n: '불운', d: '싸움에 나오면 울음소리를 내서 상대의 명중률을 2단계 떨어뜨린다.' };
 MONSTERS.seonsaeng.trait = { n: '수능감독', d: '매 턴 1/365 확률로 수능 감독하러 가서 한 턴 쉰다.' };
-for (const [id, by] of [['kkamo', '티키티키펑크'], ['seonsaeng', 'pshrocket']]) Object.assign(MONSTERS[id], { img: true, contest: { by, name: MONSTERS[id].n } }); // 그림은 공모전 출품작 그림을 서버가 그대로 내보냄
+for (const [id, by] of [['kkamo', '티키티키펑크'], ['seonsaeng', 'pshrocket']]) Object.assign(MONSTERS[id], { img: true, contest: { by, name: MONSTERS[id].n } });
+MONSTERS.seonsaeng.contest.own = ['', '-mega']; // 선생님은 새로 받은 그림 파일 (public/img/mon/seonsaeng.webp, -mega.webp). 까모는 공모전 출품작 그림을 서버가 그대로 내보냄
 Object.assign(MONSTERS.deungsin, { trait: { n: '돌연사 · 갈증', d: '돌연사: 턴이 시작될 때, 턴이 끝날 때, 공격할 때, 공격받을 때마다 10% 확률로 즉사한다. 갈증: 체력바 아래 갈증 게이지(100%에서 시작)가 기술을 쓰면 15%, 턴이 끝나면 5%, 공격받으면 5% 줄고, 0%가 되면 즉사한다. 메가진화(바다의 왕)하면 갈증 게이지가 사라지고 모든 죽을 확률이 절반이 된다.' } });
 Object.assign(MONSTERS.basaeng, { trait: { n: '불사신', d: '한 방에 쓰러질 공격을 맞아도 30% 확률로 체력 1을 남기고 버틴다.' } });
 // 하위권 상향: 기본 능력치에 더하는 값 [체력, 공격, 방어, 특공, 특방, 스피드]
