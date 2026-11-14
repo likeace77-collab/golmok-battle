@@ -1,5 +1,9 @@
 // 배틀 엔진. 서버에서만 돌고, 모든 판정은 여기서 결정됩니다.
-const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP, BANNED, TIERS, FORMS, ITEMS, TYPES, GMAX_MOVES } = require('./data');
+const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP, BANNED, TIERS, FORMS, ITEMS, TYPES, GMAX_MOVES, PERKS } = require('./data');
+// 강화 고유 효과: pv = 특성 수치 변화량, plusStats = 공통 4% + 고유 능력치 3%
+const perkOf = (m) => (m?.plus ? PERKS[m.species] || {} : {});
+const pv = (m) => (perkOf(m).v || 0) * (m?.plus || 0);
+const plusStats = (stats, species, plus) => Object.fromEntries(Object.entries(stats).map(([k, v]) => [k, Math.round(v * (1 + plus * 0.04 + (PERKS[species]?.stat === k ? plus * 0.03 : 0)))]));
 
 const LEVEL = 50;
 // 골목몬이 너무 빨리 쓰러지지 않도록 모든 골목몬의 체력을 1.3배로 (훈련장 더미 1000은 그대로)
@@ -37,7 +41,7 @@ function calcStats(base) {
 function makeMon(spec) {
   const sp = MONSTERS[spec.species];
   const plus = Math.max(0, Math.min(5, spec.plus | 0)); // 강화: +1마다 능력치 4%
-  const stats = Object.fromEntries(Object.entries(calcStats(sp.base)).map(([k, v]) => [k, Math.round(v * (1 + plus * 0.04))]));
+  const stats = plusStats(calcStats(sp.base), spec.species, plus);
   return {
     species: spec.species, name: sp.n, types: sp.types, stats, mega: false, shiny: !!spec.shiny, plus,
     hp: stats.hp, maxHp: stats.hp,
@@ -65,7 +69,7 @@ function suddenDeath(b, s, m, ev, text) {
 const DEATH = ['갑자기 햇빛이 너무 눈부셨다', '물살이 너무 셌다', '깜짝 놀랐다', '지나가던 물고기와 눈이 마주쳤다', '스트레스를 받았다', '자기가 등신이라는 걸 깨달았다', '바닷물이 너무 짰다', '물방울이 눈에 들어갔다', '옆 개복치가 죽는 걸 보고 충격받았다'];
 const dp = (m, pct) => (m.mega ? pct / 2 : pct); // 바다의 왕: 죽을 확률 절반
 function rollDeath(b, s, m, ev) { // 돌연사 10%
-  if (m.species !== DS || !alive(m) || b.training || !chance(b, dp(m, 10))) return false;
+  if (m.species !== DS || !alive(m) || b.training || !chance(b, dp(m, Math.max(0, 10 + pv(m))))) return false; // 강화마다 -0.5%p
   const why = DEATH[Math.floor(rand(b) * DEATH.length)];
   return suddenDeath(b, s, m, ev, `${m.name}의 돌연사! ${why}...`);
 }
@@ -216,7 +220,7 @@ function doMega(b, s, ev) {
   const sp = MONSTERS[m.species];
   const base = Object.fromEntries(Object.entries(sp.base).map(([k, v]) => [k, v + sp.mega.boost[k]]));
   const oldName = m.name, oldMax = m.maxHp;
-  m.stats = Object.fromEntries(Object.entries(calcStats(base)).map(([k, v]) => [k, Math.round(v * (1 + (m.plus || 0) * 0.04))])); // 강화 보너스 유지
+  m.stats = plusStats(calcStats(base), m.species, m.plus || 0); // 강화 보너스 유지
   m.maxHp = m.stats.hp + tierHp(m);
   m.hp += m.maxHp - oldMax;
   m.name = sp.mega.n; m.mega = true;
@@ -321,7 +325,7 @@ function resolve(b) {
 function speedOf(b, s) {
   const m = activeOf(b, s);
   let v = m.stats.spe * stageMul(m.stages.spe) * stripMul(m);
-  if (m.species === 'godeuri' && m.hp * 2 <= m.maxHp) v *= 1.5; // 특성 녹아내림
+  if (m.species === 'godeuri' && m.hp * 2 <= m.maxHp) v *= 1.5 + pv(m); // 특성 녹아내림
   if (has(m, 'scarf')) v *= 1.5; // 털 목도리
   if (m.status === 'par') v *= .5;
   return v;
@@ -342,7 +346,7 @@ function runTurn(b, ev) {
     const mon = activeOf(b, o.s);
     const mv = o.a.z ? MOVES[MONSTERS[mon.species].z] : mon.gmax && o.a.index >= 0 ? gmaxMoves(mon)[o.a.index] : o.a.index === -1 ? STRUGGLE : MOVES[mon.moves[o.a.index].id];
     const ride = mon.species === 'bangpae' && mon.hp === mon.maxHp && mv.type === 'wind' ? 1 : 0; // 방패연 바람타기
-    const rush = mon.species === 'baedalbot' && chance(b, 30) ? 1 : 0; // 배달봇 배달의민족
+    const rush = mon.species === 'baedalbot' && chance(b, 30 + pv(mon)) ? 1 : 0; // 배달봇 배달의민족
     if (rush) msg(ev, `${mon.name}의 배달의민족! 신호등을 건너뛰고 먼저 출발했다!`);
     const quick = has(mon, 'shoes') && chance(b, 20) ? .5 : 0; // 운동화
     if (quick) useItem(b, o.s, mon, ev, '재빨리 먼저 움직인다!');
@@ -452,7 +456,7 @@ function hurt(b, s, m, amount, ev, extra) {
     for (const i of seats(b)) {
       const x = activeOf(b, i);
       if (!alive(x)) continue;
-      hurt(b, i, x, 100, ev, { blast: 1 });
+      hurt(b, i, x, 100 + pv(m), ev, { blast: 1 });
       if (x !== m) faintCheck(b, i, x, ev);
     }
   }
@@ -460,7 +464,7 @@ function hurt(b, s, m, amount, ev, extra) {
   if (m.species === 'dakdulgi' && !m.ateBread && m.hp > 0 && m.hp * 2 <= m.maxHp) { // 닭둘기 빵 줍기
     m.ateBread = true;
     msg(ev, `${josa(m.name, '은/는')} 바닥의 빵을 주워 먹었다!`);
-    heal(b, s, m, m.maxHp / 3, ev);
+    heal(b, s, m, m.maxHp / 3, ev, m);
   }
   if (m.species === 'jeonbot' && !m.emergency && m.hp > 0 && m.hp * 2 <= m.maxHp) { // 전봇이 비상전력
     m.emergency = true;
@@ -484,7 +488,8 @@ function hurt(b, s, m, amount, ev, extra) {
   }
   return dmg;
 }
-function heal(b, s, m, amount, ev) {
+function heal(b, s, m, amount, ev, perk = null) {
+  if (perk && perkOf(perk).heal) amount *= 1 + perk.plus * 0.1; // 강화: 특성 회복량 (특성으로 회복할 때만 perk를 넘김)
   const v = Math.min(m.maxHp - m.hp, Math.max(1, Math.floor(amount)));
   if (v <= 0) return 0;
   const form0 = formOf(m);
@@ -504,7 +509,7 @@ function faintCheck(b, s, m, ev) {
     if (m.species === 'yeonji' && !m.markDone) { // 연지곤지: 공격 말고 다른 이유로 쓰러져도 상대에게 자국
       m.markDone = true;
       const o = foesOf(b, s).find((i) => alive(activeOf(b, i)));
-      if (o !== undefined) { activeOf(b, o).yeonjiMark = true; msg(ev, `${m.name}의 연지곤지! ${activeOf(b, o).name}에게 붉은 연지 자국이 남았다!`); }
+      if (o !== undefined) { activeOf(b, o).yeonjiMark = .25 + pv(m); msg(ev, `${m.name}의 연지곤지! ${activeOf(b, o).name}에게 붉은 연지 자국이 남았다!`); }
     }
     return true;
   }
@@ -643,14 +648,16 @@ function damageOf(b, atk, def, mv, crit, roll) {
   if (has(atk, 'note') && effX > 1) dmg *= 1.25; // 족집게 노트
   if (b.terrain === 'grass' && mv.type === 'grass' && teamOf(b, seats(b).find((i) => activeOf(b, i) === atk) ?? -1) === b.terrainTeam) dmg *= 1.3;
   if (mv.bean && def.types.includes('spirit')) dmg *= 2; // 팥붕: 팥은 귀신에게 두 배 // 그래스필드 (깐 쪽만)
-  if (mv.sound && atk.species === 'harmonium') dmg *= 1.3; // 특성 펑크록
-  if (mv.sound && atk.species === 'maemmaem') dmg *= 1.3; // 특성 떼창
-  if (phys && def.species === 'malrang') dmg *= .75; // 특성 말랑말랑
-  if (def.species === 'seonggeom' && def.hp === def.maxHp) dmg *= .5; // 특성 천년의 잠
-  if (!phys && atk.species === 'madoseo' && def.status) dmg *= 1.3; // 특성 금서
+  if (mv.sound && atk.species === 'harmonium') dmg *= 1.3 + pv(atk); // 특성 펑크록
+  if (mv.sound && atk.species === 'maemmaem') dmg *= 1.3 + pv(atk); // 특성 떼창
+  if (phys && def.species === 'malrang') dmg *= .75 + pv(def); // 특성 말랑말랑
+  if (def.species === 'seonggeom' && def.hp === def.maxHp) dmg *= .5 + pv(def); // 특성 천년의 잠
+  if (!phys && atk.species === 'madoseo' && def.status) dmg *= 1.3 + pv(atk); // 특성 금서
+  if (perkOf(atk).type === mv.type) dmg *= 1 + atk.plus * 0.03; // 강화: 타입 위력
+  if (def.species === 'ppeondegi') dmg *= 1 + pv(def); // 강화: 뻔데기 받는 피해 감소
   if (atk.blaze > 0) dmg *= 1.5; // 등신 불타올라라
   if (mv.sound && def.species === 'harmonium') dmg *= .5;
-  if (atk.species === 'yangmeori' && mv.type === (isHot(b) ? 'fire' : 'ice')) dmg *= 1.3; // 특성 온탕냉탕
+  if (atk.species === 'yangmeori' && mv.type === (isHot(b) ? 'fire' : 'ice')) dmg *= 1.3 + pv(atk); // 특성 온탕냉탕
   if (phys && atk.status === 'brn') dmg *= .5;
   return Math.max(1, Math.floor(dmg));
 }
@@ -868,7 +875,7 @@ function hitOne(b, s, me, o, mv, ev) {
   }
   if (foe.species === 'batji' && mv.type === 'water') { // 빗물받이 저수
     msg(ev, `${foe.name}의 저수! 물을 받아 마셨다!`);
-    if (!heal(b, o, foe, foe.maxHp / 4, ev)) msg(ev, `${josa(foe.name, '은/는')} 이미 배가 부르다.`);
+    if (!heal(b, o, foe, foe.maxHp / 4, ev, foe)) msg(ev, `${josa(foe.name, '은/는')} 이미 배가 부르다.`);
     return;
   }
   const eff = effMon(mv.type, foe, me);
@@ -893,12 +900,12 @@ function hitOne(b, s, me, o, mv, ev) {
       if (!landed) ev.push({ t: 'reflect', side: o, by: s, counter: true, text: `${josa(foe.name, '은/는')} 방패로 받아내며 피해를 반으로 나눴다!` });
     }
     if (foe.species === 'ppogeuri' && !foe.popped) { // 특성 거품막
-      foe.popped = true; dmg = Math.max(1, Math.floor(dmg / 2));
+      foe.popped = true; dmg = Math.max(1, Math.floor(dmg * Math.max(.1, .5 + pv(foe))));
       msg(ev, `${foe.name}의 거품막이 피해를 줄였다! 거품이 터졌다.`);
     }
     const sturdy = foe.species === 'maetdol' && foe.hp === foe.maxHp && dmg >= foe.hp && foe.hp > 1; // 맷돌이 옹골참
     if (sturdy) dmg = foe.hp - 1;
-    const roach = !sturdy && foe.species === 'basaeng' && dmg >= foe.hp && foe.hp > 1 && chance(b, 30); // 바선생 불사신
+    const roach = !sturdy && foe.species === 'basaeng' && dmg >= foe.hp && foe.hp > 1 && chance(b, 30 + pv(foe)); // 바선생 불사신
     if (roach) dmg = foe.hp - 1;
     const reborn = !sturdy && !roach && foe.species === 'hwansaeng' && !foe.reborn && dmg >= foe.hp && !b.training; // 환생트럭 이세계 환생
     if (reborn) { foe.reborn = true; dmg = foe.hp; }
@@ -908,7 +915,7 @@ function hitOne(b, s, me, o, mv, ev) {
     total += got;
     if (sturdy) msg(ev, `${josa(foe.name, '은/는')} 옹골참으로 버텼다!`);
     if (roach) msg(ev, `${josa(foe.name, '은/는')} 불사신이다! 체력 1로 버텼다!`);
-    if (reborn) { msg(ev, `${josa(foe.name, '은/는')} 이세계에서 환생해 돌아왔다!`); heal(b, o, foe, foe.maxHp / 4, ev); }
+    if (reborn) { msg(ev, `${josa(foe.name, '은/는')} 이세계에서 환생해 돌아왔다!`); heal(b, o, foe, foe.maxHp * (.25 + pv(foe)), ev); }
     if (hold) useItem(b, o, foe, ev, hold);
     if (foe.species === 'bongdari' && mv.cat === 'p') foe.lastPhys = got; // 봉다리 내용물분출용
     landed++;
@@ -982,7 +989,7 @@ function afterHit(b, s, me, o, foe, mv, total, ev) {
   const phys = mv.cat === 'p';
   if (alive(me) && phys && !me.status && !me.types.includes('fire')) {
     // 땡초 하바네로분출 (반드시), 연탄이 불꽃의무장 (30%): 물리(접촉) 공격을 한 상대를 화상
-    if (foe.species === 'ttaengcho' || (foe.species === 'yeontan' && chance(b, 30))) {
+    if (foe.species === 'ttaengcho' || (foe.species === 'yeontan' && chance(b, 30 + pv(foe)))) {
       msg(ev, `${foe.name}의 ${foe.species === 'ttaengcho' ? '하바네로분출' : '불꽃의무장'}!`);
       applyStatus(b, s, me, 'brn', ev, true);
     }
@@ -1007,18 +1014,18 @@ function afterHit(b, s, me, o, foe, mv, total, ev) {
   if (alive(me) && has(me, 'straw') && total > 0 && me.hp < me.maxHp) { useItem(b, s, me, ev, '쭉 빨아 마셨다!'); heal(b, s, me, total / 8, ev); }
   if (alive(me) && has(me, 'battery')) { msg(ev, `${josa(me.name, '은/는')} 번개 배터리에 찌릿했다!`); hurt(b, s, me, me.maxHp / 10, ev); } // 자판봇: 아군에게 과자
   if (foe.species === 'yeonji' && !alive(foe) && !foe.markDone && alive(me)) { // 연지곤지
-    foe.markDone = true; me.yeonjiMark = true;
+    foe.markDone = true; me.yeonjiMark = .25 + pv(foe);
     msg(ev, `${foe.name}의 연지곤지! ${me.name}에게 붉은 연지 자국이 남았다!`);
   }
   if (foe.species === 'bongdari' && !alive(foe) && foe.lastPhys && alive(me)) { // 봉다리 내용물분출
     msg(ev, `${foe.name}의 내용물분출! 봉지 속 내용물이 쏟아졌다!`);
-    hurt(b, s, me, foe.lastPhys, ev);
+    hurt(b, s, me, foe.lastPhys * (1 + pv(foe)), ev);
   }
-  if (foe.species === 'orak' && alive(me) && !me.distracted && chance(b, 30)) { // 오락이 돈지랄
+  if (foe.species === 'orak' && alive(me) && !me.distracted && chance(b, 30 + pv(foe))) { // 오락이 돈지랄
     me.distracted = true;
     msg(ev, `${foe.name}에게서 돈이 우수수 떨어졌다! ${josa(me.name, '은/는')} 돈에 정신이 팔렸다!`);
   }
-  if (foe.species === 'kkaebi' && alive(me) && mv._id && !me.disabled && chance(b, 30)) { // 깨비 저주받은바디
+  if (foe.species === 'kkaebi' && alive(me) && mv._id && !me.disabled && chance(b, 30 + pv(foe))) { // 깨비 저주받은바디
     me.disabled = { id: mv._id, turns: 4 };
     msg(ev, `${foe.name}의 저주받은바디! ${me.name}의 ${josa(mv.n, '이/가')} 봉인되었다!`);
   }
@@ -1034,13 +1041,13 @@ function snack(b, s, me, ev) {
   if (mate !== undefined) {
     const x = activeOf(b, mate);
     msg(ev, `${me.name}의 과자나 뱉어내 이련아! ${x.name}에게 과자가 날아갔다!`);
-    heal(b, mate, x, x.maxHp / 2, ev);
+    heal(b, mate, x, x.maxHp / 2, ev, me);
     return;
   }
   const side = b.sides[s];
   const bench = side.mons.filter((x, i) => i !== side.active && alive(x) && x.hp < x.maxHp).sort((p, q) => p.hp / p.maxHp - q.hp / q.maxHp)[0];
   if (!bench) return;
-  bench.hp = Math.min(bench.maxHp, bench.hp + Math.floor(bench.maxHp / 2));
+  bench.hp = Math.min(bench.maxHp, bench.hp + Math.floor(bench.maxHp / 2 * (1 + (perkOf(me).heal ? me.plus * 0.1 : 0))));
   msg(ev, `${me.name}의 과자나 뱉어내 이련아! 대기 중인 ${josa(bench.name, '이/가')} 과자를 먹고 체력을 회복했다!`);
 }
 // 붕빵이: 눅눅(스피드 하락) ↔ 바삭(물리 공격한 상대에게 1/4 반격)
@@ -1250,9 +1257,9 @@ function endOfTurn(b, ev) {
     if (!alive(m)) continue;
     if (m.species === 'damjaengjeon' && m.hp < m.maxHp) { // 특성 광합성 충전
       msg(ev, `${josa(m.name, '은/는')} 광합성으로 충전했다!`);
-      heal(b, s, m, m.maxHp / 16, ev);
+      heal(b, s, m, m.maxHp / 16, ev, m);
     }
-    if (m.species === 'chijeu' && m.status && chance(b, 50)) { // 치즈냥 그루밍
+    if (m.species === 'chijeu' && m.status && chance(b, 50 + pv(m))) { // 치즈냥 그루밍
       m.status = null; m.statusTurns = 0;
       ev.push({ t: 'status', side: s, status: null, text: `${josa(m.name, '은/는')} 털을 핥아 상태이상이 나았다!` });
     }
@@ -1268,7 +1275,7 @@ function endOfTurn(b, ev) {
   for (const s of seats(b)) {
     const m = activeOf(b, s);
     if (!alive(m) || b.phase === 'over') continue;
-    if (m.species === 'eomuk' && b.weather === 'rain' && m.hp < m.maxHp) { msg(ev, `${m.name}의 촉촉바디! 빗물에 국물이 불었다.`); heal(b, s, m, m.maxHp / 8, ev); }
+    if (m.species === 'eomuk' && b.weather === 'rain' && m.hp < m.maxHp) { msg(ev, `${m.name}의 촉촉바디! 빗물에 국물이 불었다.`); heal(b, s, m, m.maxHp / 8, ev, m); }
     if (m.species === 'eomuk' && b.weather === 'sun') { msg(ev, `${m.name}의 촉촉바디! 땡볕에 국물이 졸아든다...`); hurt(b, s, m, m.maxHp / 16, ev); faintCheck(b, s, m, ev); }
     if (m.species === 'tteokppo' && ++m.fieldTurns === 2) { // 라면사리 추가
       msg(ev, `${m.name}의 라면사리 추가! 국물이 진해졌다!`);
@@ -1279,7 +1286,7 @@ function endOfTurn(b, ev) {
       ev.push({ t: 'item', side: s, item: m.item, back: true, text: `${m.name}의 리사이클! ${josa(ITEMS[m.item].n, '이/가')} 다시 생겼다!` });
     }
     if (has(m, 'leftover') && m.hp < m.maxHp) { useItem(b, s, m, ev, '조금 먹고 체력을 회복했다.'); heal(b, s, m, m.maxHp / 16, ev); }
-    if (m.yeonjiMark && alive(m)) { msg(ev, `${m.name}의 연지 자국이 화끈거린다!`); hurt(b, s, m, m.maxHp / 4, ev); faintCheck(b, s, m, ev); }
+    if (m.yeonjiMark && alive(m)) { msg(ev, `${m.name}의 연지 자국이 화끈거린다!`); hurt(b, s, m, m.maxHp * (m.yeonjiMark === true ? .25 : m.yeonjiMark), ev); faintCheck(b, s, m, ev); }
   }
   if (b.terrain && --b.terrainTurns <= 0) { b.terrain = null; ev.push({ t: 'terrain', terrain: null, text: '그래스필드가 사라졌다.' }); }
   if (b.weather && --b.weatherTurns <= 0) {

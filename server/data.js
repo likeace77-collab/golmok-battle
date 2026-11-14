@@ -868,4 +868,55 @@ const GMAX_MOVES = {
   deungsin: '거다이 심해 압살',
 };
 
-module.exports = { GMAX_MOVES, ITEMS, FORMS, TIERS, BANNED, DEV_ACCOUNTS, STRIP, TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES };
+
+// 강화 고유 효과: +1 강화마다 (공통 능력치 +4%와 별도)
+//  stat: 그 능력치 +3% 더 / type: 그 타입 기술 위력 +3% / heal: 특성 회복량 +10% / v: 특성 수치가 단계마다 v만큼
+const PERKS = {
+  yeontan: { v: 4, d: '불꽃의무장 화상 확률 +4%p' },
+  bungbbang: { type: 'fire' }, horong: { type: 'spirit' }, kettle: { type: 'water' },
+  daeya: { stat: 'def' }, usan: { stat: 'spe' }, kongsiru: { type: 'grass' }, ssaribi: { type: 'wind' },
+  ttaengcho: { type: 'fire' }, jeonbot: { type: 'elec' },
+  orak: { v: 4, d: '돈지랄(상대 한눈팔기) 확률 +4%p' },
+  bangpae: { type: 'wind' }, bingsu: { type: 'ice' }, bonaeng: { stat: 'def' }, jangdok: { type: 'poison' },
+  maetdol: { stat: 'def' }, jangseung: { type: 'earth' }, fan: { stat: 'spe' },
+  kkaebi: { v: 4, d: '저주받은바디 봉인 확률 +4%p' },
+  kkangtong: { type: 'poison' },
+  bongdari: { v: 0.1, d: '내용물분출 되돌려주는 피해 +10%' },
+  manhol: { type: 'earth' }, sigung: { type: 'poison' },
+  batji: { heal: 1, d: '저수 회복량 +10%' },
+  meokarak: { type: 'spirit' }, ppeong: { type: 'water' }, tteokppo: { stat: 'atk' },
+  sundae: { v: 15, d: '창자버스터 폭발 피해 +15' },
+  eomuk: { heal: 1, d: '촉촉바디 비 회복량 +10%' },
+  hotteok: { type: 'fire' },
+  ppeondegi: { v: -0.02, d: '받는 모든 피해 -2%' },
+  neonna: { type: 'fairy' },
+  yeonji: { v: 0.02, d: '연지 자국 피해 +최대 체력 2%p' },
+  lumina: { type: 'fairy' }, silvia: { type: 'fairy' }, danjo: { stat: 'def' },
+  jabanbot: { heal: 1, d: '과자 회복량 +10%' },
+  baedalbot: { v: 4, d: '배달의민족 먼저 공격 확률 +4%p' },
+  setakbot: { type: 'water' },
+  godeuri: { v: 0.06, d: '녹아내림 스피드 배율 +0.06' },
+  yangmeori: { v: 0.03, d: '온탕냉탕 배율 +0.03' },
+  damjaengjeon: { heal: 1, d: '광합성 충전 회복량 +10%' },
+  ppogeuri: { v: -0.06, d: '거품막이 피해를 6%p 더 줄임' },
+  hwangsari: { type: 'earth' }, tuhon: { stat: 'atk' },
+  harmonium: { v: 0.03, d: '펑크록 소리 기술 배율 +0.03' },
+  hwansaeng: { v: 0.05, d: '이세계 환생 체력 +최대 체력 5%p' },
+  malrang: { v: -0.03, d: '말랑말랑 물리 피해 3%p 더 줄임' },
+  seonggeom: { v: -0.04, d: '천년의 잠 피해 4%p 더 줄임' },
+  madoseo: { v: 0.03, d: '금서 특수 기술 배율 +0.03' },
+  mimik: { type: 'grass' },
+  maemmaem: { v: 0.03, d: '떼창 소리 기술 배율 +0.03' },
+  wengweng: { type: 'poison' },
+  dakdulgi: { heal: 1, d: '빵 줍기 회복량 +10%' },
+  chijeu: { v: 5, d: '그루밍 확률 +5%p' },
+  basaeng: { v: 4, d: '불사신 버티기 확률 +4%p' },
+  deungsin: { v: -0.5, d: '돌연사 확률 -0.5%p' },
+};
+const STAT_KO = { atk: '공격', def: '방어', spa: '특공', spd: '특방', spe: '스피드', hp: '체력' };
+for (const [id, p] of Object.entries(PERKS)) {
+  if (p.stat) p.d = `${STAT_KO[p.stat]} +3% 더`;
+  if (p.type) p.d = `${TYPES[p.type].n} 기술 위력 +3%`;
+}
+
+module.exports = { GMAX_MOVES, ITEMS, FORMS, TIERS, BANNED, DEV_ACCOUNTS, STRIP, TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES, PERKS };

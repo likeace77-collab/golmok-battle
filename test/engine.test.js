@@ -871,3 +871,12 @@ test('레이드: 4명 대 보스 1마리, 보스는 거다이맥스 유지·광�
     assert.ok(spread || b.turn < 3);
   }
 });
+
+test('강화 고유 효과: 능력치형은 그 능력치만 더 오르고, 등신은 돌연사 확률이 줄어든다', () => {
+  const D = require('../server/data');
+  assert.equal(Object.keys(D.PERKS).length, Object.keys(D.MONSTERS).length);
+  const mk = (plus) => E.createBattle([{ name: 'a', team: [{ species: 'usan', moves: E.smartMoves('usan', []), plus }] }, { name: 'b', team: E.botTeam(1, 1) }], 1).sides[0].mons[0];
+  const p0 = mk(0), p5 = mk(5);
+  assert.ok(p5.stats.spe / p0.stats.spe > p5.stats.atk / p0.stats.atk + 0.1);
+  assert.equal(D.PERKS.deungsin.v, -0.5);
+});

@@ -243,12 +243,20 @@ function showBox() {
 }
 // 골목몬 한 마리: 기술 바꾸기(500GP), 메가스톤 사기(상점 가격)
 // 강화 칸: 같은 골목몬(덱·원정·교환에 안 걸린 것)을 먹여 +1
+// 강화 고유 효과 한 줄: 단계마다 얼마, 지금 합계
+function perkLine(species, n) {
+  const p = G.data.PERKS?.[species];
+  if (!p) return '';
+  const now = p.d.replace(/([+-]?)(\d+(?:\.\d+)?)/, (_, sg, num) => sg + +(num * n).toFixed(2)); // 설명 속 숫자 × 단계
+  return `<p class="perk"><b>✦ 고유 효과</b> 단계마다 ${esc(p.d)}${n ? ` <em>지금 +${n}: ${esc(now)}</em>` : ''}</p>`;
+}
 function enhanceBox(m) {
   const n = m.plus || 0, sp = G.data.MONSTERS[m.species];
   const deckUids = new Set((G.user.decks[G.user.active]?.team || []).map((t) => t.uid));
   const food = G.user.mons.filter((x) => x.uid !== m.uid && x.species === m.species);
   return `<section class="enh"><h3 class="dex-h">강화 <b class="plus-tag">${n ? `+${n}` : '+0'}</b> <small class="muted">+1마다 모든 능력치 4% (최대 +5)</small></h3>
     <div class="enh-bar">${[1, 2, 3, 4, 5].map((i) => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</div>
+    ${perkLine(m.species, n)}
     ${n >= 5 ? '<p class="muted">최대로 강화했어요! 🔥</p>' : food.length ? `<p class="muted" style="font-size:13px">같은 ${esc(sp.n)}을(를) 먹이면 +1. 비용 ${ICON.gp(14)} ${fmt((n + 1) * 1000)}GP</p>
       <div class="enh-food">${food.map((f) => `<button class="tr-pick" data-food="${f.uid}"><div class="tr-mon${f.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${f.plus ? `<em class="plus-dot">+${f.plus}</em>` : ''}${f.shiny ? '<em class="shiny-dot">✨</em>' : ''}${monArt(f.species, f.shiny)}<b>${deckUids.has(f.uid) ? '덱에 있음' : '먹이기'}</b></div></button>`).join('')}</div>`
       : `<p class="muted" style="font-size:13px">같은 골목몬이 한 마리 더 있으면 먹여서 강화할 수 있어요. 스카우트나 교환으로 모아 보세요!</p>`}
