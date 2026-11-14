@@ -14,23 +14,34 @@ const BG_C = ['#2340A8', '#E8402C', '#F2B705', '#3CC9A7', '#9A4FB8', '#F27FA5'];
 const BG_SWATCH = [...BG_C, '#5B9BF0', '#F27FA5', '#FFD23F', '#E8402C', '#14102b', '#F7A24B', '#2a1450', '#FFB3CC'];
 
 const AVATAR_LABELS = {
+  eyeColor: '눈 색', eyeSize: '눈 크기', lashes: '속눈썹', height: '키', bottom: '하의',
   body: '체형', pose: '자세', aura: '오라', back: '등', hand: '손에 든 것', gloves: '장갑', neck: '목', pantsColor: '바지 색', shoes: '신발', shoeColor: '신발 색',
   skin: '피부', hair: '머리 모양', hairColor: '머리 색', brow: '눈썹', eyes: '눈', mouth: '입', face: '얼굴 장식',
-  glasses: '안경', hat: '모자', outfit: '옷', outfitColor: '옷 색', bg: '배경',
+  glasses: '안경', hat: '모자', outfit: '상의', outfitColor: '상의 색', pantsColor: '하의 색', bg: '배경', aura: '이펙트',
 };
-const AVATAR_SWATCH = { skin: SKIN, hairColor: HAIR_C, outfitColor: CLOTH_C, bg: BG_SWATCH, pantsColor: PANTS_C, shoeColor: SHOE_C };
-const AVATAR_ORDER = ['body', 'pose', 'skin', 'hair', 'hairColor', 'brow', 'eyes', 'mouth', 'face', 'glasses', 'hat', 'outfit', 'outfitColor', 'pantsColor', 'shoes', 'shoeColor', 'gloves', 'neck', 'back', 'hand', 'aura', 'bg'];
+const EYE_SW = ['#3a2a1a', '#6b3f1f', '#2F7DE1', '#3FA34D', '#9A4FB8', '#E8402C', '#F2B705', '#18b5b0', '#F27FA5', '#7C8798', '#C21F4A', '#1a1433'];
+const AVATAR_SWATCH = { eyeColor: EYE_SW, skin: SKIN, hairColor: HAIR_C, outfitColor: CLOTH_C, bg: BG_SWATCH, pantsColor: PANTS_C, shoeColor: SHOE_C };
+const AVATAR_ORDER = ['body', 'height', 'pose', 'aura', 'skin', 'hair', 'hairColor', 'eyes', 'eyeColor', 'eyeSize', 'lashes', 'brow', 'mouth', 'face', 'glasses', 'hat', 'outfit', 'outfitColor', 'bottom', 'pantsColor', 'shoes', 'shoeColor', 'gloves', 'neck', 'back', 'hand', 'bg'];
+// 전신으로 보여 줄 항목 (나머지는 얼굴 가까이)
+const AVATAR_FULL = new Set(['body', 'height', 'pose', 'aura', 'outfit', 'outfitColor', 'bottom', 'pantsColor', 'shoes', 'shoeColor', 'gloves', 'neck', 'back', 'hand']);
 const AVATAR_NAMES = {
-  body: ['보통', '날씬', '듬직', '꼬마'], pose: ['차렷', '허리에 손', '팔짱', '브이', '손 흔들기', '근육 자랑', '엄지척', '손가락질', '파이팅', '손하트', '뒷짐', '만세 점프'],
+  body: ['남 · 보통', '남 · 슬림', '남 · 근육', '여 · 보통', '여 · 슬림', '여 · 탄탄'], height: ['보통', '작게', '크게'],
+  pose: ['차렷', '허리에 손', '팔짱', '브이', '손 흔들기', '근육 자랑', '엄지척', '손가락질', '파이팅', '손하트', '뒷짐', '만세 점프', '모자 챙 잡기', '주머니에 손', '공 던지기', '하늘 찌르기', '돌아보기', '무릎 꿇기', '그루브 댄스', '챔피언'],
+  hair: ['짧은 머리', '댄디컷', '삐죽 머리', '가르마', '울프컷', '포니테일', '트윈테일', '긴 생머리', '단발', '반묶음', '똥머리', '웨이브 장발', '삭발', '올백', '곱슬', '땋은 머리'],
+  eyes: ['기본', '날카로운', '동그란', '처진', '고양이', '졸린', '반짝반짝', '무심한'], eyeSize: ['아주 작게', '작게', '보통', '크게', '아주 크게'], lashes: ['없음', '짧게', '길게', '풍성하게', '아래까지'],
+  brow: ['기본', '일자', '올라간', '처진', '굵은', '짧은 눈썹'], mouth: ['미소', '활짝', '무표정', '오!', '시무룩', '메롱', '송곳니', '고양이 입', '씨익', '헤헤'],
+  face: ['없음', '주근깨', '볼터치', '흉터', '반창고', '별 스티커', '전투 페인트'], glasses: ['없음', '동그란 안경', '네모 안경', '선글라스', '사이버 바이저', '외눈 안경', '안대', '별 안경'],
+  outfit: ['티셔츠', '후드티', '셔츠', '야구 점퍼', '가죽 재킷', '트레이닝 재킷', '니트', '정장', '크롭티', '블라우스', '롱코트', '교복', '민소매', '롱패딩'],
+  bottom: ['청바지', '카고 바지', '슬랙스', '트레이닝 바지', '반바지', '플리츠 스커트', '롱스커트', '레깅스', '찢청', '와이드 팬츠'],
   shoes: ['운동화', '부츠', '슬리퍼', '구두', '하이탑', '장화', '롤러', '쪼리'], gloves: ['없음', '흰 장갑', '권투', '가죽', '고무장갑', '메카'],
   neck: ['없음', '목도리', '금목걸이', '나비넥타이', '두건', '메달'], back: ['없음', '망토', '천사 날개', '악마 날개', '책가방', '제트팩', '등검', '나비 날개', '기타', '깃발'],
-  hand: ['없음', '검', '지팡이', '깃발', '마이크', '아이스크림', '국자', '뚫어뻥', '빗자루', '연탄집게'], aura: ['없음', '불꽃', '번개', '반짝', '얼음', '하트', '어둠', '무지개'],
+  hand: ['없음', '검', '지팡이', '깃발', '마이크', '아이스크림', '국자', '뚫어뻥', '빗자루', '연탄집게'], aura: ['없음', '불꽃', '번개', '반짝', '얼음', '하트', '어둠', '무지개', '네온 링', '벚꽃', '불사조 날개', '번개 폭풍', '은하수', '황금 오라', '흑염', '글리치'],
 };
 
 // 3D가 되면 3D로, 안 되면 2D로 그립니다. 배경은 2D 그림을 깝니다.
-function avatarSVG(a, cls = '') {
+function avatarSVG(a, cls = '', full = false) {
   if (typeof Avatar3D === 'undefined' || !Avatar3D) return avatarSVG2D(a, cls);
-  return `<svg class="${cls}" viewBox="0 0 100 125" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${avatarBg(a.bg || 0)}<image href="${Avatar3D.snapshot(a)}" width="100" height="125"/></svg>`;
+  return `<svg class="${cls}" viewBox="0 0 100 125" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${avatarBg(a.bg || 0)}<image href="${Avatar3D.snapshot(a, 200, 250, full ? 'full' : 'bust')}" width="100" height="125"/></svg>`;
 }
 
 function avatarBg(i) {
