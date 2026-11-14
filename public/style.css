@@ -1741,3 +1741,9 @@ svg[data-shiny] { filter: var(--sf); animation: shinyGlow 2.4s ease-in-out infin
 .ar-grid button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px; border: 2px solid #1a143322; border-radius: 10px; background: #fff; font-size: 11px; }
 .ar-grid button svg, .ar-grid button img { width: 44px; height: 44px; }
 .ar-grid button[aria-pressed="true"] { border-color: #1a1433; background: #FFE45C; }
+/* 꾸미기: 유료 표시 */
+.avgrid button { position: relative; }
+.av-price { position: absolute; top: 3px; right: 3px; font-style: normal; font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 6px; background: #1a1433; color: #FFE45C; }
+.avgrid button.paid { box-shadow: inset 0 0 0 2px #B44BFF; }
+.av-buybar { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.av-buybar small { margin-left: 6px; opacity: .8; }

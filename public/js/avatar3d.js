@@ -61,6 +61,8 @@ const Avatar3D = (() => {
     }
     return g;
   }
+  const shade = (hex, k) => { const c = new T.Color(hex); if (k < 0) c.multiplyScalar(1 + k); else c.lerp(new T.Color('#fff'), k); return `#${c.getHexString()}`; };
+  const addR = (p, o) => { p.add(o); return o; };
   const at = (obj, x, y, z, rx = 0, ry = 0, rz = 0) => { obj.position.set(x, y, z); obj.rotation.set(rx, ry, rz); return obj; };
 
   /* ---------- 캐릭터 만들기 ---------- */
@@ -70,11 +72,11 @@ const Avatar3D = (() => {
     const pc = PANTS_C[v('pantsColor')], sc = SHOE_C[v('shoeColor')];
     const body = v('body'), outfit = v('outfit');
     const kid = body === 3;
-    const W = [1, .86, 1.22, .92][body];
+    const W = [1, .86, 1.22, .92, 1.08, .9][body];
     const root = new T.Group(), hips = new T.Group(), torso = new T.Group(), head = new T.Group();
     const J = { root, hips, torso, head };
     root.add(hips);
-    const legLen = kid ? .32 : .48;
+    const legLen = kid ? .32 : body === 5 ? .6 : body === 4 ? .52 : .48;
     hips.position.y = legLen + .42;
     hips.add(torso);
 
@@ -82,7 +84,13 @@ const Avatar3D = (() => {
     for (const s of [-1, 1]) {
       const leg = new T.Group();
       at(leg, s * .19 * W, 0, 0);
-      leg.add(at(part(cap(.14 * W, legLen), pc), 0, -legLen / 2 - .14, 0));
+      // 하의: 0 기본, 1 카고 조거, 2 데님, 3 트레이닝, 4 반바지, 5 스커트
+      const bt = v('bottom'), bare = bt === 4 || bt === 5;
+      leg.add(at(part(cap(.14 * W * (bt === 1 ? 1.12 : 1), legLen), bare ? skin : pc), 0, -legLen / 2 - .14, 0));
+      if (bt === 1) { leg.add(at(part(box(.09, .16, .16), shade(pc, -.15), { line: .015 }), s * .14 * W, -legLen * .35, 0)); leg.add(at(new T.Mesh(tor(.15 * W, .035, Math.PI * 2, 6, 18), toon(shade(pc, -.25))), 0, -legLen - .12, 0, Math.PI / 2)); }
+      if (bt === 2) { leg.add(at(new T.Mesh(box(.012, legLen + .1, .012), flat('#F2B705')), s * .1 * W, -legLen / 2 - .14, .1 * W)); leg.add(at(new T.Mesh(tor(.145 * W, .04, Math.PI * 2, 6, 18), toon(shade(pc, .35))), 0, -legLen - .12, 0, Math.PI / 2)); }
+      if (bt === 3) leg.add(at(part(box(.03, legLen + .2, .05), '#fff', { line: 0 }), s * .135 * W, -legLen / 2 - .12, 0));
+      if (bt === 4) leg.add(at(part(cap(.16 * W, legLen * .25), pc), 0, -.12, 0));
       const shoe = new T.Group();
       at(shoe, 0, -legLen - .3, .05);
       const shoes = [
@@ -94,16 +102,20 @@ const Avatar3D = (() => {
         () => { shoe.add(at(part(cyl(.16, .17, .44), sc), 0, .14, 0)); shoe.add(at(part(box(.27, .1, .38), sc), 0, -.06, .05)); },
         () => { shoe.add(at(part(box(.25, .16, .38), sc), 0, 0, .02)); for (const z of [-.12, .14]) shoe.add(at(part(cyl(.06, .06, .3, 12), '#E8402C'), 0, -.13, z, 0, 0, Math.PI / 2)); },
         () => { shoe.add(at(part(box(.24, .04, .38), sc), 0, -.07, .03)); shoe.add(at(part(box(.04, .06, .16), '#fff', { line: .01 }), 0, -.03, .08)); },
+        // 8 하이탑 (형광 포인트), 9 버클 워커
+        () => { shoe.add(at(part(cyl(.15, .15, .28), sc), 0, .08, 0)); shoe.add(at(part(box(.27, .14, .38), sc), 0, -.02, .04)); shoe.add(at(part(box(.28, .06, .41), '#7CFF4F', { line: .015 }), 0, -.09, .04)); for (const y of [.02, .1, .18]) shoe.add(at(part(box(.12, .025, .02), '#7CFF4F', { line: 0 }), 0, y, .15)); },
+        () => { shoe.add(at(part(cyl(.16, .17, .4), '#2a2a33'), 0, .12, 0)); shoe.add(at(part(box(.28, .14, .4), '#2a2a33'), 0, -.04, .05)); shoe.add(at(part(box(.3, .07, .42), '#57505c', { line: .015 }), 0, -.12, .05)); for (const y of [.06, .2]) { shoe.add(at(new T.Mesh(tor(.165, .022, Math.PI * 2, 6, 18), toon(sc)), 0, y, 0, Math.PI / 2)); shoe.add(at(part(box(.06, .05, .03), '#C7CDD6', { line: .008 }), .14, y, .06)); } },
       ];
       (shoes[v('shoes')] || shoes[0])();
       leg.add(shoe);
       hips.add(leg);
       J[s < 0 ? 'legL' : 'legR'] = leg;
     }
+    if (v('bottom') === 5) hips.add(at(part(cyl(.3 * W, .46 * W, .36, 20), pc, { line: .02 }), 0, -.16, 0));
 
     // 몸통
-    const armColor = outfit === 10 ? skin : cc;
-    const torsoColor = { 2: '#2B2B38', 4: '#fff', 5: '#2a2a33', 7: '#8a8f98', 8: '#fff', 11: '#3B2F8C' }[outfit] || cc;
+    const armColor = outfit === 10 ? skin : outfit === 16 ? '#F4F2E6' : outfit === 15 ? '#2a2a33' : cc;
+    const torsoColor = { 2: '#2B2B38', 4: '#fff', 5: '#2a2a33', 7: '#8a8f98', 8: '#fff', 11: '#3B2F8C', 15: '#2a2a33' }[outfit] || cc;
     const chest = part(cap(.34, .38), torsoColor);
     chest.scale.set(W, 1, .82);
     torso.add(at(chest, 0, .42, 0));
@@ -124,6 +136,10 @@ const Avatar3D = (() => {
       11: () => { tAdd(at(part(cyl(.3 * W, .55 * W, .7, 20), '#3B2F8C'), 0, -.05, 0)); front(tor(.16, .05), cc, .8, .12); },
       12: () => { for (let i = 0; i < 4; i++) { const r = tor(.35, .025, Math.PI * 2, 6, 30); tAdd(at(part(r, '#fff', { line: 0 }), 0, .2 + i * .16, 0, Math.PI / 2)).scale.set(W, .82, 1); } },
       13: () => { for (const s of [-1, 1]) tAdd(at(part(box(.05, .6, .04), '#fff', { line: 0 }), s * .25 * W, .42, .25)); front(shapeGeo('n7', [[-.08, .1], [.1, .1], [.02, -.12], [-.03, -.12], [.03, .05], [-.08, .05]], .02), '#fff', .45, .3, { line: .01 }); },
+      // 14 오버사이즈 후드 집업 (안에 빈티지 셔츠), 15 테크웨어 스트랩 재킷, 16 야구 점퍼
+      14: () => { addR(torso, at(part(tor(.25, .1), cc), 0, .82, -.14, Math.PI / 2.6)); front(box(.16, .62, .03), '#2B2B38', .42, .29, { line: .01 }); for (const s of [-1, 1]) { tAdd(at(part(box(.02, .58, .02), '#C7CDD6', { line: 0 }), s * .085, .42, .31)); tAdd(at(part(cyl(.012, .012, .22, 6), '#fff', { line: 0 }), s * .06, .68, .31)); } tAdd(at(part(box(.12, .1, .02), '#F2B705', { line: .006 }), 0, .45, .31)); },
+      15: () => { for (const s of [-1, 1]) { addR(torso, at(part(box(.07, .78, .03), cc, { line: .01 }), s * .04, .45, .29, 0, 0, s * .55)); tAdd(at(part(box(.09, .07, .04), '#C7CDD6', { line: .008 }), s * .13, .62, .3)); } tAdd(at(part(box(.5 * W, .05, .03), '#BFE4FF', { line: 0 }), 0, .2, .28)); tAdd(at(part(tor(.17, .05), '#2a2a33'), 0, .82, .06, Math.PI / 2)); },
+      16: () => { tAdd(at(part(tor(.17, .05), '#2B2B38'), 0, .82, .04, Math.PI / 2)); for (const y of [.1, .14]) addR(torso, at(new T.Mesh(tor(.34, .02, Math.PI * 2, 6, 30), toon(y === .1 ? '#2B2B38' : '#F4F2E6')), 0, y, 0, Math.PI / 2)).scale.set(W, .82, 1); front(box(.03, .58, .02), '#F4F2E6', .45, .3, { line: 0 }); front(shapeGeo('n7', [[-.08, .1], [.1, .1], [.02, -.12], [-.03, -.12], [.03, .05], [-.08, .05]], .02), '#F4F2E6', .6, .28, { line: .01 }); },
     }[outfit] || (() => {}))();
     // 목 장식
     ({
@@ -164,6 +180,15 @@ const Avatar3D = (() => {
     // 손하트 포즈용 하트
     { const hp = at(part(shapeGeo('hp', heartPts(.2), .08), '#FF5C8A', { line: .02 }), 0, .62, .62);
       hp.visible = false; torso.add(hp); J.heartProp = hp; }
+    // 유료 포즈 소품: 야구공(왼손), 트로피(오른손), 랭크업 홀로그램(등 뒤)
+    { const ball = new T.Group(); ball.add(part(sph(.12, 16, 12), '#fff', { line: .015 })); ball.add(at(new T.Mesh(tor(.122, .012, Math.PI * 2, 6, 24), flat('#E8402C')), 0, 0, 0, 0, .5)); ball.visible = false; J.handL.add(ball); J.ball = ball; }
+    { const tr = new T.Group(); tr.add(at(part(cyl(.2, .09, .3, 16), '#FFD23F'), 0, .36, 0)); tr.add(at(part(cyl(.05, .05, .14), '#E7B23A'), 0, .14, 0)); tr.add(at(part(box(.22, .07, .14), '#8B5A2B'), 0, .03, 0)); for (const s of [-1, 1]) tr.add(at(part(tor(.08, .02, Math.PI), '#FFD23F', { line: .008 }), s * .21, .38, 0, 0, 0, s * Math.PI / 2)); tr.visible = false; tr.position.set(0, -.06, .06); tr.rotation.x = Math.PI; J.handR.add(tr); J.trophy = tr; }
+    { const ho = new T.Group(), g = (c, op) => new T.MeshBasicMaterial({ color: c, transparent: true, opacity: op, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide });
+      ho.add(at(new T.Mesh(tor(1.05, .03, Math.PI * 2, 6, 6), g('#2EF2FF', .9)), 0, 0, 0, 0, 0, Math.PI / 6));
+      ho.add(at(new T.Mesh(disc(1.0, 0, Math.PI * 2), g('#1a6cff', .22)), 0, 0, -.01));
+      ho.add(at(new T.Mesh(shapeGeo('hup', [[-.35, -.1], [0, .3], [.35, -.1], [.18, -.1], [0, .1], [-.18, -.1]]), g('#FFE45C', .95)), 0, .35, .01));
+      for (const [x, y, w] of [[-1.25, .55, .7], [1.25, .2, .6], [-1.15, -.35, .55]]) { const pn = new T.Group(); pn.add(new T.Mesh(box(w, .3, .005), g('#2EF2FF', .3))); pn.add(at(new T.Mesh(box(w, .02, .005), g('#ffffff', .9)), 0, .14, .005)); pn.add(at(new T.Mesh(box(w * .6, .05, .005), g('#FFE45C', .9)), -w * .15, -.04, .005)); ho.add(at(pn, x, y, 0)); }
+      ho.visible = false; root.add(at(ho, 0, 2.0, -.7)); J.holo = ho; }
     // 손에 든 것 (오른손)
     const hand = J.handR, H = (o) => hand.add(o);
     ({
@@ -210,21 +235,42 @@ const Avatar3D = (() => {
     };
     const M = (geo, c, o = {}) => { const m = new T.Mesh(geo, flat(c, T.DoubleSide, o.op || 1)); if (o.s) m.scale.set(...o.s); if (o.r) m.rotation.z = o.r; const g = new T.Group(); g.add(m); return g; };
     const ex = .22 * R / .62, ey = -.02;
+    // 눈 색·눈 크기: 눈동자를 색 홍채 + 검은 동공 + 하이라이트로, 크기는 눈 중심에서 키움
+    const EYE_C = ['', '#2F7DE1', '#18c8e0', '#3FA34D', '#9A4FB8', '#E8402C', '#8a1030', '#F2B705', '#F27FA5', '#7C8798', '#6b3f1f', '#B8C2CC'];
+    const EC = EYE_C[v('eyeColor')] || '', es = [1, .8, 1.2, 1.4][v('eyeSize')] || 1;
+    let eyeX = 0;
+    const eF = (obj, x, y) => { obj.scale.multiplyScalar(es); return onFace(obj, eyeX + (x - eyeX) * es, ey + (y - ey) * es); };
+    const IR = (r, sc, lit, base = INK) => {
+      const g = M(disc(r), EC || base, { s: sc });
+      if (EC) {
+        const p = new T.Mesh(disc(r * .48), flat(INK, T.DoubleSide)); p.position.z = .002; if (sc) p.scale.set(...sc); g.add(p);
+        if (!lit) { const h = new T.Mesh(disc(r * .3), flat('#fff', T.DoubleSide)); h.position.set(-r * .35, r * .38, .004); g.add(h); }
+      }
+      return g;
+    };
     const eyeKinds = [
-      (x) => onFace(M(disc(.07), INK), x, ey),
-      (x) => onFace(M(tor(.07, .02, Math.PI), INK), x, ey - .03),
-      (x) => { onFace(M(disc(.12), '#fff'), x, ey); onFace(M(disc(.065), INK), x, ey - .01); onFace(M(disc(.025), '#fff'), x - .03, ey + .03); },
-      (x) => { onFace(M(disc(.06), INK), x, ey - .02); onFace(M(box(.16, .03, .001), INK, { r: x < 0 ? -.4 : .4 }), x, ey + .1); },
-      (x) => onFace(M(box(.15, .03, .001), INK), x, ey),
-      (x) => { onFace(M(disc(.08), INK, { s: [.85, 1.25, 1] }), x, ey); onFace(M(disc(.03), '#fff'), x - .025, ey + .04); onFace(M(disc(.015), '#fff'), x + .025, ey - .04); },
-      (x) => onFace(M(shapeGeo('hrt', heartPts(.11)), '#E8402C'), x, ey),
-      (x) => { onFace(M(disc(.075, Math.PI, Math.PI), INK), x, ey + .01); },
-      (x) => (x < 0 ? onFace(M(tor(.07, .02, Math.PI), INK, { r: Math.PI }), x, ey + .03) : onFace(M(disc(.07), INK), x, ey)),
-      (x) => onFace(M(shapeGeo('str', starPts(.1)), '#FFE45C'), x, ey),
-      (x) => { onFace(M(box(.15, .03, .001), INK, { r: .78 }), x, ey); onFace(M(box(.15, .03, .001), INK, { r: -.78 }), x, ey); },
-      (x) => { onFace(M(disc(.09), '#6CF2C2'), x, ey); onFace(M(disc(.03), '#fff'), x - .02, ey + .03); },
+      (x) => eF(IR(.07), x, ey),
+      (x) => eF(M(tor(.07, .02, Math.PI), INK), x, ey - .03),
+      (x) => { eF(M(disc(.12), '#fff'), x, ey); eF(IR(.065), x, ey - .01); eF(M(disc(.025), '#fff'), x - .03, ey + .03); },
+      (x) => { eF(IR(.06), x, ey - .02); eF(M(box(.16, .03, .001), INK, { r: x < 0 ? -.4 : .4 }), x, ey + .1); },
+      (x) => eF(M(box(.15, .03, .001), INK), x, ey),
+      (x) => { eF(IR(.08, [.85, 1.25, 1], true), x, ey); eF(M(disc(.03), '#fff'), x - .025, ey + .04); eF(M(disc(.015), '#fff'), x + .025, ey - .04); },
+      (x) => eF(M(shapeGeo('hrt', heartPts(.11)), '#E8402C'), x, ey),
+      (x) => { eF(M(disc(.075, Math.PI, Math.PI), INK), x, ey + .01); },
+      (x) => (x < 0 ? eF(M(tor(.07, .02, Math.PI), INK, { r: Math.PI }), x, ey + .03) : eF(IR(.07), x, ey)),
+      (x) => eF(M(shapeGeo('str', starPts(.1)), '#FFE45C'), x, ey),
+      (x) => { eF(M(box(.15, .03, .001), INK, { r: .78 }), x, ey); eF(M(box(.15, .03, .001), INK, { r: -.78 }), x, ey); },
+      (x) => { eF(IR(.09, null, false, '#6CF2C2'), x, ey); eF(M(disc(.03), '#fff'), x - .02, ey + .03); },
     ];
-    for (const x of [-ex, ex]) (eyeKinds[v('eyes')] || eyeKinds[0])(x);
+    for (const x of [-ex, ex]) { eyeX = x; (eyeKinds[v('eyes')] || eyeKinds[0])(x); }
+    // 속눈썹: 1 단선, 2 긴 컬, 3 풍성 (아래 속눈썹까지)
+    const lash = v('lashes');
+    if (lash) for (const x of [-ex, ex]) {
+      eyeX = x; const o = x < 0 ? -1 : 1, top = ey + .085;
+      eF(M(box(.15, lash === 1 ? .018 : .026, .001), INK, { r: o * .12 }), x, top);
+      if (lash >= 2) { eF(M(box(.07, .016, .001), INK, { r: o * .7 }), x + o * .085, top + .025); eF(M(box(.06, .014, .001), INK, { r: o * 1.1 }), x + o * .05, top + .04); }
+      if (lash >= 3) { eF(M(box(.05, .013, .001), INK, { r: o * 1.4 }), x + o * .01, top + .045); [-.03, .02, .06].forEach((d) => eF(M(box(.012, .035, .001), INK, { r: o * -.3 }), x + o * d, ey - .085)); }
+    }
     const browY = .15;
     ({
       1: () => [-ex, ex].forEach((x) => onFace(M(tor(.07, .012, Math.PI), INK), x, browY)),
@@ -232,6 +278,8 @@ const Avatar3D = (() => {
       3: () => [-ex, ex].forEach((x) => onFace(M(box(.16, .035, .001), INK, { r: x < 0 ? -.35 : .35 }), x, browY - .01)),
       4: () => [-ex, ex].forEach((x) => onFace(M(box(.15, .03, .001), INK, { r: x < 0 ? .3 : -.3 }), x, browY)),
       5: () => onFace(M(box(.42, .05, .001), INK), 0, browY),
+      6: () => [-ex, ex].forEach((x) => onFace(M(box(.17, .022, .001), INK, { r: x < 0 ? -.2 : .2 }), x, browY + .015)),
+      7: () => [-ex, ex].forEach((x) => onFace(M(tor(.085, .014, Math.PI), shade(hc, -.35)), x, browY - .02)),
     }[v('brow')] || (() => {}))();
     const my = -.25;
     const mouthKinds = [
@@ -316,7 +364,7 @@ const Avatar3D = (() => {
     const aura = new T.Group();
     root.add(aura);
     const auraKind = v('aura');
-    if (auraKind) {
+    if (auraKind && auraKind < 8) {
       const conf = [null, ['#FF8A1A', 'flame'], ['#FFE45C', 'bolt'], ['#ffffff', 'spark'], ['#7fe0f0', 'ice'], ['#F27FA5', 'heart'], ['#3B1A6E', 'dark'], ['rainbow', 'spark']][auraKind];
       const cols = conf[0] === 'rainbow' ? ['#E8402C', '#F2B705', '#3FA34D', '#2F7DE1', '#9A4FB8'] : [conf[0]];
       for (let i = 0; i < 18; i++) {
@@ -328,9 +376,27 @@ const Avatar3D = (() => {
       }
       if (conf[1] === 'dark' || conf[1] === 'flame') aura.add(at(new T.Mesh(cyl(.9, .9, .02, 30), flat(conf[1] === 'dark' ? '#3B1A6E' : '#FF8A1A', T.DoubleSide, .35)), 0, .02, 0));
     }
+    if (auraKind >= 8) paidAura(aura, auraKind);
     J.aura = aura;
     root.scale.setScalar(kid ? .95 : 1);
     return J;
+  }
+
+  /* ---------- 유료 이펙트 ---------- */
+  const glowM = (c, op = 1) => { const k = `gl${c}${op}`; if (!mats.has(k)) mats.set(k, new T.MeshBasicMaterial({ color: c, transparent: true, opacity: op, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide })); return mats.get(k); };
+  const rnd = (i, k = 1) => { const x = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453; return x - Math.floor(x); };
+  function paidAura(aura, kind) {
+    const add = (m, u) => { m.userData = u; aura.add(m); return m; };
+    ({
+      // 8 레드·블랙 에너지
+      8: () => { for (let i = 0; i < 26; i++) add(new T.Mesh(i % 3 ? cone(.06 + rnd(i) * .05, .3, 5) : box(.08, .08, .08), i % 2 ? glowM('#ff2a3a', .9) : flat('#1a0610', T.DoubleSide, .85)), { m: 'rise', a: rnd(i) * 6.28, r: .55 + rnd(i, 2) * .5, y: rnd(i, 3) * 2.8, s: .7 + rnd(i, 4) }); add(at(new T.Mesh(tor(.95, .035, Math.PI * 2, 6, 40), glowM('#ff2a3a')), 0, .03, 0, Math.PI / 2), { m: 'pulse' }); add(at(new T.Mesh(cyl(.95, .95, .01, 30), flat('#1a0610', T.DoubleSide, .55)), 0, .01, 0), {}); },
+      // 9 네온 링
+      9: () => { [['#2EF2FF', 0], ['#FF3DCB', 1], ['#FFE45C', 2]].forEach(([c, i]) => add(new T.Mesh(tor(.9 - i * .08, .025, Math.PI * 2, 6, 48), glowM(c)), { m: 'ring', i, y: .4 + i * .9 })); },
+      // 10 랭크업 홀로그램 (떠다니는 UI)
+      10: () => { for (let i = 0; i < 6; i++) { const pn = new T.Group(); const w = .45 + rnd(i) * .25; pn.add(new T.Mesh(box(w, .26, .005), glowM('#2EF2FF', .28))); pn.add(at(new T.Mesh(box(w, .02, .005), glowM('#ffffff', .9)), 0, .12, .004)); pn.add(at(new T.Mesh(box(w * (.3 + rnd(i, 2) * .5), .05, .005), glowM('#FFE45C', .9)), -w * .2, -.03, .004)); add(pn, { m: 'orbitP', a: (i / 6) * 6.28, y: .5 + (i % 3) * .8, r: 1.35 }); } for (let i = 0; i < 8; i++) add(new T.Mesh(shapeGeo('upar', [[-.1, -.04], [0, .08], [.1, -.04]]), glowM('#7CFF4F')), { m: 'rise', a: rnd(i, 5) * 6.28, r: .5 + rnd(i, 6) * .4, y: rnd(i, 7) * 3, s: 1 }); },
+      // 11 불사조 날개
+      11: () => { for (const s of [-1, 1]) { const w = new T.Group(); for (let j = 0; j < 6; j++) w.add(at(new T.Mesh(shapeGeo(`fw${j}`, [[0, 0], [.25 + j * .07, .7 - j * .1], [.6 + j * .14, .75 - j * .17], [.42 + j * .08, .14 - j * .07]]), glowM(j % 2 ? '#FF8A1A' : '#FFD23F', .85)), 0, 0, -j * .002)); w.scale.x = s; add(at(w, s * .15, 1.75, -.4), { m: 'wing', s }); } for (let i = 0; i < 14; i++) add(new T.Mesh(sph(.035, 6, 4), glowM('#FFB13B')), { m: 'rise', a: rnd(i) * 6.28, r: .4 + rnd(i, 2) * .5, y: rnd(i, 3) * 2.8, s: .5 + rnd(i, 4) }); },
+    }[kind] || (() => {}))();
   }
 
   /* ---------- 포즈와 동작 ---------- */
@@ -365,6 +431,15 @@ const Avatar3D = (() => {
     (t) => ({ armL: [.45, 0, .15], foreL: [.2, 0, -1.2], armR: [.45, 0, -.15], foreR: [.2, 0, 1.2], head: [-.12, Math.sin(t * .7) * .15, 0], torso: [-.05, 0, 0] }),
     // 11 만세 점프
     (t) => ({ armL: [0, 0, 2.6], foreL: [0, 0, .2], armR: [0, 0, -2.6], foreR: [0, 0, -.2], dy: Math.max(0, Math.sin(t * 5)) * .22, legL: [-.25 * Math.max(0, Math.sin(t * 5)), 0, 0], legR: [.2 * Math.max(0, Math.sin(t * 5)), 0, 0] }),
+    // ---- 유료 포즈 ----
+    // 12 공 던지기: 왼손으로 야구공을 툭툭 띄우며 정면 응시
+    (t) => ({ armL: [-1.5, 0, .5], foreL: [-1.0, 0, 0], ball: Math.abs(Math.sin(t * 2.6)) * .45, armR: [0, 0, -.12], head: [-.15, 0, 0], legR: [0, 0, .1] }),
+    // 13 모자 챙 잡기
+    (t) => ({ armR: [-.4, 0, -2.4], foreR: [0, 0, -1.6], armL: [0, 0, .1], head: [.1, .12, -.12], legL: [0, 0, -.08], legR: [0, 0, .08] }),
+    // 14 승리 팔짱 (뒤로 랭크업 홀로그램)
+    (t) => ({ armL: [-.25, -1.5, .28], foreL: [-1.7, 0, 0], armR: [-.38, 1.5, -.28], foreR: [-1.78, 0, 0], head: [-.18, 0, .06], legL: [0, 0, -.12], legR: [0, 0, .12], holo: true }),
+    // 15 챔피언 (트로피 들기)
+    (t) => ({ armR: [-.2, 0, -2.75], foreR: [0, 0, -.1], trophy: true, armL: [0, 0, .75], foreL: [0, 0, -1.7], head: [-.2, 0, .05], legL: [0, 0, -.14], legR: [0, 0, .14], dy: Math.max(0, Math.sin(t * 3)) * .03 }),
   ];
   // 오른손에 물건을 들면 손가락 포즈는 왼손으로 바꿉니다.
   const mirror = (p) => {
@@ -415,6 +490,11 @@ const Avatar3D = (() => {
       if (g) for (const [n, o] of Object.entries(g)) o.visible = pose[k] === n;
     }
     if (w >= .5 && J.heartProp) J.heartProp.visible = !!pose.heart;
+    if (w >= .5) {
+      if (J.ball) { J.ball.visible = pose.ball !== undefined; if (J.ball.visible) J.ball.position.set(0, -.22 - pose.ball, .02); }
+      if (J.trophy) J.trophy.visible = !!pose.trophy;
+      if (J.holo) J.holo.visible = !!pose.holo;
+    }
     for (const j of JOINTS) {
       const r = pose[j] || [0, 0, 0];
       const o = J[j].rotation;
@@ -475,8 +555,14 @@ const Avatar3D = (() => {
   }
 
   function animateAura(J, t) {
+    if (J.holo?.visible) { J.holo.rotation.z = Math.sin(t * .8) * .05; J.holo.position.y = 2.0 + Math.sin(t * 1.6) * .05; J.holo.children[0].rotation.z = Math.PI / 6 + t * .4; }
     J.aura.children.forEach((m) => {
       const u = m.userData;
+      if (u.m === 'rise') { const y = (u.y + t * .55 * u.s) % 2.9; m.position.set(Math.cos(u.a + t * .3) * u.r, y, Math.sin(u.a + t * .3) * u.r); m.scale.setScalar(Math.max(.15, 1 - y / 2.9)); return; }
+      if (u.m === 'ring') { m.position.y = u.y + Math.sin(t * 1.5 + u.i) * .25; m.rotation.set(Math.PI / 2 + Math.sin(t + u.i * 2) * .35, 0, Math.cos(t * .8 + u.i) * .3); return; }
+      if (u.m === 'pulse') { const k = 1 + Math.sin(t * 4) * .06; m.scale.set(k, k, 1); return; }
+      if (u.m === 'wing') { m.rotation.y = u.s * (-.35 + Math.sin(t * 3.2) * .25); return; }
+      if (u.m === 'orbitP') { const a = u.a + t * .5; m.position.set(Math.cos(a) * u.r, u.y + Math.sin(t * 2 + u.a) * .08, Math.sin(a) * u.r); m.rotation.y = Math.PI / 2 - a; return; }
       if (!u.r) return;
       const a = u.a + t * 1.6;
       m.position.set(Math.cos(a) * u.r, ((u.y + t * .8) % 2.8) + .1, Math.sin(a) * u.r);

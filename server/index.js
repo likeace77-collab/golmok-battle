@@ -110,9 +110,11 @@ const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const keyOf = (name) => name.toLowerCase();
 
 const NONE_FIRST = ['hat', 'glasses', 'face', 'brow', 'gloves', 'neck', 'back', 'hand', 'aura', 'pose', 'body'];
+const isPaid = (k, v) => !!Data.AVATAR_PAID[k]?.[v];
 const randomAvatar = (any = false) => Object.fromEntries(
-  Object.entries(Data.AVATAR_OPTIONS).map(([k, n]) => [k, !any && NONE_FIRST.includes(k) ? 0 : crypto.randomInt(n)])
+  Object.entries(Data.AVATAR_OPTIONS).map(([k, n]) => [k, !any && (NONE_FIRST.includes(k) || ['eyeColor', 'eyeSize', 'lashes', 'bottom'].includes(k)) ? 0 : (() => { let v; do v = crypto.randomInt(n); while (!any && isPaid(k, v)); return v; })()])
 );
+const ownsPart = (u, k, v) => !isPaid(k, v) || isDev(u) || (u.avatarOwned || []).includes(`${k}:${v}`);
 const pick = (list) => list[crypto.randomInt(list.length)].id;
 const randomStyle = () => ({ title: pick(Data.COSMETICS.titles), card: pick(Data.COSMETICS.cards), pins: [pick(Data.COSMETICS.pins), pick(Data.COSMETICS.pins)] });
 const newStats = () => ({ games: 0, streak: 0, streakBest: 0, p0: 0, p1: 0, p2: 0, p3: 0, tagGames: 0, tagWins: 0, megas: 0, zmoves: 0, botWins: 0, dummyDmg: 0, dummyBest: 0, flawless: 0 });
@@ -241,12 +243,14 @@ function validStyle(u, s) {
   return { title: s.title, card: s.card, pins };
 }
 
-function validAvatar(a) {
+function validAvatar(a, u) {
   if (!a || typeof a !== 'object') return null;
   const out = {};
   for (const [k, n] of Object.entries(Data.AVATAR_OPTIONS)) {
-    if (!Number.isInteger(a[k]) || a[k] < 0 || a[k] >= n) return null;
-    out[k] = a[k];
+    const x = a[k] ?? 0;
+    if (!Number.isInteger(x) || x < 0 || x >= n) return null;
+    if (u && !ownsPart(u, k, x)) return { locked: `${k}:${x}` };
+    out[k] = x;
   }
   return out;
 }
@@ -274,7 +278,7 @@ const deckView = (u) => u.decks.map((d) => ({ name: d.name, team: d.team.map((t)
 function migrate() {
   let changed = false;
   for (const u of Object.values(db.users)) {
-    for (const k of Object.keys(Data.AVATAR_OPTIONS)) if (!Number.isInteger(u.avatar[k])) { u.avatar[k] = 0; changed = true; }
+    for (const [k, n] of Object.entries(Data.AVATAR_OPTIONS)) if (!Number.isInteger(u.avatar[k]) || u.avatar[k] < 0 || u.avatar[k] >= n || !ownsPart(u, k, u.avatar[k])) { u.avatar[k] = 0; changed = true; }
     if (!u.stats) { u.stats = newStats(); changed = true; }
     if (Array.isArray(u.decks) && u.decks.some((d) => !d.team.length || d.team.some((t) => !u.mons?.some((m) => m.uid === t.uid)))) { require('./decks').pruneDecks(u); changed = true; } // 빈 덱 정리
     for (const [k, v0] of Object.entries(newStats())) if (!Number.isInteger(u.stats[k])) { u.stats[k] = v0; changed = true; }
@@ -369,7 +373,7 @@ const isAdult = (u) => ageOf(u) !== null && ageOf(u) > 19;
 const uncensored = (u) => isAdult(u) && !u.settings?.mosaic;
 
 const publicUser = (u) => ({
-  dev: isDev(u), owned: u.owned || [], mailNew: (u.mail || []).filter((m) => !m.read || !m.claimed).length, tempPw: !!u.tempPw, birthYear: u.birthYear || null, needAge: !u.birthYear, adult: isAdult(u), uncensored: uncensored(u), settings: { mosaic: !!u.settings?.mosaic },
+  dev: isDev(u), owned: u.owned || [], avatarOwned: u.avatarOwned || [], mailNew: (u.mail || []).filter((m) => !m.read || !m.claimed).length, tempPw: !!u.tempPw, birthYear: u.birthYear || null, needAge: !u.birthYear, adult: isAdult(u), uncensored: uncensored(u), settings: { mosaic: !!u.settings?.mosaic },
   name: u.name, avatar: u.avatar, decks: deckView(u), active: u.active, stats: u.stats, style: u.style,
   wins: u.wins, losses: u.losses, draws: u.draws, h2h: u.h2h,
   tutorial: !!u.tutorial, gp: u.gp, tickets: u.tickets, skips: u.skips, rerolls: u.rerolls || 0, stones: u.stones, mons: u.mons,
@@ -435,7 +439,7 @@ async function api(req, res, url) {
   const route = `${req.method} ${url.pathname}`;
   if (route === 'GET /api/data') {
     const { BANNED, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES } = Data;
-    return json(res, 200, { ITEMS: Data.ITEMS, FORMS: Data.FORMS.names, TIERS: Data.TIERS.names, BANNED, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES, PERKS: Data.PERKS, GMAX: E.gmaxInfo(), inviteRequired: !!INVITE_CODE });
+    return json(res, 200, { ITEMS: Data.ITEMS, FORMS: Data.FORMS.names, TIERS: Data.TIERS.names, BANNED, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES, PERKS: Data.PERKS, AVATAR_PAID: Data.AVATAR_PAID, GMAX: E.gmaxInfo(), inviteRequired: !!INVITE_CODE });
   }
   if (route === 'POST /api/signup' || route === 'POST /api/login') {
     if (limited(req)) return json(res, 429, { error: '시도가 너무 많습니다. 1분 뒤에 다시 해 주세요.' });
@@ -536,9 +540,19 @@ async function api(req, res, url) {
     return json(res, 200, {});
   }
   if (route === 'PUT /api/avatar') {
-    const a = validAvatar(await readBody(req));
+    const a = validAvatar(await readBody(req), user);
     if (!a) return json(res, 400, { error: '아바타 값이 올바르지 않습니다.' });
+    if (a.locked) return json(res, 400, { error: '아직 사지 않은 포즈나 이펙트가 있어요. 먼저 구매해 주세요.' });
     user.avatar = a; save(); broadcastLobby();
+    return json(res, 200, { user: publicUser(user) });
+  }
+  if (route === 'POST /api/avatar/buy') {
+    const b = await readBody(req), k = String(b?.k || ''), v = b?.v;
+    const price = Data.AVATAR_PAID[k]?.[v];
+    if (!price || !Number.isInteger(v)) return json(res, 400, { error: '살 수 없는 항목이에요.' });
+    if (ownsPart(user, k, v)) return json(res, 400, { error: '이미 가지고 있어요.' });
+    if ((user.gp || 0) < price) return json(res, 400, { error: `GP가 모자라요. (${price.toLocaleString('ko-KR')}GP 필요)` });
+    user.gp -= price; (user.avatarOwned ||= []).push(`${k}:${v}`); save();
     return json(res, 200, { user: publicUser(user) });
   }
   if (route === 'GET /api/players') {

@@ -62,6 +62,11 @@ async function playStep(page) {
   // 아바타, 팀 저장
   await a.page.click('#go-ava');
   await a.page.click('[data-k=hair][data-v="19"]');
+  await a.page.click('[data-cat=pose]');
+  await a.page.click('[data-k=pose][data-v="14"]');
+  if (!await a.page.$('#save[disabled]') || !await a.page.$('[data-buy="pose:14"]')) throw new Error('유료 포즈를 사지 않고 저장할 수 있음');
+  await shot(a.page, 'paid-pose');
+  await a.page.click('[data-k=pose][data-v="3"]');
   await a.page.click('[data-cat=hat]');
   await a.page.click('[data-k=hat][data-v="12"]');
   await a.page.click('[data-cat=glasses]');

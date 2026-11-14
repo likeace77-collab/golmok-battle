@@ -573,9 +573,14 @@ for (const id of ['tierslash', 'elemblade', 'reflector', 'bangalzzuk', 'ramdeath
 MONSTERS.bungbbang.moves = MONSTERS.bungbbang.moves.map((m) => (m === 'ember' ? 'bangalzzuk' : m));
 
 const AVATAR_OPTIONS = {
-  skin: 10, hair: 20, hairColor: 16, brow: 6, eyes: 12, mouth: 10, face: 7,
-  glasses: 8, hat: 14, outfit: 14, outfitColor: 16, bg: 14,
-  body: 4, pose: 12, pantsColor: 12, shoes: 8, shoeColor: 12, gloves: 6, neck: 6, back: 10, hand: 10, aura: 8,
+  skin: 10, hair: 20, hairColor: 16, brow: 8, eyes: 12, eyeColor: 12, eyeSize: 4, lashes: 4, mouth: 10, face: 7,
+  glasses: 8, hat: 14, outfit: 17, outfitColor: 16, bottom: 6, bg: 14,
+  body: 6, pose: 16, pantsColor: 12, shoes: 10, shoeColor: 12, gloves: 6, neck: 6, back: 10, hand: 10, aura: 12,
+};
+// 유료 꾸미기: GP로 한 번 사면 계속 씁니다. { 항목: { 번호: 가격 } }
+const AVATAR_PAID = {
+  pose: { 12: 3000, 13: 3000, 14: 8000, 15: 10000 },
+  aura: { 8: 6000, 9: 6000, 10: 12000, 11: 12000 },
 };
 
 // 칭호, 전투카드, 핀. cond: [기록 이름, 필요한 수]. 없으면 처음부터 열림.
@@ -954,4 +959,4 @@ for (const [id, p] of Object.entries(PERKS)) {
   if (p.type) p.d = `${TYPES[p.type].n} 기술 위력 +3%`;
 }
 
-module.exports = { GMAX_MOVES, ITEMS, FORMS, TIERS, BANNED, DEV_ACCOUNTS, STRIP, TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES, PERKS };
+module.exports = { GMAX_MOVES, ITEMS, FORMS, TIERS, BANNED, DEV_ACCOUNTS, STRIP, TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, AVATAR_PAID, COSMETICS, STAT_NAMES, PERKS };

@@ -14,17 +14,22 @@ const BG_C = ['#2340A8', '#E8402C', '#F2B705', '#3CC9A7', '#9A4FB8', '#F27FA5'];
 const BG_SWATCH = [...BG_C, '#5B9BF0', '#F27FA5', '#FFD23F', '#E8402C', '#14102b', '#F7A24B', '#2a1450', '#FFB3CC'];
 
 const AVATAR_LABELS = {
-  body: '체형', pose: '자세', aura: '오라', back: '등', hand: '손에 든 것', gloves: '장갑', neck: '목', pantsColor: '바지 색', shoes: '신발', shoeColor: '신발 색',
+  eyeColor: '눈 색', eyeSize: '눈 크기', lashes: '속눈썹', bottom: '하의',
+  body: '체형', pose: '자세', aura: '오라', back: '등', hand: '손에 든 것', gloves: '장갑', neck: '목', pantsColor: '하의 색', shoes: '신발', shoeColor: '신발 색',
   skin: '피부', hair: '머리 모양', hairColor: '머리 색', brow: '눈썹', eyes: '눈', mouth: '입', face: '얼굴 장식',
-  glasses: '안경', hat: '모자', outfit: '옷', outfitColor: '옷 색', bg: '배경',
+  glasses: '안경', hat: '모자', outfit: '상의', outfitColor: '상의 색', bg: '배경',
 };
-const AVATAR_SWATCH = { skin: SKIN, hairColor: HAIR_C, outfitColor: CLOTH_C, bg: BG_SWATCH, pantsColor: PANTS_C, shoeColor: SHOE_C };
-const AVATAR_ORDER = ['body', 'pose', 'skin', 'hair', 'hairColor', 'brow', 'eyes', 'mouth', 'face', 'glasses', 'hat', 'outfit', 'outfitColor', 'pantsColor', 'shoes', 'shoeColor', 'gloves', 'neck', 'back', 'hand', 'aura', 'bg'];
+const EYE_SW = ['#1a1433', '#2F7DE1', '#18c8e0', '#3FA34D', '#9A4FB8', '#E8402C', '#8a1030', '#F2B705', '#F27FA5', '#7C8798', '#6b3f1f', '#B8C2CC'];
+const AVATAR_SWATCH = { eyeColor: EYE_SW, skin: SKIN, hairColor: HAIR_C, outfitColor: CLOTH_C, bg: BG_SWATCH, pantsColor: PANTS_C, shoeColor: SHOE_C };
+const AVATAR_ORDER = ['body', 'pose', 'skin', 'hair', 'hairColor', 'brow', 'eyes', 'eyeColor', 'eyeSize', 'lashes', 'mouth', 'face', 'glasses', 'hat', 'outfit', 'outfitColor', 'bottom', 'pantsColor', 'shoes', 'shoeColor', 'gloves', 'neck', 'back', 'hand', 'aura', 'bg'];
 const AVATAR_NAMES = {
-  body: ['보통', '날씬', '듬직', '꼬마'], pose: ['차렷', '허리에 손', '팔짱', '브이', '손 흔들기', '근육 자랑', '엄지척', '손가락질', '파이팅', '손하트', '뒷짐', '만세 점프'],
-  shoes: ['운동화', '부츠', '슬리퍼', '구두', '하이탑', '장화', '롤러', '쪼리'], gloves: ['없음', '흰 장갑', '권투', '가죽', '고무장갑', '메카'],
+  body: ['보통', '날씬', '듬직', '꼬마', '탄탄', '모델'], pose: ['차렷', '허리에 손', '팔짱', '브이', '손 흔들기', '근육 자랑', '엄지척', '손가락질', '파이팅', '손하트', '뒷짐', '만세 점프', '공 던지기', '모자 챙 잡기', '승리 팔짱', '챔피언'],
+  brow: ['없음', '동그란', '굵은', '화난', '처진', '일자 연결', '날렵한', '아치형'], eyeSize: ['보통', '작게', '크게', '아주 크게'], lashes: ['없음', '단선', '긴 컬', '풍성하게'],
+  outfit: ['티셔츠', '후드티', '정장', '트레이닝', '멜빵', '조끼', '띠', '갑옷', '단추 셔츠', '물방울', '민소매', '마법사', '줄무늬', '등번호', '후드 집업', '테크웨어 재킷', '야구 점퍼'],
+  bottom: ['기본 바지', '카고 조거', '데님', '트레이닝', '반바지', '스커트'],
+  shoes: ['운동화', '부츠', '슬리퍼', '구두', '하이탑', '장화', '롤러', '쪼리', '형광 하이탑', '버클 워커'], gloves: ['없음', '흰 장갑', '권투', '가죽', '고무장갑', '메카'],
   neck: ['없음', '목도리', '금목걸이', '나비넥타이', '두건', '메달'], back: ['없음', '망토', '천사 날개', '악마 날개', '책가방', '제트팩', '등검', '나비 날개', '기타', '깃발'],
-  hand: ['없음', '검', '지팡이', '깃발', '마이크', '아이스크림', '국자', '뚫어뻥', '빗자루', '연탄집게'], aura: ['없음', '불꽃', '번개', '반짝', '얼음', '하트', '어둠', '무지개'],
+  hand: ['없음', '검', '지팡이', '깃발', '마이크', '아이스크림', '국자', '뚫어뻥', '빗자루', '연탄집게'], aura: ['없음', '불꽃', '번개', '반짝', '얼음', '하트', '어둠', '무지개', '레드·블랙 에너지', '네온 링', '랭크업 홀로그램', '불사조 날개'],
 };
 
 // 3D가 되면 3D로, 안 되면 2D로 그립니다. 배경은 2D 그림을 깝니다.
