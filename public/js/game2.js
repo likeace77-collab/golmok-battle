@@ -535,7 +535,8 @@ const SHINY_FORM = {
   },
 };
 function shinify(svg, id) {
-  const form = (svg.match(/img\/mon\/[a-z]+(?:-(t\d|f\d|s\d|mega))?(?:-m)?\.webp/) || [])[1] || 'base';
+  const blob = /href="(blob:[^"]+)"/.exec(svg)?.[1], bk = blob && typeof CLEAN_KEY !== 'undefined' ? CLEAN_KEY[blob] : '';
+  const form = bk ? (bk.endsWith('-mega') ? 'mega' : 'base') : (svg.match(/img\/mon\/[a-z]+(?:-(t\d|f\d|s\d|mega))?(?:-m)?\.webp/) || [])[1] || 'base';
   const st = `--shue:${shinyHue(id)}deg;--sf:${SHINY_FORM[id]?.[form] || `hue-rotate(${shinyHue(id)}deg) saturate(1.35) brightness(1.05)`}`;
   const head = svg.slice(0, svg.indexOf('>'));
   return /\sstyle="/.test(head) ? svg.replace(/\sstyle="/, ` data-shiny="1" style="${st};`) : svg.replace('<svg', `<svg data-shiny="1" style="${st}"`);

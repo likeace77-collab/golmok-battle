@@ -268,7 +268,8 @@ function monsterSVG(id, cls = '', mega = false, hits = 0, tier = 0) {
     }
     // 19세 이하이거나 모자이크를 켠 계정은 모자이크 그림 (-m). 서버도 원본을 안 보냅니다.
     const mosaic = sp.censor && !(typeof G !== 'undefined' && G.user?.uncensored);
-    return `<svg class="${cls}" viewBox="0 0 200 200" aria-hidden="true"><image href="img/mon/${id}${mega ? '-mega' : stage ? `-s${stage}` : ''}${mosaic ? '-m' : ''}.webp" width="200" height="200"/></svg>`;
+    const clean = sp.contest && typeof CLEAN_ART !== 'undefined' && CLEAN_ART[id + (mega ? '-mega' : '')]; // 공모전 그림: 배경 지운 그림
+    return `<svg class="${cls}" viewBox="0 0 200 200" aria-hidden="true"><image href="${clean || `img/mon/${id}${mega ? '-mega' : stage ? `-s${stage}` : ''}${mosaic ? '-m' : ''}.webp`}" width="200" height="200"/></svg>`;
   }
   if (mega) return `<svg class="${cls}" viewBox="-6 -6 212 212" aria-hidden="true">${MEGA_ART[id]}</svg>`;
   if (tier && NEW_ART[`${id}_fire`]) return `<svg class="${cls}" viewBox="-4 -6 208 212" aria-hidden="true">${NEW_ART[`${id}_fire`]}</svg>`; // 등신 불타올라라
