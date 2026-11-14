@@ -108,6 +108,33 @@ function scoutReroll(u, pay = 'gp') {
   u.counts.rerolls = (u.counts.rerolls || 0) + 1;
   return { ok: true };
 }
+// 자동 리롤: 원하는 골목몬이나 이로치가 나올 때까지 계속 다시 뽑기 (한 번에 최대 300번)
+// shiny: 'off' 원하는 골목몬만 · 'any' 원하는 골목몬 또는 아무 이로치 · 'target' 원하는 골목몬이 이로치로
+const AUTO_MAX = 300;
+function scoutAuto(u, { targets = [], shiny = 'off', pay = 'ticket', max = 50 } = {}) {
+  const pool = released();
+  targets = [...new Set((Array.isArray(targets) ? targets : []).map(String))].filter((x) => pool.includes(x)).slice(0, 20);
+  if (!['off', 'any', 'target'].includes(shiny)) shiny = 'off';
+  if (!targets.length && shiny !== 'any') return { error: '원하는 골목몬을 하나 이상 고르거나, 아무 이로치 조건을 켜 주세요.' };
+  max = Math.max(1, Math.min(AUTO_MAX, Math.floor(+max) || 1));
+  const hit = () => {
+    const c = u.scout.cands, sh = u.scout.shiny || [];
+    if (shiny === 'target') return c.some((x) => targets.includes(x) && sh.includes(x));
+    return c.some((x) => targets.includes(x)) || (shiny === 'any' && sh.length > 0);
+  };
+  if (!scoutState(u).cands) return { error: '스카우트 후보가 나와 있을 때만 다시 뽑을 수 있어요.' };
+  if (hit()) return { auto: { n: 0, found: true, spent: { rerolls: 0, gp: 0 } } };
+  let n = 0; const spent = { rerolls: 0, gp: 0 };
+  while (n < max) {
+    const use = pay === 'both' ? (u.rerolls > 0 ? 'ticket' : 'gp') : pay === 'gp' ? 'gp' : 'ticket';
+    const r = scoutReroll(u, use);
+    if (r.error) break;
+    n++; if (use === 'ticket') spent.rerolls++; else spent.gp += REROLL_GP;
+    if (hit()) return { auto: { n, found: true, spent } };
+  }
+  if (!n) return { error: pay === 'gp' ? `GP가 모자라요. (${REROLL_GP}GP 필요)` : '리롤권이 없어요.' };
+  return { auto: { n, found: false, spent } };
+}
 function scoutPick(u, species, pay) {
   const st = scoutState(u);
   if (!st.cands?.includes(species)) return { error: '스카우트 후보가 아니에요.' };
@@ -443,6 +470,6 @@ function afterBattle(u, kind, won, side) {
 
 module.exports = {
   SHOP_ITEMS, buyItem, shopView, claimFree, buyDeal, SCOUT_HOURS, SKIP_GP, SCOUT_GP, STONE_GP, STONE_DUPE_GP, MOVE_GP, STARTERS, TUTORIAL_REWARD, ATTEND, DAILY, WEEKLY,
-  newProgress, addMon, grant, finishTutorial, scoutState, scoutSkip, scoutReroll, enhance, PLUS_MAX, PLUS_PCT, plusCost, expeState, expeSend, expeClaim, expeRecall, awayUids, scoutPick, changeMove, buyStone,
+  newProgress, addMon, grant, finishTutorial, scoutState, scoutSkip, scoutReroll, scoutAuto, enhance, PLUS_MAX, PLUS_PCT, plusCost, expeState, expeSend, expeClaim, expeRecall, awayUids, scoutPick, changeMove, buyStone,
   bump, attendState, attend, questState, claimQuest, achState, claimAch, passState, claimPass, claimable, afterBattle, seasonOf, passBook, dayKey, released,
 };

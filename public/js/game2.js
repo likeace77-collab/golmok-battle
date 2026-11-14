@@ -173,7 +173,8 @@ async function showScout() {
     if (st.cands) {
       app.innerHTML = `${topbar('스카우트')}<section class="sc-head"><s aria-hidden="true"></s><h2>오늘의 후보 8마리</h2><p>1마리를 골라 <b>${ICON.gp(16)} 2500GP</b> 또는 <b>${ICON.ticket(14)} 입수권 1장</b>으로 데려와요.</p>
         ${G.user.rerolls > 0 ? `<button class="btn small sc-reroll" id="sc-reroll" data-pay="ticket">🎲 후보 다시 뽑기 <span>리롤권 1장 · ${fmt(G.user.rerolls)}장 보유</span></button>` : ''}
-        <button class="btn small sc-reroll ${G.user.rerolls > 0 ? 'paper' : ''}" id="sc-reroll-gp" data-pay="gp" ${G.user.gp < (st.reroll || 500) ? 'disabled' : ''}>🎲 ${G.user.rerolls > 0 ? 'GP로' : '후보'} 다시 뽑기 <span>${ICON.gp(14)} ${fmt(st.reroll || 500)}</span></button></section>
+        <button class="btn small sc-reroll ${G.user.rerolls > 0 ? 'paper' : ''}" id="sc-reroll-gp" data-pay="gp" ${G.user.gp < (st.reroll || 500) ? 'disabled' : ''}>🎲 ${G.user.rerolls > 0 ? 'GP로' : '후보'} 다시 뽑기 <span>${ICON.gp(14)} ${fmt(st.reroll || 500)}</span></button>
+        <button class="btn small paper sc-reroll" id="sc-auto">🤖 자동 리롤 <span>원하는 골목몬·이로치가 나올 때까지</span></button></section>
         <div class="sc-grid">${st.cands.map((id, i) => { const sp = G.data.MONSTERS[id], n = ownCount(id); const tot = Object.values(sp.base).reduce((a, b) => a + b, 0);
           const sh = (st.shiny || []).includes(id); return `<button class="sc-card${sh ? ' is-shiny' : ''}" data-pick="${id}" style="--tc:${G.data.TYPES[sp.types[0]].c};--d:${i * 70}ms">${sh ? SHINY_TAG : n ? `<em class="sc-own">보유 ${n}</em>` : '<em class="sc-new">NEW</em>'}${monArt(id, sh)}<b>${esc(sp.n)}</b><span>${typesOf(id)}</span><small>능력치 합계 ${tot}</small></button>`; }).join('')}</div>`;
     } else {
@@ -190,11 +191,46 @@ async function showScout() {
     }
     app.querySelector('#back').onclick = () => { clearInterval(G.scoutTimer); showLobby(); };
     app.querySelectorAll('[data-pick]').forEach((b) => { b.onclick = () => pickSheet(b.dataset.pick); });
+    app.querySelector('#sc-auto')?.addEventListener('click', autoSheet);
     app.querySelectorAll('#sc-reroll, #sc-reroll-gp').forEach((btn) => btn.addEventListener('click', async (e) => {
       const el = e.currentTarget; el.disabled = true;
       try { const r = await api('POST', '/api/scout/reroll', { pay: el.dataset.pay }); setUser(r); st = r.scout; toast(el.dataset.pay === 'ticket' ? '리롤권으로 후보를 새로 뽑았어요!' : '후보를 새로 뽑았어요!'); render(); }
       catch (err) { toast(err.message); el.disabled = false; }
     }));
+  };
+  const autoSheet = () => {
+    let cfg = { targets: [], shiny: 'any', pay: 'ticket', max: 30 };
+    try { cfg = { ...cfg, ...JSON.parse(localStorage.getItem('autoReroll') || '{}') }; } catch { /* 처음이면 기본값 */ }
+    const ids = Object.keys(G.data.MONSTERS).filter((id) => !(G.data.BANNED || []).includes(id));
+    const u = G.user;
+    const draw = () => {
+      const bg = openSheet(`<div class="row" style="margin-bottom:8px"><h2>🤖 자동 리롤</h2><button class="btn small paper" data-x>닫기</button></div>
+        <p class="muted" style="margin-bottom:8px">조건에 맞는 후보가 나오면 바로 멈춰요. 리롤권 ${fmt(u.rerolls || 0)}장 · ${fmt(u.gp)}GP 보유</p>
+        <h3 class="ar-h">원하는 골목몬 <small>${cfg.targets.length}마리 선택</small></h3>
+        <div class="ar-grid">${ids.map((id) => `<button data-t="${id}" aria-pressed="${cfg.targets.includes(id)}">${monArt(id)}<span>${esc(G.data.MONSTERS[id].n)}</span></button>`).join('')}</div>
+        <h3 class="ar-h">이로치 조건</h3>
+        <div class="chips">${[['off', '상관없음'], ['any', '아무 이로치나 나와도 멈춤'], ['target', '원하는 골목몬이 이로치일 때만']].map(([k, n]) => `<button data-sh="${k}" aria-pressed="${cfg.shiny === k}">${n}</button>`).join('')}</div>
+        <h3 class="ar-h">무엇으로 뽑을까요</h3>
+        <div class="chips">${[['ticket', '🎲 리롤권만'], ['gp', `GP만 (${fmt(st.reroll || 500)}GP씩)`], ['both', '리롤권 먼저, 다 쓰면 GP']].map(([k, n]) => `<button data-py="${k}" aria-pressed="${cfg.pay === k}">${n}</button>`).join('')}</div>
+        <h3 class="ar-h">최대 횟수</h3>
+        <div class="chips">${[10, 30, 50, 100, 300].map((n) => `<button data-mx="${n}" aria-pressed="${cfg.max === n}">${n}번</button>`).join('')}</div>
+        <button class="btn wide" id="ar-go" style="margin-top:12px">자동 리롤 시작</button>`);
+      const keep = () => { try { localStorage.setItem('autoReroll', JSON.stringify(cfg)); } catch { /* 저장 못 해도 이번엔 적용 */ } };
+      const re = () => { const y = bg.querySelector('.sheet')?.scrollTop || 0; closeSheet(); draw(); const sh = document.querySelector('.sheet'); if (sh) sh.scrollTop = y; };
+      bg.querySelector('[data-x]').onclick = closeSheet;
+      bg.querySelectorAll('[data-t]').forEach((b) => { b.onclick = () => { const t = b.dataset.t, i = cfg.targets.indexOf(t); if (i >= 0) cfg.targets.splice(i, 1); else if (cfg.targets.length < 20) cfg.targets.push(t); else return toast('20마리까지 고를 수 있어요.'); b.setAttribute('aria-pressed', i < 0); bg.querySelector('.ar-h small').textContent = `${cfg.targets.length}마리 선택`; keep(); }; });
+      for (const [a, k, num] of [['sh', 'shiny'], ['py', 'pay'], ['mx', 'max', 1]]) bg.querySelectorAll(`[data-${a}]`).forEach((b) => { b.onclick = () => { cfg[k] = num ? +b.dataset[a] : b.dataset[a]; keep(); re(); }; });
+      bg.querySelector('#ar-go').onclick = async (e) => {
+        const el = e.currentTarget; el.disabled = true; el.textContent = '뽑는 중…';
+        try {
+          const r = await api('POST', '/api/scout/auto', cfg);
+          setUser(r); st = r.scout; closeSheet(); render();
+          const a = r.auto, used = [a.spent.rerolls ? `리롤권 ${a.spent.rerolls}장` : '', a.spent.gp ? `${fmt(a.spent.gp)}GP` : ''].filter(Boolean).join(' + ');
+          toast(a.found ? (a.n ? `${a.n}번 만에 찾았어요! (${used})` : '이미 조건에 맞는 후보가 있어요!') : `${a.n}번 뽑았지만 못 찾았어요. (${used})`);
+        } catch (err) { toast(err.message); el.disabled = false; el.textContent = '자동 리롤 시작'; }
+      };
+    };
+    draw();
   };
   const pickSheet = (id) => {
     const sp = G.data.MONSTERS[id], u = G.user;

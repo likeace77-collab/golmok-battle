@@ -613,6 +613,7 @@ async function progressApi(req, res, route, auth, user) {
   if (route === 'POST /api/expe/claim') return done(P.expeClaim(user, String(body.uid || 'all')), { expe: P.expeState(user) });
   if (route === 'POST /api/expe/recall') return done(P.expeRecall(user, String(body.uid || '')), { expe: P.expeState(user) });
   if (route === 'POST /api/scout/reroll') return done(P.scoutReroll(user, body?.pay === 'ticket' ? 'ticket' : 'gp'), { scout: P.scoutState(user) });
+  if (route === 'POST /api/scout/auto') { const r = P.scoutAuto(user, { targets: body?.targets, shiny: body?.shiny, pay: ['ticket', 'gp', 'both'].includes(body?.pay) ? body.pay : 'ticket', max: body?.max }); return done(r, { scout: P.scoutState(user), ...(r.auto ? { auto: r.auto } : {}) }); }
   if (route === 'POST /api/scout/skip') return done(P.scoutSkip(user), { scout: P.scoutState(user) });
   if (route === 'POST /api/scout/pick') { const r = P.scoutPick(user, String(body.species ?? ''), body.pay === 'ticket' ? 'ticket' : 'gp'); return done(r, { scout: P.scoutState(user) }); }
   if (route === 'POST /api/mon/enhance') {
