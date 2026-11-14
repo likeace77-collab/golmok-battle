@@ -61,12 +61,7 @@ async function playStep(page) {
 
   // 아바타, 팀 저장
   await a.page.click('#go-ava');
-  await a.page.click('[data-k=hair][data-v="15"]');
-  await a.page.click('[data-cat=pose]');
-  await a.page.click('[data-k=pose][data-v="18"]');
-  if (!await a.page.$('#save[disabled]') || !await a.page.$('[data-buy="pose:18"]')) throw new Error('유료 포즈를 사지 않고 저장할 수 있음');
-  await shot(a.page, 'paid-pose');
-  await a.page.click('[data-k=pose][data-v="3"]');
+  await a.page.click('[data-k=hair][data-v="19"]');
   await a.page.click('[data-cat=hat]');
   await a.page.click('[data-k=hat][data-v="12"]');
   await a.page.click('[data-cat=glasses]');
@@ -82,7 +77,7 @@ async function playStep(page) {
   await shot(a.page, 'avatar');
   await a.page.click('#save');
   await a.page.waitForSelector('#go-team');
-  if (!/동네 꼬마/.test(await a.page.textContent('.profile .tt'))) throw new Error('칭호 저장 안 됨');
+  if (!/동네 꼬마/.test(await a.page.textContent('.profile .bc-title'))) throw new Error('칭호 저장 안 됨');
   if (await a.page.locator('.profile .bc-pins svg').count() !== 2) throw new Error('핀 저장 안 됨');
   await shot(a.page, 'lobby-card');
   await a.page.click('#go-team');

@@ -273,7 +273,6 @@ function onServer(m) {
     case 'react': Battle.onReact(m); break;
     case 'rank_wait': case 'rank_found': case 'rank_cancel': onRankMsg(m); break;
     case 'raid_room': case 'raid_invite': onRaidMsg(m); break;
-    case 'rank_stage': showRankStage(m); break;
     case 'traded': if (G.screen !== 'battle') tradeDone(m, () => (G.screen === 'friends' ? showFriends() : null)); else toast(`🔄 ${m.with}님과 교환이 끝났어요!`); break;
     case 'chosen': Battle.onChosen(m); break;
     case 'opp_ready': Battle.setNote('상대가 행동을 골랐습니다.'); break;
@@ -346,7 +345,7 @@ function renderLobby() {
     <section class="panel">
       ${walletHTML(u)}
       <div class="profile">
-        ${lobbyStageHTML(u)}
+        ${battleCard({ name: u.name, avatar: u.avatar, style: u.style }, 'big')}
         <p class="muted">${recordText(u)}${u.stats?.streak > 1 ? `, ${u.stats.streak}연승 중` : ''}</p>
         ${rival ? `<p class="muted">${rival}</p>` : ''}
       </div>
@@ -437,8 +436,6 @@ function renderLobby() {
   app.querySelectorAll('[data-seat]').forEach((b) => { b.onclick = () => wsSend({ t: 'tag_seat', id: b.dataset.room, seat: +b.dataset.seat }); });
   app.querySelectorAll('[data-tlevel]').forEach((b) => { b.onclick = () => wsSend({ t: 'tag_level', level: +b.dataset.tlevel }); });
   app.querySelector('#go-ava').onclick = showAvatar;
-  app.querySelector('#go-ava2')?.addEventListener('click', showAvatar);
-  mountLobbyStage(u);
   app.querySelector('#go-dex').onclick = showDex;
   app.querySelector('#go-types').onclick = showTypeChart;
   app.querySelector('#go-fields').onclick = showFields;
@@ -484,8 +481,6 @@ function condText(item) {
   return `${G.data.STAT_NAMES[k]} ${f(n)}${k === 'streakBest' ? '연승' : dmg ? '' : '회'} (${f(Math.min(statOf(G.user, k), n))}/${f(n)})`;
 }
 
-const ownsAva = (k, v) => !G.data.AVATAR_PAID?.[k]?.[v] || !!G.user.dev || (G.user.avatarOwned || []).includes(`${k}:${v}`);
-const lockedParts = (a) => Object.keys(G.data.AVATAR_PAID || {}).filter((k) => !ownsAva(k, a[k] || 0)).map((k) => [k, a[k]]);
 function showAvatar() {
   G.screen = 'avatar';
   const draft = { ...G.user.avatar };
@@ -498,11 +493,9 @@ function showAvatar() {
     let body = '';
     if (tab === 'avatar') {
       const n = G.data.AVATAR_OPTIONS[cat], sw = AVATAR_SWATCH[cat];
-      const paid = G.data.AVATAR_PAID?.[cat] || {};
-      body = `<div class="chips cats">${cats.map((k) => `<button data-cat="${k}" aria-pressed="${k === cat}">${AVATAR_LABELS[k]}${G.data.AVATAR_PAID?.[k] ? ' 💎' : ''}</button>`).join('')}</div>
-        ${Object.keys(paid).length ? `<p class="muted" style="margin:6px 0">💎 표시는 유료예요. 눌러서 미리 보고, 마음에 들면 GP로 사요. (보유 ${(G.user.gp || 0).toLocaleString('ko-KR')}GP)</p>` : ''}
-        <div class="avgrid ${sw ? 'swatch' : ''}">${Array.from({ length: n }, (_, i) => { const lock = paid[i] && !ownsAva(cat, i); return `<button class="${paid[i] ? 'paid' : ''}" data-k="${cat}" data-v="${i}" aria-pressed="${(draft[cat] || 0) === i}" aria-label="${AVATAR_LABELS[cat]} ${AVATAR_NAMES[cat]?.[i] || i + 1}${lock ? ` 유료 ${paid[i]}GP` : ''}"
-          ${sw ? `style="background:${sw[i]}"` : ''}>${sw ? '' : avatarSVG({ ...draft, [cat]: i }, '', AVATAR_FULL.has(cat))}${AVATAR_NAMES[cat] ? `<span class="avname">${AVATAR_NAMES[cat][i]}</span>` : ''}${paid[i] ? `<em class="av-price">${lock ? `💎 ${paid[i].toLocaleString('ko-KR')}` : '보유'}</em>` : ''}</button>`; }).join('')}</div>
+      body = `<div class="chips cats">${cats.map((k) => `<button data-cat="${k}" aria-pressed="${k === cat}">${AVATAR_LABELS[k]}</button>`).join('')}</div>
+        <div class="avgrid ${sw ? 'swatch' : ''}">${Array.from({ length: n }, (_, i) => `<button data-k="${cat}" data-v="${i}" aria-pressed="${(draft[cat] || 0) === i}" aria-label="${AVATAR_LABELS[cat]} ${AVATAR_NAMES[cat]?.[i] || i + 1}"
+          ${sw ? `style="background:${sw[i]}"` : ''}>${sw ? '' : avatarSVG({ ...draft, [cat]: i })}${AVATAR_NAMES[cat] ? `<span class="avname">${AVATAR_NAMES[cat][i]}</span>` : ''}</button>`).join('')}</div>
         <button class="btn paper small" id="rand" style="margin-top:10px">무작위로 섞기</button>`;
     } else {
       const kind = { title: 'titles', card: 'cards', pin: 'pins' }[tab];
@@ -517,15 +510,13 @@ function showAvatar() {
       }).join('');
       if (tab === 'pin') body = `<p class="muted" style="margin-bottom:8px">핀은 3개까지 달 수 있습니다. (${style.pins.length}/3)</p>${body}`;
     }
-    const locked = lockedParts(draft);
     app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>꾸미기</h1></div>
-      ${typeof Avatar3D !== 'undefined' && Avatar3D ? `<div class="stage3d stg">${stageDeco}<canvas id="av3d" aria-label="3D 아바타 미리보기. 옆으로 밀면 돌아갑니다"></canvas>
+      ${typeof Avatar3D !== 'undefined' && Avatar3D ? `<div class="stage3d"><canvas id="av3d" aria-label="3D 아바타 미리보기. 옆으로 밀면 돌아갑니다"></canvas>
         <div class="stage3d-btns">${[['cheer', '환호'], ['command', '지시'], ['mega', '기합'], ['z', 'Z 안무']].map(([k, n]) => `<button class="btn small paper" data-act="${k}">${n}</button>`).join('')}</div></div>` : ''}
       <div class="preview-card">${battleCard(me, 'big')}</div>
       <div class="tabs styletabs">${[['avatar', '아바타'], ['title', '칭호'], ['card', '전투카드'], ['pin', '핀']].map(([k, n]) => `<button data-tab="${k}" aria-selected="${tab === k}">${n}</button>`).join('')}</div>
       <section class="panel">${body}</section>
-      ${locked.length ? `<div class="av-buybar">${locked.map(([k, v]) => `<button class="btn" data-buy="${k}:${v}">🛒 ${AVATAR_LABELS[k]} '${AVATAR_NAMES[k]?.[v] || v}' 사기 <small>${G.data.AVATAR_PAID[k][v].toLocaleString('ko-KR')}GP</small></button>`).join('')}<p class="muted">미리 보는 중이에요. 사야 저장할 수 있어요.</p></div>` : ''}
-      <button class="btn wide" id="save" style="margin-top:14px" ${locked.length ? 'disabled' : ''}>저장하기</button>`;
+      <button class="btn wide" id="save" style="margin-top:14px">저장하기</button>`;
     app.querySelector('#back').onclick = () => { live?.destroy(); showLobby(); };
     const cv = app.querySelector('#av3d');
     if (cv) {
@@ -539,16 +530,8 @@ function showAvatar() {
     app.querySelectorAll('[data-cat]').forEach((b) => { b.onclick = () => { cat = b.dataset.cat; render(); }; });
     app.querySelectorAll('[data-k]').forEach((b) => { b.onclick = () => { draft[b.dataset.k] = +b.dataset.v; const y = scrollY; render(); scrollTo(0, y); }; });
     app.querySelector('#rand')?.addEventListener('click', () => {
-      for (const [k, n] of Object.entries(G.data.AVATAR_OPTIONS)) { let x; do x = Math.floor(Math.random() * n); while (!ownsAva(k, x)); draft[k] = x; }
+      for (const [k, n] of Object.entries(G.data.AVATAR_OPTIONS)) draft[k] = Math.floor(Math.random() * n);
       render();
-    });
-    app.querySelectorAll('[data-buy]').forEach((b) => {
-      b.onclick = async () => {
-        const [k, v] = b.dataset.buy.split(':'), price = G.data.AVATAR_PAID[k][v];
-        if (!confirm(`${AVATAR_LABELS[k]} '${AVATAR_NAMES[k]?.[v] || v}'을(를) ${price.toLocaleString('ko-KR')}GP에 살까요?`)) return;
-        b.disabled = true;
-        try { G.user = (await api('POST', '/api/avatar/buy', { k, v: +v })).user; toast('구매했어요! 이제 저장할 수 있어요.'); const y = scrollY; render(); scrollTo(0, y); } catch (e) { toast(e.message); b.disabled = false; }
-      };
     });
     app.querySelectorAll('[data-pick]').forEach((b) => {
       b.onclick = () => {
