@@ -75,63 +75,62 @@
     ${drop(20, 42, .6)}${drop(32, 48, .5)}${drop(180, 38, .55)}
     ${spark(22, 160, 6)}${spark(180, 164, 7)}${spark(170, 70, 4, '#ffb3e0')}${spark(30, 84, 4, '#bfe8ff')}`);
 
-  /* ---------- 거다이맥스: 반전! 피의 달 아래 깨어난 구미호 ----------
-     귀엽던 여우비가 거대한 요괴로. 붉은 달, 아홉 개의 불타는 꼬리(끝에 푸른 여우불), 귀까지 찢어진 이빨 가득한 웃음,
-     빛나는 세로 동공 눈 넷, 골목 지붕을 움켜쥔 발톱, 꼬리 끝 비구름은 시커먼 먹구름이 되어 번개를 친다. */
-  const H = (x, y, r, a = 0) => { const p = []; for (let k = 0; k < 7; k++) { const t = (a + k * 360 / 7) * Math.PI / 180, rr = k % 2 ? r * .55 : r; p.push(`${(x + Math.cos(t) * rr).toFixed(1)} ${(y + Math.sin(t) * rr).toFixed(1)}`); } return p.join(' '); };
-  // 여우불: 푸른 도깨비불
-  const wisp = (x, y, s) => `<path d="M${x} ${y - 16 * s}Q${x + 10 * s} ${y - 4 * s} ${x + 7 * s} ${y + 6 * s}Q${x} ${y + 12 * s} ${x - 7 * s} ${y + 6 * s}Q${x - 10 * s} ${y - 4 * s} ${x - 2 * s} ${y - 8 * s}Q${x + 2 * s} ${y - 12 * s} ${x} ${y - 16 * s}Z" fill="url(#ybW)" stroke-width="2" class="gx-eye"/><path d="M${x} ${y - 4 * s}Q${x + 4 * s} ${y + 2 * s} ${x} ${y + 6 * s}Q${x - 4 * s} ${y + 2 * s} ${x} ${y - 4 * s}Z" fill="#fff" stroke="none"/>`;
-  // 불꽃 꼬리: 톱날 가장자리, 끝에 여우불
-  const fireTail = (a, L, w) => {
-    const pts = [], n = 7;
-    for (let k = 0; k <= n; k++) { const t = k / n, ww = w * Math.sin(Math.PI * Math.min(1, t * 1.15)) * (1 - t * .25); pts.push([L * t, -ww - (k % 2 ? 5 : 0)]); }
-    for (let k = n; k >= 0; k--) { const t = k / n, ww = w * Math.sin(Math.PI * Math.min(1, t * 1.15)) * (1 - t * .25); pts.push([L * t + (k % 2 ? 3 : 0), ww + (k % 2 ? 5 : 0)]); }
-    return `<g transform="translate(100 150) rotate(${a})"><path d="M${pts.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join('L')}Z" fill="url(#ybR)" stroke="#ff6a2a" stroke-width="6" opacity=".35"/><path d="M${pts.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join('L')}Z" fill="url(#ybR)"/><path d="M${L * .2} 0Q${L * .55} ${-w * .3} ${L * .85} 0" fill="none" stroke="#ff5a2a" stroke-width="2.4" opacity=".8"/>${wisp(L + 4, 0, .9)}</g>`;
-  };
-  const fangs = (x, y, w, h, n) => { // 귀까지 찢어진 입
-    let top = '', bot = '';
-    for (let k = 0; k < n; k++) { const a = x - w / 2 + (w / n) * k, b = a + w / n, m = (a + b) / 2, cv = Math.sin(Math.PI * (k + .5) / n) * h * .35;
-      top += `<path d="M${a.toFixed(1)} ${(y - h * .2 + cv * .2).toFixed(1)}L${m.toFixed(1)} ${(y + h * .25 + cv).toFixed(1)}L${b.toFixed(1)} ${(y - h * .2 + cv * .2).toFixed(1)}Z"/>`;
-      bot += `<path d="M${(a + 2).toFixed(1)} ${(y + h * .9 + cv).toFixed(1)}L${(m + 2).toFixed(1)} ${(y + h * .35 + cv * .6).toFixed(1)}L${(b + 2).toFixed(1)} ${(y + h * .9 + cv).toFixed(1)}Z"/>`; }
-    return `<path d="M${x - w / 2 - 6} ${y - h * .45}Q${x} ${y - h * .05} ${x + w / 2 + 6} ${y - h * .45}Q${x + w * .44} ${y + h * 1.4} ${x} ${y + h * 1.35}Q${x - w * .44} ${y + h * 1.4} ${x - w / 2 - 6} ${y - h * .45}Z" fill="#2a0410"/>`
-      + `<path d="M${x - w * .3} ${y + h * .95}Q${x} ${y + h * .7} ${x + w * .3} ${y + h * .95}Q${x} ${y + h * 1.25} ${x - w * .3} ${y + h * .95}Z" fill="#8a0f2a" stroke="none"/>`
-      + `<g fill="#f6eedc" stroke-width="1.6">${top}${bot}</g>`;
-  };
-  const evil = (x, y, r, d) => `<path d="M${x - r * d} ${y - r * .55}L${x + r * d} ${y + r * .1}Q${x} ${y + r * .85} ${x - r * d} ${y + r * .15}Z" fill="#FFE14D" class="gx-eye"/><ellipse cx="${x + r * .15 * d}" cy="${y + r * .18}" rx="${r * .13}" ry="${r * .42}" fill="#1a0006" stroke="none"/><circle cx="${x - r * .3 * d}" cy="${y - r * .05}" r="${r * .12}" fill="#fff" stroke="none"/>`;
   const ruins = [[-6, 24, 22, '#5a1a1a'], [16, 20, 32, '#2a3a5a'], [164, 20, 28, '#2a4a2a'], [182, 24, 20, '#5a3a1a']].map(([x, w, h, c]) =>
     `<path d="M${x} 202V${202 - h}l${w * .3} 4 ${w * .2}-6 ${w * .5} 3V202z" fill="#4a4250" stroke-width="2.4"/><path d="M${x - 3} ${202 - h}L${x + w * .4} ${202 - h - 10}L${x + w + 3} ${202 - h + 4}z" fill="${c}" stroke-width="2.4"/><path d="M${x + w * .3} ${202 - h + 8}l4 6-3 5" fill="none" stroke="#ff5a2a" stroke-width="1.6"/>`).join('');
-  const claw = (x, y, d) => `<g transform="translate(${x} ${y}) scale(${d} 1)"><path d="M-22 6Q-24 -14 -6 -18Q12 -18 18 0Q20 10 10 12H-18Z" fill="url(#ybR)"/>${[-16, -6, 4, 13].map((cx, k) => `<path d="M${cx} -14Q${cx - 2} -30 ${cx + 6} -38Q${cx + 4} -26 ${cx + 6} -14Z" fill="#f6eedc" stroke-width="2"/>`).join('')}</g>`;
+  /* ---------- 거다이맥스: 반전! 가면 벗은 구미호 ----------
+     귀여운 여우비 얼굴은 사실 금 간 가면이었다. 반쪽이 깨져 떨어진 자리엔 텅 빈 어둠과 바늘 같은 눈동자들.
+     가면 아래로 귀까지 찢어진 입, 가늘고 긴 이빨, 뚝뚝 떨어지는 핏물. 앙상한 갈비뼈, 땅까지 늘어진 긴 손톱,
+     아홉 개의 검은 꼬리 끝마다 눈알이 달려 이쪽을 본다. 붉은 달, 깔린 안개, 무너진 골목. */
+  const tailEye = (a, L, w) => {
+    const r = a * Math.PI / 180, ex = 100 + Math.cos(r) * L, ey = 150 + Math.sin(r) * L, mx = 100 + Math.cos(r + .25) * L * .55, my = 150 + Math.sin(r + .25) * L * .55;
+    return `<path d="M100 150Q${mx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}" fill="none" stroke="#1a1433" stroke-width="${w + 6}"/><path d="M100 150Q${mx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}" fill="none" stroke="url(#ybD)" stroke-width="${w}"/>`
+      + `<g transform="translate(${ex.toFixed(1)} ${ey.toFixed(1)}) rotate(${a + 90})"><ellipse rx="11" ry="13" fill="#3a0a14"/><ellipse rx="8" ry="5.5" fill="#f2ead2" stroke-width="2"/><circle r="3.4" fill="#d1102a" stroke="none" class="gx-eye"/><circle r="1.3" fill="#000" stroke="none"/><path d="M-8 0q8-7 16 0" fill="none" stroke-width="1.6"/></g>`;
+  };
+  const pin = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r * 2.2}" fill="#ff0a2a" opacity=".22" stroke="none"/><circle cx="${x}" cy="${y}" r="${r}" fill="#ffe8e8" stroke="none" class="gx-eye"/><circle cx="${x}" cy="${y}" r="${r * .45}" fill="#ff1030" stroke="none"/>`;
+  const needleGrin = (x, y, w, h, n) => {
+    let t = '';
+    for (let k = 0; k < n; k++) { const u = (k + .5) / n, px = x - w / 2 + w * u, curve = Math.sin(Math.PI * u) * h * .5, top = y - h * .1 + curve * .3, len = h * (.45 + .25 * Math.sin(Math.PI * u));
+      t += `<path d="M${(px - 2.4).toFixed(1)} ${top.toFixed(1)}L${px.toFixed(1)} ${(top + len).toFixed(1)}L${(px + 2.4).toFixed(1)} ${top.toFixed(1)}Z"/>`;
+      const bt = y + h * 1.25 + curve * .2; t += `<path d="M${(px + 1).toFixed(1)} ${bt.toFixed(1)}L${(px + 3.2).toFixed(1)} ${(bt - len * .8).toFixed(1)}L${(px + 5.4).toFixed(1)} ${bt.toFixed(1)}Z"/>`; }
+    return `<path d="M${x - w / 2 - 10} ${y - h * .4}Q${x} ${y + h * .1} ${x + w / 2 + 10} ${y - h * .4}Q${x + w * .46} ${y + h * 1.7} ${x} ${y + h * 1.6}Q${x - w * .46} ${y + h * 1.7} ${x - w / 2 - 10} ${y - h * .4}Z" fill="#120006"/>`
+      + `<path d="M${x - w * .28} ${y + h * 1.1}Q${x} ${y + h * .8} ${x + w * .28} ${y + h * 1.1}Q${x} ${y + h * 1.5} ${x - w * .28} ${y + h * 1.1}Z" fill="#5a0618" stroke="none"/>`
+      + `<g fill="#e9e2cc" stroke-width="1.2">${t}</g>`;
+  };
+  const blood = (x, y, L) => `<path d="M${x - 3} ${y}Q${x - 3} ${y + L} ${x} ${y + L + 4}Q${x + 3} ${y + L} ${x + 3} ${y}Z" fill="#a8061e" stroke="#1a1433" stroke-width="1.6"/><circle cx="${x}" cy="${y + L + 10}" r="2.2" fill="#a8061e" stroke="none"/>`;
+  const longClaw = (x, y, d) => `<g transform="translate(${x} ${y}) scale(${d} 1)"><path d="M-14 -40Q-22 -10 -16 8Q0 16 16 8Q20 -10 10 -40Z" fill="url(#ybD)"/>${[-12, -4, 4, 12].map((cx, k) => `<path d="M${cx - 3} 8Q${cx - 6 + k} 30 ${cx - 14 + k * 4} 46Q${cx + 2} 30 ${cx + 3} 8Z" fill="#d9d0b8" stroke-width="1.8"/>`).join('')}<path d="M-10 -30v14M-2 -32v16M6 -30v14" stroke="#000" stroke-width="1.4" opacity=".6"/></g>`;
   const GMAX = `<defs>
-    <radialGradient id="ybN" cx=".5" cy=".25" r=".9"><stop offset="0" stop-color="#5a0a1e"/><stop offset=".55" stop-color="#1e0820"/><stop offset="1" stop-color="#07040c"/></radialGradient>
-    <radialGradient id="ybMo" cx=".4" cy=".4" r=".7"><stop offset="0" stop-color="#ff8a6a"/><stop offset=".6" stop-color="#d1102a"/><stop offset="1" stop-color="#6a0012"/></radialGradient>
-    <linearGradient id="ybR" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7a2a"/><stop offset=".5" stop-color="#a8201a"/><stop offset="1" stop-color="#2a0608"/></linearGradient>
-    <linearGradient id="ybB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2602a"/><stop offset=".6" stop-color="#8a1c14"/><stop offset="1" stop-color="#3a0808"/></linearGradient>
-    <radialGradient id="ybW" cx=".5" cy=".7" r=".7"><stop offset="0" stop-color="#e8fbff"/><stop offset=".45" stop-color="#5ad8ff"/><stop offset="1" stop-color="#6a3aff"/></radialGradient>
-    <radialGradient id="ybG" cx=".5" cy=".5" r=".5"><stop offset=".4" stop-color="#ff2a4a" stop-opacity=".55"/><stop offset="1" stop-color="#ff2a4a" stop-opacity="0"/></radialGradient></defs>` + D(`
+    <linearGradient id="ybF" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8b088"/><stop offset="1" stop-color="#b8703c"/></linearGradient>
+    <radialGradient id="ybE" cx=".5" cy=".7" r=".7"><stop offset="0" stop-color="#9be7ff"/><stop offset=".6" stop-color="#4a9cff"/><stop offset="1" stop-color="#3a2a8a"/></radialGradient>
+    <radialGradient id="ybN" cx=".5" cy=".2" r=".95"><stop offset="0" stop-color="#3a0412"/><stop offset=".5" stop-color="#120208"/><stop offset="1" stop-color="#020103"/></radialGradient>
+    <radialGradient id="ybMo" cx=".4" cy=".4" r=".7"><stop offset="0" stop-color="#ff6a4a"/><stop offset=".55" stop-color="#a80018"/><stop offset="1" stop-color="#3a0008"/></radialGradient>
+    <linearGradient id="ybD" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a2228"/><stop offset="1" stop-color="#0e080c"/></linearGradient>
+    <linearGradient id="ybB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a2a2a"/><stop offset=".6" stop-color="#22121a"/><stop offset="1" stop-color="#0a0608"/></linearGradient>
+    <linearGradient id="ybFog" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a7a90" stop-opacity="0"/><stop offset="1" stop-color="#8a7a90" stop-opacity=".55"/></linearGradient>
+    <radialGradient id="ybG" cx=".5" cy=".5" r=".5"><stop offset=".3" stop-color="#ff0a2a" stop-opacity=".45"/><stop offset="1" stop-color="#ff0a2a" stop-opacity="0"/></radialGradient>
+    <clipPath id="ybK"><path d="M0 0H108L100 22 112 40 98 58 110 78 96 96 106 116 94 140H0Z"/></clipPath></defs>` + D(`
     <rect x="-6" y="-10" width="212" height="212" rx="20" fill="url(#ybN)" stroke="none"/>
-    <circle cx="100" cy="40" r="80" fill="url(#ybG)" stroke="none"/><circle cx="70" cy="84" r="24" fill="url(#ybG)" stroke="none"/><circle cx="130" cy="84" r="24" fill="url(#ybG)" stroke="none"/>
-    <circle cx="100" cy="40" r="40" fill="url(#ybMo)" stroke-width="3"/><path d="M80 22l10 14-6 10M118 30l-8 12 6 8" fill="none" stroke="#5a0010" stroke-width="2.4"/>
-    ${[-182, -162, -142, -122, -58, -38, -18, 2, -100].map((a, k) => fireTail(a, k === 8 ? 112 : 118, 24)).join('')}
-    ${cloud(22, 22, .6, '#2a2236')}${cloud(178, 20, .6, '#2a2236')}
-    <path d="M24 32l-6 14 8-2-6 16M176 30l6 12-8-1 6 16" fill="none" stroke="#c8f0ff" stroke-width="3"/>
-    ${Array.from({ length: 14 }, (_, k) => drop(6 + (k * 41) % 192, 50 + ((k * 59) % 120), .55, '#3a1a4a')).join('')}
-    <path d="M18 202Q14 150 44 124L56 132 62 118 76 126 84 112 100 120 116 112 124 126 138 118 144 132 156 124Q186 150 182 202Z" fill="url(#ybB)"/>
-    <path d="M68 202L72 170 80 176 86 160 94 168 100 152 106 168 114 160 120 176 128 170 132 202Z" fill="#6a5a58" stroke-width="2.8"/><path d="M80 186h40M84 194h32" stroke="#3a2a2a" stroke-width="2.4"/>
-    ${ruins}
-    <!-- 귀: 길고 찢어진, 끝에 여우불 -->
-    <path d="M46 72L30 -2 52 20 58 12 64 26 90 46Z" fill="url(#ybB)"/><path d="M52 60L40 14 54 30 74 46Z" fill="#3a0612" stroke-width="2.2"/>${wisp(30, -4, .85)}
-    <path d="M154 72L170 -2 148 20 142 12 136 26 110 46Z" fill="url(#ybB)"/><path d="M148 60L160 14 146 30 126 46Z" fill="#3a0612" stroke-width="2.2"/>${wisp(170, -4, .85)}
-    <!-- 머리: 날카로운 볼털 -->
-    <path d="M100 40Q150 40 160 76L190 82 164 94 186 108 158 112 172 128 140 126Q120 150 100 150Q80 150 60 126L28 128 42 112 14 108 36 94 10 82 40 76Q50 40 100 40Z" fill="url(#ybB)"/>
-    <path d="M100 40l-6 14 6-4 6 4z" fill="#3a0808" stroke-width="2"/>
-    <path d="M72 58l-8 6M128 58l8 6M86 50l-2 8M114 50l2 8" stroke="#3a0808" stroke-width="2.4"/>
-    ${evil(70, 84, 16, 1)}${evil(130, 84, 16, -1)}${evil(82, 64, 7, 1)}${evil(118, 64, 7, -1)}
-    <path d="M48 70L90 82M152 70L110 82" stroke-width="5"/>
-    <path d="M96 98Q100 94 104 98Q100 104 96 98Z" fill="#1a0006"/>
-    ${fangs(100, 116, 104, 16, 10)}
-    <path d="M70 136q-2 10 2 18M128 136q2 8-1 14" fill="none" stroke="#ff4a6a" stroke-width="3" opacity=".9"/><circle cx="72" cy="156" r="2.6" fill="#ff4a6a" stroke="none"/>
-    ${claw(36, 178, 1)}${claw(164, 178, -1)}
-    ${wisp(12, 70, .8)}${wisp(190, 64, .9)}${wisp(22, 150, .7)}${wisp(182, 146, .7)}`);
+    <circle cx="100" cy="30" r="86" fill="url(#ybG)" stroke="none"/>
+    <circle cx="100" cy="30" r="38" fill="url(#ybMo)" stroke-width="3"/><path d="M78 14l12 12-8 12 6 8M120 20l-10 12 8 10" fill="none" stroke="#1a0004" stroke-width="2.4"/>${blood(92, 66, 10)}${blood(112, 64, 16)}
+    <path d="M-6 150L6 112 10 150 18 96 26 150M180 150L188 104 194 150 200 120 206 150" fill="none" stroke="#0a0608" stroke-width="3"/>
+    ${[-176, -156, -136, -118, -62, -44, -24, -4, -90].map((a, k) => tailEye(a, k === 8 ? 140 : 104 + (k % 2) * 10, 12)).join('')}
+    <path d="M30 202Q26 150 52 128L62 134 72 124 84 132 100 126 116 132 128 124 138 134 148 128Q174 150 170 202Z" fill="url(#ybB)"/>
+    <g fill="none" stroke="#6a5058" stroke-width="3">${[148, 160, 172, 184].map((y, k) => `<path d="M${74 + k * 2} ${y}Q100 ${y + 8} ${126 - k * 2} ${y}"/>`).join('')}<path d="M100 140V196" stroke-width="2.4"/></g>
+    ${ruins.replace(/#ff5a2a/g, '#a8061e')}
+    ${longClaw(40, 160, 1)}${longClaw(160, 160, -1)}
+    <path d="M44 74L22 -6 50 22 56 10 64 28 92 44Z" fill="url(#ybB)"/><path d="M50 62L34 14 52 32 74 46Z" fill="#000" stroke-width="2.2"/><path d="M38 20l6 10-4 4" fill="none" stroke="#a8061e" stroke-width="2"/>
+    <path d="M156 74L178 -6 150 22 144 10 136 28 108 44Z" fill="url(#ybB)"/><path d="M150 62L166 14 148 32 126 46Z" fill="#000" stroke-width="2.2"/>
+    <path d="M100 38Q154 38 164 78L184 88 162 96 176 112 150 114Q130 152 100 152Q70 152 50 114L24 112 38 96 16 88 36 78Q46 38 100 38Z" fill="url(#ybB)"/>
+    <ellipse cx="128" cy="92" rx="30" ry="40" fill="#040002"/>
+    ${pin(130, 82, 4.2)}${pin(142, 100, 2.4)}${pin(118, 104, 2)}${pin(134, 116, 1.6)}${pin(146, 74, 1.4)}
+    <path d="M108 60q10 8 4 20M150 64q-6 12 2 22" fill="none" stroke="#3a0010" stroke-width="2"/>
+    ${needleGrin(100, 138, 120, 18, 16)}
+    ${blood(62, 156, 14)}${blood(140, 158, 22)}${blood(100, 168, 10)}${blood(80, 162, 18)}
+    <g transform="rotate(-9 82 92)"><g clip-path="url(#ybK)" opacity=".96">${face(102, 90, 1.08, 'ybE', false)}</g>
+      <path d="M108 50L100 72 112 90 98 108 106 128" fill="none" stroke-width="2.6"/><path d="M60 80l10 8-4 10M70 120l8-6" fill="none" stroke="#5a2a1a" stroke-width="2"/>
+      <path d="M78 108q-2 14 0 30" fill="none" stroke="#2a4aa8" stroke-width="3" opacity=".8"/></g>
+    <path d="M112 186l8-6 6 8-10 4zM124 194l6-2 2 6z" fill="#e8b088" stroke-width="2"/>
+    <rect x="-6" y="150" width="212" height="52" fill="url(#ybFog)" stroke="none"/>
+    <path d="M-6 184Q30 172 60 184T120 184T206 182" fill="none" stroke="#a89ab0" stroke-width="5" opacity=".35"/>`);
 
   if (typeof NEW_ART !== 'undefined') NEW_ART.yeoubi = BASE;
   if (typeof MEGA_ART !== 'undefined') MEGA_ART.yeoubi = MEGA;
