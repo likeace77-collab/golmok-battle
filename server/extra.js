@@ -177,7 +177,7 @@ function fshopBuy(u, id) {
 /* ---------- 코스튬 (골목몬 머리 위에 씌우는 꾸미기) ---------- */
 // price: GP, jelly: 이벤트 젤리. 그림은 public/js/extra.js의 COSTUME_ART
 const COSTUMES = {
-  wakppu: { n: '왁뿌말랑왕', d: '말랑말랑 젤리 왕관에 볼터치, 몸이 말랑말랑 흔들려요. 말랑말랑 축제 한정!', price: 20000, jelly: 40, fx: 'squish' },
+  wakppu: { n: '왁뿌말랑왕', only: 'malrang', d: '말랑왕 전용! 말랑왕이 알록달록 왁뿌볼 속에 쏙. 대전에서 맞을 때마다 왁스 껍질이 바삭바삭 부서지는 ASMR 소리가 나요.', price: 20000, jelly: 40, fx: 'wax' },
   santa: { n: '산타 모자', price: 3000 },
   crown: { n: '황금 왕관', price: 0, d: '도감 완성 보상' },
   wizard: { n: '마법사 모자', price: 4000 },
@@ -211,16 +211,17 @@ function costumeWear(u, uid, id, dev) {
   const m = (u.mons || []).find((x) => x.uid === uid); if (!m) return err('없는 골목몬이에요.');
   if (id && !COSTUMES[id]) return err('없는 코스튬이에요.');
   if (id && !dev && !(u.costumes || []).includes(id)) return err('가지고 있지 않은 코스튬이에요.');
+  if (id && COSTUMES[id].only && m.species !== COSTUMES[id].only) return err(`${Data.MONSTERS[COSTUMES[id].only].n} 전용 코스튬이에요.`);
   if (id) m.costume = id; else delete m.costume;
   return { ok: true };
 }
 
 /* ---------- 기간 한정 이벤트: 말랑말랑 축제 ---------- */
 const EVENT = { id: 'mallang', n: '말랑말랑 축제', start: Date.parse('2026-11-15T00:00:00+09:00'), end: Date.parse('2026-12-01T00:00:00+09:00'),
-  d: '대전을 하면 말랑 젤리가 나와요! 모은 젤리로 이벤트 상점에서 왁뿌말랑왕 코스튬과 선물을 바꿔요.', dailyCap: 40, login: 5 };
+  d: '대전을 하면 말랑 젤리가 나와요! 모은 젤리로 말랑왕 전용 코스튬 「왁뿌말랑왕」과 선물을 바꿔요. 맞을 때마다 왁스 껍질이 바삭바삭!', dailyCap: 40, login: 5 };
 const eventLive = (t = Date.now()) => t >= EVENT.start && t < EVENT.end;
 const ESHOP = [
-  { id: 'e-wakppu', n: '코스튬: 왁뿌말랑왕', jelly: 40, costume: 'wakppu' },
+  { id: 'e-wakppu', n: '코스튬: 왁뿌말랑왕 (말랑왕 전용)', jelly: 40, costume: 'wakppu' },
   { id: 'e-reroll', n: '리롤권 3장', jelly: 10, r: { rerolls: 3 }, limit: 10 },
   { id: 'e-skip', n: '1시간 스킵권 10장', jelly: 8, r: { skips: 10 }, limit: 10 },
   { id: 'e-gp', n: '3,000GP', jelly: 10, r: { gp: 3000 }, limit: 20 },

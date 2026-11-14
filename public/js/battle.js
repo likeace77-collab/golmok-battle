@@ -243,7 +243,7 @@ const Battle = (() => {
   // 루미나·실비아: 각성 단계 오라
   const AWAKEN = { lumina: true, silvia: true };
   // 골목몬 그림: 이로치면 메가진화·거다이맥스·옷 단계까지 이로치 색으로
-  const art = (m, cls = '') => { const svg = m.gmax ? gmaxSVG(m.species, cls) : monsterSVG(m.species, cls, m.mega, m.hits, m.tier); return cosArt(m.shiny ? shinify(svg, m.species) : svg, m.gmax ? '' : m.costume); };
+  const art = (m, cls = '') => { const svg = m.gmax ? gmaxSVG(m.species, cls) : monsterSVG(m.species, cls, m.mega, m.hits, m.tier); return cosArt(m.shiny ? shinify(svg, m.species) : svg, m.gmax ? '' : m.costume, { crack: m.hits || 0, big: !!m.mega }); };
   const auraClass = (m) => (AWAKEN[m.species] && m.strip ? ` aura-${m.species} aw${m.strip}` : '');
   async function awakenCut(key, m) {
     const sp = G.data.MONSTERS[m.species];
@@ -405,6 +405,10 @@ const Battle = (() => {
           }
         }
         if (e.quiet) break;
+        if (e.dmg !== undefined && m.costume === 'wakppu' && e.moveType) { // 왁뿌말랑왕: 맞을 때마다 껍질이 부서짐
+          const box = $(`#m-${key}`), n = m.hits || 0;
+          if (box && n <= 6) { box.innerHTML = art(m, ''); waxCrunch(n >= 6 ? 1.3 : 1); waxShards(box, n >= 6 ? 18 : 10); }
+        }
         if (e.dmg !== undefined) {
           if (e.moveType) {
             trainer(key)?.play('flinch');

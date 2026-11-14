@@ -2,11 +2,7 @@
 
 /* ---------- 코스튬 그림 (골목몬 그림과 같은 200×200 좌표에 덧그림) ---------- */
 const COSTUME_ART = {
-  wakppu: `<g class="cos-jelly"><path d="M58 46 L62 14 Q66 6 72 14 L84 30 L96 8 Q100 0 104 8 L116 30 L128 14 Q134 6 138 14 L142 46 Q100 58 58 46 Z" fill="#FF8FC4" fill-opacity=".85" stroke="#1a1433" stroke-width="4" stroke-linejoin="round"/>
-    <path d="M66 40 Q100 50 134 40" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".8"/>
-    <circle cx="68" cy="16" r="7" fill="#FFD6EA" stroke="#1a1433" stroke-width="3"/><circle cx="100" cy="8" r="8" fill="#B6F0FF" stroke="#1a1433" stroke-width="3"/><circle cx="132" cy="16" r="7" fill="#FFF3A0" stroke="#1a1433" stroke-width="3"/>
-    <ellipse cx="78" cy="26" rx="4" ry="8" fill="#fff" opacity=".7"/><path d="M100 30 l4 6 7 1-5 5 1 7-7-3-7 3 1-7-5-5 7-1z" fill="#fff" stroke="#E8407A" stroke-width="2"/>
-    <g opacity=".9"><circle cx="40" cy="30" r="4" fill="#FFD6EA"/><circle cx="160" cy="24" r="5" fill="#B6F0FF"/><path d="M168 54l3 6 6 1-5 4 1 6-5-3-5 3 1-6-5-4 6-1z" fill="#FFE45C"/></g></g>`,
+  wakppu: '', // 왁뿌볼 껍질은 waxShell()로 그림 (부서진 단계가 있어서)
   santa: `<path d="M60 48 Q72 6 112 10 Q146 14 150 48 Z" fill="#E8402C" stroke="#1a1433" stroke-width="4"/><path d="M112 10 Q150 -2 160 30" fill="none" stroke="#E8402C" stroke-width="14" stroke-linecap="round"/><circle cx="160" cy="32" r="11" fill="#fff" stroke="#1a1433" stroke-width="3"/><rect x="54" y="42" width="102" height="16" rx="8" fill="#fff" stroke="#1a1433" stroke-width="4"/>`,
   crown: `<path d="M62 50 L58 12 L80 30 L100 4 L120 30 L142 12 L138 50 Z" fill="#FFD23F" stroke="#1a1433" stroke-width="4" stroke-linejoin="round"/><rect x="60" y="44" width="80" height="10" fill="#E7B23A" stroke="#1a1433" stroke-width="3"/><circle cx="100" cy="34" r="6" fill="#E8402C" stroke="#1a1433" stroke-width="2"/><circle cx="76" cy="38" r="4" fill="#2F7DE1"/><circle cx="124" cy="38" r="4" fill="#3FA34D"/>`,
   wizard: `<path d="M56 54 Q100 40 144 54 L128 58 Q100 50 72 58 Z" fill="#3B2F8C" stroke="#1a1433" stroke-width="4"/><path d="M72 52 L112 -6 Q118 22 128 52 Z" fill="#3B2F8C" stroke="#1a1433" stroke-width="4" stroke-linejoin="round"/><path d="M78 44 Q100 38 124 44" stroke="#F2B705" stroke-width="6" fill="none"/><path d="M104 20l3 5 5 1-4 4 1 5-5-2-5 2 1-5-4-4 5-1z" fill="#FFE45C"/>`,
@@ -21,11 +17,85 @@ const COSTUME_ART = {
   ribbon: `<path d="M126 26 L98 8 Q90 20 98 40 Z M134 26 L162 8 Q170 20 162 40 Z" fill="#FF5C8A" stroke="#1a1433" stroke-width="4" stroke-linejoin="round"/><circle cx="130" cy="26" r="9" fill="#FF8FB4" stroke="#1a1433" stroke-width="4"/>`,
 };
 // 골목몬 그림(svg 문자열)에 코스튬을 덧그림
-function cosArt(svg, costume) {
-  if (!costume || !COSTUME_ART[costume] || typeof svg !== 'string') return svg;
+/* 왁뿌말랑왕: 말랑왕을 감싼 왁뿌볼(왁스 껍질). crack = 맞은 횟수 → 조각이 하나씩 떨어져 나감 (6번이면 다 깨짐) */
+const WAX_CHUNKS = [
+  'M100 52L196 52L196 120L150 118L128 96L112 100Z', 'M4 100L70 92L84 118L62 140L4 150Z', 'M84 108L118 104L136 128L120 160L86 162L66 136Z',
+  'M150 118L196 120L196 210L120 210L120 160L136 128Z', 'M4 150L62 140L86 162L80 210L4 210Z', 'M4 52L100 52L112 100L84 108L70 92L4 100Z',
+];
+let WAX_UID = 0;
+function waxShell(crack = 0, big = false) {
+  const n = Math.max(0, Math.min(6, crack | 0)), id = `wx${++WAX_UID}`;
+  const cx = 100, cy = big ? 132 : 132, rx = big ? 86 : 80, ry = big ? 68 : 64;
+  const crumbs = n >= 6 ? [[52, 150, '#FFB3D9'], [138, 168, '#B9F3E4'], [96, 182, '#D9C6FF'], [70, 110, '#FFF1A8'], [150, 132, '#FFB3D9']].map(([x, y, c], k) => `<path d="M${x} ${y}l${6 + k} -4 4 ${7 - k} -9 3z" fill="${c}" stroke="#1a1433" stroke-width="2"/>`).join('') : '';
+  if (n >= 6) return `<g class="wax-done">${crumbs}</g>`;
+  const holes = WAX_CHUNKS.slice(0, n).map((d) => `<path d="${d}" fill="#000"/>`).join('');
+  const next = WAX_CHUNKS.slice(n, n + 2).map((d, k) => `<path d="${d}" fill="none" stroke="#1a1433" stroke-width="${k ? 1.6 : 2.6}" stroke-linejoin="miter" opacity="${k ? .45 : .85}"/>`).join('');
+  return `<g class="wax-ball"><defs>
+      <radialGradient id="${id}g" cx="35%" cy="28%" r="80%"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".18" stop-color="#FFE3F1"/><stop offset=".55" stop-color="#FFB3D9"/><stop offset="1" stop-color="#E88BC0"/></radialGradient>
+      <mask id="${id}m"><rect x="0" y="0" width="200" height="210" fill="#fff"/>${holes}</mask>
+      <clipPath id="${id}c"><ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}"/></clipPath></defs>
+    <g mask="url(#${id}m)">
+      <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#${id}g)" stroke="#1a1433" stroke-width="4.5"/>
+      <g clip-path="url(#${id}c)" opacity=".85">
+        <path d="M20 120Q60 92 96 118T180 110" fill="none" stroke="#B9F3E4" stroke-width="16" stroke-linecap="round"/>
+        <path d="M24 158Q70 134 104 160T184 150" fill="none" stroke="#D9C6FF" stroke-width="14" stroke-linecap="round"/>
+        <path d="M40 186Q90 170 160 188" fill="none" stroke="#FFF1A8" stroke-width="12" stroke-linecap="round"/>
+        <g clip-path="url(#${id}c)">${next}</g>
+      </g>
+      <ellipse cx="${cx - 34}" cy="${cy - 36}" rx="22" ry="10" fill="#fff" opacity=".8" transform="rotate(-24 ${cx - 34} ${cy - 36})"/>
+      <circle cx="${cx + 44}" cy="${cy - 30}" r="5" fill="#fff" opacity=".85"/>
+    </g>
+    </g>`;
+}
+// 골목몬 그림(svg 문자열)에 코스튬을 덧그림. opts.crack: 왁뿌볼이 맞은 횟수
+function cosArt(svg, costume, opts = {}) {
+  if (!costume || typeof svg !== 'string') return svg;
+  if (costume === 'wakppu') return svg.replace(/<svg\b/, '<svg data-cos="wakppu"').replace(/<\/svg>\s*$/, `<g class="cos cos-wakppu">${waxShell(opts.crack || 0, opts.big)}</g></svg>`);
+  if (!COSTUME_ART[costume]) return svg;
   return svg.replace(/<svg\b/, `<svg data-cos="${costume}"`).replace(/<\/svg>\s*$/, `<g class="cos cos-${costume}">${COSTUME_ART[costume]}</g></svg>`);
 }
-const costumeSVG = (id, size = 64) => `<svg viewBox="20 -10 160 90" width="${size}" height="${size * .56}" aria-hidden="true">${COSTUME_ART[id] || ''}</svg>`;
+/* 바삭바삭 왁스 부서지는 소리 (WebAudio로 직접 만듦) + 진동 */
+let WAX_AC = null;
+document.addEventListener('pointerdown', () => { try { WAX_AC ||= new (window.AudioContext || window.webkitAudioContext)(); if (WAX_AC.state === 'suspended') WAX_AC.resume(); } catch { /* 소리 없이 */ } }, { capture: true });
+function waxCrunch(power = 1) {
+  try {
+    WAX_AC ||= new (window.AudioContext || window.webkitAudioContext)();
+    const ac = WAX_AC; if (ac.state === 'suspended') ac.resume();
+    const now = ac.currentTime + .01;
+    if (!WAX_AC.noise) { const b = ac.createBuffer(1, ac.sampleRate * .5, ac.sampleRate); const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; WAX_AC.noise = b; }
+    const out = ac.createGain(); out.gain.value = .9; out.connect(ac.destination);
+    const crack = (t, len, freq, q, vol) => {
+      const src = ac.createBufferSource(); src.buffer = WAX_AC.noise; src.playbackRate.value = .8 + Math.random() * .6;
+      const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = q;
+      const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
+      const g = ac.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .0015); g.gain.exponentialRampToValueAtTime(.0008, t + len);
+      src.connect(bp); bp.connect(hp); hp.connect(g); g.connect(out); src.start(t, Math.random() * .4, len + .02);
+    };
+    // 첫 '빠각': 크고 날카로운 금
+    crack(now, .05, 2600, 1.2, .9 * power);
+    // 오도독 갈라지는 잔금들
+    const n = 9 + Math.floor(power * 8);
+    for (let i = 0; i < n; i++) { const t = now + .012 + Math.pow(Math.random(), 1.6) * .19; crack(t, .006 + Math.random() * .018, 1800 + Math.random() * 5200, 1 + Math.random() * 4, (.18 + Math.random() * .45) * power); }
+    // 부스러기 떨어지는 사각사각 꼬리
+    for (let i = 0; i < 7; i++) crack(now + .2 + Math.random() * .28, .004 + Math.random() * .01, 5000 + Math.random() * 4000, 2, .05 + Math.random() * .09);
+    // 묵직한 톡 (말랑 속살)
+    const o = ac.createOscillator(), og = ac.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(180, now); o.frequency.exponentialRampToValueAtTime(55, now + .09);
+    og.gain.setValueAtTime(.35 * power, now); og.gain.exponentialRampToValueAtTime(.001, now + .12); o.connect(og); og.connect(out); o.start(now); o.stop(now + .14);
+  } catch { /* 소리를 못 내도 게임은 계속 */ }
+  try { navigator.vibrate?.([14, 18, 8, 12, 6]); } catch { /* 진동 없음 */ }
+}
+// 껍질 조각이 튀어 나가는 연출 (el: 골목몬 그림 상자)
+function waxShards(el, n = 9) {
+  if (!el) return;
+  const r = el.getBoundingClientRect(); const cols = ['#FFB3D9', '#B9F3E4', '#D9C6FF', '#FFF1A8', '#FFE3F1'];
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement('i'); s.className = 'wax-shard';
+    const a = Math.random() * Math.PI * 2, d = 40 + Math.random() * 80;
+    s.style.cssText = `left:${r.left + r.width * (.3 + Math.random() * .4)}px;top:${r.top + r.height * (.35 + Math.random() * .4)}px;background:${cols[i % cols.length]};--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d * .6 - 30}px;--rot:${(Math.random() - .5) * 720}deg;width:${6 + Math.random() * 10}px;height:${5 + Math.random() * 8}px`;
+    document.body.appendChild(s); setTimeout(() => s.remove(), 950);
+  }
+}
+const costumeSVG = (id, size = 64) => (id === 'wakppu' ? `<svg viewBox="14 60 172 140" width="${size}" height="${size * .8}" aria-hidden="true">${waxShell(0)}</svg>` : `<svg viewBox="20 -10 160 90" width="${size}" height="${size * .56}" aria-hidden="true">${COSTUME_ART[id] || ''}</svg>`);
 (function patchArt() {
   // 기존 그림 함수들에 코스튬을 끼워 넣기: monArt(id, shiny, cls, mega, ..., {costume})는 그대로 두고, 객체를 받는 곳만 감쌈
   if (typeof gotItem === 'function') {
@@ -198,18 +268,21 @@ async function costumeSheet(mon, after) {
   const sp = G.data.MONSTERS[mon.species];
   const draw = (preview = mon.costume || '') => {
     const bg = openSheet(`<div class="row" style="margin-bottom:8px"><h2>👑 코스튬</h2><button class="btn small paper" data-x>닫기</button></div>
-      <div class="cos-prev${mon.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${cosArt(monArt(mon.species, mon.shiny), preview)}</div>
+      <div class="cos-prev${mon.shiny ? ' is-shiny' : ''}" id="cos-prev" style="--tc:${G.data.TYPES[sp.types[0]].c}">${cosArt(monArt(mon.species, mon.shiny), preview, { crack: 0 })}</div>
+      ${preview === 'wakppu' ? '<p class="muted" style="text-align:center;margin:-4px 0 8px">👆 그림을 톡톡 눌러 왁뿌볼을 부숴 보세요 (소리 켜기!)</p>' : ''}
       <div class="cos-grid"><button class="cos-it ${!preview ? 'on' : ''}" data-cos=""><span class="cos-none">✕</span><b>벗기</b></button>
-        ${list.map((c) => `<button class="cos-it ${preview === c.id ? 'on' : ''} ${c.own ? 'own' : ''}" data-cos="${c.id}">${costumeSVG(c.id, 64)}<b>${esc(c.n)}</b><small>${c.own ? '보유' : c.price ? `${fmt(c.price)}GP` : esc(c.d || '보상')}</small></button>`).join('')}</div>
+        ${list.map((c) => `<button class="cos-it ${preview === c.id ? 'on' : ''} ${c.own ? 'own' : ''}" data-cos="${c.id}">${costumeSVG(c.id, 64)}<b>${esc(c.n)}</b><small>${c.only ? `${esc(G.data.MONSTERS[c.only].n)} 전용 · ` : ''}${c.own ? '보유' : c.price ? `${fmt(c.price)}GP` : esc(c.d || '보상')}</small></button>`).join('')}</div>
       ${(() => { const c = list.find((x) => x.id === preview); if (!c) return ''; if (c.d) return `<p class="muted" style="margin:8px 0">${esc(c.d)}</p>`; return ''; })()}
       <div class="sc-pay">${(() => { const c = list.find((x) => x.id === preview);
         if (!preview) return '<button class="btn wide" id="cos-wear">코스튬 벗기</button>';
+        if (c?.only && c.only !== mon.species) return `<p class="muted">${esc(G.data.MONSTERS[c.only].n)} 전용 코스튬이라 이 골목몬은 입을 수 없어요.${c.own ? '' : ' (상점에서 미리 사 둘 수는 있어요)'}</p>${c.own ? '' : `${c.price ? `<button class="btn" id="cos-buy">${ICON.gp(18)} ${fmt(c.price)}GP에 사기</button>` : ''}${c.jelly ? `<button class="btn mint" id="cos-jelly">🍮 젤리 ${c.jelly}개로 사기</button>` : ''}`}`;
         if (c?.own) return `<button class="btn wide" id="cos-wear">${esc(c.n)} 입히기</button>`;
         return `${c?.price ? `<button class="btn" id="cos-buy">${ICON.gp(18)} ${fmt(c.price)}GP에 사기</button>` : ''}${c?.jelly ? `<button class="btn mint" id="cos-jelly">🍮 젤리 ${c.jelly}개로 사기</button>` : ''}${!c?.price && !c?.jelly ? '<p class="muted">보상으로만 얻을 수 있어요.</p>' : ''}`; })()}</div>`);
     bg.querySelector('[data-x]').onclick = closeSheet;
     bg.querySelectorAll('[data-cos]').forEach((b) => { b.onclick = () => { closeSheet(); draw(b.dataset.cos); }; });
     bg.querySelector('#cos-wear')?.addEventListener('click', async () => { try { setUser(await api('POST', '/api/costume/wear', { uid: mon.uid, id: preview })); mon.costume = preview || undefined; closeSheet(); toast(preview ? '입혔어요!' : '벗겼어요.'); after?.(); } catch (e) { toast(e.message); } });
     const buy = async (pay) => { try { const r = await api('POST', '/api/costume/buy', { id: preview, pay }); setUser(r); list = (await api('GET', '/api/costumes')).list; closeSheet(); showGot(r.got, '코스튬을 샀어요!', () => draw(preview)); } catch (e) { toast(e.message); } };
+    if (preview === 'wakppu') { let hits = 0; const box = bg.querySelector('#cos-prev'); box.style.cursor = 'pointer'; box.onclick = () => { hits = hits >= 6 ? 0 : hits + 1; box.innerHTML = cosArt(monArt(mon.species, mon.shiny), 'wakppu', { crack: hits }); box.classList.remove('wax-hit'); void box.offsetWidth; box.classList.add('wax-hit'); if (hits) { waxCrunch(hits >= 6 ? 1.3 : 1); waxShards(box, hits >= 6 ? 18 : 9); } }; }
     bg.querySelector('#cos-buy')?.addEventListener('click', () => buy('gp'));
     bg.querySelector('#cos-jelly')?.addEventListener('click', () => buy('jelly'));
   };
