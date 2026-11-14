@@ -292,11 +292,11 @@ function claimPass(u, lv, track) {
 // 받을 수 있는 보상 개수 (로비 배지)
 /* ---------- 원정: 골목몬을 보내 두면 시간이 지나 보상을 들고 와요 ---------- */
 const EXPE_SLOTS = 3;
-const EXPE = [
-  { id: 'cvs', n: '편의점 골목', icon: '🏪', hours: 1, like: ['elec', 'steel'], r: { gp: 1200, skips: 3 }, luck: {} },
-  { id: 'hill', n: '뒷산 약수터', icon: '⛰️', hours: 4, like: ['grass', 'earth', 'water'], r: { gp: 5000, skips: 10 }, luck: { tickets: 0.15 } },
-  { id: 'night', n: '야시장', icon: '🏮', hours: 8, like: ['fire', 'spirit', 'poison'], r: { gp: 10000, skips: 20 }, luck: { tickets: 0.35, stones: 0.12 } },
-  { id: 'sea', n: '바닷가 방파제', icon: '🌊', hours: 12, like: ['water', 'ice', 'wind'], r: { gp: 16000, skips: 30, tickets: 1 }, luck: { stones: 0.25, gpt: 0.3 } },
+const EXPE = [ // 보상은 처음의 절반 (2026-11-14 너프)
+  { id: 'cvs', n: '편의점 골목', icon: '🏪', hours: 1, like: ['elec', 'steel'], r: { gp: 600, skips: 2 }, luck: {} },
+  { id: 'hill', n: '뒷산 약수터', icon: '⛰️', hours: 4, like: ['grass', 'earth', 'water'], r: { gp: 2500, skips: 5 }, luck: { tickets: 0.075 } },
+  { id: 'night', n: '야시장', icon: '🏮', hours: 8, like: ['fire', 'spirit', 'poison'], r: { gp: 5000, skips: 10 }, luck: { tickets: 0.175, stones: 0.06 } },
+  { id: 'sea', n: '바닷가 방파제', icon: '🌊', hours: 12, like: ['water', 'ice', 'wind'], r: { gp: 8000, skips: 15 }, luck: { tickets: 0.5, stones: 0.125, gpt: 0.15 } },
 ];
 const expeOf = (u) => (u.expe ||= []);
 const awayUids = (u) => new Set(expeOf(u).map((e) => e.uid));
