@@ -99,7 +99,7 @@ const Battle = (() => {
   // 대전 전: 상대 덱을 보고 먼저 낼 골목몬을 고릅니다.
   function renderPreview() {
     const waiting = !view.mustAct;
-    const rosterHTML = (o) => `<div class="grid pv">${o.roster.map((m) => `<div class="card" style="--tc:${G.data.TYPES[m.types[0]].c}">${monsterSVG(m.species)}<span>${m.name}</span><p>${m.types.map(typeChip).join('')}</p></div>`).join('')}</div>`;
+    const rosterHTML = (o) => `<div class="grid pv">${o.roster.map((m) => `<div class="card" style="--tc:${G.data.TYPES[m.types[0]].c}">${monArt(m.species, m.shiny)}<span>${m.name}</span><p>${m.types.map(typeChip).join('')}</p></div>`).join('')}</div>`;
     const vsCard = (x) => battleCard({ name: x.name, avatar: x.avatar, style: x.style });
     app.innerHTML = `${headHTML()}
       <section class="vs ${view.doubles ? 'dbl' : ''}${view.raid?.dark ? ' raid-dark' : ''}">
@@ -108,7 +108,7 @@ const Battle = (() => {
         <div class="vs-side">${view.opps.map(vsCard).join('')}</div>
       </section>
       ${view.raid ? `<section class="panel raid-boss ${view.raid.dark ? 'dark' : ''}"><h2>레이드 보스: ${esc(view.raid.title)}</h2>
-        <div class="rb-art">${view.raid.gmax ? gmaxSVG(view.opps[0].roster[0].species) : monsterSVG(view.opps[0].roster[0].species, '', true)}</div>
+        <div class="rb-art">${art({ ...view.opps[0].roster[0], mega: !view.raid.gmax, gmax: view.raid.gmax ? 1 : 0, hits: 0, tier: 0 })}</div>
         <p class="muted">+5 강화 · ${view.raid.gmax ? '판 내내 거다이맥스' : '처음부터 메가진화'} · 공격은 모두 광역 · 2턴마다 충격파 · ${view.raid.limit}턴 제한</p></section>`
       : view.opps.map((o) => `<section class="panel">
         <h2>${view.doubles ? esc(o.name) : '상대'} 덱: ${esc(o.deck)}</h2>${rosterHTML(o)}
@@ -118,7 +118,7 @@ const Battle = (() => {
         <h2>${spectating ? '선봉을 고르는 중입니다' : waiting ? '다른 사람이 고르는 중입니다' : '먼저 내보낼 골목몬을 고르세요'}</h2>
         <p class="muted" style="margin-bottom:6px">내 덱: ${esc(view.me.deck)}</p>
         ${view.me.mons.map((m, i) => `<button class="sw pv-lead ${view.lead === i ? 'picked' : ''}" data-lead="${i}" ${waiting ? 'disabled' : ''}>
-          ${monsterSVG(m.species)}
+          ${monArt(m.species, m.shiny)}
           <div class="inf">${m.name} ${m.types.map(typeChip).join('')}
             <small>${m.moves.map((x) => G.data.MOVES[x.id].n).join(', ')}</small></div>
           ${view.lead === i ? '<em>선봉</em>' : ''}</button>`).join('')}
@@ -242,6 +242,8 @@ const Battle = (() => {
 
   // 루미나·실비아: 각성 단계 오라
   const AWAKEN = { lumina: true, silvia: true };
+  // 골목몬 그림: 이로치면 메가진화·거다이맥스·옷 단계까지 이로치 색으로
+  const art = (m, cls = '') => { const svg = m.gmax ? gmaxSVG(m.species, cls) : monsterSVG(m.species, cls, m.mega, m.hits, m.tier); return m.shiny ? shinify(svg, m.species) : svg; };
   const auraClass = (m) => (AWAKEN[m.species] && m.strip ? ` aura-${m.species} aw${m.strip}` : '');
   async function awakenCut(key, m) {
     const sp = G.data.MONSTERS[m.species];
@@ -269,7 +271,7 @@ const Battle = (() => {
     $('#scene')?.appendChild(tag);
     setTimeout(() => tag.remove(), 1500);
     await wait(560);
-    if (box) { box.innerHTML = monsterSVG(m.species, '', m.mega, m.hits, m.tier); box.className = `mon ${key}${m.mega ? ' mega' : ''}${auraClass(m)} swapfx`; setTimeout(() => box.classList.remove('swapfx'), 500); }
+    if (box) { box.innerHTML = art(m, ''); box.className = `mon ${key}${m.mega ? ' mega' : ''}${m.shiny ? ' is-shiny' : ''}${auraClass(m)} swapfx`; setTimeout(() => box.classList.remove('swapfx'), 500); }
     await wait(Math.max(0, ms - 560));
   }
 
@@ -295,8 +297,8 @@ const Battle = (() => {
   function drawMon(key, m) {
     const box = $(`#m-${key}`);
     box.className = `mon ${key}${m.mega ? ' mega' : ''}${m.gmax ? ' giant' : ''}${auraClass(m)}`;
-    box.innerHTML = m.gmax ? gmaxSVG(m.species) : monsterSVG(m.species, '', m.mega, m.hits, m.tier);
-    if (m.shiny) { box.innerHTML = shinify(box.innerHTML, m.species); box.classList.add('is-shiny'); }
+    box.innerHTML = art(m);
+    if (m.shiny) box.classList.add('is-shiny');
   }
 
   const dispMon = (key) => (key === 'me' ? mine() : seatOf(key).active);
@@ -314,7 +316,7 @@ const Battle = (() => {
 
   function drawPipsFrom(roster) {
     const el = $('#pips');
-    if (el) el.innerHTML = roster.map((m) => `<span class="${m.out ? 'out' : ''}">${monsterSVG(m.species, '', m.mega)}</span>`).join('');
+    if (el) el.innerHTML = roster.map((m) => `<span class="${m.out ? 'out' : ''}">${art({ ...m, gmax: 0 })}</span>`).join('');
   }
 
   function drawWeather() {
@@ -399,7 +401,7 @@ const Battle = (() => {
           const sp = G.data.MONSTERS[m.species];
           if (sp?.forms && !m.mega && m.hp > 0) {
             const r = m.hp / m.maxHp, f = r > .75 ? 0 : r > .5 ? 1 : r > .25 ? 2 : r > .05 ? 3 : 4;
-            if (f !== (m.tier || 0) && (e.healed || e.quiet)) { m.tier = f; const box = $(`#m-${key}`); if (box) box.innerHTML = monsterSVG(m.species, '', m.mega, m.hits, m.tier); drawPlate(key, m); }
+            if (f !== (m.tier || 0) && (e.healed || e.quiet)) { m.tier = f; const box = $(`#m-${key}`); if (box) box.innerHTML = art(m, ''); drawPlate(key, m); }
           }
         }
         if (e.quiet) break;
@@ -502,7 +504,7 @@ const Battle = (() => {
         const box = $(`#m-${key}`);
         const ms = Fx.rage(key, e.form, e.up);
         await wait(e.up ? 420 : 200);
-        if (box) { box.innerHTML = monsterSVG(m.species, '', m.mega, m.hits, m.tier); box.classList.add('swapfx', 'forged'); setTimeout(() => box.classList.remove('swapfx', 'forged'), 700); }
+        if (box) { box.innerHTML = art(m, ''); box.classList.add('swapfx', 'forged'); setTimeout(() => box.classList.remove('swapfx', 'forged'), 700); }
         drawPlate(key, m);
         if (e.up) {
           const tag = document.createElement('div');
@@ -520,7 +522,7 @@ const Battle = (() => {
         const box = $(`#m-${key}`);
         const ms = Fx.forge(key, e.tier);
         await wait(520);
-        if (box) { box.innerHTML = monsterSVG(m.species, '', m.mega, m.hits, m.tier); box.classList.add('swapfx', 'forged'); setTimeout(() => box.classList.remove('swapfx', 'forged'), 700); }
+        if (box) { box.innerHTML = art(m, ''); box.classList.add('swapfx', 'forged'); setTimeout(() => box.classList.remove('swapfx', 'forged'), 700); }
         drawPlate(key, m);
         const tag = document.createElement('div');
         tag.className = `forge-tag ft${Math.min(e.tier, 4)} ${key}`;
@@ -583,7 +585,7 @@ const Battle = (() => {
   // 루미나·실비아 전용 Z 연출 (약 3.6초): 등장 → 기 모으기 → 발사
   const ROMAN = ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
   // 얼굴만 잘라 보이는 컷: eyes는 눈매 클로즈업, head는 머리와 어깨
-  const crop = (m, cls, box) => monsterSVG(m.species, cls, m.mega, m.hits, m.tier).replace('viewBox="0 0 200 200"', `viewBox="${box}" preserveAspectRatio="xMidYMid slice"`);
+  const crop = (m, cls, box) => art(m, cls).replace('viewBox="0 0 200 200"', `viewBox="${box}" preserveAspectRatio="xMidYMid slice"`);
   // 메가진화 그림은 얼굴 위치가 달라서 따로 자릅니다.
   const FACE = { 'lumina-mega': ['64 29 60 60', '71 44 45 18'], 'silvia-mega': ['35 21 60 60', '43 36 45 18'] };
   const face = (m) => FACE[`${m.species}${m.mega ? '-mega' : ''}`] || ['70 0 70 70', '75 17 60 24'];
@@ -612,7 +614,7 @@ const Battle = (() => {
     cut.innerHTML = `<div class="zx-bg"></div>
       <div class="zx-ring">${lum ? magicCircle('#37E0FF', '#FF7FD0') : magicCircle('#6CF2C2', '#ffffff')}</div>
       <div class="zx-vortex"></div><div class="zx-lines"></div>
-      <div class="zx-art">${monsterSVG(sp, '', e.mon.mega, e.mon.hits, e.mon.tier)}</div>
+      <div class="zx-art">${art({ ...e.mon, species: sp })}</div>
       <div class="zx-eye">${eyes(e.mon)}<i class="zx-glint"></i></div>
       ${duo ? '<canvas class="zx-tr"></canvas><div class="zx-bond">유대 MAX</div>' : ''}
       <div class="zx-title"><small>Z기술 · ${esc(e.player)} × ${esc(e.mon.name)}</small><b>${esc(e.move)}</b></div>
@@ -646,7 +648,7 @@ const Battle = (() => {
         <div class="zc-pair">
           ${duo ? '<canvas class="zc-tr"></canvas>' : ''}
           <div class="zc-bond"><i></i><i></i><i></i><b>유대 MAX</b></div>
-          <div class="zc-mon">${monsterSVG(e.mon.species, '', e.mon.mega, e.mon.hits, e.mon.tier)}</div>
+          <div class="zc-mon">${art(e.mon, '')}</div>
         </div>
         <div class="zc-text"><span class="zc-kick">Z기술 · ${esc(e.player)} × ${esc(e.mon.name)}</span><b class="zc-name">${esc(e.move)}</b></div>
       </div>
@@ -777,7 +779,7 @@ const Battle = (() => {
     say(`${moveDraft.mv ? moveDraft.mv.n : '악쓰기'}, 누구에게 쓸까요?`);
     panel.innerHTML = `${liveOpps().map((o) => {
       const eff = moveDraft.mv && moveDraft.mv.cat !== 'x' ? effOn(moveDraft.mv, o.active) : 1;
-      return `<button class="sw tg" data-tg="${o.seat}">${monsterSVG(o.active.species, '', o.active.mega, o.active.hits, o.active.tier)}
+      return `<button class="sw tg" data-tg="${o.seat}">${art(o.active, '')}
         <div class="inf">${o.active.name} ${o.active.types.map(typeChip).join('')}
           <small>${esc(o.name)}${eff === 0 ? ', 효과 없음' : eff !== 1 ? `, 상성 ${eff}배` : ''}</small></div></button>`;
     }).join('')}<button class="btn paper wide" id="tg-back">기술 고르기로 돌아가기</button>`;
@@ -791,7 +793,7 @@ const Battle = (() => {
     if (training) {
       say('어떤 골목몬으로 바꿀까요?');
       panel.innerHTML = `<div class="swgrid">${view.me.mons.map((m, i) => `<button data-sw="${i}" ${i === view.me.active ? 'disabled' : ''} aria-label="${m.name}">
-        ${monsterSVG(m.species, '', m.mega, m.hits, m.tier)}<span>${m.name}</span></button>`).join('')}</div>
+        ${art(m, '')}<span>${m.name}</span></button>`).join('')}</div>
         <button class="btn paper wide" id="sw-back">기술 고르기로 돌아가기</button>`;
       panel.querySelectorAll('[data-sw]').forEach((b) => { b.onclick = () => { menu = 'moves'; act({ type: 'switch', index: +b.dataset.sw }); }; });
       panel.querySelector('#sw-back').onclick = () => { menu = 'moves'; renderPanel(); };
@@ -802,7 +804,7 @@ const Battle = (() => {
     panel.innerHTML = `${view.me.mons.map((m, i) => {
       const off = m.hp <= 0 || i === view.me.active || stuck;
       return `<button class="sw" data-sw="${i}" ${off ? 'disabled' : ''}>
-        ${monsterSVG(m.species, '', m.mega, m.hits, m.tier)}
+        ${art(m, '')}
         <div class="inf">${m.name} ${m.types.map(typeChip).join('')}
           <div class="bar" style="max-width:190px"><i class="${m.hp / m.maxHp <= .2 ? 'low' : m.hp / m.maxHp <= .5 ? 'mid' : ''}" style="width:${(m.hp / m.maxHp) * 100}%"></i></div>
           <small>${m.hp <= 0 ? '쓰러짐' : `${m.hp} / ${m.maxHp}`}${m.status ? `, ${STATUS[m.status]}` : ''}${i === view.me.active && m.hp > 0 ? ', 싸우는 중' : ''}</small>
@@ -842,7 +844,7 @@ const Battle = (() => {
     const champ = win || draw ? view.me : view.opp;
     if (!draw) { trainer('me')?.play(win ? 'cheer' : 'sad', { hold: true, dur: 1.6 }); trainer('opp')?.play(win ? 'sad' : 'cheer', { hold: true, dur: 1.6 }); }
     const rb = view.raid && view.opp.roster[0];
-    div.innerHTML = `<div class="result-card">${rb && !win ? `<div class="raid-res ${view.raid.dark ? 'dark' : ''}">${view.raid.gmax ? gmaxSVG(rb.species) : monsterSVG(rb.species, '', true)}<b>${esc(view.raid.title)}</b></div>` : battleCard({ name: champ.name, avatar: champ.avatar, style: champ.style }, 'big')}</div>
+    div.innerHTML = `<div class="result-card">${rb && !win ? `<div class="raid-res ${view.raid.dark ? 'dark' : ''}">${art({ ...rb, mega: !view.raid.gmax, gmax: view.raid.gmax ? 1 : 0, hits: 0, tier: 0 })}<b>${esc(view.raid.title)}</b></div>` : battleCard({ name: champ.name, avatar: champ.avatar, style: champ.style }, 'big')}</div>
       <h1 class="title ${spectating ? 'small' : ''}">${draw ? '무승부' : spectating ? `${esc(winners)} 승리` : win ? '승리' : '패배'}</h1>
       <p style="color:#fff">${esc(myNames())} 대 ${esc(oppNames())}, ${view.turn - 1}턴${practice && !view.raid ? ' (연습)' : ''}${spectating ? ' (관전)' : ''}</p>
       ${scoreHTML()}

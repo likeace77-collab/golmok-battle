@@ -1328,7 +1328,7 @@ function viewFor(b, s) {
     return {
       seat: i, name: o.name, avatar: o.avatar, style: o.style, deck: o.deck, hazard: o.hazard,
       active: preview ? null : publicMon(activeOf(b, i)), // 고르기 전에는 선봉을 숨김
-      roster: o.mons.map((m) => ({ species: m.species, slot: m.slot, name: m.name, types: m.types, out: !alive(m), mega: m.mega })),
+      roster: o.mons.map((m) => ({ species: m.species, slot: m.slot, name: m.name, types: m.types, out: !alive(m), mega: m.mega, shiny: m.shiny || undefined })),
     };
   };
   const opps = foesOf(b, s).map(seatView);

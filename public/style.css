@@ -1704,3 +1704,7 @@ svg[data-shiny] { filter: hue-rotate(var(--shue)) saturate(1.35) brightness(1.05
 .sc-mons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; } .sc-mons > div { display: grid; justify-items: center; padding: 4px; background: #fff; border: 2px solid #1a143330; border-radius: 10px; font-size: 12px; text-align: center; }
 .sc-mons svg { width: 52px; height: 52px; } .sc-mons small { font-size: 10px; color: #6a6480; } .sc-mons .out svg { filter: grayscale(1); opacity: .6; }
 .sc-best { margin: 8px 0 0; font-size: 12px; }
+/* 이로치 변신 모습 */
+.shiny-forms > div { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px; }
+.shiny-forms figure { margin: 0; padding: 6px; text-align: center; background: linear-gradient(160deg, #fff8d6, #ffe7f4); border: 2px solid #c8a000; border-radius: 12px; }
+.shiny-forms svg { width: 100%; max-width: 150px; height: auto; } .shiny-forms figcaption { font-size: 12px; font-weight: 800; }

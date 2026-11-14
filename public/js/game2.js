@@ -263,6 +263,7 @@ function openMon(uid, after) {
     <div class="row" style="align-items:flex-start;margin-bottom:10px"><div class="detail-pic${m.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? SHINY_TAG : ''}${monArt(m.species, m.shiny)}</div>
       <div style="flex:1;min-width:0"><p style="margin-bottom:4px">${typesOf(m.species)}</p>${Object.entries(sp.base).map(([k, v]) => `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${v}</span><i style="width:${Math.min(100, v / 1.3)}%"></i></div>`).join('')}</div></div>
     ${sp.trait ? `<p class="trait"><b>특성 ${sp.trait.n}</b> ${sp.trait.d}</p>` : ''}
+    ${m.shiny ? `<section class="shiny-forms"><h3 class="dex-h">✨ 이로치 변신 모습</h3><div><figure class="is-shiny">${monArt(m.species, true, '', true)}<figcaption>메가진화 · ${esc(sp.mega.n)}</figcaption></figure>${typeof GMAX_ART !== 'undefined' && GMAX_ART[m.species] ? `<figure class="is-shiny">${shinify(gmaxSVG(m.species), m.species)}<figcaption>거다이맥스</figcaption></figure>` : ''}</div></section>` : ''}
     ${enhanceBox(m)}
     <section class="mon-stone ${stone ? 'have' : ''}">${stoneSVG(m.species, 64, { lock: !stone })}<div><b>${esc(sp.n)} 메가스톤</b><p>${stone ? `있어요! 대전에서 <b>${esc(sp.mega.n)}</b>(으)로 메가진화할 수 있어요.` : '없으면 이 골목몬은 메가진화를 못 해요.'}</p>
       ${stone ? '' : `<button class="btn small" data-stone>${ICON.gp(16)} ${fmt(STONE_PRICE)}GP로 사기</button>`}</div></section>

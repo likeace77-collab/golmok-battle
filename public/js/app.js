@@ -1201,7 +1201,7 @@ function matchups(id) {
 }
 
 // 도감: 거다이맥스 칸
-function gmaxBox(id) {
+function gmaxBox(id, shiny = false) {
   const sp = G.data.MONSTERS[id], X = G.data.GMAX;
   if (!X || typeof GMAX_ART === 'undefined' || !GMAX_ART[id]) return '';
   const gt = sp.types[0];
@@ -1209,7 +1209,7 @@ function gmaxBox(id) {
   for (const t of [...sp.types, 'normal']) if (!types.includes(t)) types.push(t);
   return `<section class="gmaxbox" style="--gc:${G.data.TYPES[gt].c}">
     <h3>거다이맥스</h3>
-    <div class="gmax-pic">${gmaxSVG(id)}</div>
+    <div class="gmax-pic${shiny ? ' is-shiny' : ''}">${shiny ? shinify(gmaxSVG(id), id) : gmaxSVG(id)}</div>
     <p class="gmax-rule">한 판에 한 번, ${X.turns}턴 동안 거대한 괴수가 돼요. 체력 ${X.hp}배, 기술은 거다이기술 1개와 다이기술 3개만 쓸 수 있어요.</p>
     <div class="gmax-g">${typeChip(gt)}<b>★ ${esc(X.names[id] || `거다이 ${sp.n}`)}</b><small>거다이기술 · 위력 ${X.gpow}, 반드시 명중. ${X.gfx[gt] || ''}</small></div>
     <p class="muted" style="margin:8px 0 4px;font-size:13px">다이기술 (위력 ${X.dpow}) — 이 골목몬 기술의 타입에 따라 3개가 정해져요. 될 수 있는 것:</p>
@@ -1221,9 +1221,11 @@ function openDexEntry(id) {
   const sp = G.data.MONSTERS[id];
   const total = Object.values(sp.base).reduce((a, b) => a + b, 0);
   const no = Object.keys(G.data.MONSTERS).indexOf(id) + 1;
-  const bg = openSheet(`<div class="row" style="margin-bottom:10px"><h2>${no}. ${sp.n}</h2><button class="btn small paper" data-x>닫기</button></div>
+  const own = (G.user.mons || []).some((m) => m.shiny && m.species === id), sh = own && G.dexShiny; // 이로치를 가지고 있으면 이로치로 볼 수 있음
+  const pic = (svg) => (sh ? shinify(svg, id) : svg);
+  const bg = openSheet(`<div class="row" style="margin-bottom:10px"><h2>${no}. ${sp.n}</h2>${own ? `<button class="btn small ${sh ? '' : 'paper'}" data-shiny>${sh ? '원래 색으로' : '✨ 이로치로'}</button>` : ''}<button class="btn small paper" data-x>닫기</button></div>
     <div class="row" style="align-items:flex-start;margin-bottom:12px">
-      <div class="detail-pic" style="--tc:${G.data.TYPES[sp.types[0]].c}">${monsterSVG(id)}</div>
+      <div class="detail-pic${sh ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${pic(monsterSVG(id))}</div>
       <div style="flex:1;min-width:0">
         <p style="margin-bottom:4px">${typesOf(id)}</p>
         ${Object.entries(sp.base).map(([k, v]) => `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${v}</span><i style="width:${Math.min(100, v / 1.3)}%"></i></div>`).join('')}
@@ -1235,7 +1237,7 @@ function openDexEntry(id) {
     <section class="megabox">
       <h3>메가진화: ${sp.mega.n}</h3>
       <div class="row" style="align-items:flex-start">
-        <div class="detail-pic" style="--tc:${G.data.TYPES[sp.types[0]].c}">${monsterSVG(id, '', true)}</div>
+        <div class="detail-pic${sh ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${pic(monsterSVG(id, '', true))}</div>
         <div style="flex:1;min-width:0">
           ${Object.entries(sp.base).map(([k, v]) => { const up = sp.mega.boost[k], now = v + up; return `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${now}${up ? ` <b>+${up}</b>` : ''}</span><i style="width:${Math.min(100, now / 1.7)}%"></i></div>`; }).join('')}
           <p style="text-align:right;line-height:1.3;font-size:14px">합계 ${total + 100}</p>
@@ -1244,13 +1246,14 @@ function openDexEntry(id) {
       <p style="margin-top:8px;font-size:15px;line-height:1.4">${sp.mega.d}</p>
     </section>
     <section class="panel shinybox"><h3>✨ 이로치</h3><div class="detail-pic is-shiny" style="--tc:${G.data.TYPES[sp.types[0]].c}">${monArt(id, true)}</div><p class="muted" style="font-size:13px;margin-top:6px">스카우트 후보로 나올 때 1/40, 보상으로 받을 때 1/64 확률로 나오는 색이 다른 ${esc(sp.n)}. 능력은 똑같고 반짝여요!</p></section>
-    ${gmaxBox(id)}
+    ${gmaxBox(id, sh)}
     ${sp.z ? `<section class="zbox" style="--zc:${G.data.TYPES[G.data.MOVES[sp.z].type].c}"><span>Z기술</span><b>${G.data.MOVES[sp.z].n}</b>
       <small>${typeChip(G.data.MOVES[sp.z].type)}${G.data.MOVES[sp.z].cat === 'p' ? '물리' : '특수'}, 위력 ${G.data.MOVES[sp.z].pow}, 반드시 명중. ${G.data.MOVES[sp.z].d}</small></section>` : ''}
     <h3 class="dex-h">타입 상성</h3>
     ${matchups(id)}
     <h3 class="dex-h">배울 수 있는 스킬 ${sp.moves.length}개</h3>
     ${sp.moves.map((m) => `<div class="mv">${typeChip(G.data.MOVES[m].type)}<b>${G.data.MOVES[m].n}</b>${sigTag(m)}<small>${moveLine(m)}</small></div>`).join('')}`);
+  const tg = bg.querySelector('[data-shiny]'); if (tg) tg.onclick = () => { G.dexShiny = !G.dexShiny; closeSheet(); openDexEntry(id); };
   bg.querySelector('[data-x]').onclick = closeSheet;
 }
 
