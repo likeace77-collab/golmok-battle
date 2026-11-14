@@ -57,6 +57,7 @@ function grant(u, r) {
   if (r.gp) { u.gp += r.gp; got.push({ k: 'gp', n: r.gp }); }
   if (r.tickets) { u.tickets += r.tickets; got.push({ k: 'ticket', n: r.tickets }); }
   if (r.skips) { u.skips += r.skips; got.push({ k: 'skip', n: r.skips }); }
+  if (r.rerolls) { u.rerolls = (u.rerolls || 0) + r.rerolls; got.push({ k: 'reroll', n: r.rerolls }); } // 리롤권: 스카우트 후보 다시 뽑기 1번
   if (r.stones) addStones(u, r.stones, got);
   if (r.mon) { const m = addMon(u, r.mon === 'random' ? released()[rnd(released().length)] : r.mon, null, r.shiny || (r.mon === 'random' && rollShiny(SHINY_GIFT))); got.push({ k: 'mon', id: m.species, ...(m.shiny ? { shiny: true } : {}) }); }
   if (r.pass) { addPass(u, r.pass); got.push({ k: 'pass', n: r.pass }); }
@@ -96,11 +97,11 @@ function scoutSkip(u) {
 }
 // 후보 다시 뽑기: 500GP. 지금 후보와 최대한 다른 8마리로
 const REROLL_GP = 500;
-function scoutReroll(u) {
+function scoutReroll(u, pay = 'gp') {
   const st = scoutState(u);
   if (!st.cands) return { error: '스카우트 후보가 나와 있을 때만 다시 뽑을 수 있어요.' };
-  if (u.gp < REROLL_GP) return { error: `GP가 모자라요. (${REROLL_GP}GP 필요)` };
-  u.gp -= REROLL_GP;
+  if (pay === 'ticket') { if (!(u.rerolls > 0)) return { error: '리롤권이 없어요.' }; u.rerolls--; }
+  else { if (u.gp < REROLL_GP) return { error: `GP가 모자라요. (${REROLL_GP}GP 필요)` }; u.gp -= REROLL_GP; }
   const fresh = shuffle(released().filter((x) => !st.cands.includes(x)));
   u.scout.cands = [...fresh, ...shuffle(st.cands)].slice(0, 8);
   u.scout.shiny = u.scout.cands.filter(() => rollShiny(SHINY_SCOUT));

@@ -156,6 +156,7 @@ const EMERGENCY = { id: 'emg-20261111', until: Date.parse('2026-11-12T00:00:00+0
 const GIFTS = [
   EMERGENCY,
   { id: 'startup-20261112', before: Date.parse('2026-11-13T00:00:00+09:00'), title: '🏰 길드 창업 지원금 도착!', r: { gp: 3000, tickets: 1 } },
+  { id: 'reroll-20261114', until: Date.parse('2026-11-22T00:00:00+09:00'), title: '🎲 리롤권 출시 기념! 리롤권 50장', r: { rerolls: 50 } },
   { id: 'night-20261113', until: Date.parse('2026-11-14T00:00:00+09:00'), title: '🌙 오늘 밤 접속 보상!', r: { gp: 15000 } },
 ];
 // 새 게임으로 바뀌기 전부터 있던 계정에 '차원을 넘어온 자' 칭호
@@ -371,7 +372,7 @@ const publicUser = (u) => ({
   dev: isDev(u), owned: u.owned || [], mailNew: (u.mail || []).filter((m) => !m.read || !m.claimed).length, tempPw: !!u.tempPw, birthYear: u.birthYear || null, needAge: !u.birthYear, adult: isAdult(u), uncensored: uncensored(u), settings: { mosaic: !!u.settings?.mosaic },
   name: u.name, avatar: u.avatar, decks: deckView(u), active: u.active, stats: u.stats, style: u.style,
   wins: u.wins, losses: u.losses, draws: u.draws, h2h: u.h2h,
-  tutorial: !!u.tutorial, gp: u.gp, tickets: u.tickets, skips: u.skips, stones: u.stones, mons: u.mons,
+  tutorial: !!u.tutorial, gp: u.gp, tickets: u.tickets, skips: u.skips, rerolls: u.rerolls || 0, stones: u.stones, mons: u.mons,
   premium: P.passState(u).premium, badges: { ...P.claimable(u), social: (u.freq?.in || []).filter((k) => db.users[k] && !(u.friends || []).includes(k)).length + (db.guilds ? S.tradeIn(keyOf(u.name)) : 0), guild: db.guilds ? S.guildClaimable(u, keyOf(u.name)) : 0 }, guild: u.guild && db.guilds?.[u.guild] ? { id: u.guild, name: db.guilds[u.guild].name, emblem: db.guilds[u.guild].emblem, color: db.guilds[u.guild].color, role: S.roleOf(u) } : null, gpt: u.gpt || 0, friendsN: (u.friends || []).length, rank: u.rank ? { pts: u.rank.pts, tier: R.tierOf(u.rank.pts), ever: u.rank.ever || 0 } : { pts: 1000, tier: 0, ever: 0 }, scoutReady: !!P.scoutState(u).cands, surveyDone: !!db.surveys?.[keyOf(u.name)], sunfish: !!u.sunfishDone,
 });
 
@@ -611,7 +612,7 @@ async function progressApi(req, res, route, auth, user) {
   if (route === 'POST /api/expe/send') return done(P.expeSend(user, String(body.uid || ''), String(body.dest || ''), new Set(deckOf(user).team.map((t) => t.uid))), { expe: P.expeState(user) });
   if (route === 'POST /api/expe/claim') return done(P.expeClaim(user, String(body.uid || 'all')), { expe: P.expeState(user) });
   if (route === 'POST /api/expe/recall') return done(P.expeRecall(user, String(body.uid || '')), { expe: P.expeState(user) });
-  if (route === 'POST /api/scout/reroll') return done(P.scoutReroll(user), { scout: P.scoutState(user) });
+  if (route === 'POST /api/scout/reroll') return done(P.scoutReroll(user, body?.pay === 'ticket' ? 'ticket' : 'gp'), { scout: P.scoutState(user) });
   if (route === 'POST /api/scout/skip') return done(P.scoutSkip(user), { scout: P.scoutState(user) });
   if (route === 'POST /api/scout/pick') { const r = P.scoutPick(user, String(body.species ?? ''), body.pay === 'ticket' ? 'ticket' : 'gp'); return done(r, { scout: P.scoutState(user) }); }
   if (route === 'POST /api/mon/enhance') {

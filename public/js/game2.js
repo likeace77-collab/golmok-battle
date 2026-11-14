@@ -79,6 +79,7 @@ function rewardChips(r) {
   if (r.gp) out.push(`<span class="rw">${ICON.gp(18)}${fmt(r.gp)}</span>`);
   if (r.tickets) out.push(`<span class="rw">${ICON.ticket(16)}×${r.tickets}</span>`);
   if (r.skips) out.push(`<span class="rw">${ICON.skip(16)}×${r.skips}</span>`);
+  if (r.rerolls) out.push(`<span class="rw">🎲 리롤권 ×${r.rerolls}</span>`);
   if (r.stones) out.push(`<span class="rw"><span class="rw-stone">💎</span>메가스톤${typeof r.stones === 'number' ? ` ×${r.stones}` : ''}</span>`);
   if (r.pass) out.push(`<span class="rw">${ICON.pass(16)}${r.pass}</span>`);
   if (r.mon) out.push(`<span class="rw">${esc(G.data.MONSTERS[r.mon].n)}</span>`);
@@ -88,6 +89,7 @@ function rewardChips(r) {
 function gotItem(x) {
   if (x.k === 'gp') return `<div class="got-i">${ICON.gp(54)}<b>${fmt(x.n)} GP</b>${x.why ? `<small>${esc(x.why)}</small>` : ''}</div>`;
   if (x.k === 'ticket') return `<div class="got-i">${ICON.ticket(46)}<b>골목몬 입수권 ×${x.n}</b></div>`;
+  if (x.k === 'reroll') return `<div class="got-i"><span class="got-dice">🎲</span><b>리롤권 ×${x.n}</b><small>스카우트 후보 다시 뽑기 1번</small></div>`;
   if (x.k === 'skip') return `<div class="got-i">${ICON.skip(46)}<b>1시간 스킵권 ×${x.n}</b></div>`;
   if (x.k === 'stone') return `<div class="got-i">${stoneSVG(x.id, 60)}<b>${esc(G.data.MONSTERS[x.id].n)} 메가스톤</b></div>`;
   if (x.k === 'gpt') return `<div class="got-i">${ICON.gpt(52)}<b>길P +${fmt(x.n)}</b></div>`;
@@ -100,7 +102,7 @@ function showGot(got, title = '받았어요!', then) {
   const bg = openSheet(`<div class="got"><s aria-hidden="true"></s><h2>${esc(title)}</h2><div class="got-list">${got.map(gotItem).join('')}</div><button class="btn wide" data-x>좋아요!</button></div>`);
   bg.querySelector('[data-x]').onclick = () => { closeSheet(); then?.(); };
 }
-const walletHTML = (u = G.user) => `<div class="wallet"><span title="GP">${ICON.gp(20)}<b>${fmt(u.gp)}</b></span><span title="골목몬 입수권">${ICON.ticket(18)}<b>${fmt(u.tickets)}</b></span><span title="1시간 스킵권">${ICON.skip(18)}<b>${fmt(u.skips)}</b></span><span class="wl-stone" title="내 메가스톤 보기" role="button" tabindex="0" data-gostones>💎<b>${u.stones.length}</b></span>${u.guild || u.gpt ? `<span title="길P (길드 포인트)">${ICON.gpt(18)}<b>${fmt(u.gpt || 0)}</b></span>` : ''}</div>`;
+const walletHTML = (u = G.user) => `<div class="wallet"><span title="GP">${ICON.gp(20)}<b>${fmt(u.gp)}</b></span><span title="골목몬 입수권">${ICON.ticket(18)}<b>${fmt(u.tickets)}</b></span><span title="1시간 스킵권">${ICON.skip(18)}<b>${fmt(u.skips)}</b></span>${u.rerolls ? `<span title="리롤권 (스카우트 후보 다시 뽑기)">🎲<b>${fmt(u.rerolls)}</b></span>` : ''}<span class="wl-stone" title="내 메가스톤 보기" role="button" tabindex="0" data-gostones>💎<b>${u.stones.length}</b></span>${u.guild || u.gpt ? `<span title="길P (길드 포인트)">${ICON.gpt(18)}<b>${fmt(u.gpt || 0)}</b></span>` : ''}</div>`;
 const topbar = (title, back = 'lobby') => `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>${title}</h1></div>${walletHTML()}`;
 const setUser = (r) => { if (r?.user) G.user = r.user; };
 
@@ -170,7 +172,8 @@ async function showScout() {
     const u = G.user;
     if (st.cands) {
       app.innerHTML = `${topbar('스카우트')}<section class="sc-head"><s aria-hidden="true"></s><h2>오늘의 후보 8마리</h2><p>1마리를 골라 <b>${ICON.gp(16)} 2500GP</b> 또는 <b>${ICON.ticket(14)} 입수권 1장</b>으로 데려와요.</p>
-        <button class="btn small sc-reroll" id="sc-reroll" ${G.user.gp < (st.reroll || 500) ? 'disabled' : ''}>🎲 후보 다시 뽑기 <span>${ICON.gp(14)} ${fmt(st.reroll || 500)}</span></button></section>
+        ${G.user.rerolls > 0 ? `<button class="btn small sc-reroll" id="sc-reroll" data-pay="ticket">🎲 후보 다시 뽑기 <span>리롤권 1장 · ${fmt(G.user.rerolls)}장 보유</span></button>` : ''}
+        <button class="btn small sc-reroll ${G.user.rerolls > 0 ? 'paper' : ''}" id="sc-reroll-gp" data-pay="gp" ${G.user.gp < (st.reroll || 500) ? 'disabled' : ''}>🎲 ${G.user.rerolls > 0 ? 'GP로' : '후보'} 다시 뽑기 <span>${ICON.gp(14)} ${fmt(st.reroll || 500)}</span></button></section>
         <div class="sc-grid">${st.cands.map((id, i) => { const sp = G.data.MONSTERS[id], n = ownCount(id); const tot = Object.values(sp.base).reduce((a, b) => a + b, 0);
           const sh = (st.shiny || []).includes(id); return `<button class="sc-card${sh ? ' is-shiny' : ''}" data-pick="${id}" style="--tc:${G.data.TYPES[sp.types[0]].c};--d:${i * 70}ms">${sh ? SHINY_TAG : n ? `<em class="sc-own">보유 ${n}</em>` : '<em class="sc-new">NEW</em>'}${monArt(id, sh)}<b>${esc(sp.n)}</b><span>${typesOf(id)}</span><small>능력치 합계 ${tot}</small></button>`; }).join('')}</div>`;
     } else {
@@ -187,11 +190,11 @@ async function showScout() {
     }
     app.querySelector('#back').onclick = () => { clearInterval(G.scoutTimer); showLobby(); };
     app.querySelectorAll('[data-pick]').forEach((b) => { b.onclick = () => pickSheet(b.dataset.pick); });
-    app.querySelector('#sc-reroll')?.addEventListener('click', async (e) => {
-      e.currentTarget.disabled = true;
-      try { const r = await api('POST', '/api/scout/reroll'); setUser(r); st = r.scout; toast('후보를 새로 뽑았어요!'); render(); }
-      catch (err) { toast(err.message); e.currentTarget.disabled = false; }
-    });
+    app.querySelectorAll('#sc-reroll, #sc-reroll-gp').forEach((btn) => btn.addEventListener('click', async (e) => {
+      const el = e.currentTarget; el.disabled = true;
+      try { const r = await api('POST', '/api/scout/reroll', { pay: el.dataset.pay }); setUser(r); st = r.scout; toast(el.dataset.pay === 'ticket' ? '리롤권으로 후보를 새로 뽑았어요!' : '후보를 새로 뽑았어요!'); render(); }
+      catch (err) { toast(err.message); el.disabled = false; }
+    }));
   };
   const pickSheet = (id) => {
     const sp = G.data.MONSTERS[id], u = G.user;
