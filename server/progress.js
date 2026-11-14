@@ -134,6 +134,7 @@ function enhance(u, uid, food, busy) {
   u.gp -= cost;
   u.mons = u.mons.filter((x) => x !== f);
   (u.decks || []).forEach((d) => { d.team = d.team.filter((t) => t.uid !== food); });
+  require('./decks').pruneDecks(u);
   m.plus = n + 1 + Math.min(PLUS_MAX - n - 1, f.plus || 0); // 강화된 골목몬을 먹이면 그만큼 더
   const shinyMoved = f.shiny && !m.shiny; if (shinyMoved) m.shiny = true; // 이로치를 먹이면 이로치가 옮겨 붙음
   u.counts.enhance = (u.counts.enhance || 0) + 1;

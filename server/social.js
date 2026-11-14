@@ -372,7 +372,7 @@ function tradeAnswer(u, key, id, yes) {
   if (gi < 0 || wi < 0) { delete db.trades[id]; return err('교환할 골목몬이 이미 없어요.'); }
   if (bUser.mons.length < 2) return err('골목몬이 한 마리뿐이면 교환할 수 없어요.');
   const [gm] = a.mons.splice(gi, 1), [wm] = bUser.mons.splice(wi, 1);
-  const unDeck = (user, uid) => (user.decks || []).forEach((d) => { d.team = d.team.filter((x) => x.uid !== uid); });
+  const unDeck = (user, uid) => { (user.decks || []).forEach((d) => { d.team = d.team.filter((x) => x.uid !== uid); }); require('./decks').pruneDecks(user); };
   unDeck(a, gm.uid); unDeck(bUser, wm.uid);
   // 반짝반짝: 받은 골목몬이 이로치로
   const sparkle = (m, owner) => { if (!m.shiny && Math.random() < TRADE_SHINY) { m.shiny = true; owner.counts.shiny = (owner.counts.shiny || 0) + 1; return true; } return false; };

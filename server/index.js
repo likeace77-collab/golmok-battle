@@ -249,6 +249,7 @@ function validDecks(u, list) {
   const out = [];
   for (const d of list) {
     const name = String(d?.name ?? '').trim();
+    if (Array.isArray(d?.team) && !d.team.some((x) => monOf(u, String(x?.uid ?? '')))) { out.push(null); continue; } // 골목몬이 다 없어진 덱은 건너뜀
     const team = validTeam(u, d?.team);
     if (!team || !name || [...name].length > 12 || /[\u0000-\u001f]/.test(name)) return null;
     out.push({ name, team });
@@ -268,6 +269,7 @@ function migrate() {
   for (const u of Object.values(db.users)) {
     for (const k of Object.keys(Data.AVATAR_OPTIONS)) if (!Number.isInteger(u.avatar[k])) { u.avatar[k] = 0; changed = true; }
     if (!u.stats) { u.stats = newStats(); changed = true; }
+    if (Array.isArray(u.decks) && u.decks.some((d) => !d.team.length || d.team.some((t) => !u.mons?.some((m) => m.uid === t.uid)))) { require('./decks').pruneDecks(u); changed = true; } // 빈 덱 정리
     for (const [k, v0] of Object.entries(newStats())) if (!Number.isInteger(u.stats[k])) { u.stats[k] = v0; changed = true; }
     if (!u.style) { u.style = defaultStyle(); changed = true; }
     for (const [k, v0] of Object.entries(P.newProgress())) if (u[k] === undefined) { u[k] = v0; changed = true; }
@@ -338,12 +340,13 @@ function validTeam(u, t) {
   const uids = new Set(), out = [];
   for (const x of t) {
     const m = monOf(u, String(x?.uid ?? ''));
-    if (!m || uids.has(m.uid)) return null; // 같은 골목몬 여러 마리 OK (같은 개체는 한 번만)
+    if (!m) continue; // 강화·교환으로 없어진 골목몬은 조용히 뺌
+    if (uids.has(m.uid)) return null; // 같은 골목몬 여러 마리 OK (같은 개체는 한 번만)
     uids.add(m.uid);
     const item = Data.ITEMS[x.item] ? x.item : undefined; // 도구 (없거나 모르는 도구면 빈손)
     out.push({ uid: m.uid, ...(item ? { item } : {}) });
   }
-  return out;
+  return out.length ? out : null;
 }
 
 // 나이: 태어난 해로 셉니다. 19세 이하는 루미나·실비아 의상에 모자이크.
@@ -554,8 +557,11 @@ async function api(req, res, url) {
   }
   if (route === 'PUT /api/decks') {
     const body = await readBody(req);
-    const decks = validDecks(user, body.decks);
-    if (!decks) return json(res, 400, { error: '덱은 1~20개, 이름은 12자 이내, 골목몬은 내가 가진 서로 다른 종류 1~6마리여야 합니다.' });
+    const raw = validDecks(user, body.decks);
+    const decks = raw && raw.filter(Boolean);
+    if (decks && !decks.length) return json(res, 400, { error: '덱에 골목몬을 한 마리 이상 넣어 주세요.' });
+    if (raw) body.active = raw.slice(0, Number.isInteger(body.active) ? body.active + 1 : 1).filter(Boolean).length - (raw[body.active] ? 1 : 0); // 빈 덱이 빠진 만큼 번호 당기기
+    if (!decks) return json(res, 400, { error: '덱은 1~20개, 이름은 12자 이내, 덱마다 내 골목몬 1~6마리여야 합니다.' });
     const sp = (d) => d.team.map((t) => monOf(user, t.uid)).filter(Boolean);
     const banned = bannedIn(user, decks.flatMap(sp)).filter((n, i, a) => a.indexOf(n) === i);
     if (banned.length) {
@@ -1343,7 +1349,7 @@ server.on('upgrade', (req, socket, head) => {
     online.get(key)?.close(4000, 'replaced'); // 새 탭/기기로 접속하면 이전 연결은 닫음
     db.users[key].lastSeen = Date.now(); save();
     online.set(key, ws);
-    { const u = db.users[key]; specialGrants(u); const gifts = pendingGifts(u); if (gifts.length) { save(); send(ws, { t: 'me', user: publicUser(u) }); send(ws, { t: 'gift', title: gifts.length > 1 ? '선물이 도착했어요!' : gifts[0].title, got: gifts.flatMap((x) => x.got) }); } }
+    { const u = db.users[key]; specialGrants(u); require('./decks').pruneDecks(u); const gifts = pendingGifts(u); if (gifts.length) { save(); send(ws, { t: 'me', user: publicUser(u) }); send(ws, { t: 'gift', title: gifts.length > 1 ? '선물이 도착했어요!' : gifts[0].title, got: gifts.flatMap((x) => x.got) }); } }
     ws.alive = true;
     ws.on('pong', () => { ws.alive = true; });
     ws.on('message', (raw) => {
