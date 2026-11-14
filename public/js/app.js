@@ -164,6 +164,7 @@ function showSettings() {
       <p>태어난 해 <b>${u.birthYear}</b> (${age}세)</p>
       <p class="muted" style="font-size:13px">나이는 한 번만 설정할 수 있습니다.</p>
     </section>
+    ${pushSettingsHTML()}
     <section class="panel">
       <h2>캐릭터 모자이크</h2>
       ${u.adult ? `<label class="toggle"><input type="checkbox" id="mosaic" ${u.settings.mosaic ? 'checked' : ''}> 루미나, 실비아 의상에 모자이크 켜기</label>
@@ -203,6 +204,7 @@ function showSettings() {
       </form>
     </section>`;
   app.querySelector('#back').onclick = showLobby;
+  bindPushSettings();
   if (u.dev) {
     const rw = (r) => [r.gp && `${fmt(r.gp)}GP`, r.tickets && `입수권 ${r.tickets}`, r.skips && `스킵권 ${r.skips}`, r.rerolls && `리롤권 ${r.rerolls}`, r.stones && `메가스톤 ${r.stones}`, r.gpt && `길P ${r.gpt}`, r.mon && `${r.shiny ? '✨이로치 ' : ''}${r.mon === 'random' ? '랜덤 골목몬' : G.data.MONSTERS[r.mon]?.n}`].filter(Boolean).join(' · ');
     const drawList = (list) => {
@@ -273,6 +275,7 @@ function onServer(m) {
     case 'react': Battle.onReact(m); break;
     case 'rank_wait': case 'rank_found': case 'rank_cancel': onRankMsg(m); break;
     case 'raid_room': case 'raid_invite': onRaidMsg(m); break;
+    case 'draft': onDraftMsg(m); break;
     case 'traded': if (G.screen !== 'battle') tradeDone(m, () => (G.screen === 'friends' ? showFriends() : null)); else toast(`🔄 ${m.with}님과 교환이 끝났어요!`); break;
     case 'chosen': Battle.onChosen(m); break;
     case 'opp_ready': Battle.setNote('상대가 행동을 골랐습니다.'); break;
@@ -338,8 +341,8 @@ function renderLobby() {
   const u = G.user, L = G.lobby;
   const others = L.players.filter((p) => p.name !== u.name);
   const rival = Object.entries(u.h2h || {}).map(([n, r]) => `${esc(n)}: ${r.w}승 ${r.l}패${r.d ? ` ${r.d}무` : ''}`).join(', ');
-  app.innerHTML = `
-    ${L.incoming.map((c) => `<div class="notice"><b>${esc(c.name)}님의 ${c.size}대${c.size} 대전 신청</b>
+  app.innerHTML = `${newsBanner()}
+    ${L.incoming.map((c) => `<div class="notice"><b>${esc(c.name)}님의 ${c.size}대${c.size}${c.draft ? ' 🚫밴픽' : ''} 대전 신청</b>
       <p style="margin-bottom:8px">내 덱: ${esc(u.decks[u.active]?.name || '')}</p>
       <div class="row"><button class="btn mint" data-acc="${esc(c.from)}">받기</button><button class="btn paper" data-dec="${esc(c.from)}">거절</button></div></div>`).join('')}
     <section class="panel">
@@ -363,6 +366,10 @@ function renderLobby() {
         <button class="g2b dungeon" id="go-dungeon"><span>🗼</span><b>이벤트 던전</b></button>
         <button class="g2b expe" id="go-expe"><span>🧭</span><b>원정</b>${u.badges.expe ? `<em class="mailbadge">${u.badges.expe}</em>` : ''}</button>
         <button class="g2b chat" id="go-chat"><span>💬</span><b>채팅</b><em class="mailbadge" data-chatbadge hidden></em></button>
+        <button class="g2b tourney" id="go-tourney"><span>🏆</span><b>토너먼트</b><small>토요일 밤 9시</small></button>
+        <button class="g2b news" id="go-news"><span>📢</span><b>소식</b>${u.badges.news ? `<em class="mailbadge">${u.badges.news}</em>` : ''}</button>
+        <button class="g2b stats" id="go-stats"><span>📊</span><b>전적</b><small>리플레이</small></button>
+        ${u.dev ? '<button class="g2b admin" id="go-admin"><span>🛠</span><b>관리자</b></button>' : ''}
       </div>
       <div class="nav">
         <button class="btn paper" id="go-team">덱 관리</button>
@@ -381,6 +388,7 @@ function renderLobby() {
         <h2 style="margin:0">대전 인원</h2>
         <div class="seg">
           ${[1, 3, 6].map((n) => `<button data-size="${n}" aria-pressed="${G.size === n}">${n}대${n}</button>`).join('')}
+          <button data-draft aria-pressed="${!!G.draft}" title="서로 상대 덱에서 1마리씩 금지하고 시작">🚫 밴픽 ${G.draft ? 'ON' : 'OFF'}</button>
         </div>
       </div>
       <h2 style="margin-top:12px">사용할 덱</h2>
@@ -428,6 +436,12 @@ function renderLobby() {
   app.querySelector('#go-rank').onclick = () => showRank();
   app.querySelector('#go-dungeon').onclick = () => showDungeon();
   app.querySelector('#go-raid').onclick = () => showRaid();
+  app.querySelector('#go-tourney').onclick = () => showTourney();
+  app.querySelector('#go-news').onclick = () => showNews();
+  app.querySelector('#news-band')?.addEventListener('click', () => showNews());
+  app.querySelector('#go-stats').onclick = () => showStats();
+  app.querySelector('#go-admin')?.addEventListener('click', () => showAdmin());
+  if (!G.newsAt || Date.now() - G.newsAt > 120e3) loadNewsPin(); // 고정 공지는 2분마다 새로 확인
   refreshChatBadge();
   app.querySelectorAll('[data-watch]').forEach((b) => { b.onclick = () => wsSend({ t: 'spectate', id: b.dataset.watch }); });
   app.querySelector('#tag-new')?.addEventListener('click', () => wsSend({ t: 'tag_create' }));
@@ -456,12 +470,13 @@ function renderLobby() {
     await api('POST', '/api/logout'); G.user = null; G.ws?.close(); showAuth();
   };
   app.querySelectorAll('[data-size]').forEach((b) => { b.onclick = () => { G.size = +b.dataset.size; renderLobby(); }; });
+  app.querySelector('[data-draft]')?.addEventListener('click', () => { G.draft = !G.draft; if (G.draft) toast(`밴픽 대전: 덱 앞 ${(G.size || 3) + 1}마리 중 상대가 1마리를 금지해요.`); renderLobby(); });
   app.querySelectorAll('[data-deck]').forEach((b) => {
     b.onclick = async () => {
       try { await saveDecks(cloneDecks(), +b.dataset.deck); renderLobby(); } catch (e) { toast(e.message); }
     };
   });
-  app.querySelectorAll('[data-ch]').forEach((b) => { b.onclick = () => wsSend({ t: 'challenge', to: b.dataset.ch, size: G.size }); });
+  app.querySelectorAll('[data-ch]').forEach((b) => { b.onclick = () => wsSend({ t: 'challenge', to: b.dataset.ch, size: G.size, draft: !!G.draft }); });
   app.querySelectorAll('[data-cancel]').forEach((b) => { b.onclick = () => wsSend({ t: 'cancel' }); });
   app.querySelectorAll('[data-acc]').forEach((b) => { b.onclick = () => wsSend({ t: 'accept', from: b.dataset.acc }); });
   app.querySelectorAll('[data-dec]').forEach((b) => { b.onclick = () => wsSend({ t: 'decline', from: b.dataset.dec }); });
@@ -822,7 +837,8 @@ function showDex() {
     app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>도감</h1></div>
       <section class="panel">
         <div class="dex-head"><p class="muted">골목몬 ${list.length}마리 · <b class="dex-shinyn">✨ 이로치 ${shinyOwn.size}종</b> 보유</p>
-          <button class="btn small ${G.dexShiny ? '' : 'paper'} dex-shinybtn" id="dex-shiny" aria-pressed="${!!G.dexShiny}">✨ ${G.dexShiny ? '원래 색으로 보기' : '이로치로 보기'}</button></div>
+          <button class="btn small ${G.dexShiny ? '' : 'paper'} dex-shinybtn" id="dex-shiny" aria-pressed="${!!G.dexShiny}">✨ ${G.dexShiny ? '원래 색으로 보기' : '이로치로 보기'}</button>
+          <button class="btn small mailbtn" id="dex-rw">📚 수집 보상${G.user.badges?.dex ? `<em class="mailbadge">${G.user.badges.dex}</em>` : ''}</button></div>
         <div class="chips">
           <button data-t="all" aria-pressed="${G.dexType === 'all'}">전체</button>
           <button data-t="shiny" aria-pressed="${G.dexType === 'shiny'}" class="chip-shiny">✨ 내 이로치</button>
@@ -833,6 +849,7 @@ function showDex() {
           : `<button class="card${shinyOwn.has(id) ? ' has-shiny' : ''}" data-dex="${id}" style="--tc:${G.data.TYPES[G.data.MONSTERS[id].types[0]].c}">${shinyOwn.has(id) ? '<em class="shiny-dot" title="이로치 보유">✨</em>' : ''}${monArt(id, !!G.dexShiny)}<span>${ids.indexOf(id) + 1}. ${G.data.MONSTERS[id].n}</span>${(G.data.BANNED || []).includes(id) ? '<em class="bantag">개발자 전용</em>' : ''}</button>`).join('')}</div>
       </section>`;
     app.querySelector('#dex-shiny').onclick = () => { G.dexShiny = !G.dexShiny; render(); };
+    app.querySelector('#dex-rw')?.addEventListener('click', () => showDexRewards());
     app.querySelector('#back').onclick = showLobby;
     app.querySelectorAll('[data-t]').forEach((b) => { b.onclick = () => { G.dexType = b.dataset.t; render(); }; });
     app.querySelectorAll('[data-dex]').forEach((b) => { b.onclick = () => openDexEntry(b.dataset.dex); });

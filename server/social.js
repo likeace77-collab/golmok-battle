@@ -439,4 +439,4 @@ function api(route, u, key, b) {
   }
 }
 
-module.exports = { tradeIn, roleOf, roleOk, init, setDb, api, socialView, chatSend, chatHistory, afterBattle, guildClaimable, isFriend, GUILD_QUESTS };
+module.exports = { sysChat, tradeIn, roleOf, roleOk, init, setDb, api, socialView, chatSend, chatHistory, afterBattle, guildClaimable, isFriend, GUILD_QUESTS };

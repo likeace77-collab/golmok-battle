@@ -50,6 +50,7 @@ async function showFriends(back = showLobby) {
     <section class="panel"><h2>내 친구 <small class="muted">${v.friends.length}명</small></h2>
       ${v.friends.map((p) => row(p, `<button class="btn small" data-dm="${p.key}" title="1:1 채팅">💬</button><button class="btn small" data-trade="${p.key}" title="골목몬 교환">🔄</button>${p.online && !p.busy ? `<button class="btn small mint" data-vs="${p.key}" title="대전 신청">⚔️</button>` : ''}<button class="btn small paper" data-rm="${p.key}" title="친구 삭제">✕</button>`)).join('') || '<p class="wait">아직 친구가 없어요. 위에서 이름으로 신청해 보세요!</p>'}
     </section>
+    <div id="fg-box"></div>
     ${tradeSection(v.trades)}
     ${v.reqOut.length ? `<section class="panel"><h2>보낸 신청</h2>${v.reqOut.map((p) => row(p, `<button class="btn small paper" data-cancel="${p.key}">취소</button>`)).join('')}</section>` : ''}`;
   app.querySelector('#back').onclick = back;
@@ -60,6 +61,7 @@ async function showFriends(back = showLobby) {
   app.querySelectorAll('[data-cancel]').forEach((b) => { b.onclick = () => act('/api/friend/cancel', { key: b.dataset.cancel }, '신청을 취소했어요.'); });
   app.querySelectorAll('[data-rm]').forEach((b) => { b.onclick = () => { if (confirm('친구를 삭제할까요?')) act('/api/friend/remove', { key: b.dataset.rm }, '친구를 삭제했어요.'); }; });
   app.querySelectorAll('[data-dm]').forEach((b) => { b.onclick = () => showChat(`dm:${b.dataset.dm}`, () => showFriends(back)); });
+  friendGiftPanel(app.querySelector('#fg-box'), v.friends);
   app.querySelectorAll('[data-trade]').forEach((b) => { b.onclick = () => showTrade(b.dataset.trade, () => showFriends(back)); });
   app.querySelectorAll('[data-tacc]').forEach((b) => { b.onclick = async () => { b.disabled = true; try { const r = await api('POST', '/api/trade/accept', { id: b.dataset.tacc }); setUser(r); tradeDone(r, () => showFriends(back)); } catch (e) { toast(e.message); b.disabled = false; } }; });
   app.querySelectorAll('[data-tdec]').forEach((b) => { b.onclick = () => act('/api/trade/decline', { id: b.dataset.tdec }); });

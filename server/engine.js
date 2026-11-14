@@ -43,7 +43,7 @@ function makeMon(spec) {
   const plus = Math.max(0, Math.min(5, spec.plus | 0)); // 강화: +1마다 능력치 4%
   const stats = plusStats(calcStats(sp.base), spec.species, plus);
   return {
-    species: spec.species, name: sp.n, types: sp.types, stats, mega: false, shiny: !!spec.shiny, plus,
+    species: spec.species, name: sp.n, types: sp.types, stats, mega: false, shiny: !!spec.shiny, plus, ...(spec.costume ? { costume: String(spec.costume).slice(0, 20) } : {}),
     hp: stats.hp, maxHp: stats.hp,
     status: null, statusTurns: 0, item: ITEMS[spec.item] ? spec.item : null, itemUsed: false,
     moves: spec.moves.map((id) => ({ id, pp: MOVES[id].pp })),
@@ -439,7 +439,7 @@ function tallyFaint(b, s, m) {
 }
 function scoreOf(b) {
   return b.sides.map((sd, i) => ({ seat: i, name: sd.name, team: teamOf(b, i), ...stOf(b, i),
-    mons: sd.mons.map((m) => ({ species: m.species, name: m.name, shiny: !!m.shiny, mega: !!m.mega, dealt: m.dealt || 0, healed: m.healed || 0, kills: m.kills || 0, out: m.hp <= 0 })) }));
+    mons: sd.mons.map((m) => ({ species: m.species, name: m.name, shiny: !!m.shiny, costume: m.costume || undefined, mega: !!m.mega, dealt: m.dealt || 0, healed: m.healed || 0, kills: m.kills || 0, out: m.hp <= 0 })) }));
 }
 
 function hurt(b, s, m, amount, ev, extra) {
@@ -520,7 +520,7 @@ function faintCheck(b, s, m, ev) {
 function publicMon(m) {
   return {
     species: m.species, slot: m.slot, name: m.name, types: m.types,
-    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega, gmax: m.gmax || 0, shiny: m.shiny || undefined, plus: m.plus || undefined, thirst: m.thirst, blaze: m.blaze || 0, hits: m.hits || 0, strip: stripOf(m), tier: tierOf(m) || formOf(m) || (m.blaze > 0 ? 1 : 0),
+    hp: m.hp, maxHp: m.maxHp, status: m.status, stages: m.stages, seeded: m.seeded, mega: m.mega, gmax: m.gmax || 0, shiny: m.shiny || undefined, costume: m.costume || undefined, plus: m.plus || undefined, thirst: m.thirst, blaze: m.blaze || 0, hits: m.hits || 0, strip: stripOf(m), tier: tierOf(m) || formOf(m) || (m.blaze > 0 ? 1 : 0),
   };
 }
 
@@ -1416,7 +1416,7 @@ function viewFor(b, s) {
     return {
       seat: i, name: o.name, avatar: o.avatar, style: o.style, deck: o.deck, hazard: o.hazard,
       active: preview ? null : publicMon(activeOf(b, i)), // 고르기 전에는 선봉을 숨김
-      roster: o.mons.map((m) => ({ species: m.species, slot: m.slot, name: m.name, types: m.types, out: !alive(m), mega: m.mega, shiny: m.shiny || undefined })),
+      roster: o.mons.map((m) => ({ species: m.species, slot: m.slot, name: m.name, types: m.types, out: !alive(m), mega: m.mega, shiny: m.shiny || undefined, costume: m.costume || undefined })),
     };
   };
   const opps = foesOf(b, s).map(seatView);
@@ -1697,5 +1697,5 @@ function botTeam(level, size, enemy = []) {
 }
 
 module.exports = {
-  createBattle, createTraining, DUMMY_HP, smartMoves, gmaxMoves, canGmax, gmaxInfo, choose, speedOf, legalActions, viewFor, botAction, botTeam, forfeit, teamOf, canZ, calcStats, effOf, josa, activeOf, canMega, isBoss,
+  createBattle, createTraining, scoreOf, DUMMY_HP, smartMoves, gmaxMoves, canGmax, gmaxInfo, choose, speedOf, legalActions, viewFor, botAction, botTeam, forfeit, teamOf, canZ, calcStats, effOf, josa, activeOf, canMega, isBoss,
 };
