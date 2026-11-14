@@ -54,36 +54,48 @@ const contest = fs.existsSync(CONTEST_FILE) ? JSON.parse(fs.readFileSync(CONTEST
 async function loadGist() {
   const r = await fetch(`${GIST_API}/gists/${GIST_ID}`, { headers: gistHeaders });
   if (!r.ok) throw new Error(`Gist 읽기 실패: ${r.status}`);
-  const files = (await r.json()).files || {};
+  const j = await r.json(), files = j.files || {};
   const read = async (f) => (f.truncated ? (await fetch(f.raw_url, { headers: gistHeaders })).text() : f.content);
   if (files[GIST_CONTEST]) Object.assign(contest, JSON.parse(await read(files[GIST_CONTEST])));
   else if (files[GIST_CONTEST_OLD]) Object.assign(contest, JSON.parse(await read(files[GIST_CONTEST_OLD]))); // 처음엔 원래 게임 출품작을 복사
+  gistSeen = j.updated_at || '';
   if (files[GIST_FILE2]) return replaceDb(JSON.parse(await read(files[GIST_FILE2])));
   if (files[GIST_FILE]) { replaceDb(fromOldGame(JSON.parse(await read(files[GIST_FILE])))); queueGist(); } // 처음 새 게임으로 넘어올 때
 }
 
-let gistDirty = false, contestDirty = false, gistBusy = false, gistTimer = null;
+let gistDirty = false, contestDirty = false, gistBusy = false, gistTimer = null, gistSeen = '';
+// GitHub은 Gist 수정을 1시간에 약 500번까지만 받아 줍니다. 3초마다 올리면 금방 막혀서
+// 그동안의 저장이 Gist에 안 올라가고, 다음 배포 때 예전 데이터로 되돌아갔습니다.
+// 그래서 최소 20초 간격으로 모아서 올리고, 막히면 점점 길게 기다렸다가 다시 올립니다.
+const GIST_GAP = 20e3;
+const gistStat = { lastTry: 0, lastOk: 0, lastErr: '', fails: 0, wait: 0 };
 async function pushGist() {
   if (gistBusy || (!gistDirty && !contestDirty)) return;
-  gistBusy = true;
+  gistBusy = true; gistStat.lastTry = Date.now();
   const files = {}, was = [gistDirty, contestDirty];
   if (gistDirty) files[GIST_FILE2] = { content: JSON.stringify(db) };
   if (contestDirty) files[GIST_CONTEST] = { content: JSON.stringify(contest) };
   gistDirty = contestDirty = false;
   try {
     const r = await fetch(`${GIST_API}/gists/${GIST_ID}`, { method: 'PATCH', headers: gistHeaders, body: JSON.stringify({ files }) });
-    if (!r.ok) throw new Error(String(r.status));
+    if (r.ok) { try { gistSeen = (await r.clone().json()).updated_at || gistSeen; } catch { /* 시각을 못 읽어도 저장은 됨 */ } }
+    if (!r.ok) { const ra = +r.headers.get('retry-after') || 0, reset = +r.headers.get('x-ratelimit-reset') || 0; const e = new Error(String(r.status)); e.wait = ra ? ra * 1e3 : reset ? Math.max(0, reset * 1e3 - Date.now()) : 0; throw e; }
+    gistStat.lastOk = Date.now(); gistStat.fails = 0; gistStat.wait = 0; gistStat.lastErr = '';
   } catch (e) {
     gistDirty ||= was[0]; contestDirty ||= was[1];
-    console.error('Gist 저장 실패, 다음 변경 때 다시 시도합니다:', e.message);
+    gistStat.fails++; gistStat.lastErr = `${new Date().toISOString()} ${e.message}`;
+    gistStat.wait = Math.min(10 * 60e3, Math.max(e.wait || 0, GIST_GAP * 2 ** Math.min(5, gistStat.fails)));
+    console.error(`Gist 저장 실패(${e.message}), ${Math.round(gistStat.wait / 1000)}초 뒤 다시 올립니다.`);
   }
   gistBusy = false;
 }
 function queueGist(kind = 'db') {
   if (!GIST_ID) return;
   if (kind === 'contest') contestDirty = true; else gistDirty = true;
-  clearTimeout(gistTimer);
-  gistTimer = setTimeout(async () => { await pushGist(); if (gistDirty || contestDirty) queueGist(contestDirty ? 'contest' : 'db'); }, 3000);
+  // 저장이 계속 몰려도 3초마다는 꼭 올리도록 (예전엔 저장할 때마다 타이머가 다시 시작돼 한참 안 올라갔음)
+  if (gistTimer) return;
+  const gap = Math.max(GIST_GAP, gistStat.wait), delay = Math.max(1000, gistStat.lastTry + gap - Date.now());
+  gistTimer = setTimeout(async () => { gistTimer = null; await pushGist(); if (gistDirty || contestDirty) queueGist(contestDirty ? 'contest' : 'db'); }, delay);
 }
 function saveContest() {
   const tmp = `${CONTEST_FILE}.tmp`;
@@ -98,6 +110,7 @@ function save() {
   saveTimer = setTimeout(() => {
     saveTimer = null;
     const tmp = `${DB_FILE}.tmp`;
+    db.meta = { ...(db.meta || {}), at: Date.now() }; // 어느 쪽 데이터가 더 최신인지 비교용
     fs.writeFileSync(tmp, JSON.stringify(db));
     fs.renameSync(tmp, DB_FILE); // 쓰다 죽어도 파일이 깨지지 않게
     queueGist();
@@ -656,6 +669,7 @@ async function progressApi(req, res, route, auth, user) {
   if (route === 'POST /api/quest/claim') return done(P.claimQuest(user, String(body.id ?? '')), rewardsView(user));
   if (route === 'POST /api/ach/claim') return done(P.claimAch(user, String(body.id ?? '')), rewardsView(user));
   if (route === 'POST /api/pass/claim') return done(P.claimPass(user, Number(body.lv), body.track === 'prem' ? 'prem' : 'free'), rewardsView(user));
+  if (route === 'GET /api/dev/gist') { if (!isDev(user)) return json(res, 403, { error: '개발자만 할 수 있어요.' }); return json(res, 200, { on: !!GIST_ID, dirty: gistDirty, busy: gistBusy, ...gistStat, lastOkAgoSec: gistStat.lastOk ? Math.round((Date.now() - gistStat.lastOk) / 1000) : null, dbAt: db.meta?.at || 0 }); }
   if (route === 'GET /api/dev/coupons') { if (!isDev(user)) return json(res, 403, { error: '개발자만 할 수 있어요.' }); return json(res, 200, { list: couponList() }); }
   if (route === 'POST /api/dev/coupon') { if (!isDev(user)) return json(res, 403, { error: '개발자만 할 수 있어요.' }); return done(couponMake(body)); }
   if (route === 'POST /api/dev/coupon/delete') {
@@ -1454,9 +1468,47 @@ setInterval(() => {
   R.init({ seasonOf: P.seasonOf, grant: P.grant, sendMail });
   S.init(db, { keyOf, online, send, toast, publicUser, save, grant: P.grant, bump: P.bump, isDev, inBattle, sendMail, fixStyle, seasonOf: P.seasonOf, cosmetic: (kind, id) => Data.COSMETICS[kind]?.find((x) => x.id === id), owns });
   server.listen(PORT, () => console.log(`골목대전 서버 실행 중: http://localhost:${PORT}`));
+  if (GIST_ID) watchHandoff();
 })();
 
+// 새로 배포되면 새 서버가 먼저 Gist를 읽고, 그동안 예전 서버가 받은 저장(꾸미기 등)은 예전 서버가 꺼질 때 Gist에 올라갑니다.
+// 그래서 켜진 뒤 몇 분 동안은 Gist가 다른 서버에 의해 바뀌었는지 보고, 바뀌었으면 다시 읽어 옵니다.
+function watchHandoff() {
+  const until = Date.now() + 10 * 60e3;
+  const tick = async () => {
+    if (Date.now() > until) return;
+    try {
+      if (!gistBusy) {
+        const r = await fetch(`${GIST_API}/gists/${GIST_ID}`, { headers: gistHeaders });
+        if (r.ok) {
+          const j = await r.json();
+          if (j.updated_at && gistSeen && j.updated_at !== gistSeen && !gistBusy) {
+            const f = j.files?.[GIST_FILE2];
+            if (f) {
+              const text = f.truncated ? await (await fetch(f.raw_url, { headers: gistHeaders })).text() : f.content;
+              const next = JSON.parse(text); gistSeen = j.updated_at;
+              // Gist 안의 다른 파일(공모전 등)이 바뀌었거나 내 데이터가 더 최신이면 덮어쓰지 않습니다.
+              if (!((next.meta?.at || 0) > (db.meta?.at || 0))) { setTimeout(tick, 8000).unref(); return; }
+              replaceDb(next); migrate();
+              fs.writeFileSync(`${DB_FILE}.tmp`, JSON.stringify(db)); fs.renameSync(`${DB_FILE}.tmp`, DB_FILE);
+              console.log('다른 서버가 올린 최신 데이터로 다시 읽었습니다.');
+              for (const [k, ws] of online) if (db.users[k]) send(ws, { t: 'me', user: publicUser(db.users[k]) });
+            }
+          }
+        }
+      }
+    } catch (e) { console.error('Gist 확인 실패:', e.message); }
+    setTimeout(tick, 8000).unref();
+  };
+  setTimeout(tick, 8000).unref();
+}
+
 process.on('SIGTERM', async () => {
-  if (GIST_ID) { clearTimeout(gistTimer); gistBusy = false; await pushGist(); }
+  if (GIST_ID) {
+    clearTimeout(gistTimer);
+    for (let i = 0; i < 40 && gistBusy; i++) await new Promise((r) => setTimeout(r, 250)); // 올리는 중이면 끝날 때까지
+    gistDirty = true; await pushGist(); // 꺼지기 전 마지막 상태는 반드시 한 번 올림
+    if (gistDirty) { await new Promise((r) => setTimeout(r, 3000)); await pushGist(); }
+  }
   process.exit(0);
 });
