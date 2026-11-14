@@ -1749,3 +1749,28 @@ svg[data-shiny] { filter: var(--sf); animation: shinyGlow 2.4s ease-in-out infin
 .av-buybar small { margin-left: 6px; opacity: .8; }
 .ps-over { margin: 10px 0; padding: 10px 12px; border-radius: 12px; background: #ffffff1f; border: 2px dashed #FFD23F; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
 .ps-over b { font-size: 14px; } .ps-over small { opacity: .8; }
+/* 길드 꾸미기: 문장 모양, 보조 색, 배너 무늬, 구호 */
+.gd-emb { background: radial-gradient(circle at 35% 30%, #fff8, transparent 60%), linear-gradient(160deg, var(--gc), var(--gc2, var(--gc))); }
+.gd-emb.sh-round { border-radius: 50%; }
+.gd-emb.sh-square { border-radius: 10px; }
+.gd-emb.sh-hex { border: 0; border-radius: 0; clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); box-shadow: none; filter: drop-shadow(2px 2px 0 var(--ink)); }
+.gd-emb.sh-diamond { border: 0; border-radius: 0; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); box-shadow: none; filter: drop-shadow(2px 2px 0 var(--ink)); }
+.gd-emb.sh-star { border: 0; border-radius: 0; clip-path: polygon(50% 0, 63% 33%, 98% 36%, 71% 58%, 80% 94%, 50% 75%, 20% 94%, 29% 58%, 2% 36%, 37% 33%); box-shadow: none; filter: drop-shadow(2px 2px 0 var(--ink)); font-size: .8em; }
+.gd-emb.sh-flag { border-radius: 6px 6px 0 0; clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%); }
+.gd-head { background: linear-gradient(120deg, color-mix(in srgb, var(--gc) 80%, #000), var(--gc) 45%, var(--gc2, var(--gc)) 100%); }
+.gd-head.pt-plain s { display: none; }
+.gd-head.pt-stripe s { inset: 0; animation: none; background: repeating-linear-gradient(135deg, #ffffff1c 0 12px, transparent 12px 26px); }
+.gd-head.pt-check s { inset: 0; animation: none; background: repeating-linear-gradient(0deg, #ffffff18 0 14px, transparent 14px 28px), repeating-linear-gradient(90deg, #ffffff18 0 14px, transparent 14px 28px); }
+.gd-head.pt-dots s { inset: 0; animation: none; background: radial-gradient(circle, #ffffff33 0 3px, transparent 4px) 0 0 / 18px 18px; }
+.gd-head.pt-stars s { inset: 0; animation: gdTwinkle 3s ease-in-out infinite alternate; background: radial-gradient(circle, #fff 0 1px, transparent 2px) 0 0 / 23px 29px, radial-gradient(circle, #fffa 0 1.5px, transparent 2.5px) 11px 13px / 37px 31px; }
+.gd-head.pt-wave s { inset: 0; animation: none; background: radial-gradient(circle at 50% 100%, transparent 10px, #ffffff22 11px 14px, transparent 15px) 0 0 / 30px 16px; }
+.gd-head.pt-flame s { inset: 0; animation: none; background: linear-gradient(0deg, #ff8a0066, transparent 60%), radial-gradient(ellipse at 50% 100%, #ffd23f55 0 20%, transparent 60%) 0 100% / 34px 60px repeat-x; }
+.gd-head.pt-grid s { inset: 0; animation: none; background: linear-gradient(#2EF2FF33 1px, transparent 1px) 0 0 / 20px 20px, linear-gradient(90deg, #2EF2FF33 1px, transparent 1px) 0 0 / 20px 20px; }
+@keyframes gdTwinkle { from { opacity: .4; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .gd-head.pt-stars s { animation: none; } }
+.gd-motto { position: relative; display: block; font-size: 13px; margin: 2px 0 4px; font-style: italic; text-shadow: 1px 1px 0 var(--ink); }
+.gd-pick.shapes button, .gd-pick.patterns button { display: flex; flex-direction: column; align-items: center; gap: 2px; width: auto; height: auto; padding: 6px; font-size: 11px; }
+.gd-pick.shapes .gd-emb { width: 36px; height: 36px; font-size: 18px; }
+.gd-pick.patterns i.gd-head { display: block; width: 64px; height: 36px; padding: 0; border-width: 2px; border-radius: 8px; box-shadow: none; }
+.gd-pick.colors button.none { width: auto; padding: 0 8px; font-size: 12px; background: #fff; }
+.gd-form input[name="motto"] { width: 100%; }

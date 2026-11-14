@@ -6,8 +6,17 @@ const KST = 9 * 3600e3, DAY = 86400e3;
 const weekKey = (t = Date.now()) => { const d = new Date(t + KST); const wd = (d.getUTCDay() + 6) % 7; return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - wd)).toISOString().slice(0, 10); };
 
 const FRIEND_MAX = 50, GUILD_MAX = 20, GUILD_GP = 3000, CHAT_KEEP = 100, CHAT_LEN = 200;
-const EMBLEMS = ['🏰', '🐉', '🔥', '⚡', '🌊', '🌙', '⭐', '👑', '🗡️', '🛡️', '🍀', '🐾', '💀', '🎸', '🍜', '🚀'];
-const COLORS = ['#E8402C', '#ff8a00', '#FFD23F', '#3FA34D', '#2EA8E0', '#2340A8', '#7a2cff', '#ff3e9a', '#222033'];
+const EMBLEMS = ['🏰', '🐉', '🔥', '⚡', '🌊', '🌙', '⭐', '👑', '🗡️', '🛡️', '🍀', '🐾', '💀', '🎸', '🍜', '🚀',
+  '🦁', '🐺', '🦅', '🐯', '🦊', '🐻', '🐼', '🦈', '🐙', '🦄', '🐸', '🐧', '🦉', '🐝', '🦖', '🐲',
+  '💎', '🌸', '🍁', '❄️', '☀️', '🌈', '🌋', '🏔️', '🎯', '🎮', '🎲', '🏆', '⚔️', '🪐', '👾', '🤖', '🍕', '🍩', '🧋', '🎧', '📚', '🏀'];
+const COLORS = ['#E8402C', '#ff8a00', '#FFD23F', '#3FA34D', '#2EA8E0', '#2340A8', '#7a2cff', '#ff3e9a', '#222033',
+  '#B31220', '#c45a00', '#9acd32', '#0f8a6a', '#18c8e0', '#5B9BF0', '#3b2f8c', '#b44bff', '#F27FA5', '#8B5A2B', '#7C8798', '#C9A227', '#ffffff', '#0b3d2e', '#5a1020'];
+// 문장 모양, 배너 무늬 (길드장이 길드 꾸미기에서 고름)
+const SHAPES = ['shield', 'round', 'hex', 'diamond', 'star', 'flag', 'square'];
+const PATTERNS = ['rays', 'stripe', 'check', 'dots', 'stars', 'wave', 'flame', 'grid', 'plain'];
+const MOTTO_LEN = 24;
+const cleanMotto = (t) => String(t ?? '').replace(/[\u0000-\u001f]/g, '').slice(0, MOTTO_LEN);
+const look = (g) => ({ shape: g.shape || 'shield', pattern: g.pattern || 'rays', color2: g.color2 || '', motto: g.motto || '' });
 
 // 길드 협업 퀘스트 (매주 월요일 초기화). 이번 주에 한 판이라도 기여한 길드원이 각자 받아요.
 const GUILD_QUESTS = [
@@ -116,11 +125,11 @@ function settleWar() {
     sysChat(`g:${g.id}`, `👑 지난주 길드전 ${i + 1}위! 보상이 들어왔어요.`);
   });
   for (const g of Object.values(db.guilds)) if (g.champ && g.champ.week !== now) delete g.champ;
-  db.war = { week: now, last: { week: prev, top: rows.map((g, i) => ({ id: g.id, name: g.name, emblem: g.emblem, color: g.color, score: g.week.war, rank: i + 1 })) } };
+  db.war = { week: now, last: { week: prev, top: rows.map((g, i) => ({ id: g.id, name: g.name, emblem: g.emblem, color: g.color, ...look(g), score: g.week.war, rank: i + 1 })) } };
 }
 function warView(key) {
   const now = weekKey(), mine = userOf(key)?.guild;
-  const rows = Object.values(db.guilds).map((g) => ({ id: g.id, name: g.name, emblem: g.emblem, color: g.color, champ: g.champ?.rank || 0, score: g.week?.id === now ? g.week.war || 0 : 0, members: g.members.length }))
+  const rows = Object.values(db.guilds).map((g) => ({ id: g.id, name: g.name, emblem: g.emblem, color: g.color, ...look(g), champ: g.champ?.rank || 0, score: g.week?.id === now ? g.week.war || 0 : 0, members: g.members.length }))
     .sort((a, b) => b.score - a.score || b.members - a.members);
   const myRank = rows.findIndex((r) => r.id === mine) + 1;
   return { top: rows.slice(0, 10), myRank, mine: rows.find((r) => r.id === mine) || null, last: db.war?.last || null, pts: WAR_PTS, rewards: WAR_R, ends: Date.parse(`${now}T00:00:00+09:00`) + 7 * DAY };
@@ -129,13 +138,13 @@ function guildView(g, key) {
   const w = guildBook(g);
   const mine = w.contrib[key] || 0;
   return {
-    id: g.id, champ: g.champ?.rank || 0, name: g.name, emblem: g.emblem, color: g.color, intro: g.intro, leader: g.leader, vices: g.vices || [], viceMax: VICE_MAX, createdAt: g.createdAt, max: GUILD_MAX, gpt: userOf(key)?.gpt || 0, pass: gpassState(g, userOf(key)),
+    id: g.id, champ: g.champ?.rank || 0, name: g.name, emblem: g.emblem, color: g.color, ...look(g), intro: g.intro, leader: g.leader, vices: g.vices || [], viceMax: VICE_MAX, createdAt: g.createdAt, max: GUILD_MAX, gpt: userOf(key)?.gpt || 0, pass: gpassState(g, userOf(key)),
     members: g.members.map((k) => ({ ...card(k), contrib: w.contrib[k] || 0 })).filter((x) => x.name).sort((a, b) => (b.key === g.leader) - (a.key === g.leader) || b.online - a.online || b.contrib - a.contrib),
     quests: GUILD_QUESTS.map((q) => { const v = Math.min(q.goal, w.prog[q.k] || 0); const got = (w.claimed[key] || []).includes(q.id); return { ...q, v, done: v >= q.goal, got, can: v >= q.goal && !got && mine > 0 }; }),
     myContrib: mine, weekEnds: Date.parse(`${weekKey()}T00:00:00+09:00`) + 7 * DAY,
   };
 }
-const guildList = () => Object.values(db.guilds).map((g) => ({ id: g.id, champ: g.champ?.rank || 0, name: g.name, emblem: g.emblem, color: g.color, intro: g.intro, count: g.members.length, max: GUILD_MAX, leader: nameOf(g.leader), online: g.members.filter((k) => H.online.has(k)).length }))
+const guildList = () => Object.values(db.guilds).map((g) => ({ id: g.id, champ: g.champ?.rank || 0, name: g.name, emblem: g.emblem, color: g.color, ...look(g), intro: g.intro, count: g.members.length, max: GUILD_MAX, leader: nameOf(g.leader), online: g.members.filter((k) => H.online.has(k)).length }))
   .sort((a, b) => b.online - a.online || b.count - a.count);
 // 길드 설명: 길이 제한 없음, 줄바꿈 유지 (빈 줄은 최대 1줄)
 const cleanIntro = (s) => String(s || '').replace(/\r\n?/g, '\n').replace(/[\u0000-\u0009\u000b-\u001f]/g, '').replace(/\n{3,}/g, '\n\n').trim();
@@ -191,6 +200,10 @@ function guildEdit(u, key, b) {
   if (b.intro != null) g.intro = cleanIntro(b.intro);
   if (EMBLEMS.includes(b.emblem)) g.emblem = b.emblem;
   if (COLORS.includes(b.color)) g.color = b.color;
+  if (b.color2 === '' || COLORS.includes(b.color2)) g.color2 = b.color2;
+  if (SHAPES.includes(b.shape)) g.shape = b.shape;
+  if (PATTERNS.includes(b.pattern)) g.pattern = b.pattern;
+  if (b.motto != null) g.motto = cleanMotto(b.motto);
   if (b.leader && g.members.includes(b.leader) && b.leader !== key) {
     g.leader = b.leader; g.vices = g.vices.filter((k) => k !== b.leader); restyle(key); restyle(b.leader);
     sysChat(`g:${g.id}`, `👑 ${nameOf(b.leader)}님이 새 길드장이 되었어요.`);
@@ -393,7 +406,7 @@ function socialView(u, key) {
   return {
     friends: u.friends.map(card).filter(Boolean).sort((a, b) => b.online - a.online || a.name.localeCompare(b.name)),
     reqIn: u.freq.in.map(card).filter(Boolean), reqOut: u.freq.out.map(card).filter(Boolean),
-    guild: g ? guildView(g, key) : null, guilds: g ? [] : guildList(), emblems: EMBLEMS, colors: COLORS, guildGp: GUILD_GP,
+    guild: g ? guildView(g, key) : null, guilds: g ? [] : guildList(), emblems: EMBLEMS, colors: COLORS, shapes: SHAPES, patterns: PATTERNS, mottoLen: MOTTO_LEN, guildGp: GUILD_GP,
     trades: tradeView(key),
     war: g ? (guildBook(g), warView(key)) : null,
   };

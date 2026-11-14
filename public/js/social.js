@@ -112,7 +112,9 @@ async function showTrade(fk, back) {
 }
 
 /* ---------- 길드 ---------- */
-const emblemTag = (g, big) => `<span class="gd-emb${big ? ' big' : ''}${g.champ ? ` champ champ-${g.champ}` : ''}" style="--gc:${g.color}">${g.emblem}${g.champ ? `<i class="gd-crown">${['', '👑', '🥈', '🥉'][g.champ]}</i>` : ''}</span>`;
+const SHAPE_N = { shield: '방패', round: '동그라미', hex: '육각형', diamond: '다이아', star: '별', flag: '깃발', square: '네모' };
+const PATTERN_N = { rays: '회전 광선', stripe: '사선 줄무늬', check: '체크', dots: '물방울', stars: '별빛', wave: '물결', flame: '불꽃', grid: '네온 격자', plain: '민무늬' };
+const emblemTag = (g, big) => `<span class="gd-emb sh-${g.shape || 'shield'}${big ? ' big' : ''}${g.champ ? ` champ champ-${g.champ}` : ''}" style="--gc:${g.color};--gc2:${g.color2 || g.color}">${g.emblem}${g.champ ? `<i class="gd-crown">${['', '👑', '🥈', '🥉'][g.champ]}</i>` : ''}</span>`;
 async function showGuild(back = showLobby) {
   G.screen = 'guild'; app.className = '';
   app.innerHTML = `${topbar('길드')}<p class="wait">불러오는 중…</p>`;
@@ -150,7 +152,7 @@ async function showGuild(back = showLobby) {
   const passCan = g.pass.levels.filter((l) => l.can).length;
   const left = Math.max(0, g.weekEnds - Date.now()), days = Math.floor(left / 864e5), hrs = Math.floor((left % 864e5) / 36e5);
   app.innerHTML = `${topbar('길드')}
-    <section class="gd-head" style="--gc:${g.color}"><s aria-hidden="true"></s>${emblemTag(g, true)}<div><h2>${esc(g.name)}</h2><p class="gd-intro">${esc(g.intro || '소개가 없어요')}</p><small>${g.members.length}/${g.max}명 · 이번 주 내 기여 ${g.myContrib}판</small></div></section>
+    <section class="gd-head pt-${g.pattern || 'rays'}" style="--gc:${g.color};--gc2:${g.color2 || g.color}"><s aria-hidden="true"></s>${emblemTag(g, true)}<div><h2>${esc(g.name)}</h2>${g.motto ? `<b class="gd-motto">“${esc(g.motto)}”</b>` : ''}<p class="gd-intro">${esc(g.intro || '소개가 없어요')}</p><small>${g.members.length}/${g.max}명 · 이번 주 내 기여 ${g.myContrib}판</small></div></section>
     <div class="gd-acts"><button class="btn" id="gd-chat">💬 길드 채팅${Social.unread.guild ? ` <em class="mailbadge">${Social.unread.guild}</em>` : ''}</button>${lead ? '<button class="btn paper" id="gd-edit">✏️ 꾸미기</button>' : ''}<button class="btn paper" id="gd-leave">나가기</button></div>
     <div class="gd-big"><button class="gd-tile pass" id="gd-pass"><span>🎫</span><b>길드 패스</b><small>Lv ${g.pass.lv} / ${g.pass.max}</small>${passCan ? `<em class="mailbadge">${passCan}</em>` : ''}</button>
       <button class="gd-tile shop" id="gd-shop"><span>🛍️</span><b>길드 상점</b><small>${ICON.gpt(14)} ${fmt(g.gpt)} 길P</small></button></div>
@@ -177,15 +179,19 @@ async function showGuild(back = showLobby) {
   app.querySelector('#gd-edit')?.addEventListener('click', () => {
     const bg = openSheet(`<h2>길드 꾸미기</h2><form id="gd-ed" class="gd-form">
       <textarea name="intro" rows="6" placeholder="길드 설명 (길이 제한 없음)">${esc(g.intro || '')}</textarea>
-      <div class="gd-pick" data-k="emblem">${v.emblems.map((e) => `<button type="button" data-v="${e}" aria-pressed="${e === g.emblem}">${e}</button>`).join('')}</div>
-      <div class="gd-pick colors" data-k="color">${v.colors.map((c) => `<button type="button" data-v="${c}" aria-pressed="${c === g.color}" style="background:${c}"></button>`).join('')}</div>
+      <input name="motto" maxlength="${v.mottoLen || 24}" placeholder="길드 구호 (예: 골목은 우리가 지킨다!)" value="${esc(g.motto || '')}">
+      <h3 class="ar-h">문장</h3><div class="gd-pick" data-k="emblem">${v.emblems.map((e) => `<button type="button" data-v="${e}" aria-pressed="${e === g.emblem}">${e}</button>`).join('')}</div>
+      <h3 class="ar-h">문장 모양</h3><div class="gd-pick shapes" data-k="shape">${(v.shapes || []).map((x) => `<button type="button" data-v="${x}" aria-pressed="${x === (g.shape || 'shield')}"><span class="gd-emb sh-${x}" style="--gc:${g.color};--gc2:${g.color2 || g.color}">${g.emblem}</span><small>${SHAPE_N[x]}</small></button>`).join('')}</div>
+      <h3 class="ar-h">대표 색</h3><div class="gd-pick colors" data-k="color">${v.colors.map((c) => `<button type="button" data-v="${c}" aria-pressed="${c === g.color}" style="background:${c}"></button>`).join('')}</div>
+      <h3 class="ar-h">보조 색 (그라데이션)</h3><div class="gd-pick colors" data-k="color2"><button type="button" data-v="" aria-pressed="${!g.color2}" class="none">없음</button>${v.colors.map((c) => `<button type="button" data-v="${c}" aria-pressed="${c === g.color2}" style="background:${c}"></button>`).join('')}</div>
+      <h3 class="ar-h">배너 무늬</h3><div class="gd-pick patterns" data-k="pattern">${(v.patterns || []).map((x) => `<button type="button" data-v="${x}" aria-pressed="${x === (g.pattern || 'rays')}"><i class="gd-head pt-${x}" style="--gc:${g.color};--gc2:${g.color2 || g.color}"><s></s></i><small>${PATTERN_N[x]}</small></button>`).join('')}</div>
       <div class="sc-pay"><button type="button" class="btn paper" data-x>취소</button><button class="btn">저장</button></div></form>`);
     bg.querySelectorAll('.gd-pick').forEach((box) => box.querySelectorAll('button').forEach((b) => { b.onclick = () => box.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); }));
     bg.querySelector('[data-x]').onclick = closeSheet;
     bg.querySelector('#gd-ed').onsubmit = (e) => {
       e.preventDefault();
       const pick = (k) => bg.querySelector(`.gd-pick[data-k="${k}"] [aria-pressed="true"]`)?.dataset.v;
-      closeSheet(); act('/api/guild/edit', { intro: e.target.intro.value, emblem: pick('emblem'), color: pick('color') });
+      closeSheet(); act('/api/guild/edit', { intro: e.target.intro.value, motto: e.target.motto.value, emblem: pick('emblem'), color: pick('color'), color2: pick('color2') ?? '', shape: pick('shape'), pattern: pick('pattern') });
     };
   });
 }
