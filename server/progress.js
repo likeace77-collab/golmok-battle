@@ -188,7 +188,8 @@ function makeDeals(rand) {
       value += unit * (k === 'mon' ? 1 : q);
     }
     if (!value) { r.rerolls = 5; value = 2000; }
-    const off = [10, 10, 20, 20, 30, 30, 40, 50, 60, 70, 80, 90, 100][Math.floor(rand() * 13)];
+    const OFF = [10, 10, 15, 20, 20, 25, 30, 30, 35, 40, 40, 45, 50, 50, 50, 55, 60, 60, 65, 70, 75, 80, 85, 90, 95, 100]; // 할인율 칸 26개 중 하나 (100% 무료는 1/26)
+    const off = OFF[Math.floor(rand() * OFF.length)];
     out.push({ i: n, r, value, off, price: Math.round((value * (100 - off)) / 100 / 10) * 10 });
   }
   return out;
