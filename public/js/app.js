@@ -356,7 +356,7 @@ function renderLobby() {
         <button class="g2b shop" id="go-shop"><span>🛒</span><b>상점</b></button>
         <button class="g2b stones" id="go-stones"><span>💎</span><b>메가스톤</b><small>${u.stones.length}개</small></button>
         <button class="g2b friends" id="go-friends"><span>👥</span><b>친구</b>${u.badges.social ? `<em class="mailbadge">${u.badges.social}</em>` : ''}<small>${u.friendsN}명</small></button>
-        <button class="g2b guild" id="go-guild"><span>${u.guild ? u.guild.emblem : '🏰'}</span><b>${u.guild ? esc(u.guild.name) : '길드'}</b>${u.guild ? '' : '<small>만들기·가입</small>'}</button>
+        <button class="g2b guild" id="go-guild"><span>${u.guild ? u.guild.emblem : '🏰'}</span><b>${u.guild ? esc(u.guild.name) : '길드'}</b>${u.badges.guild ? `<em class="mailbadge">${u.badges.guild}</em>` : ''}${u.guild ? '' : '<small>만들기·가입</small>'}</button>
         <button class="g2b rank" id="go-rank" style="--rc:${['#c8873a', '#b8c4d0', '#FFD23F', '#6CF2C2', '#2EF2FF', '#B44BFF', '#ff3a4a'][u.rank?.tier || 0]}"><span>${['🥉', '🥈', '🥇', '💠', '💎', '👑', '🔥'][u.rank?.tier || 0]}</span><b>랭크전</b><small>${u.rank?.pts ?? 1000}점</small></button>
         <button class="g2b raid" id="go-raid"><span>🐲</span><b>레이드</b><small>최대 4명</small></button>
         <button class="g2b dungeon" id="go-dungeon"><span>🗼</span><b>이벤트 던전</b></button>

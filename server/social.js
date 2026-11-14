@@ -214,7 +214,7 @@ function guildClaim(u, key, qid) {
   const w = guildBook(g); (w.claimed[key] ||= []).push(qid);
   return { ok: true, got: H.grant(u, v.r) };
 }
-const tradeIn = (key) => Object.values(db?.trades || {}).filter((t) => t.to === key && Date.now() - t.at < TRADE_TTL).length;
+const tradeIn = (key) => Object.values(db?.trades || {}).filter((t) => t.to === key && Date.now() - t.at < TRADE_TTL && userOf(t.from)?.mons.some((m) => m.uid === t.give) && userOf(t.to)?.mons.some((m) => m.uid === t.want)).length; // 화면에 보이는 교환만 셈
 const guildClaimable = (u, key) => { if (!db) return 0; const g = u.guild && db.guilds?.[u.guild]; return g ? guildView(g, key).quests.filter((q) => q.can).length + gpassState(g, u).levels.filter((l) => l.can).length : 0; };
 
 // 대전이 끝날 때 index.js가 불러요: 길드 진행도와 친구 협업 퀘스트
