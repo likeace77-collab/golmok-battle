@@ -521,6 +521,10 @@ function showSunfish() {
 const shinyHue = (id) => { let h = 7; for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 9973; return 100 + (h % 160); };
 // 모습이 바뀌는 골목몬은 모습마다 이로치 색이 따로 (단조: 재질마다 다른 금속 빛)
 const SHINY_FORM = {
+  // 까모는 검은 까마귀라 색만 돌리면 그대로라서, 이로치는 황금 까마귀 / 메가는 서리빛 대왕
+  kkamo: { base: 'sepia(1) saturate(3.2) hue-rotate(2deg) brightness(1.3) contrast(1.15)', mega: 'sepia(1) saturate(2.5) hue-rotate(170deg) brightness(1.35)' },
+  // 선생님: 분필 초록빛 선생님 / 1타강사는 보랏빛 스타 강사
+  seonsaeng: { base: 'hue-rotate(120deg) saturate(1.8) brightness(1.05)', mega: 'hue-rotate(250deg) saturate(1.8) brightness(1.05)' },
   danjo: {
     base: 'sepia(.7) hue-rotate(55deg) saturate(1.8) brightness(1.05)', // 나무 → 이끼 낀 초록 나무
     t1: 'sepia(1) saturate(4.5) hue-rotate(8deg) brightness(1.2)', // 철 → 노란 철
