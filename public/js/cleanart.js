@@ -32,17 +32,37 @@ function cleanPixels(img, { watermark = false, close = 0.008 } = {}) {
   };
   const ink = new Uint8Array(N); for (let i = 0; i < N; i++) ink[i] = isBg[i] ? 0 : 1;
   const dInk = dist(ink);
-  const wall = new Uint8Array(N); for (let i = 0; i < N; i++) wall[i] = dInk[i] <= R * 3 ? 1 : 0;
-  const far = new Uint8Array(N), q = [];
-  const push = (i) => { if (!far[i] && !wall[i]) { far[i] = 1; q.push(i); } };
-  for (let x = 0; x < W; x++) { push(x); push((H - 1) * W + x); }
-  for (let y = 0; y < H; y++) { push(y * W); push(y * W + W - 1); }
-  while (q.length) {
-    const i = q.pop(), x = i % W;
-    if (x > 0) push(i - 1); if (x < W - 1) push(i + 1); if (i >= W) push(i - W); if (i < N - W) push(i + W);
+  const floodOut = (Rv) => {
+    const wall = new Uint8Array(N); for (let i = 0; i < N; i++) wall[i] = dInk[i] <= Rv * 3 ? 1 : 0;
+    const far = new Uint8Array(N), q = [];
+    const push = (i) => { if (!far[i] && !wall[i]) { far[i] = 1; q.push(i); } };
+    for (let x = 0; x < W; x++) { push(x); push((H - 1) * W + x); }
+    for (let y = 0; y < H; y++) { push(y * W); push(y * W + W - 1); }
+    while (q.length) {
+      const i = q.pop(), x = i % W;
+      if (x > 0) push(i - 1); if (x < W - 1) push(i + 1); if (i >= W) push(i - W); if (i < N - W) push(i + W);
+    }
+    const dFar = dist(far);
+    const o = new Uint8Array(N); for (let i = 0; i < N; i++) o[i] = isBg[i] && dFar[i] <= (Rv + 2) * 3 ? 1 : 0;
+    return o;
+  };
+  const out = floodOut(R);
+  if (R > 4) {
+    // 큰 벽으로 남긴 흰 곳 중, 작은 벽으로는 바깥과 이어지는 곳: 8방향으로 선에 막혀 있으면(옷 안쪽) 남기고, 트여 있으면 배경이라 지움
+    const thin = floodOut(Math.max(2, Math.round(Math.min(W, H) * 0.006))), L = Math.round(Math.min(W, H) * 0.35);
+    const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [.7, .7], [-.7, .7], [.7, -.7], [-.7, -.7]];
+    for (let i = 0; i < N; i++) {
+      if (out[i] || !thin[i]) continue;
+      const x = i % W, y = (i / W) | 0;
+      let hit = 0;
+      for (const [dx, dy] of DIRS) for (let k = 2; k <= L; k++) {
+        const xx = Math.round(x + dx * k), yy = Math.round(y + dy * k);
+        if (xx < 0 || yy < 0 || xx >= W || yy >= H) break;
+        if (ink[yy * W + xx]) { hit++; break; }
+      }
+      if (hit < 7) out[i] = 1;
+    }
   }
-  const dFar = dist(far);
-  const out = new Uint8Array(N); for (let i = 0; i < N; i++) out[i] = isBg[i] && dFar[i] <= (R + 2) * 3 ? 1 : 0;
   // 바깥과 맞닿은 밝은 가장자리는 반투명으로 (흰 테두리 줄이기)
   for (let i = 0; i < N; i++) {
     if (out[i]) { d[i * 4 + 3] = 0; continue; }

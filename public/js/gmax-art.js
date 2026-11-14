@@ -849,3 +849,48 @@ function gmaxSVG(id, cls = '') {
   if (!GMAX_ART[id]) return typeof monsterSVG === 'function' ? monsterSVG(id, cls, true) : '';
   return `<svg class="gmax ${cls}" viewBox="-6 -10 212 212" aria-hidden="true">${GMAX_ART[id]}</svg>`;
 }
+
+/* ---------- 신캐 공모전 출시작: 까모 · 선생님 ---------- */
+(() => {
+  const { eye, maw, claw, spikes, crack, ground, W } = GMX;
+
+  // 칠흑 폭풍까마귀: 하늘을 덮는 톱날 날개, 보랏빛 번개 금, 눈 넷, 갈라진 노란 부리 속 송곳니
+  const feather = (x, y, a, L, w) => { const r = (a * Math.PI) / 180, c = Math.cos(r), s = Math.sin(r);
+    return `<path d="M${x} ${y}Q${(x + c * L * .5 - s * w).toFixed(1)} ${(y + s * L * .5 + c * w).toFixed(1)} ${(x + c * L).toFixed(1)} ${(y + s * L).toFixed(1)}Q${(x + c * L * .5 + s * w * .4).toFixed(1)} ${(y + s * L * .5 - c * w * .4).toFixed(1)} ${x} ${y}Z" fill="#2c2836"/>`; };
+  GMAX_ART.kkamo = W(`${ground('#8b3dff')}
+    <path d="M100 30L20 4 34 22 6 30 30 42 2 58 32 64 8 84 40 84 22 106 56 96 70 70Z" fill="#2c2836"/>
+    <path d="M100 30L180 4 166 22 194 30 170 42 198 58 168 64 192 84 160 84 178 106 144 96 130 70Z" fill="#2c2836"/>
+    ${[[38, 40, 200, 30, 5], [30, 62, 190, 28, 5], [44, 82, 175, 24, 5]].map((f) => feather(...f)).join('')}
+    ${[[162, 40, -20, 30, 5], [170, 62, -10, 28, 5], [156, 82, 5, 24, 5]].map((f) => feather(...f)).join('')}
+    ${crack('M30 30L52 46 44 60 66 70M170 30L148 46 156 60 134 70', '#b86bff', 2.4)}
+    ${spikes([[78, 46, -120, 26, 6], [92, 40, -100, 30, 6], [108, 40, -80, 30, 6], [122, 46, -60, 26, 6]], '#3d3846')}
+    <path d="M100 42Q146 46 150 104Q154 150 128 178L72 178Q46 150 50 104Q54 46 100 42Z" fill="#3d3846"/>
+    <path d="M70 120Q100 136 130 120M66 146Q100 162 134 146" fill="none" stroke="#2c2836" stroke-width="3"/>
+    ${crack('M62 132L72 142 64 158M138 132L128 142 136 158', '#b86bff', 2.2)}
+    ${eye(80, 74, 11, '#c86bff', 1)}${eye(120, 74, 11, '#c86bff', -1)}${eye(88, 58, 6, '#e3b8ff', 1)}${eye(112, 58, 6, '#e3b8ff', -1)}
+    <path d="M66 66L92 76M134 66L108 76" stroke-width="4.5"/>
+    <path d="M78 90L100 82 122 90 112 120 100 132 88 120Z" fill="#FFD23F"/>
+    ${maw(100, 104, 34, 22, 5, '#4a0f3a', '#fff6e0')}
+    <path d="M100 82V96" stroke-width="2.4"/>
+    ${claw(76, 186, 1.1, 180, '#FFD23F')}${claw(124, 186, 1.1, 180, '#FFD23F')}
+    <g fill="#2c2836" stroke-width="2">${[[18, 128, 30], [184, 120, -30], [30, 160, 60], [172, 156, -60], [150, 18, 20]].map(([x, y, a]) => `<path transform="translate(${x} ${y}) rotate(${a})" d="M0 -9Q5 0 0 9Q-5 0 0 -9Z"/>`).join('')}</g>`);
+
+  // 전과목 특강 거신: 등에 거대한 칠판, 한 손엔 칼처럼 든 대형 자, 한 손엔 분필, 분노한 얼굴, 날아다니는 교과서
+  GMAX_ART.seonsaeng = W(`${ground('#F2C230')}
+    <path d="M14 30H186V120H14Z" fill="#2e6b4f"/><path d="M14 30H186V120H14Z" fill="none" stroke="#8a5a2b" stroke-width="7"/>
+    <g fill="none" stroke="#f4f1e6" stroke-width="2" opacity=".85"><path d="M26 50q8-10 16 0t16 0M26 70h30M30 92l14-12M30 80l14 12M140 48h30M150 40v16M136 80q12-16 24 0q12 16 24 0M140 104h34"/></g>
+    <text x="22" y="113" font-size="12" font-weight="900" fill="#f4f1e6" stroke="none" font-family="sans-serif">E=mc²</text>
+    <path d="M176 26L196 6 200 12 182 32Z" fill="#f4f1e6"/>
+    <path d="M150 128L196 66 186 60 140 122Z" fill="#e8c35a"/><path d="M160 112l6 4M168 102l6 4M176 92l6 4M184 82l6 4" stroke-width="2"/>
+    <path d="M60 116Q100 104 140 116L150 168H50Z" fill="#fbfaf4"/>
+    <path d="M60 116L40 150 30 160M140 116L156 132" fill="none" stroke-width="10"/><path d="M60 116L40 150 30 160M140 116L156 132" fill="none" stroke="#fbfaf4" stroke-width="5"/>
+    <ellipse cx="26" cy="162" rx="10" ry="8" fill="#F2C230"/><path d="M18 156l-10-10 6-4 10 10z" fill="#fff"/>
+    <ellipse cx="156" cy="132" rx="10" ry="9" fill="#F2C230"/>
+    <path d="M62 168L58 196H86L90 170M110 170L114 196H142L138 168Z" fill="#2F7DE1"/>
+    <path d="M58 46Q60 20 100 18Q142 20 142 50Q144 96 100 102Q56 98 58 46Z" fill="#F2C230"/>
+    <path d="M56 46Q52 14 80 16Q90 4 106 14Q124 6 132 22Q150 26 144 50Q134 32 116 34Q100 22 86 32Q66 28 56 46Z" fill="#1a1433"/>
+    ${eye(82, 58, 12, '#fff', 1, '#c81e3a')}${eye(118, 58, 12, '#fff', -1, '#c81e3a')}
+    <path d="M66 46L94 54M134 46L106 54" stroke-width="6"/>
+    ${maw(100, 82, 40, 20, 6, '#7a1a0a', '#fffaf0')}
+    <g stroke-width="2.4">${[[30, 140, -20, '#c81e3a'], [176, 148, 15, '#2F7DE1'], [176, 18, -10, '#39a96b']].map(([x, y, a, c]) => `<g transform="translate(${x} ${y}) rotate(${a})"><path d="M-12 -8H12V8H-12Z" fill="${c}"/><path d="M0 -8V8" /><path d="M-9 -4H-3M3 -4H9" stroke="#fff" stroke-width="1.6"/></g>`).join('')}</g>`);
+})();
