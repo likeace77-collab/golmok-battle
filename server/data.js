@@ -621,6 +621,8 @@ const COSMETICS = {
     C('laborer', 'LEGENDARY LABORER', ['gift', 'titles:laborer'], { tier: 8 }),
     C('deungsin', '등신', ['gift', 'titles:deungsin'], { tier: 9 }),
     C('noisecrime', '소음공해죄', ['gift', 'titles:noisecrime'], { tier: 9, icon: '♬' }),
+    C('kids', '이놈의 아이들', ['gift', 'titles:kids'], { tier: 9, icon: '✎' }), // 선생님을 만든 pshrocket
+    C('kkaak', '까악까악', ['gift', 'titles:kkaak'], { tier: 9, icon: '🪶' }), // 까모를 만든 티키티키펑크
     C('dimension', '차원을 넘어온 자', ['gift', 'titles:dimension'], { tier: 10 }), // 옛 골목대전에서 넘어온 계정 기념
     // 랭크전 (한 번이라도 그 티어에 오르면)
     C('rankgold', '골드 골목꾼', ['rank', 2], { tier: 3 }), C('rankdia', '다이아 골목꾼', ['rank', 4], { tier: 4, glow: '#2EF2FF' }), C('rankmaster', '골목 마스터', ['rank', 5], { tier: 5, glow: '#B44BFF' }), C('rankboss', '진짜 골목대장', ['rank', 6], { tier: 5, glow: '#ff3a4a' }),

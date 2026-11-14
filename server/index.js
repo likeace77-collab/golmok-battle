@@ -318,6 +318,11 @@ function migrate() {
     // 신화 칭호 소음공해죄: 하르모니움을 만들어 준 고마움
     { id: 'noisecrime-title', user: '티키티키펑크', why: '하르모니움 제작', notice: '우편함에 신화 등급 칭호가 도착했습니다!',
       apply: (u) => sendMail(u, { from: '골목대전 운영팀', title: '하르모니움을 만들어 주셔서 감사합니다', body: '하르모니움을 만들어 주셔서 감사합니다. 골목에 울려 퍼진 그 금속음에 경의를 표하며, 신화 등급 칭호 "소음공해죄"를 드립니다!', reward: ['titles:noisecrime'] }) },
+    // 신캐 공모전 출시작을 만든 사람에게 신화 칭호
+    { id: 'kids-title', user: 'pshrocket', why: '선생님 제작', notice: '우편함에 신화 등급 칭호가 도착했습니다!',
+      apply: (u) => sendMail(u, { from: '골목대전 운영팀', title: '선생님을 만들어 주셔서 감사합니다', body: '신캐 공모전 출시작 "선생님"을 만들어 주셔서 감사합니다. 오늘도 교실을 지키는 모든 선생님께 경의를 표하며, 신화 등급 칭호 "이놈의 아이들"을 드립니다!', reward: ['titles:kids'] }) },
+    { id: 'kkaak-title', user: '티키티키펑크', why: '까모 제작', notice: '우편함에 신화 등급 칭호가 도착했습니다!',
+      apply: (u) => sendMail(u, { from: '골목대전 운영팀', title: '까모를 만들어 주셔서 감사합니다', body: '신캐 공모전 출시작 "까모"를 만들어 주셔서 감사합니다. 골목길 전선 위에서 세상을 내려다보는 까마귀처럼, 신화 등급 칭호 "까악까악"을 드립니다!', reward: ['titles:kkaak'] }) },
   ];
   for (const g of GRANTS) {
     const u = db.users[keyOf(g.user)];
