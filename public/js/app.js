@@ -343,7 +343,7 @@ function renderLobby() {
   const others = L.players.filter((p) => p.name !== u.name);
   const rival = Object.entries(u.h2h || {}).map(([n, r]) => `${esc(n)}: ${r.w}승 ${r.l}패${r.d ? ` ${r.d}무` : ''}`).join(', ');
   app.innerHTML = `${newsBanner()}
-    ${L.incoming.map((c) => `<div class="notice"><b>${esc(c.name)}님의 ${c.size}대${c.size}${c.draft ? ' 🚫밴픽' : ''} 대전 신청</b>
+    ${L.incoming.map((c) => `<div class="notice"><b>${esc(c.name)}님의 ${c.draft && c.size >= 6 ? '6대6 🚫밴픽 (1마리 금지 → 5대5)' : `${c.size}대${c.size}${c.draft ? ' 🚫밴픽' : ''}`} 대전 신청</b>
       <p style="margin-bottom:8px">내 덱: ${esc(u.decks[u.active]?.name || '')}</p>
       <div class="row"><button class="btn mint" data-acc="${esc(c.from)}">받기</button><button class="btn paper" data-dec="${esc(c.from)}">거절</button></div></div>`).join('')}
     <section class="panel">
@@ -473,7 +473,7 @@ function renderLobby() {
     await api('POST', '/api/logout'); G.user = null; G.ws?.close(); showAuth();
   };
   app.querySelectorAll('[data-size]').forEach((b) => { b.onclick = () => { G.size = +b.dataset.size; renderLobby(); }; });
-  app.querySelector('[data-draft]')?.addEventListener('click', () => { G.draft = !G.draft; if (G.draft) toast(`밴픽 대전: 덱 앞 ${(G.size || 3) + 1}마리 중 상대가 1마리를 금지해요.`); renderLobby(); });
+  app.querySelector('[data-draft]')?.addEventListener('click', () => { G.draft = !G.draft; if (G.draft) { const n = G.size || 3; toast(n >= 6 ? '밴픽 대전: 덱 6마리 중 상대가 1마리를 금지하고 5대5로 싸워요.' : `밴픽 대전: 덱 앞 ${n + 1}마리 중 상대가 1마리를 금지해요.`); } renderLobby(); });
   app.querySelectorAll('[data-deck]').forEach((b) => {
     b.onclick = async () => {
       try { await saveDecks(cloneDecks(), +b.dataset.deck); renderLobby(); } catch (e) { toast(e.message); }

@@ -1299,6 +1299,8 @@ setInterval(() => {
 const drafts = new Map();
 const DRAFT_SEC = 30;
 const draftOf = (k) => [...drafts.values()].find((d) => d.keys.includes(k));
+// 밴픽에 필요한 덱 수와 실제로 싸우는 수: 덱 앞 (인원+1)마리 중 1마리 금지. 덱은 최대 6마리라 6대6 밴픽은 6마리 중 1마리 금지 → 5대5
+const DRAFT_POOL = (size) => Math.min(size + 1, 6), DRAFT_FIGHT = (size) => DRAFT_POOL(size) - 1;
 const busyNow = (k) => inBattle.has(k) || !!draftOf(k); // 대전 중이거나 밴픽 중
 function draftCancel(d, text) {
   if (!drafts.has(d.id)) return;
@@ -1307,14 +1309,14 @@ function draftCancel(d, text) {
   broadcastLobby();
 }
 function startDraft(keys, size) {
-  const d = { id: crypto.randomBytes(4).toString('hex'), keys, size, pools: keys.map((k) => battleTeam(db.users[k]).slice(0, size + 1)), bans: [null, null], end: Date.now() + DRAFT_SEC * 1000 };
+  const d = { id: crypto.randomBytes(4).toString('hex'), keys, size, pools: keys.map((k) => battleTeam(db.users[k]).slice(0, DRAFT_POOL(size))), bans: [null, null], end: Date.now() + DRAFT_SEC * 1000 };
   drafts.set(d.id, d);
   keys.forEach((k) => { clearChallenges(k); });
   d.timer = setTimeout(() => { d.bans = d.bans.map((x, s) => (x === null ? crypto.randomInt(d.pools[1 - s].length) : x)); draftEnd(d); }, DRAFT_SEC * 1000 + 500);
   draftPush(d); broadcastLobby();
 }
 function draftPush(d) {
-  d.keys.forEach((k, s) => send(online.get(k), { t: 'draft', id: d.id, size: d.size, end: d.end, oppName: db.users[d.keys[1 - s]].name,
+  d.keys.forEach((k, s) => send(online.get(k), { t: 'draft', id: d.id, size: DRAFT_FIGHT(d.size), end: d.end, oppName: db.users[d.keys[1 - s]].name,
     mine: d.pools[s].map((m) => ({ species: m.species, shiny: !!m.shiny, costume: m.costume })), opp: d.pools[1 - s].map((m) => ({ species: m.species, shiny: !!m.shiny, costume: m.costume })),
     myBan: d.bans[s], oppDone: d.bans[1 - s] !== null }));
 }
@@ -1323,9 +1325,9 @@ function draftEnd(d) {
   drafts.delete(d.id); clearTimeout(d.timer);
   if (d.keys.some((k) => !online.has(k) || inBattle.has(k))) { drafts.set(d.id, d); return draftCancel(d, '상대가 나가서 밴픽 대전이 취소됐어요.'); }
   // s의 덱에서 금지된 것은 상대(1-s)가 고른 번호
-  const teams = d.pools.map((pool, s) => pool.filter((_, i) => i !== d.bans[1 - s]).slice(0, d.size));
+  const teams = d.pools.map((pool, s) => pool.filter((_, i) => i !== d.bans[1 - s]).slice(0, DRAFT_FIGHT(d.size)));
   d.keys.forEach((k, s) => toast(k, `상대가 내 ${Data.MONSTERS[d.pools[s][d.bans[1 - s]].species].n}을(를) 금지했어요!`));
-  startBattle(d.keys, d.size, 1, false, false, null, teams);
+  startBattle(d.keys, DRAFT_FIGHT(d.size), 1, false, false, null, teams);
 }
 
 /* ---------- 주간 토너먼트: 토요일 밤 9시, 신청한 사람들의 덱을 AI가 대신 싸움 ---------- */
@@ -1659,7 +1661,7 @@ function onMessage(key, msg) {
       if (battleTeam(db.users[key]).length < size) return toast(key, `선택한 덱에 골목몬이 ${size}마리 있어야 합니다.`);
       { const bn = bannedIn(db.users[key], battleTeam(db.users[key]).slice(0, size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
       if (secretIn(battleTeam(db.users[key]).slice(0, size)).length) return toast(key, SECRET_TEXT);
-      if (msg.draft && battleTeam(db.users[key]).length < size + 1) return toast(key, `밴픽 대전은 덱에 골목몬이 ${size + 1}마리 있어야 해요. (1마리는 상대가 금지)`);
+      if (msg.draft && battleTeam(db.users[key]).length < DRAFT_POOL(size)) return toast(key, `밴픽 대전은 덱에 골목몬이 ${DRAFT_POOL(size)}마리 있어야 해요. (1마리는 상대가 금지)`);
       challenges.set(key, { to, size, draft: !!msg.draft });
       pushTo(to, { title: '⚔️ 대전 신청', body: `${db.users[key].name}님이 ${size}대${size}${msg.draft ? ' 밴픽' : ''} 대전을 신청했어요!`, tag: 'challenge' });
       broadcastLobby();
@@ -1685,10 +1687,10 @@ function onMessage(key, msg) {
       if (secretIn(battleTeam(db.users[key]).slice(0, c.size)).length) return toast(key, SECRET_TEXT);
       if (bannedIn(db.users[from], battleTeam(db.users[from]).slice(0, c.size)).length || secretIn(battleTeam(db.users[from]).slice(0, c.size)).length) return toast(key, '상대 덱에 공개 전 골목몬이 있어 시작할 수 없습니다.');
       if (c.draft) {
-        if (battleTeam(db.users[key]).length < c.size + 1) return toast(key, `밴픽 대전은 덱에 골목몬이 ${c.size + 1}마리 있어야 해요.`);
-        if (battleTeam(db.users[from]).length < c.size + 1) return toast(key, '상대 덱의 골목몬이 모자라요.');
-        { const mine = battleTeam(db.users[key]).slice(0, c.size + 1), bn = bannedIn(db.users[key], mine); if (bn.length) return toast(key, BAN_TEXT(bn)); if (secretIn(mine).length) return toast(key, SECRET_TEXT); }
-        { const theirs = battleTeam(db.users[from]).slice(0, c.size + 1); if (bannedIn(db.users[from], theirs).length || secretIn(theirs).length) return toast(key, '상대 덱에 공개 전 골목몬이 있어 시작할 수 없습니다.'); }
+        if (battleTeam(db.users[key]).length < DRAFT_POOL(c.size)) return toast(key, `밴픽 대전은 덱에 골목몬이 ${DRAFT_POOL(c.size)}마리 있어야 해요.`);
+        if (battleTeam(db.users[from]).length < DRAFT_POOL(c.size)) return toast(key, '상대 덱의 골목몬이 모자라요.');
+        { const mine = battleTeam(db.users[key]).slice(0, DRAFT_POOL(c.size)), bn = bannedIn(db.users[key], mine); if (bn.length) return toast(key, BAN_TEXT(bn)); if (secretIn(mine).length) return toast(key, SECRET_TEXT); }
+        { const theirs = battleTeam(db.users[from]).slice(0, DRAFT_POOL(c.size)); if (bannedIn(db.users[from], theirs).length || secretIn(theirs).length) return toast(key, '상대 덱에 공개 전 골목몬이 있어 시작할 수 없습니다.'); }
         startDraft([from, key], c.size);
       } else startBattle([from, key], c.size);
       break;
