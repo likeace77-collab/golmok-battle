@@ -601,7 +601,7 @@ async function api(req, res, url) {
     const notes = user.notes || {};
     const players = Object.entries(db.users).map(([k, u]) => ({
       key: k, name: u.name, avatar: u.avatar, style: u.style, wins: u.wins, losses: u.losses, draws: u.draws, mons: new Set((u.mons || []).map((m) => m.species)).size,
-      online: online.has(k), busy: inBattle.has(k), createdAt: u.createdAt || null, lastSeen: online.has(k) ? Date.now() : u.lastSeen || null,
+      online: online.has(k), busy: busyNow(k), createdAt: u.createdAt || null, lastSeen: online.has(k) ? Date.now() : u.lastSeen || null,
       note: notes[k] || '', me: k === auth.key, premium: (u.premiumSeasons || []).includes(P.seasonOf()),
     })).sort((a, b) => b.online - a.online || (b.lastSeen || 0) - (a.lastSeen || 0));
     return json(res, 200, { players });
@@ -1021,7 +1021,7 @@ const toast = (key, text) => send(online.get(key), { t: 'toast', text });
 function broadcastLobby() {
   const players = [...online.keys()].map((k) => {
     const u = db.users[k];
-    return { key: k, name: u.name, avatar: u.avatar, style: u.style, wins: u.wins, losses: u.losses, busy: inBattle.has(k) };
+    return { key: k, name: u.name, avatar: u.avatar, style: u.style, wins: u.wins, losses: u.losses, busy: busyNow(k) };
   });
   const tags = [...tagRooms.values()].map((r) => ({
     id: r.id, host: r.host, level: r.level,
@@ -1298,6 +1298,14 @@ setInterval(() => {
 /* ---------- 밴픽 대전: 서로 상대 덱에서 1마리씩 금지하고 시작 ---------- */
 const drafts = new Map();
 const DRAFT_SEC = 30;
+const draftOf = (k) => [...drafts.values()].find((d) => d.keys.includes(k));
+const busyNow = (k) => inBattle.has(k) || !!draftOf(k); // 대전 중이거나 밴픽 중
+function draftCancel(d, text) {
+  if (!drafts.has(d.id)) return;
+  drafts.delete(d.id); clearTimeout(d.timer);
+  d.keys.forEach((k) => { send(online.get(k), { t: 'draft_cancel' }); toast(k, text); });
+  broadcastLobby();
+}
 function startDraft(keys, size) {
   const d = { id: crypto.randomBytes(4).toString('hex'), keys, size, pools: keys.map((k) => battleTeam(db.users[k]).slice(0, size + 1)), bans: [null, null], end: Date.now() + DRAFT_SEC * 1000 };
   drafts.set(d.id, d);
@@ -1313,7 +1321,7 @@ function draftPush(d) {
 function draftEnd(d) {
   if (!drafts.has(d.id)) return;
   drafts.delete(d.id); clearTimeout(d.timer);
-  if (d.keys.some((k) => !online.has(k) || inBattle.has(k))) { d.keys.forEach((k) => toast(k, '상대가 나가서 밴픽 대전이 취소됐어요.')); return; }
+  if (d.keys.some((k) => !online.has(k) || inBattle.has(k))) { drafts.set(d.id, d); return draftCancel(d, '상대가 나가서 밴픽 대전이 취소됐어요.'); }
   // s의 덱에서 금지된 것은 상대(1-s)가 고른 번호
   const teams = d.pools.map((pool, s) => pool.filter((_, i) => i !== d.bans[1 - s]).slice(0, d.size));
   d.keys.forEach((k, s) => toast(k, `상대가 내 ${Data.MONSTERS[d.pools[s][d.bans[1 - s]].species].n}을(를) 금지했어요!`));
@@ -1471,6 +1479,7 @@ function onMessage(key, msg) {
   if (!db.users[key].birthYear) return send(online.get(key), { t: 'need_age' });
   if (!db.users[key].tutorial && ['raid_open', 'raid_join', 'raid_start', 'dungeon', 'rank_queue', 'practice', 'challenge', 'accept', 'tag_create', 'tag_seat', 'tag_start', 'training'].includes(msg?.t)) return toast(key, '튜토리얼을 먼저 끝내 주세요.');
   const room = inBattle.get(key);
+  if (draftOf(key) && ['raid_open', 'raid_join', 'raid_start', 'dungeon', 'rank_queue', 'practice', 'challenge', 'accept', 'tag_create', 'tag_seat', 'tag_start', 'training', 'spectate'].includes(msg?.t)) return toast(key, '밴픽 중이에요. 먼저 밴픽을 끝내 주세요.');
   switch (msg?.t) {
     case 'action': {
       if (!room) return;
@@ -1646,7 +1655,7 @@ function onMessage(key, msg) {
       const to = keyOf(String(msg.to ?? ''));
       const size = [1, 3, 6].includes(msg.size) ? msg.size : 3;
       if (room || to === key || !online.has(to)) return toast(key, '지금은 신청할 수 없습니다.');
-      if (inBattle.has(to)) return toast(key, '상대가 대전 중입니다.');
+      if (busyNow(to)) return toast(key, '상대가 대전 중입니다.');
       if (battleTeam(db.users[key]).length < size) return toast(key, `선택한 덱에 골목몬이 ${size}마리 있어야 합니다.`);
       { const bn = bannedIn(db.users[key], battleTeam(db.users[key]).slice(0, size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
       if (secretIn(battleTeam(db.users[key]).slice(0, size)).length) return toast(key, SECRET_TEXT);
@@ -1669,7 +1678,7 @@ function onMessage(key, msg) {
     case 'accept': {
       const from = keyOf(String(msg.from ?? ''));
       const c = challenges.get(from);
-      if (!c || c.to !== key || room || !online.has(from) || inBattle.has(from)) return toast(key, '이미 끝난 신청입니다.');
+      if (!c || c.to !== key || room || !online.has(from) || busyNow(from)) return toast(key, '이미 끝난 신청입니다.');
       if (battleTeam(db.users[key]).length < c.size) return toast(key, `선택한 덱에 골목몬이 ${c.size}마리 있어야 합니다.`);
       if (battleTeam(db.users[from]).length < c.size) return toast(key, '상대의 덱 인원이 모자랍니다.');
       { const bn = bannedIn(db.users[key], battleTeam(db.users[key]).slice(0, c.size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
@@ -1678,6 +1687,8 @@ function onMessage(key, msg) {
       if (c.draft) {
         if (battleTeam(db.users[key]).length < c.size + 1) return toast(key, `밴픽 대전은 덱에 골목몬이 ${c.size + 1}마리 있어야 해요.`);
         if (battleTeam(db.users[from]).length < c.size + 1) return toast(key, '상대 덱의 골목몬이 모자라요.');
+        { const mine = battleTeam(db.users[key]).slice(0, c.size + 1), bn = bannedIn(db.users[key], mine); if (bn.length) return toast(key, BAN_TEXT(bn)); if (secretIn(mine).length) return toast(key, SECRET_TEXT); }
+        { const theirs = battleTeam(db.users[from]).slice(0, c.size + 1); if (bannedIn(db.users[from], theirs).length || secretIn(theirs).length) return toast(key, '상대 덱에 공개 전 골목몬이 있어 시작할 수 없습니다.'); }
         startDraft([from, key], c.size);
       } else startBattle([from, key], c.size);
       break;
@@ -1689,6 +1700,12 @@ function onMessage(key, msg) {
       if (s < 0 || d.bans[s] !== null || !Number.isInteger(i) || i < 0 || i >= d.pools[1 - s].length) return;
       d.bans[s] = i; draftPush(d);
       if (d.bans.every((x) => x !== null)) draftEnd(d);
+      break;
+    }
+    case 'draft_leave': { // 밴픽 화면에서 나가기
+      const d = draftOf(key);
+      if (d) draftCancel(d, `${db.users[key].name}님이 밴픽을 나가서 대전이 취소됐어요.`);
+      break;
     }
     default:
   }
@@ -1709,6 +1726,7 @@ server.on('upgrade', (req, socket, head) => {
     db.users[key].lastSeen = Date.now(); save();
     online.set(key, ws);
     { const u = db.users[key]; specialGrants(u); require('./decks').pruneDecks(u); const gifts = pendingGifts(u); if (gifts.length) { save(); send(ws, { t: 'me', user: publicUser(u) }); send(ws, { t: 'gift', title: gifts.length > 1 ? '선물이 도착했어요!' : gifts[0].title, got: gifts.flatMap((x) => x.got) }); } }
+    { const d = draftOf(key); if (d) setTimeout(() => { if (drafts.has(d.id)) draftPush(d); }, 300); } // 새로고침해도 밴픽 화면으로
     ws.alive = true;
     ws.on('pong', () => { ws.alive = true; });
     ws.on('message', (raw) => {

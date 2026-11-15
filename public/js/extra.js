@@ -493,11 +493,12 @@ function onDraftMsg(m) {
   G.screen = 'draft'; app.className = '';
   clearInterval(DRAFT_TIMER);
   const card = (x, i, ban) => `<button class="df-mon${x.shiny ? ' is-shiny' : ''}${ban ? ' ban' : ''}" ${ban !== undefined ? `data-ban="${i}"` : ''} style="--tc:${G.data.TYPES[G.data.MONSTERS[x.species].types[0]].c}">${cosArt(monArt(x.species, x.shiny), x.costume)}<b>${esc(G.data.MONSTERS[x.species].n)}</b>${ban ? '<em>🚫 금지</em>' : ''}</button>`;
-  app.innerHTML = `<div class="topbar"><h1>🚫 밴픽</h1><b class="df-clock" id="df-clock"></b></div>
+  app.innerHTML = `<div class="topbar"><button class="btn small paper" id="df-leave">나가기</button><h1>🚫 밴픽</h1><b class="df-clock" id="df-clock"></b></div>
     <section class="panel"><h2>${esc(m.oppName)}님의 덱 · 1마리를 금지하세요</h2><p class="muted">금지한 골목몬은 이번 대전에 못 나와요. 남은 ${m.size}마리로 싸워요.</p>
       <div class="df-grid">${m.opp.map((x, i) => card(x, i, m.myBan === null ? false : i === m.myBan)).join('')}</div>
       <p class="wait">${m.myBan === null ? '눌러서 금지할 골목몬을 고르세요' : m.oppDone ? '곧 시작해요!' : '상대가 고르는 중…'}</p></section>
     <section class="panel"><h2>내 덱</h2><div class="df-grid mine">${m.mine.map((x) => card(x, 0)).join('')}</div><p class="muted">${m.oppDone ? '상대가 금지를 골랐어요. (시작할 때 공개)' : '상대도 내 덱에서 1마리를 금지해요.'}</p></section>`;
+  app.querySelector('#df-leave').onclick = () => { if (confirm('밴픽을 나가면 이번 대전이 취소돼요. 나갈까요?')) wsSend({ t: 'draft_leave' }); };
   if (m.myBan === null) app.querySelectorAll('[data-ban]').forEach((b) => { b.onclick = () => { if (confirm(`${G.data.MONSTERS[m.opp[+b.dataset.ban].species].n}을(를) 금지할까요?`)) wsSend({ t: 'draft_ban', id: m.id, index: +b.dataset.ban }); }; });
   const tick = () => { const el = document.getElementById('df-clock'); if (!el) return clearInterval(DRAFT_TIMER); el.textContent = `${Math.max(0, Math.ceil((m.end - Date.now()) / 1000))}초`; };
   tick(); DRAFT_TIMER = setInterval(tick, 500);

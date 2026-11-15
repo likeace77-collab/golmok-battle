@@ -417,7 +417,7 @@ const MONSTERS = {
   seonsaeng: X('선생님', ['normal'], 200, 100, 100, 50, 50, 50,
     ['factorize', 'linearcut', 'ouga', 'trial', 'heateq', 'recursion', 'erlking', 'whileloop', 'techup', 'shuttle'],
     '학교 선생님. 과목은 전과목.'),
-  yeoubi: X('여우비', ['water', 'fairy'], 85, 60, 70, 105, 95, 110,
+  yeoubi: X('여우비', ['water', 'fairy'], 90, 60, 75, 105, 100, 110,
     ['foxrain', 'foxcharm', 'swish', 'foxscratch', 'bucket', 'hose', 'rainy', 'charm', 'potion', 'guard'],
     '해가 떠 있는데 비가 내리는 날에만 나타나는 아기 여우. 꼬리 끝 비구름에서 빗방울이 톡톡 떨어진다. 그 귀여운 얼굴이 가면이라는 소문이 있다.'),
 };
@@ -761,7 +761,7 @@ Object.assign(MONSTERS.dakdulgi, { trait: { n: '빵 줍기', d: '체력이 절�
 Object.assign(MONSTERS.chijeu, { trait: { n: '그루밍', d: '턴이 끝날 때 상태이상이 있으면 50% 확률로 털을 핥아 낫는다.' } });
 MONSTERS.yeoubi.trait = { n: '여우비', d: '싸움에 나오면 해가 뜬 채로 비를 내린다 (5턴 동안 비).' };
 MONSTERS.yeoubi.gmaxTypes = ['spirit', 'poison'];
-MONSTERS.yeoubi.gmaxBuff = { hp: 2, gpow: 250, dpow: 1.3, stat: 1.5, heart: true, d: '체력 2배, 공격·방어·특공·특방·스피드 1.5배, 거다이기술 위력 250 (맞은 상대에게 유혹 표식 + 마음의 상처), 다이기술 위력 1.3배' }; // 거다이맥스가 매우 강함 // 거다이맥스하면 가면이 벗겨지며 혼·독 타입으로 바뀐다
+MONSTERS.yeoubi.gmaxBuff = { hp: 1.5, gpow: 200, dpow: 1, stat: 1.2, heart: true, d: '공격·방어·특공·특방·스피드 1.2배, 거다이기술 위력 200 (맞은 상대에게 유혹 표식 + 마음의 상처)' }; // 거다이맥스가 매우 강함 // 거다이맥스하면 가면이 벗겨지며 혼·독 타입으로 바뀐다
 MONSTERS.kkamo.trait = { n: '불운', d: '싸움에 나오면 울음소리를 내서 상대의 명중률을 2단계 떨어뜨린다.' };
 MONSTERS.seonsaeng.trait = { n: '수능감독', d: '매 턴 1/365 확률로 수능 감독하러 가서 한 턴 쉰다.' };
 for (const [id, by] of [['kkamo', '티키티키펑크'], ['seonsaeng', 'pshrocket']]) Object.assign(MONSTERS[id], { img: true, contest: { by, name: MONSTERS[id].n } });

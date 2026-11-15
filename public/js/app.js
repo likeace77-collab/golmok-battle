@@ -276,6 +276,7 @@ function onServer(m) {
     case 'rank_wait': case 'rank_found': case 'rank_cancel': onRankMsg(m); break;
     case 'raid_room': case 'raid_invite': onRaidMsg(m); break;
     case 'draft': onDraftMsg(m); break;
+    case 'draft_cancel': clearInterval(DRAFT_TIMER); if (G.screen === 'draft') showLobby(); break;
     case 'traded': if (G.screen !== 'battle') tradeDone(m, () => (G.screen === 'friends' ? showFriends() : null)); else toast(`🔄 ${m.with}님과 교환이 끝났어요!`); break;
     case 'chosen': Battle.onChosen(m); break;
     case 'opp_ready': Battle.setNote('상대가 행동을 골랐습니다.'); break;
