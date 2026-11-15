@@ -6,7 +6,7 @@ let FZ_N = 0;
 /* ---------- 합체몬 그림: 두 골목몬 그림을 이음새로 꿰매 붙여요 ---------- */
 function fusionSVG(id, cls = '', mega = false) { // mega: 두 부모의 메가진화 모습을 꿰매 붙임
   const sp = G.data.MONSTERS[id], [pa, pb] = sp.parents || [], L = sp.look || {}, k = `fzc${++FZ_N}`;
-  const inner = (pid) => (G.data.MONSTERS[pid] ? monsterSVG(pid, '', mega && !!G.data.MONSTERS[pid].mega) : '<svg></svg>').replace('<svg', '<svg x="0" y="0" width="200" height="200"');
+  const inner = (pid) => (G.data.MONSTERS[pid] ? monsterSVG(pid, '', mega && !!G.data.MONSTERS[pid].mega) : '<svg></svg>').replace('<svg', '<svg x="0" y="0" width="200" height="200" data-fzin="1"');
   const S = [];
   for (let i = 0; i <= 10; i++) {
     const w = i % 2 ? 7 : -7;

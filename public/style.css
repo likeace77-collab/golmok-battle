@@ -2135,3 +2135,5 @@ button.fz-slot { cursor: pointer; }
 .fz-mega-ring { animation: fzSeam 1.6s linear infinite; }
 .fz-rt { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; } .fz-rt span { flex: 1 1 100%; font-size: 14px; } .fz-rt b { color: #7B4BFF; }
 .fz-rt .btn { white-space: nowrap; }
+/* 합체몬 그림 속 부모 그림: 대전 화면의 'svg 뒤집기·흔들기' 같은 규칙이 안쪽 그림에 걸리면 사라져 버려서 막음 */
+svg[data-fzin] { transform: none !important; animation: none !important; filter: none !important; width: 200px !important; height: 200px !important; margin: 0 !important; display: inline !important; position: static !important; overflow: visible !important; }
