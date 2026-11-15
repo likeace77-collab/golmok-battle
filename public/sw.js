@@ -7,7 +7,7 @@ self.addEventListener('push', (e) => {
   e.waitUntil((async () => {
     const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     if (!d.force && list.some((c) => c.visibilityState === 'visible' && c.focused)) return;
-    await self.registration.showNotification(d.title || '골목대전', { body: d.body || '', tag: d.tag || 'golmok', icon: '/img/icon/icon-192.png?v=2', badge: '/img/icon/icon-64.png?v=2', data: { url: d.url || '/' } });
+    await self.registration.showNotification(d.title || '골목대전', { body: d.body || '', tag: d.tag || 'golmok', icon: '/img/icon/icon-192.png?v=3', badge: '/img/icon/icon-64.png?v=3', data: { url: d.url || '/' } });
   })());
 });
 self.addEventListener('notificationclick', (e) => {
