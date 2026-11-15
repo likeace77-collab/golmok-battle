@@ -445,6 +445,13 @@ const Battle = (() => {
         await wait(900); break;
       }
       case 'gmax': { // 거다이맥스: 화면이 흔들리며 거대해짐
+        if (e.mon?.species === 'yeoubi' && typeof FoxCine !== 'undefined' && !G.fastForward) { // 여우비: 가면이 깨지는 전용 연출
+          try { await FoxCine.play(); } catch { /* 연출 없이 */ }
+          putMon(key, e.mon); drawMon(key, dispMon(key)); drawPlate(key, dispMon(key));
+          const sc2 = document.querySelector('.scene'); sc2?.classList.add('gmax-quake'); $(`#m-${key}`)?.classList.add('grow');
+          await wait(900); sc2?.classList.remove('gmax-quake'); $(`#m-${key}`)?.classList.remove('grow');
+          break;
+        }
         trainer(key)?.play('mega', { dur: 2 });
         const sc = document.querySelector('.scene'); sc?.classList.add('gmax-quake');
         Fx.megaStart(key);

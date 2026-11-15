@@ -1966,3 +1966,49 @@ svg.sk-neon { filter: drop-shadow(0 0 4px #2EF2FF) drop-shadow(0 0 10px #FF3DCB8
 .icc-home { display: grid; justify-items: center; gap: 3px; color: #fff; font-size: 11px; }
 .icc-home img, .icc-home canvas { width: 52px; height: 52px; border-radius: 12px; box-shadow: 0 2px 6px #0008; background: #fff; }
 .icc-prev { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 10px; border-radius: 12px; background: linear-gradient(160deg, #2b3a67, #121a33); color: #fff; font-size: 12px; }
+
+/* ---------- 여우비 거다이맥스 연출 ---------- */
+.ybc { position: fixed; inset: 0; z-index: 9999; overflow: hidden; pointer-events: auto; opacity: 0; transition: opacity .35s; font-family: var(--display, sans-serif); }
+.ybc.on { opacity: 1; } .ybc.out { opacity: 0; transition: opacity .55s; }
+.ybc-bg { position: absolute; inset: 0; background: radial-gradient(circle at 50% 45%, #ffe9f2 0, #ffb3d1 40%, #6a2a5a 100%); transition: background 1.2s, filter .6s; }
+.ybc.dim .ybc-bg { background: radial-gradient(circle at 50% 45%, #6a3a4a 0, #2a0a18 55%, #050003 100%); }
+.ybc.dark .ybc-bg { background: radial-gradient(circle at 50% 30%, #3a0412 0, #0e0207 55%, #000 100%); }
+.ybc-vig { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 18vmin 6vmin #000; opacity: .3; transition: opacity 1s; }
+.ybc.dim .ybc-vig, .ybc.dark .ybc-vig { opacity: 1; box-shadow: inset 0 0 22vmin 10vmin #1a0006; }
+.ybc-stage { position: absolute; inset: 0; display: grid; place-items: center; }
+.ybc-face { position: relative; width: min(72vmin, 520px); aspect-ratio: 208 / 212; }
+.ybc-face svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.ybc.glitch .ybc-face { animation: ybc-glitch .18s steps(2) infinite; }
+@keyframes ybc-glitch { 0% { filter: drop-shadow(4px 0 0 #ff0040) drop-shadow(-4px 0 0 #00e0ff); transform: translate(2px, 0) skewX(1deg); } 50% { filter: drop-shadow(-6px 0 0 #ff0040) drop-shadow(5px 0 0 #00e0ff) saturate(.4); transform: translate(-3px, 1px) skewX(-2deg); } }
+.ybc-cracks path { fill: none; stroke: #1a0006; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 120; stroke-dashoffset: 120; filter: drop-shadow(0 0 2px #ff2a4a); }
+.ybc-cracks path.go { animation: ybc-crack .32s ease-out forwards; }
+@keyframes ybc-crack { to { stroke-dashoffset: 0; } }
+.ybc-face.bleed .ybc-cracks path { stroke: #8a0018; stroke-width: 5; filter: drop-shadow(0 0 6px #ff0a2a); transition: stroke-width .4s; }
+.ybc-shards { position: absolute; inset: 0; pointer-events: none; }
+.ybc-shard { position: absolute; filter: drop-shadow(0 0 6px #ff0a2a); }
+.ybc-shard svg { width: 100%; height: 100%; }
+.ybc-blood i { position: absolute; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; background: radial-gradient(circle at 35% 30%, #ff4a5a, #a8061e 45%, #4a0008); pointer-events: none; }
+.ybc-drips { position: absolute; inset: 0; pointer-events: none; }
+.ybc-drips i { position: absolute; top: 0; width: var(--w); height: 0; background: linear-gradient(#5a0010, #a8061e 80%); border-radius: 0 0 999px 999px; box-shadow: 0 0 8px #ff0a2a66; }
+.ybc.flash::after { content: ""; position: absolute; inset: 0; background: #ff1030; mix-blend-mode: screen; animation: ybc-flash .9s ease-out forwards; pointer-events: none; }
+@keyframes ybc-flash { 0% { opacity: .95; background: #fff; } 15% { opacity: .9; background: #ff1030; } 100% { opacity: 0; } }
+.ybc-eyes i { position: absolute; opacity: 0; border-radius: 50%; background: radial-gradient(ellipse at center, #fff 0 12%, #ff1030 13% 38%, #3a0008 60%, transparent 70%); filter: drop-shadow(0 0 8px #ff0a2a); transform: scaleY(.05); }
+.ybc-eyes.open i { animation: ybc-eye 1.6s ease-out forwards, ybc-blink 2.4s 1.6s infinite; }
+@keyframes ybc-eye { 0% { opacity: 0; transform: scaleY(.05); } 30% { opacity: 1; transform: scaleY(1); } 100% { opacity: 1; transform: scaleY(1); } }
+@keyframes ybc-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.05); } }
+.ybc-real { position: absolute; left: 50%; top: 50%; width: min(108vmin, 760px); aspect-ratio: 1; margin: calc(min(108vmin, 760px) / -2) 0 0 calc(min(108vmin, 760px) / -2); opacity: 0; pointer-events: none; }
+.ybc-real svg { width: 100%; height: 100%; filter: drop-shadow(0 0 40px #ff0a2a88); }
+.ybc.reveal .ybc-eyes { transition: opacity .8s; opacity: .25; }
+.ybc-t { position: absolute; left: 0; right: 0; text-align: center; margin: 0; opacity: 0; transform: scale(.9); transition: opacity .35s, transform .5s; pointer-events: none; }
+.ybc-t.show { opacity: 1; transform: none; }
+.ybc-t1 { bottom: 12%; font-size: clamp(22px, 5vmin, 40px); color: #6a2a5a; letter-spacing: .2em; }
+.ybc-t2 { top: 12%; font-size: clamp(28px, 7vmin, 60px); color: #fff; text-shadow: 0 0 18px #ff0a2a, 3px 3px 0 #5a0010; letter-spacing: .1em; }
+.ybc-t3 { bottom: 7%; font-size: clamp(40px, 11vmin, 96px); color: #ffe8e8; letter-spacing: .08em; text-shadow: 0 0 24px #ff0a2a, 0 0 60px #ff0a2a, 4px 4px 0 #3a0008; }
+.ybc-t3.show { animation: ybc-jit .12s steps(2) 10; }
+.ybc-t3 small { display: block; font-size: .3em; letter-spacing: .5em; color: #ff8a9a; }
+@keyframes ybc-jit { 50% { transform: translate(2px, -2px) skewX(-3deg); } }
+.ybc-skip { position: absolute; right: 12px; top: calc(12px + env(safe-area-inset-top)); z-index: 2; border: 1px solid #fff6; border-radius: 999px; padding: 6px 12px; background: #0006; color: #fff; font: inherit; font-size: 13px; cursor: pointer; }
+.ybc-in { position: absolute; inset: -70px; } .ybc-in > * { } .ybc-in .ybc-stage, .ybc-in .ybc-real { }
+.ybc-splat { position: absolute; inset: 70px; pointer-events: none; z-index: 1; }
+.ybc-splat i { position: absolute; opacity: 0; background: radial-gradient(circle at 40% 35%, #d8102a, #8a0018 55%, #3a0008); filter: drop-shadow(0 0 3px #000); }
+.ybc.reveal .ybc-splat { transition: opacity 1.2s; opacity: .55; }
