@@ -42,8 +42,9 @@ test('골목 탈출: 시작 → 팀 → 대전 → 유물 → 지면 기록', ()
 
 test('월드 보스: 준 피해만큼 전체 체력이 줄고 하루 3번', () => {
   const u = mk(); const sp = M.battle(u, 'wb', null, team());
+  const b0 = E.createBattle([{ name: 'a', team: sp.team }, { name: 'b', team: sp.foe.team }], 7, { preview: true, raid: sp.raid });
+  assert.ok(b0.sides[1].mons[0].maxHp > 5000, '보스 체력이 큼'); // 싸우는 중엔 거다이맥스가 풀리며 바뀔 수 있어 시작할 때 확인
   const b = play(sp), boss = b.sides[1].mons[0];
-  assert.ok(boss.maxHp > 5000, '보스 체력이 큼');
   const before = M.wbState().hp, dmg = boss.maxHp - Math.max(0, boss.hp);
   M.result(u, 'k', sp.mode, { won: false, mons: [], size: 3, bossDmg: dmg });
   assert.equal(M.wbState().hp, before - Math.min(before, dmg));

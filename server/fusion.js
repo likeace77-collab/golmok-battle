@@ -8,9 +8,9 @@
 const Data = require('./data');
 
 const FUSE_GP = 3000;
-const NO_PARENT = new Set(['deungsin', 'dummy']); // 갈증 게이지처럼 자기 몸에 묶인 특성이 있는 골목몬
+const NO_PARENT = new Set(['dummy']); // 훈련장 허수아비만 빼고 모두 합체 가능 (등신도 OK: 기술은 물려받고 갈증·돌연사 특성은 안 물려받음)
 // 합체몬이 그대로 물려받으면 안 되는 기술 (그 골목몬 몸에만 있는 장치에 기대는 기술)
-const BOUND_KEYS = ['forge', 'tierPow', 'elem', 'glass', 'kamikaze', 'vinyl', 'hydrate', 'ignite', 'overcome', 'dive', 'ouga', 'trial', 'heatEq', 'loop', 'techUp', 'record', 'rage'];
+const BOUND_KEYS = ['forge', 'tierPow', 'elem', 'hydrate', 'dive', 'ouga', 'trial', 'heatEq', 'loop', 'techUp', 'record', 'rage'];
 const SIMPLE = new Set(['n', 'type', 'cat', 'pow', 'acc', 'pp', 'pri', 'st', 'd', 'recoil', 'fl', 'crit', 'drain', 'self', 'foe', 'hits', 'selfAfter', 'sound', 'breakGuard', 'sig']);
 const MIX_FROM_B = ['st', 'drain', 'foe', 'fl', 'crit', 'sound'];
 
@@ -27,7 +27,38 @@ function register(f) {
   for (const [id, mv] of Object.entries(f.mv || {})) hidden(Data.MOVES, id, mv);
   hidden(Data.MONSTERS, f.id, f.sp);
 }
-function init(_db) { db = _db; db.fusions ||= {}; for (const f of Object.values(db.fusions)) register(f); }
+function init(_db) { db = _db; db.fusions ||= {}; for (const f of Object.values(db.fusions)) register(f); oneTimeFixes(); }
+// 한 번만 하는 손질: suho님의 「콩시락이」에서 정전기를 빼고 합체기 하나 추가 (2026-11-15 요청)
+function oneTimeFixes() {
+  for (const f of Object.values(db.fusions)) {
+    if (f.fixes?.includes('suho-static') || f.sp.n !== '콩시락이' || String(f.sp.by || '').toLowerCase() !== 'suho') continue;
+    const [pa, pb] = (f.sp.parents || []).map((x) => Data.MONSTERS[x]);
+    if (!pa || !pb) continue;
+    const dmg = (x) => Data.MOVES[x] && Data.MOVES[x].cat !== 'x' && Data.MOVES[x].pow > 0 && !Data.MOVES[x].z;
+    const used = new Set(Object.values(f.mv || {}).map((m) => m.n));
+    let made = null;
+    for (let t = 0; t < 30 && !made; t++) {
+      const flip = t % 2 === 1, A = flip ? pb : pa, B = flip ? pa : pb;
+      const base = A.moves.filter(comboBase), mixes = B.moves.filter(dmg);
+      if (!base.length || !mixes.length) continue;
+      const c = comboMove('', pick(base), pick(mixes));
+      if (!used.has(c.n)) made = c;
+    }
+    if (!made) continue;
+    let i = 0; while (f.mv?.[`${f.id}_c${i}`]) i++;
+    const mid = `${f.id}_c${i}`;
+    f.mv ||= {}; f.mv[mid] = made;
+    f.sp.moves = [mid, ...f.sp.moves.filter((x) => x !== 'static' && x !== mid)];
+    for (const u of Object.values(db.users || {})) for (const m of u.mons || []) {
+      if (m.species !== f.id) continue;
+      m.moves = m.moves.map((x) => (x === 'static' ? mid : x));
+      if (!m.moves.includes(mid) && m.moves.length < 4) m.moves.push(mid);
+    }
+    (f.fixes ||= []).push('suho-static');
+    register(f);
+    console.log(`합체몬 손질: ${f.sp.n} (${f.id}) 정전기 → ${made.n}`);
+  }
+}
 const all = () => Object.values(db?.fusions || {}).map((f) => ({ id: f.id, sp: f.sp, mv: f.mv }));
 const pubOf = (id) => { const f = db.fusions[id]; return f && { id: f.id, sp: f.sp, mv: f.mv }; };
 
@@ -75,12 +106,15 @@ function makeFusion(u, A, B, sa, sb) {
   const inherit = [...sigs, ...pool.filter((x) => !sigs.includes(x))].slice(0, 8); // 물려받는 기술은 딱 8개
   // 합체기는 딱 2개: 한쪽 몸에 다른 쪽 효과 한 번, 반대로 한 번 (한쪽에 쓸 기술이 없으면 다른 쪽 기술끼리)
   const dmg = (x) => Data.MOVES[x] && Data.MOVES[x].cat !== 'x' && Data.MOVES[x].pow > 0 && !Data.MOVES[x].z;
-  let ca = sa.moves.filter(comboBase), cb = sb.moves.filter(comboBase);
-  if (!ca.length) ca = cb.length ? cb : sa.moves.filter(dmg); if (!cb.length) cb = ca.length ? ca : sb.moves.filter(dmg);
-  if (!ca.length) ca = cb; if (!cb.length) cb = ca;
+  // 몸(A)은 효과가 단순한 공격 기술, 섞을 기술(B)은 반대쪽 골목몬의 아무 공격 기술. 한쪽에 몸으로 쓸 기술이 없으면 다른 쪽 걸로
+  const ba = sa.moves.filter(comboBase), bb = sb.moves.filter(comboBase), xa = sa.moves.filter(dmg), xb = sb.moves.filter(dmg);
+  const body = (own, other) => (own.length ? own : other.length ? other : [...xa, ...xb]);
+  const mix = (own, avoid) => { const c = own.filter((x) => x !== avoid); return c.length ? c : [...xa, ...xb].filter((x) => x !== avoid); };
   const mv = {};
-  const nCombo = ca.length && cb.length ? 2 : 0;
-  for (let i = 0; i < nCombo; i++) { const flip = i % 2 === 1; const mid = `${id}_c${i}`; mv[mid] = comboMove(mid, flip ? pick(cb) : pick(ca), flip ? pick(ca) : pick(cb)); }
+  for (let i = 0; i < 2; i++) {
+    const A1 = pick(body(i ? bb : ba, i ? ba : bb)), B1 = pick(mix(i ? xa : xb, A1));
+    if (A1 && B1) mv[`${id}_c${i}`] = comboMove(`${id}_c${i}`, A1, B1);
+  }
   const combos = Object.keys(mv);
   const moves = [...combos, ...inherit];
   const front = Math.random() < 0.5 ? 0 : 1, [P, Q] = front ? [sb, sa] : [sa, sb];

@@ -44,11 +44,19 @@ test('합체 제한: 합체몬은 다시 못 하고, 같은 골목몬·등신·G
   assert.match(F.fuse(u, r.mon.uid, 'c').error, /더 합체/);
   u.mons.push({ uid: 'e', species: 'yeontan', moves: ['ember'] });
   assert.match(F.fuse(u, 'c', 'e').error, /서로 다른/);
-  assert.ok(F.fuse(u, 'c', 'd').error, '등신은 합체 불가');
   assert.ok(F.fuse(u, 'c', 'c').error);
   u.mons.push({ uid: 'f', species: 'horong', moves: ['ember'] }); u.gp = 10;
   assert.match(F.fuse(u, 'c', 'f').error, /GP/);
   u.gp = 1e5; assert.ok(F.fuse(u, 'c', 'f', new Set(['f'])).error, '원정 중');
+});
+
+test('등신도 합체: 등신 기술은 반동까지 그대로, 갈증은 없음', () => {
+  const u = mk(); const r = F.fuse(u, 'c', 'd'); assert.ok(r.ok, r.error);
+  const sp = Data.MONSTERS[r.mon.species];
+  const b = E.createBattle([{ name: 'x', team: [{ species: r.mon.species, moves: ['glasscannon', ...sp.moves.slice(0, 3)].slice(0, 4) }] }, { name: 'y', team: [{ species: 'yeontan', moves: ['ember'] }] }], 5);
+  const me = b.sides[0].mons[0]; assert.equal(me.thirst, undefined); assert.ok(me.dsMoves);
+  for (let i = 0; i < 80 && b.phase !== 'over'; i++) for (const s of [0, 1]) if (b.needs[s]) E.choose(b, s, E.botAction(b, s, 2));
+  assert.equal(b.phase, 'over');
 });
 
 test('합체몬은 재시작해도 다시 등록돼요', () => {

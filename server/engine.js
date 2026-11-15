@@ -49,6 +49,7 @@ function makeMon(spec) {
     status: spec.status || null, statusTurns: 0, item: ITEMS[spec.item] ? spec.item : null, itemUsed: false,
     moves: spec.moves.map((id) => ({ id, pp: MOVES[id].pp })),
     ...(spec.species === DS ? { thirst: 100, blaze: 0 } : {}),
+    ...(spec.species !== DS && spec.moves.some((id) => MOVES[id]?.glass || MOVES[id]?.ironTail || MOVES[id]?.ignite) ? { dsMoves: true, blaze: 0 } : {}), // 등신 기술을 물려받은 합체몬
     ...freshVolatile(),
   };
 }
@@ -805,19 +806,22 @@ function clearField(b, ev, all) {
 
 function useMove(b, s, index, ev, want, z = false) {
   const me = activeOf(b, s);
-  if (me.species !== DS) return useMoveCore(b, s, index, ev, want, z);
+  const ds = me.species === DS;
+  // 등신 기술을 물려받은 합체몬도 유리대포·아이언테일 반동과 불타올라라 지속시간은 똑같이 (갈증·돌연사 특성은 등신만)
+  if (!ds && !me.dsMoves) return useMoveCore(b, s, index, ev, want, z);
   const before = ev.length;
   useMoveCore(b, s, index, ev, want, z);
   const e = ev.slice(before).find((x) => x.t === 'move' && x.side === s);
   if (!e) return; // 움직이지 못함
   const mv = MOVES[e.id] || STRUGGLE;
+  const last = ds ? me.lastMove : me.dsLast;
   if (alive(me)) {
-    if (mv.glass && me.lastMove === 'glasscannon' && chance(b, dp(me, 25))) suddenDeath(b, s, me, ev, `유리대포를 연달아 쏜 반동으로 ${josa(me.name, '이/가')} 산산조각 났다!`);
+    if (mv.glass && last === 'glasscannon' && chance(b, dp(me, 25))) suddenDeath(b, s, me, ev, `유리대포를 연달아 쏜 반동으로 ${josa(me.name, '이/가')} 산산조각 났다!`);
     if (mv.ironTail && chance(b, dp(me, 33))) suddenDeath(b, s, me, ev, `강철 꼬리가 너무 무거워서 ${josa(me.name, '은/는')} 그대로 가라앉았다...`);
-    if (mv.cat !== 'x') rollDeath(b, s, me, ev); // 공격할 때 돌연사
-    if (!mv.hydrate) thirst(b, s, me, 15, ev); // 기술 쓰면 갈증 15%
+    if (ds && mv.cat !== 'x') rollDeath(b, s, me, ev); // 공격할 때 돌연사
+    if (ds && !mv.hydrate) thirst(b, s, me, 15, ev); // 기술 쓰면 갈증 15%
   }
-  me.lastMove = e.id;
+  if (ds) me.lastMove = e.id; else me.dsLast = e.id;
   if (me.blaze > 0 && !mv.ignite) {
     me.blaze--;
     if (me.blaze === 0 && alive(me)) ev.push({ t: 'blaze', side: s, on: false, mon: publicMon(me), text: `${me.name}의 불길이 사그라들었다.` });

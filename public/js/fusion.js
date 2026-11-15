@@ -1,6 +1,6 @@
 'use strict';
 /* 🧬 합체: 골목몬 두 마리를 합쳐 세상에 하나뿐인 새 골목몬 탄생 · 합체 트리 */
-const FZ_GP = 3000, FZ_NO = new Set(['deungsin', 'dummy']);
+const FZ_GP = 3000, FZ_NO = new Set(['dummy']);
 let FZ_N = 0;
 
 /* ---------- 합체몬 그림: 두 골목몬 그림을 이음새로 꿰매 붙여요 ---------- */
