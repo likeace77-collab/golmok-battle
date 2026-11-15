@@ -238,7 +238,7 @@ function legalActions(b, s) {
 }
 
 // 메가진화는 한 판에 한 번. 행동을 쓰지 않고 그 턴의 기술을 바로 이어서 씁니다.
-const hasStone = (b, s) => !b.sides[s].stones || b.sides[s].stones.includes(activeOf(b, s).species); // 메가스톤이 있어야 메가진화 (봇·훈련장은 제한 없음)
+const hasStone = (b, s) => !b.sides[s].stones || b.sides[s].stones.includes(activeOf(b, s).species) || !!MONSTERS[activeOf(b, s).species]?.fz; // 합체몬은 스톤 없이 // 메가스톤이 있어야 메가진화 (봇·훈련장은 제한 없음)
 const canMega = (b, s) => b.phase === 'choose' && !!MONSTERS[activeOf(b, s).species].mega && !b.sides[s].megaUsed && !activeOf(b, s).mega && !activeOf(b, s).gmax && alive(activeOf(b, s)) && hasStone(b, s);
 
 function doMega(b, s, ev) {

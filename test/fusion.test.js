@@ -96,3 +96,15 @@ test('합체몬 특성: 모두 서로 다르고, 실제로 발동해요', () => 
   { sp.ft = [{ k: 'immune', s: 'brn' }]; const b = E.createBattle([{ name: 'x', team: [{ species: fid, moves: ['guard'] }] }, { name: 'y', team: [{ species: 'yeontan', moves: ['ember'] }] }], 1); const m = b.sides[0].mons[0]; assert.ok(m); }
   sp.ft = saved;
 });
+
+test('합체몬 메가진화: 스톤 없이 가능, 보너스 합계 +100', () => {
+  const f = Object.values(db.fusions)[0], sp = Data.MONSTERS[f.id];
+  assert.ok(sp.mega?.n); assert.equal(Object.values(sp.mega.boost).reduce((a, b) => a + b, 0), 100);
+  const b = E.createBattle([{ name: 'x', team: [{ species: f.id, moves: ['tackle'] }], stones: [] }, { name: 'y', team: [{ species: 'yeontan', moves: ['ember'] }] }], 2);
+  b.sides[0].stones = [];
+  assert.ok(E.canMega(b, 0));
+  const spa = b.sides[0].mons[0].stats.atk;
+  E.choose(b, 0, { type: 'move', index: 0, mega: true }); E.choose(b, 1, { type: 'move', index: 0 });
+  assert.ok(b.sides[0].mons[0].mega); assert.equal(b.sides[0].mons[0].name, sp.mega.n);
+  assert.ok(b.sides[0].mons[0].stats.atk >= spa);
+});

@@ -752,7 +752,7 @@ function editMon(team, i, done) {
         </div>
       </div>
       ${sp.trait ? `<p class="trait"><b>특성 ${sp.trait.n}</b> ${sp.trait.d}</p>` : ''}
-      ${sp.mega ? `<p class="mega-line">${stoneSVG(slot.species, 34, { lock: !stone })}<span>${stone ? `메가스톤 있음: <b>${sp.mega.n}</b>(으)로 메가진화 가능` : '메가스톤이 없어 메가진화를 못 해요'}</span></p>` : '<p class="mega-line">🧬 합체몬은 메가진화를 못 해요.</p>'}
+      ${sp.fz ? `<p class="mega-line">🧬 합체몬: 메가스톤 없이 <b>${esc(sp.mega?.n || '')}</b>(으)로 메가진화 가능</p>` : sp.mega ? `<p class="mega-line">${stoneSVG(slot.species, 34, { lock: !stone })}<span>${stone ? `메가스톤 있음: <b>${sp.mega.n}</b>(으)로 메가진화 가능` : '메가스톤이 없어 메가진화를 못 해요'}</span></p>` : '<p class="mega-line">🧬 합체몬은 메가진화를 못 해요.</p>'}
       <h3 style="font-family:var(--ui);font-weight:400;margin-bottom:6px">도구 <small class="muted">전부 무료 · ${slot.item && G.data.ITEMS[slot.item] ? `${G.data.ITEMS[slot.item].i} ${G.data.ITEMS[slot.item].n}` : '없음'}</small></h3>
       <div class="items">${Object.entries(G.data.ITEMS || {}).map(([id, it]) => `<button class="itm" data-item="${id}" aria-pressed="${slot.item === id}" title="${esc(it.d)}"><span class="ii">${it.i}</span><b>${it.n}</b></button>`).join('')}</div>
       <p class="item-desc muted">${slot.item && G.data.ITEMS[slot.item] ? `${G.data.ITEMS[slot.item].n}: ${G.data.ITEMS[slot.item].d}` : '도구를 누르면 들려 주고, 다시 누르면 뺍니다.'}</p>

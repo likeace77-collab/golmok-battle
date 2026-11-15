@@ -15,6 +15,7 @@ const SIMPLE = new Set(['n', 'type', 'cat', 'pow', 'acc', 'pp', 'pri', 'st', 'd'
 const MIX_FROM_B = ['st', 'drain', 'foe', 'fl', 'crit', 'sound'];
 
 let db = null;
+const jo = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1) - 0xac00; return `${w}${c >= 0 && c <= 11171 && c % 28 ? a : b}`; }; // 받침 따라 조사
 const rnd = (n) => Math.floor(Math.random() * n);
 const pick = (a) => a[rnd(a.length)];
 const shuffle = (a) => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = rnd(i + 1); [b[i], b[j]] = [b[j], b[i]]; } return b; };
@@ -57,7 +58,23 @@ function fillSuho() {
   }
 }
 function giveTraits() {
-  for (const f of Object.values(db.fusions).sort((a, b) => (a.sp.at || 0) - (b.sp.at || 0))) if (!f.sp.ft) { Object.assign(f.sp, pickTrait(f.sp, f.id)); register(f); }
+  for (const f of Object.values(db.fusions).sort((a, b) => (a.sp.at || 0) - (b.sp.at || 0))) {
+    if (!f.sp.ft) Object.assign(f.sp, pickTrait(f.sp, f.id));
+    if (!f.sp.mega) f.sp.mega = megaOf(f.sp);
+    register(f);
+  }
+}
+// 합체몬 메가진화: 두 부모의 메가진화 보너스를 반씩 섞음 (합계 +100). 메가스톤 없이도 할 수 있음
+const MEGA_W = ['폭주', '각성', '극한', '초월', '진(眞)', '울트라'];
+function megaOf(sp) {
+  const [pa, pb] = (sp.parents || []).map((x) => Data.MONSTERS[x]);
+  const keys = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
+  const raw = Object.fromEntries(keys.map((k) => [k, ((pa?.mega?.boost?.[k] || 0) + (pb?.mega?.boost?.[k] || 0)) / 2 + Math.random() * 6]));
+  const tot = keys.reduce((n, k) => n + raw[k], 0) || 1;
+  const boost = Object.fromEntries(keys.map((k) => [k, Math.round(raw[k] / tot * 100)]));
+  const fix = 100 - keys.reduce((n, k) => n + boost[k], 0); const top = keys.reduce((a, k) => (boost[k] > boost[a] ? k : a), 'atk'); boost[top] += fix;
+  const w = MEGA_W[Math.abs([...sp.n].reduce((h, c) => h * 31 + c.charCodeAt(0), 7)) % MEGA_W.length];
+  return { n: `${w} ${sp.n}`, d: `${jo(pa?.mega?.n || pa?.n || '?', '과', '와')} ${pb?.mega?.n || pb?.n || '?'}의 힘이 한 몸에서 깨어났다. 합체몬은 메가스톤 없이도 메가진화할 수 있다.`, boost, fz: true };
 }
 // 한 번만 하는 손질: suho님의 「콩시락이」에서 정전기를 빼고 합체기 하나 추가 (2026-11-15 요청)
 function oneTimeFixes() {
@@ -205,12 +222,12 @@ function makeFusion(u, A, B, sa, sb) {
   const front = Math.random() < 0.5 ? 0 : 1, [P, Q] = front ? [sb, sa] : [sa, sb];
   const sp = {
     n: mixName(P.n, Q.n), types, base, moves, fz: true, parents: front ? [B.species, A.species] : [A.species, B.species],
-    flavor: `${P.n}와(과) ${Q.n}이(가) 합체해 태어난 골목몬. ${pick(LINES)}`,
+    flavor: `${jo(P.n, '과', '와')} ${jo(Q.n, '이', '가')} 합체해 태어난 골목몬. ${pick(LINES)}`,
     ...(combos[0] ? { sig: combos[0] } : {}), ...(P.z ? { z: P.z } : Q.z ? { z: Q.z } : {}),
     look: { split: pick(['v', 'h', 'd']), hue: rnd(360), tint: Math.random() < 0.55, mark: rnd(4), eyes: rnd(3) },
     by: u.name, no: n, at: Date.now(),
   };
-  Object.assign(sp, pickTrait(sp, id));
+  Object.assign(sp, pickTrait(sp, id)); sp.mega = megaOf(sp);
   return { id, sp, mv };
 }
 
