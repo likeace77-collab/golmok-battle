@@ -1953,3 +1953,16 @@ svg.sk-neon { filter: drop-shadow(0 0 4px #2EF2FF) drop-shadow(0 0 10px #FF3DCB8
 .cs-bigwin small { display: block; font-weight: 900; color: #d62839; font-size: 18px; } .cs-bigwin b { display: block; font-size: 48px; line-height: 1; } .cs-bigwin span { font-weight: 800; }
 @keyframes cs-bw { 0% { transform: translate(-50%, -50%) scale(.2); } 12% { transform: translate(-50%, -50%) scale(1.15); } 20%, 85% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { opacity: 0; } }
 .db-coin.tl { transform: rotateY(180deg); } .db-coin.tl.flip { animation-name: db-flip; }
+
+/* ---------- 아이콘 공모전 ---------- */
+.icc-hero { background: linear-gradient(135deg, #2a6cff, #6a2aff 55%, #ff4d8a); }
+.icc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 10px; }
+.icc-e { position: relative; padding: 12px; border: var(--line); border-radius: 14px; background: #FFF3D4; box-shadow: 3px 3px 0 var(--ink); }
+.icc-e.win { background: #FFE89A; }
+.icc-e h3 { margin: 8px 0 0; font-size: 17px; }
+.icc-d { font-size: 13px; margin: 6px 0; white-space: pre-wrap; }
+.icc-phone { display: flex; align-items: flex-end; gap: 10px; padding: 10px; border-radius: 12px; background: linear-gradient(160deg, #2b3a67, #121a33); }
+.icc-big { width: 62%; aspect-ratio: 1; object-fit: cover; border-radius: 22%; box-shadow: 0 4px 12px #0008; }
+.icc-home { display: grid; justify-items: center; gap: 3px; color: #fff; font-size: 11px; }
+.icc-home img, .icc-home canvas { width: 52px; height: 52px; border-radius: 12px; box-shadow: 0 2px 6px #0008; background: #fff; }
+.icc-prev { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 10px; border-radius: 12px; background: linear-gradient(160deg, #2b3a67, #121a33); color: #fff; font-size: 12px; }

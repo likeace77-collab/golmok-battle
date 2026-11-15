@@ -644,6 +644,7 @@ async function api(req, res, url) {
   }
   if (route.endsWith(' /api/contest') || route.startsWith('POST /api/contest/')) return contestApi(req, res, route, auth, user);
   if (route.includes(' /api/skincontest')) return skinContestApi(req, res, route, auth, user, new URL(req.url, 'http://x'));
+  if (route.includes(' /api/iconcontest')) return iconContestApi(req, res, route, auth, user, new URL(req.url, 'http://x'));
   return progressApi(req, res, route, auth, user);
 }
 
@@ -846,6 +847,45 @@ async function skinContestApi(req, res, route, auth, user, url) {
   if (route === 'POST /api/skincontest/like') { e.likes ||= []; const i = e.likes.indexOf(auth.key); if (i >= 0) e.likes.splice(i, 1); else if (e.key !== auth.key) e.likes.push(auth.key); else return json(res, 400, { error: '내 작품에는 좋아요를 못 눌러요.' }); saveContest(); return json(res, 200, view()); }
   if (route === 'POST /api/skincontest/delete') { if (!dev && !(e.key === auth.key && !closed)) return json(res, 403, { error: '지울 수 없는 출품작이에요.' }); contest.skins = list.filter((x) => x !== e); saveContest(); return json(res, 200, view()); }
   if (route === 'POST /api/skincontest/winner') { if (!dev) return json(res, 403, { error: '개발자만 뽑을 수 있어요.' }); e.winner = !e.winner; saveContest(); return json(res, 200, view()); }
+  return json(res, 404, { error: '없는 경로입니다.' });
+}
+/* ---------- 아이콘 공모전: 골목대전 앱 아이콘을 그려서 내기 ---------- */
+const ICON_CONTEST = { title: '아이콘 공모전', start: Date.parse('2026-11-15T00:00:00+09:00'), ends: Date.parse('2026-11-29T23:59:59+09:00'), prize: 30000 };
+const ICON_PER_USER = 3;
+async function iconContestApi(req, res, route, auth, user, url) {
+  const dev = isDev(user), closed = Date.now() > ICON_CONTEST.ends;
+  const list = (contest.icons ||= []);
+  const view = () => ({ info: { ...ICON_CONTEST, closed, count: list.length, perUser: ICON_PER_USER }, dev,
+    list: [...list].sort((a, b) => (b.winner ? 1 : 0) - (a.winner ? 1 : 0) || (b.likes || []).length - (a.likes || []).length || b.at - a.at)
+      .map((e) => ({ id: e.id, user: e.user, mine: e.key === auth.key, name: e.name, desc: e.desc, at: e.at, editedAt: e.editedAt, winner: !!e.winner, likes: (e.likes || []).length, liked: (e.likes || []).includes(auth.key) })) });
+  if (route === 'GET /api/iconcontest') return json(res, 200, view());
+  if (route === 'GET /api/iconcontest/img') {
+    const e = list.find((x) => x.id === url.searchParams.get('id')), m = e && /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/.exec(e.image);
+    if (!m) return json(res, 404, { error: '그림이 없어요.' });
+    res.writeHead(200, { 'Content-Type': m[1], 'Cache-Control': 'private, max-age=600' }); return res.end(Buffer.from(m[2], 'base64'));
+  }
+  const body = await readBody(req);
+  const cut = (v, n) => String(v ?? '').trim().slice(0, n);
+  if (route === 'POST /api/iconcontest') {
+    if (closed) return json(res, 403, { error: '아이콘 공모전 접수가 끝났어요.' });
+    const old = body.id ? list.find((x) => x.id === String(body.id)) : null;
+    if (body.id && !(old && old.key === auth.key)) return json(res, 403, { error: '내 출품작만 고칠 수 있어요.' });
+    if (!old && list.filter((x) => x.key === auth.key).length >= ICON_PER_USER) return json(res, 400, { error: `한 사람당 ${ICON_PER_USER}개까지 낼 수 있어요.` });
+    if (!old && list.length >= 300) return json(res, 400, { error: '출품작이 너무 많아 더 받을 수 없어요.' });
+    const name = cut(body.name, 16), desc = cut(body.desc, 300), image = imageIn(body.image);
+    if (!name) return json(res, 400, { error: '작품 이름을 넣어 주세요.' });
+    if (!image && !old?.image) return json(res, 400, { error: '아이콘을 그려 주세요.' });
+    if (badImage(image)) return json(res, 400, { error: '그림이 너무 크거나 형식이 맞지 않아요.' });
+    const f = { name, desc, ...(image ? { image } : {}) };
+    if (old) Object.assign(old, f, { editedAt: Date.now() });
+    else list.push({ id: crypto.randomBytes(6).toString('hex'), key: auth.key, user: user.name, at: Date.now(), likes: [], ...f });
+    saveContest(); return json(res, 200, view());
+  }
+  const e = list.find((x) => x.id === String(body.id ?? ''));
+  if (!e) return json(res, 404, { error: '없는 출품작이에요.' });
+  if (route === 'POST /api/iconcontest/like') { e.likes ||= []; const i = e.likes.indexOf(auth.key); if (i >= 0) e.likes.splice(i, 1); else if (e.key !== auth.key) e.likes.push(auth.key); else return json(res, 400, { error: '내 작품에는 좋아요를 못 눌러요.' }); saveContest(); return json(res, 200, view()); }
+  if (route === 'POST /api/iconcontest/delete') { if (!dev && !(e.key === auth.key && !closed)) return json(res, 403, { error: '지울 수 없는 출품작이에요.' }); contest.icons = list.filter((x) => x !== e); saveContest(); return json(res, 200, view()); }
+  if (route === 'POST /api/iconcontest/winner') { if (!dev) return json(res, 403, { error: '개발자만 뽑을 수 있어요.' }); e.winner = !e.winner; saveContest(); return json(res, 200, view()); }
   return json(res, 404, { error: '없는 경로입니다.' });
 }
 async function contestApi(req, res, route, auth, user) {

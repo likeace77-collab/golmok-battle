@@ -557,3 +557,72 @@ function bindPushSettings(root = app) {
   root.querySelector('#push-off')?.addEventListener('click', () => pushDisable());
   root.querySelector('#push-test')?.addEventListener('click', () => api('POST', '/api/push/test').then(() => toast('시험 알림을 보냈어요.')).catch((e) => toast(e.message)));
 }
+
+/* ---------- 아이콘 공모전 ---------- */
+async function showIconContest(back = showEvents) {
+  G.screen = 'iconcontest'; app.className = '';
+  app.innerHTML = `${topbar('📱 아이콘 공모전')}<p class="wait">불러오는 중…</p>`; app.querySelector('#back').onclick = back;
+  let v; try { v = await api('GET', '/api/iconcontest'); } catch (e) { return toast(e.message); }
+  let tab = 'all';
+  const img = (e) => `/api/iconcontest/img?id=${e.id}&t=${e.editedAt || e.at}`;
+  const draw = () => {
+    const i = v.info, mine = v.list.filter((e) => e.mine), list = tab === 'mine' ? mine : v.list;
+    app.innerHTML = `${topbar('📱 아이콘 공모전')}
+      <section class="skc-hero icc-hero"><s aria-hidden="true"></s><small>EVENT · ${dateStr(i.start)} ~ ${dateStr(i.ends)}</small><h2>골목대전 아이콘 공모전</h2>
+        <p>휴대폰 홈 화면에 들어갈 <b>골목대전 앱 아이콘</b>을 그려 주세요! 우승작은 <b>진짜 앱 아이콘</b>이 되고, 만든 사람에게 <b>${fmt(i.prize)}GP</b>를 드려요.</p>
+        <p class="muted" style="color:#fffc">한 사람당 ${i.perUser}개 · 지금까지 ${i.count}개 · 마음에 드는 작품에 ❤️를 눌러 주세요</p>
+        ${i.closed ? '<b class="skc-closed">접수 마감</b>' : mine.length < i.perUser ? '<button class="btn wide" id="icc-new">✏️ 아이콘 내기</button>' : '<p>최대 개수까지 냈어요. 고치거나 지우고 다시 낼 수 있어요.</p>'}</section>
+      <div class="tabs styletabs">${[['all', `전체 ${v.list.length}`], ['mine', `내 작품 ${mine.length}`]].map(([k, n]) => `<button data-tab="${k}" aria-selected="${tab === k}">${n}</button>`).join('')}</div>
+      <div class="icc-grid">${list.map((e) => `<article class="icc-e ${e.winner ? 'win' : ''}">${e.winner ? '<em class="ct-win">🏆 우승</em>' : ''}
+        <div class="icc-phone"><img class="icc-big" src="${img(e)}" alt="${esc(e.name)}" loading="lazy"><div class="icc-home"><img src="${img(e)}" alt="" loading="lazy"><small>골목대전</small></div></div>
+        <h3>${esc(e.name)}</h3><small class="muted">${esc(e.user)} · ${dateStr(e.at)}${e.editedAt ? ' (수정)' : ''}</small>
+        ${e.desc ? `<p class="icc-d">${esc(e.desc)}</p>` : ''}
+        <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn small ${e.liked ? '' : 'paper'}" data-like="${e.id}" ${e.mine ? 'disabled' : ''}>❤️ ${e.likes}</button>
+          ${e.mine && !i.closed ? `<button class="btn small paper" data-edit="${e.id}">고치기</button>` : ''}${(e.mine && !i.closed) || v.dev ? `<button class="btn small paper" data-del="${e.id}">지우기</button>` : ''}
+          ${v.dev ? `<button class="btn small ${e.winner ? 'paper' : ''}" data-win="${e.id}">${e.winner ? '우승 취소' : '🏆 우승'}</button>` : ''}</div></article>`).join('')}</div>
+      ${list.length ? '' : '<section class="panel"><p class="muted">아직 작품이 없어요. 첫 번째 아이콘을 내 보세요!</p></section>'}`;
+    app.querySelector('#back').onclick = back;
+    app.querySelectorAll('[data-tab]').forEach((b) => { b.onclick = () => { tab = b.dataset.tab; draw(); }; });
+    app.querySelector('#icc-new')?.addEventListener('click', () => iconContestForm(null, (nv) => { v = nv; tab = 'mine'; draw(); }, () => showIconContest(back)));
+    const post = async (path, body, msg) => { try { v = await api('POST', path, body); if (msg) toast(msg); draw(); } catch (e) { toast(e.message); } };
+    app.querySelectorAll('[data-like]').forEach((b) => { b.onclick = () => post('/api/iconcontest/like', { id: b.dataset.like }); });
+    app.querySelectorAll('[data-del]').forEach((b) => { b.onclick = () => { if (confirm('이 작품을 지울까요?')) post('/api/iconcontest/delete', { id: b.dataset.del }, '지웠어요.'); }; });
+    app.querySelectorAll('[data-win]').forEach((b) => { b.onclick = () => post('/api/iconcontest/winner', { id: b.dataset.win }); });
+    app.querySelectorAll('[data-edit]').forEach((b) => { b.onclick = () => iconContestForm(v.list.find((e) => e.id === b.dataset.edit), (nv) => { v = nv; draw(); }, () => showIconContest(back)); });
+  };
+  draw();
+}
+function iconContestForm(old, done, back) {
+  G.screen = 'iconcontest-form';
+  const COLS = ['#1a1433', '#ffffff', '#E8402C', '#FF8A00', '#FFD23F', '#4CD964', '#2F7DE1', '#7FB8A4', '#9A4FB8', '#F27FA5', '#A9713A', '#7C8798'];
+  app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>${old ? '아이콘 고치기' : '아이콘 내기'}</h1></div>
+    <form id="icc-f">
+      <section class="panel"><h2>1. 아이콘 그리기</h2><p class="muted" style="font-size:13px">네모 칸 전체가 아이콘이 돼요. 휴대폰에서는 모서리가 둥글게 잘리니 중요한 건 가운데에 그려 주세요. 사진을 넣고 그 위에 그려도 돼요.${old ? ' 비워 두면 예전 그림 그대로예요.' : ''}</p>
+        <div class="pad" id="icc-pad"><canvas aria-label="그림판"></canvas>
+        <div class="pad-tools">${COLS.map((c, i) => `<button type="button" class="pc ${i ? '' : 'on'}" data-col="${c}" style="--c:${c}" aria-label="색"></button>`).join('')}</div>
+        <div class="pad-tools">${[3, 6, 12, 22].map((n) => `<button type="button" class="ps ${n === 6 ? 'on' : ''}" data-size="${n}" aria-label="굵기 ${n}"><i style="width:${n / 1.4 + 2}px;height:${n / 1.4 + 2}px"></i></button>`).join('')}
+          <button type="button" class="pt" data-tool="erase">지우개</button><button type="button" class="pt" data-tool="undo">되돌리기</button><button type="button" class="pt" data-tool="clear">전부 지우기</button>
+          <button type="button" class="pt pfile" data-tool="photo">📷 사진 넣기</button><input type="file" accept="image/*" class="vh"></div></div>
+        <div class="icc-prev"><span>홈 화면 미리보기</span><div class="icc-home"><canvas id="icc-mini" width="96" height="96"></canvas><small>골목대전</small></div></div></section>
+      <section class="panel"><h2>2. 작품 이름과 설명</h2>
+        <input name="name" maxlength="16" placeholder="작품 이름 (예: 네온 골목)" value="${esc(old?.name || '')}" required>
+        <label class="skc-l" style="margin-top:8px">설명 (선택)<textarea name="desc" maxlength="300" rows="3" placeholder="어떤 느낌으로 그렸는지 알려 주세요">${esc(old?.desc || '')}</textarea></label></section>
+      <button class="btn wide" id="icc-send">${old ? '고친 내용 저장' : '공모전에 내기'}</button></form>`;
+  app.querySelector('#back').onclick = back;
+  const pad = drawPad(app.querySelector('#icc-pad')), big = app.querySelector('#icc-pad canvas'), mini = app.querySelector('#icc-mini').getContext('2d');
+  const sync = () => mini.drawImage(big, 0, 0, 96, 96);
+  if (old) { const im = new Image(); im.onload = () => { mini.drawImage(im, 0, 0, 96, 96); }; im.src = `/api/iconcontest/img?id=${old.id}&t=${old.editedAt || old.at}`; }
+  ['pointerup', 'pointermove'].forEach((ev) => big.addEventListener(ev, () => { if (pad.used()) sync(); }));
+  app.querySelector('#icc-pad').addEventListener('click', () => setTimeout(() => { if (pad.used()) sync(); }, 60));
+  app.querySelector('#icc-pad input[type=file]').addEventListener('change', () => setTimeout(sync, 400));
+  app.querySelector('#icc-f').onsubmit = async (e) => {
+    e.preventDefault(); const f = e.target, btn = app.querySelector('#icc-send');
+    if (!old && !pad.used()) return toast('아이콘을 그려 주세요.');
+    btn.disabled = true; btn.textContent = '올리는 중…';
+    try {
+      const r = await api('POST', '/api/iconcontest', { id: old?.id, name: f.name.value, desc: f.desc.value, image: pad.used() ? pad.data() : '' });
+      toast(old ? '고쳤어요!' : '공모전에 냈어요! 🎉'); done(r);
+    } catch (err) { toast(err.message); btn.disabled = false; btn.textContent = old ? '고친 내용 저장' : '공모전에 내기'; }
+  };
+}
+if (typeof EVENTS !== 'undefined') EVENTS.unshift({ id: 'iconcontest', title: '📱 아이콘 공모전', period: '11월 15일 ~ 11월 29일', desc: '골목대전 앱 아이콘을 그려 주세요! 우승작은 진짜 앱 아이콘이 되고 30,000GP를 드려요.', ends: Date.parse('2026-11-29T23:59:59+09:00'), open: () => showIconContest() });
