@@ -10,7 +10,8 @@ const Battle = (() => {
   const avatarOf = (key) => (key === 'me' ? view.me : ALLY.includes(key) ? (view.allies?.[ALLY.indexOf(key)] || view.ally) : key === 'opp' ? view.opps[0] : view.opps[1])?.avatar;
   const trainer = (key) => trainers[key];
   let deadline = 0, tick = null, gen = 0;
-  const SPEED = Number(new URLSearchParams(location.search).get('speed') ?? 1); // ?speed=0 이면 연출 생략
+  const SPEED0 = Number(new URLSearchParams(location.search).get('speed') ?? 1); // ?speed=0 이면 연출 생략
+  let SPEED = SPEED0; // 리플레이 배속으로 바뀜
 
   const wait = (ms) => new Promise((res) => {
     const t = setTimeout(res, ms * SPEED);
@@ -912,5 +913,5 @@ const Battle = (() => {
     while (layer.children.length > 8) layer.firstChild.remove();
   }
 
-  return { enter, onTurn, onChosen, setNote, onNoBattle, exit, stop, onReact };
+  return { enter, onTurn, onChosen, setNote, onNoBattle, exit, stop, onReact, setSpeed: (x) => { SPEED = SPEED0 / x; }, whenIdle: () => queue };
 })();

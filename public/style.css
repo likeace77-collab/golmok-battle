@@ -2233,3 +2233,11 @@ svg.sk-rainbow { animation: skRain 3s linear infinite; } @keyframes skRain { fro
 .bx-pic { font-size: 46px; } .bx-pic.shake { animation: bxShake .12s linear infinite; } @keyframes bxShake { 25% { rotate: -12deg; scale: 1.1; } 75% { rotate: 12deg; scale: 1.1; } }
 .bx-it .btn { width: 100%; } .bx-odds { margin-top: 10px; font-size: 12.5px; } .bx-odds p { margin: 4px 0; }
 .bx-skin { text-align: center; } .bx-skin .cos-prev { width: 160px; height: 160px; margin: 8px auto; box-shadow: 0 0 24px var(--gc); }
+/* 📼 리플레이 타임라인 */
+.rp-bar { position: fixed; left: 50%; bottom: 10px; translate: -50% 0; z-index: 85; width: min(560px, calc(100% - 16px)); padding: 6px 8px; border: 3px solid var(--ink); border-radius: 14px; background: #1a1433ee; color: #fff; box-shadow: 3px 3px 0 #000; display: grid; gap: 4px; }
+.rp-row { display: flex; align-items: center; gap: 4px; } .rp-row button { flex: 1; min-width: 0; padding: 6px 2px; font: inherit; font-weight: 900; border: 2px solid #fff; border-radius: 9px; background: #2e2160; color: #fff; cursor: pointer; }
+.rp-row .rp-play { background: #FFD23F; color: var(--ink); border-color: var(--ink); } .rp-row .rp-speed, .rp-row .rp-pov { flex: 1.2; font-size: 13px; }
+.rp-t { flex: none; width: 64px; font-size: 12px; font-weight: 800; text-align: center; } #rp-range { flex: 1; accent-color: #FFD23F; }
+.rp-povs { display: flex; gap: 4px; } .rp-povs button { flex: 1; padding: 3px; font: inherit; font-size: 12px; border: 2px solid #ffffff66; border-radius: 8px; background: transparent; color: #fff; cursor: pointer; } .rp-povs button.on { background: #fff; color: var(--ink); font-weight: 900; }
+body:has(.rp-bar) #app.in-battle { padding-bottom: 130px; }
+body:has(.rp-bar) #toast { bottom: 150px; z-index: 90; }

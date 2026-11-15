@@ -284,21 +284,86 @@ async function shareReplay(id) {
   bg.querySelector('[data-copy]').onclick = async () => { try { await navigator.clipboard.writeText(url); toast('🔗 링크를 복사했어요!'); } catch { bg.querySelector('.rp-link input').select(); toast('링크를 길게 눌러 복사해 주세요.'); } };
 }
 let REPLAY_BACK = null;
+// 📼 리플레이: 타임라인(앞뒤로 한 턴씩·원하는 턴으로), 일시정지, 배속, 보는 시점 바꾸기
+const RP = { r: null, i: 0, pov: 0, play: true, tok: 0, speed: 1 };
 async function playReplay(id, back = showLobby) {
   let r; try { r = (await api('GET', `/api/replay?id=${encodeURIComponent(id)}`)).replay; } catch (e) { return toast(e.message); }
   REPLAY_BACK = back;
   G.replaying = true;
-  Battle.enter({ t: 'battle', view: { ...r.start, spectator: true, mustAct: false }, spectator: true, practice: true, replay: true });
+  Object.assign(RP, { r, i: 0, pov: 0, play: true, speed: RP.speed || 1 });
+  Battle.setSpeed(RP.speed);
   toast(`▶ 리플레이: ${r.names.join(' vs ')}`);
-  for (const t of r.turns) Battle.onTurn({ t: 'turn', events: t.events, view: { ...t.view, spectator: true, mustAct: false } });
+  rpBar();
+  rpSeek(0, true);
+}
+const rpView = (v) => ({ ...v, spectator: true, mustAct: false });
+const rpViewAt = (i) => { const { r, pov } = RP, alt = pov && r.start2; return rpView(i === 0 ? (alt ? r.start2 : r.start) : (alt && r.turns[i - 1].view2 ? r.turns[i - 1].view2 : r.turns[i - 1].view)); };
+// i번째 턴이 끝난 장면으로 바로 이동 (play면 거기서부터 이어서 재생)
+function rpSeek(i, play = RP.play) {
+  const N = RP.r.turns.length; i = Math.max(0, Math.min(N, i));
+  const tok = ++RP.tok; RP.i = i; RP.play = play;
+  Battle.stop();
+  Battle.enter({ t: 'battle', view: rpViewAt(i), spectator: true, practice: true, replay: true });
+  rpExitBtn(i < N);
+  rpBarSync();
+  if (play) rpLoop(tok);
+}
+async function rpStep(tok) { // 다음 한 턴을 연출과 함께
+  const { r, pov } = RP, t = r.turns[RP.i]; if (!t) return false;
+  Battle.onTurn({ t: 'turn', events: t.events, view: rpView(pov && t.view2 ? t.view2 : t.view) });
+  await Battle.whenIdle();
+  if (tok !== RP.tok) return false;
+  RP.i++; rpBarSync();
+  if (RP.i >= r.turns.length) rpExitBtn(false);
+  return true;
+}
+async function rpLoop(tok) {
+  await Battle.whenIdle();
+  while (RP.play && tok === RP.tok && G.replaying && RP.i < RP.r.turns.length) { if (!await rpStep(tok)) return; }
+  if (tok === RP.tok) { RP.play = false; rpBarSync(); }
+}
+function rpExitBtn(show) {
   document.querySelector('.rp-exit')?.remove();
+  if (!show || !G.replaying) return;
   const x = document.createElement('button');
   x.className = 'btn small paper rp-exit'; x.textContent = '✕ 리플레이 나가기';
   x.onclick = () => endReplay();
   document.body.appendChild(x);
 }
+function rpBar() {
+  document.querySelector('.rp-bar')?.remove();
+  const bar = document.createElement('div'); bar.className = 'rp-bar';
+  const r = RP.r, names = r.alt != null && r.start2 ? [r.start.me?.name || r.names[0], r.start2.me?.name || r.names[r.alt] || r.names[1]] : null;
+  bar.innerHTML = `<div class="rp-row"><button data-rp="first" title="처음">⏮</button><button data-rp="back" title="한 턴 뒤로">◀</button><button data-rp="play" class="rp-play">⏸</button><button data-rp="next" title="한 턴 앞으로">▶</button><button data-rp="last" title="끝">⏭</button>
+      <button data-rp="speed" class="rp-speed">1×</button>${names ? '<button data-rp="pov" class="rp-pov" title="보는 시점 바꾸기">👁 시점</button>' : ''}</div>
+    <div class="rp-row"><span class="rp-t" id="rp-t">0/${r.turns.length}턴</span><input type="range" id="rp-range" min="0" max="${r.turns.length}" value="0" step="1"></div>
+    ${names ? `<div class="rp-povs">${names.map((n, i) => `<button data-pov="${i}">${esc(n)}</button>`).join('')}</div>` : ''}`;
+  document.body.appendChild(bar);
+  const N = r.turns.length;
+  bar.querySelector('[data-rp="first"]').onclick = () => rpSeek(0, false);
+  bar.querySelector('[data-rp="last"]').onclick = () => rpSeek(N, false);
+  bar.querySelector('[data-rp="back"]').onclick = () => rpSeek(RP.i - 1, false);
+  bar.querySelector('[data-rp="next"]').onclick = async () => { if (RP.i >= N) return; if (RP.play) { RP.play = false; await Battle.whenIdle(); } const tok = ++RP.tok; rpBarSync(); rpStep(tok); };
+  bar.querySelector('[data-rp="play"]').onclick = () => { if (RP.play) { RP.play = false; rpBarSync(); return; } if (RP.i >= N) return rpSeek(0, true); RP.play = true; rpBarSync(); rpLoop(++RP.tok); };
+  bar.querySelector('[data-rp="speed"]').onclick = () => { RP.speed = { 1: 2, 2: 4, 4: 0.5, 0.5: 1 }[RP.speed] || 1; Battle.setSpeed(RP.speed); rpBarSync(); };
+  const pov = (p) => { RP.pov = p; rpSeek(RP.i, false); toast(`👁 ${names[p]} 쪽에서 봐요`); };
+  bar.querySelector('[data-rp="pov"]')?.addEventListener('click', () => pov(RP.pov ? 0 : 1));
+  bar.querySelectorAll('[data-pov]').forEach((b) => { b.onclick = () => pov(+b.dataset.pov); });
+  const rg = bar.querySelector('#rp-range');
+  rg.oninput = () => { bar.querySelector('#rp-t').textContent = `${rg.value}/${N}턴`; };
+  rg.onchange = () => rpSeek(+rg.value, false);
+}
+function rpBarSync() {
+  const bar = document.querySelector('.rp-bar'); if (!bar) return;
+  const N = RP.r.turns.length;
+  bar.querySelector('#rp-t').textContent = `${RP.i}/${N}턴`;
+  bar.querySelector('#rp-range').value = RP.i;
+  bar.querySelector('.rp-play').textContent = RP.play ? '⏸' : RP.i >= N ? '↻' : '▶️';
+  bar.querySelector('.rp-speed').textContent = `${RP.speed}×`;
+  bar.querySelectorAll('[data-pov]').forEach((b) => b.classList.toggle('on', +b.dataset.pov === RP.pov));
+}
 function endReplay() { // 남은 장면 재생을 멈춰야 나간 뒤에 다시 대전 화면으로 끌려가지 않음
-  G.replaying = false; document.querySelector('.rp-exit')?.remove();
+  G.replaying = false; RP.tok++; RP.play = false; Battle.setSpeed(1); document.querySelector('.rp-exit')?.remove(); document.querySelector('.rp-bar')?.remove();
   Battle.stop(); app.className = '';
   (REPLAY_BACK || showLobby)();
 }

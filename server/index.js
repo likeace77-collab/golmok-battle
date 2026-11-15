@@ -65,7 +65,7 @@ const replays = (() => { try { return fs.existsSync(REPLAY_FILE) ? JSON.parse(fs
 let replaysDirty = false;
 function saveReplay(rec) {
   const id = crypto.randomBytes(5).toString('hex');
-  replays[id] = { at: Date.now(), kind: rec.kind, names: rec.names, z: zlib.gzipSync(JSON.stringify({ start: rec.start, turns: rec.turns })).toString('base64') };
+  replays[id] = { at: Date.now(), kind: rec.kind, names: rec.names, z: zlib.gzipSync(JSON.stringify({ start: rec.start, start2: rec.start2, alt: rec.alt, turns: rec.turns })).toString('base64') };
   const ids = Object.keys(replays).sort((a, b) => replays[a].at - replays[b].at);
   for (const old of ids.slice(0, Math.max(0, ids.length - REPLAY_MAX))) delete replays[old];
   try { fs.writeFileSync(`${REPLAY_FILE}.tmp`, JSON.stringify(replays)); fs.renameSync(`${REPLAY_FILE}.tmp`, REPLAY_FILE); } catch (e) { console.error('리플레이 저장 실패', e.message); }
@@ -1149,7 +1149,7 @@ function startModeBattle(key, sp) {
 function openRoom(room) {
   const { keys } = room;
   battles.set(room.id, room);
-  if (!room.training) room.rep = { kind: room.raid ? 'raid' : room.tag ? 'tag' : room.ranked ? 'rank' : room.dungeon ? 'dungeon' : room.keys.includes(BOT) ? 'practice' : 'pvp', names: room.b.sides.map((x) => x.name), start: watchView(room), turns: [] };
+  if (!room.training) room.rep = { kind: room.raid ? 'raid' : room.tag ? 'tag' : room.ranked ? 'rank' : room.dungeon ? 'dungeon' : room.keys.includes(BOT) ? 'practice' : 'pvp', names: room.b.sides.map((x) => x.name), start: watchView(room), alt: altSeat(room.b), start2: watchView(room, altSeat(room.b)), turns: [] };
   keys.forEach((k) => { if (k !== BOT) { inBattle.set(k, room); clearChallenges(k); removeFromTag(k); stopWatching(k); } });
   armTimer(room);
   keys.forEach((k, s) => { if (k !== BOT) syncBattle(room, s); });
@@ -1168,7 +1168,8 @@ function syncBattle(room, s) {
   });
 }
 
-const watchView = (room) => ({ ...E.viewFor(room.b, 0), mustAct: false, canMega: false, spectator: true });
+const watchView = (room, seat = 0) => ({ ...E.viewFor(room.b, seat), mustAct: false, canMega: false, spectator: true });
+const altSeat = (b) => b.sides.findIndex((_, i) => E.teamOf(b, i) !== E.teamOf(b, 0)); // 리플레이 시점 바꾸기: 상대 팀 첫 자리
 function stopWatching(key) {
   const room = spectating.get(key);
   if (!room) return;
@@ -1264,7 +1265,7 @@ function afterTurn(room, events) {
     send(online.get(k), { t: 'turn', events, view: E.viewFor(room.b, s), remain: remaining(room) });
   });
   for (const k of room.spectators) send(online.get(k), { t: 'turn', events, view: watchView(room), remain: remaining(room) });
-  if (room.rep && room.rep.turns.length < 400) room.rep.turns.push({ events, view: watchView(room) });
+  if (room.rep && room.rep.turns.length < 400) room.rep.turns.push({ events, view: watchView(room), view2: watchView(room, room.rep.alt) });
   if (room.spectators.size && room.b.turn <= 4) pushBets(room); // 예측 마감 알림
   if (room.b.phase === 'over') { if (room.rep) room.rep.id = saveReplay(room.rep); return finish(room); }
   pumpBot(room);
@@ -1434,11 +1435,11 @@ function simMatch(a, b) {
   if (!pa.team.length) return { w: b, rep: null };
   if (!pb.team.length) return { w: a, rep: null };
   const bt = E.createBattle([pa, pb], undefined, { preview: true });
-  const view = () => ({ ...E.viewFor(bt, 0), mustAct: false, canMega: false, spectator: true });
-  const rec = { kind: 'tourney', names: [pa.name, pb.name], start: view(), turns: [] };
+  const view = (seat = 0) => ({ ...E.viewFor(bt, seat), mustAct: false, canMega: false, spectator: true });
+  const rec = { kind: 'tourney', names: [pa.name, pb.name], start: view(), start2: view(1), alt: 1, turns: [] };
   for (let n = 0; bt.phase !== 'over' && n < 600; n++) {
     let moved = false;
-    for (const s of [0, 1]) if (bt.needs[s] && !bt.pending[s]) { const r = E.choose(bt, s, E.botAction(bt, s, 3)); moved = true; if (r.events && rec.turns.length < 400) rec.turns.push({ events: r.events, view: view() }); }
+    for (const s of [0, 1]) if (bt.needs[s] && !bt.pending[s]) { const r = E.choose(bt, s, E.botAction(bt, s, 3)); moved = true; if (r.events && rec.turns.length < 400) rec.turns.push({ events: r.events, view: view(), view2: view(1) }); }
     if (!moved) break;
   }
   const w = bt.winner === 1 ? b : bt.winner === 0 ? a : (crypto.randomInt(2) ? a : b);
