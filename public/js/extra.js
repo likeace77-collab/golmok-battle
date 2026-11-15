@@ -280,11 +280,15 @@ async function playReplay(id, back = showLobby) {
   x.onclick = () => endReplay();
   document.body.appendChild(x);
 }
-function endReplay() { G.replaying = false; document.querySelector('.rp-exit')?.remove(); (REPLAY_BACK || showLobby)(); }
+function endReplay() { // 남은 장면 재생을 멈춰야 나간 뒤에 다시 대전 화면으로 끌려가지 않음
+  G.replaying = false; document.querySelector('.rp-exit')?.remove();
+  Battle.stop(); app.className = '';
+  (REPLAY_BACK || showLobby)();
+}
 // 관전 나가기 버튼을 누르면 리플레이에서는 서버에 알리지 않고 돌아감
 document.addEventListener('click', (e) => {
   if (!G.replaying) return;
-  const b = e.target.closest('#leave-spec, .result-card .btn');
+  const b = e.target.closest('#leave-spec, #to-lobby, .rp-exit, .result-card .btn');
   if (!b) return;
   e.stopImmediatePropagation(); e.preventDefault();
   endReplay();

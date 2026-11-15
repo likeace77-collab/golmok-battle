@@ -72,10 +72,14 @@ function makeFusion(u, A, B, sa, sb) {
   // 기술: 두 골목몬의 기술 중에서 물려받기 + 합체기 1~2개
   const pool = shuffle([...new Set([...sa.moves, ...sb.moves])].filter(inheritable));
   const sigs = [sa.sig, sb.sig].filter((x) => x && pool.includes(x));
-  const inherit = [...sigs, ...pool.filter((x) => !sigs.includes(x))].slice(0, 8 + rnd(3));
-  const ca = sa.moves.filter(comboBase), cb = sb.moves.filter(comboBase);
+  const inherit = [...sigs, ...pool.filter((x) => !sigs.includes(x))].slice(0, 8); // 물려받는 기술은 딱 8개
+  // 합체기는 딱 2개: 한쪽 몸에 다른 쪽 효과 한 번, 반대로 한 번 (한쪽에 쓸 기술이 없으면 다른 쪽 기술끼리)
+  const dmg = (x) => Data.MOVES[x] && Data.MOVES[x].cat !== 'x' && Data.MOVES[x].pow > 0 && !Data.MOVES[x].z;
+  let ca = sa.moves.filter(comboBase), cb = sb.moves.filter(comboBase);
+  if (!ca.length) ca = cb.length ? cb : sa.moves.filter(dmg); if (!cb.length) cb = ca.length ? ca : sb.moves.filter(dmg);
+  if (!ca.length) ca = cb; if (!cb.length) cb = ca;
   const mv = {};
-  const nCombo = ca.length && cb.length ? 1 + (Math.random() < 0.5 ? 1 : 0) : 0;
+  const nCombo = ca.length && cb.length ? 2 : 0;
   for (let i = 0; i < nCombo; i++) { const flip = i % 2 === 1; const mid = `${id}_c${i}`; mv[mid] = comboMove(mid, flip ? pick(cb) : pick(ca), flip ? pick(ca) : pick(cb)); }
   const combos = Object.keys(mv);
   const moves = [...combos, ...inherit];

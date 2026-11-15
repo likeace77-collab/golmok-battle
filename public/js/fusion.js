@@ -44,7 +44,7 @@ function fzMonBox(m) {
   const sp = G.data.MONSTERS[m.species], [a, b] = sp.parents || [];
   return `<section class="fz-box"><h3 class="dex-h">🧬 합체몬 <small class="muted">No.${sp.no || '?'} · ${esc(sp.by || '')}</small></h3>
     <div class="fz-fam"><span>${monArt(a)}<small>${fzName(a)}</small></span><b>＋</b><span>${monArt(b)}<small>${fzName(b)}</small></span></div>
-    <p class="muted" style="font-size:12.5px">세상에 하나뿐인 골목몬이에요. 더 합체할 수 없고, 메가진화도 못 해요. ${sp.sig ? `합체기 <b>${esc(G.data.MOVES[sp.sig]?.n || '')}</b>를 쓸 수 있어요.` : ''}</p></section>`;
+    <p class="muted" style="font-size:12.5px">세상에 하나뿐인 골목몬이에요. 더 합체할 수 없고, 메가진화도 못 해요. ${(() => { const c = sp.moves.filter((id) => G.data.MOVES[id]?.fzMove).map((id) => `<b>${esc(G.data.MOVES[id].n)}</b>`); return c.length ? `합체기 ${c.join('·')}를 쓸 수 있어요.` : ''; })()}</p></section>`;
 }
 
 /* ---------- 🧬 합체 화면 ---------- */
@@ -59,7 +59,7 @@ async function showFusion() {
     const sp0 = sel[0] && G.user.mons.find((x) => x.uid === sel[0])?.species;
     app.innerHTML = `${topbar('🧬 합체')}
       <section class="fz-hero"><div class="fz-pair">${pick(0)}<b class="fz-plus">＋</b>${pick(1)}<b class="fz-arrow">➜</b><div class="fz-slot fz-mystery${ready ? ' ready' : ''}"><i>?</i><small>${ready ? '무엇이 태어날까…?' : '새 골목몬'}</small></div></div>
-        <p>두 골목몬을 합쳐 <b>세상에 하나뿐인 새 골목몬</b>을 탄생시켜요. 능력치는 두 골목몬의 평균에서 조금 흔들리고, 기술은 둘의 기술을 물려받거나 <b>합쳐서</b> 새 합체기가 생겨요.</p>
+        <p>두 골목몬을 합쳐 <b>세상에 하나뿐인 새 골목몬</b>을 탄생시켜요. 능력치는 두 골목몬의 평균에서 조금 흔들리고, 기술은 둘의 기술 중 <b>8개</b>를 물려받고, 두 기술을 <b>합친</b> 합체기 <b>2개</b>가 생겨요.</p>
         <p class="fz-warn">⚠️ 모습·이름·기술·능력치는 <b>합체해 봐야 알아요.</b> 되돌릴 수 없고, 두 골목몬은 사라져요. 합체몬은 다시 합체할 수 없어요.</p>
         <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn" id="fz-go" ${ready ? '' : 'disabled'}>🧬 합체하기 (${ICON.gp(14)}${fmt(FZ_GP)})</button><button class="btn paper" id="fz-tree">🌳 합체 트리</button></div></section>
       <section class="panel"><h2>합체할 골목몬 고르기 <small class="muted">${mons.length}마리 · 이미 합체한 골목몬은 안 보여요</small></h2>

@@ -337,7 +337,7 @@ function showLobby() {
   // 새 게임: 튜토리얼(스타터 덱)을 끝내야 로비로
   if (!G.user.tutorial) { if (!['tutorial', 'starters'].includes(G.screen)) { closeSheet(); showTutorial(); } return; }
   if (G.user?.tempPw && !G.pwNag) { G.pwNag = true; setTimeout(() => toast('임시 비밀번호로 들어왔어요. 설정에서 새 비밀번호로 바꿔 주세요!'), 300); }
-  G.screen = 'lobby'; app.className = ''; closeSheet(); document.getElementById('bet-bar')?.remove(); renderLobby();
+  G.screen = 'lobby'; app.className = ''; closeSheet(); document.getElementById('bet-bar')?.remove(); if (G.replaying) { G.replaying = false; Battle.stop?.(); } document.querySelector('.rp-exit')?.remove(); renderLobby();
 }
 
 function renderLobby() {

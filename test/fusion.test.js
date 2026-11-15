@@ -26,7 +26,8 @@ test('합체: 두 마리가 사라지고 새 골목몬 한 마리가 태어나�
   assert.ok(sp.types.some((t) => Data.MONSTERS.yeoubi.types.includes(t)) && sp.types.some((t) => Data.MONSTERS.yeontan.types.includes(t)));
   // 기술은 두 골목몬에게서 + 합체기
   assert.ok(sp.moves.every((id) => Data.MOVES[id]));
-  assert.ok(sp.moves.some((id) => Data.MOVES[id].fzMove), '합체기');
+  assert.equal(sp.moves.filter((id) => Data.MOVES[id].fzMove).length, 2, '합체기 2개');
+  assert.equal(sp.moves.filter((id) => !Data.MOVES[id].fzMove).length, 8, '물려받는 기술 8개');
   assert.ok(sp.moves.filter((id) => !Data.MOVES[id].fzMove).every((id) => Data.MONSTERS.yeoubi.moves.includes(id) || Data.MONSTERS.yeontan.moves.includes(id)));
   assert.equal(u.decks[0].team.length, 1, '덱에서도 빠져요');
   // 트리에 기록

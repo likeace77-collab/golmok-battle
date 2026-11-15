@@ -143,6 +143,11 @@ const Battle = (() => {
     app.querySelector('#leave-spec')?.addEventListener('click', () => { wsSend({ t: 'unspectate' }); exit(); });
   }
 
+  function stop() { // 리플레이를 중간에 끌 때: 남은 연출을 모두 버림 (화면 이동은 부른 쪽에서)
+    Object.values(trainers).forEach((t) => t.destroy());
+    trainers = {};
+    view = null; gen++; playing = false; clearInterval(tick); queue = Promise.resolve();
+  }
   function exit() {
     Object.values(trainers).forEach((t) => t.destroy());
     trainers = {};
@@ -866,6 +871,7 @@ const Battle = (() => {
       <button class="btn" id="to-lobby">로비로 돌아가기</button>`;
     app.appendChild(div);
     div.querySelector('#to-lobby').onclick = () => { view = null; showLobby(); };
+    if (G.replaying) { document.querySelector('.rp-exit')?.remove(); div.querySelector('#to-lobby').textContent = '리플레이 끝! 돌아가기'; } // 리플레이가 끝나면 위쪽 나가기 버튼은 치움
   }
 
   /* ---------- 응원·이모티콘 ---------- */
@@ -906,5 +912,5 @@ const Battle = (() => {
     while (layer.children.length > 8) layer.firstChild.remove();
   }
 
-  return { enter, onTurn, onChosen, setNote, onNoBattle, exit, onReact };
+  return { enter, onTurn, onChosen, setNote, onNoBattle, exit, stop, onReact };
 })();
