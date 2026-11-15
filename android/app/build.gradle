@@ -1,0 +1,19 @@
+// 골목대전 안드로이드 앱: 게임 사이트를 앱 안의 WebView로 띄웁니다 (크롬과 따로 사용 시간이 잡혀요)
+plugins { id 'com.android.application' }
+def run = (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int
+android {
+  namespace 'com.golmok.champions'
+  compileSdk 34
+  defaultConfig {
+    applicationId 'com.golmok.champions'
+    minSdk 24
+    targetSdk 34
+    versionCode run
+    versionName "1.0.${run}"
+  }
+  signingConfigs {
+    release { storeFile file('golmok.keystore'); storePassword 'golmok-app'; keyAlias 'golmok'; keyPassword 'golmok-app' }
+  }
+  buildTypes { release { minifyEnabled false; signingConfig signingConfigs.release } }
+  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}

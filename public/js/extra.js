@@ -543,11 +543,13 @@ async function pushDisable() {
   try { const reg = SW_REG || await navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription(); await api('POST', '/api/push/unsub', { endpoint: sub?.endpoint || '' }); await sub?.unsubscribe(); } catch { /* 이미 꺼져 있음 */ }
   toast('푸시 알림을 껐어요.');
 }
+const IN_APP = / GolmokApp\//.test(navigator.userAgent);
+const APK_URL = 'https://github.com/likeace77-collab/golmok-battle/releases/download/app-latest/golmok.apk';
 function pushSettingsHTML() {
-  return `<section class="panel"><h2>🔊 대전 효과음</h2><p class="muted" style="font-size:13px">기술마다 다른 소리가 나요. 무음 모드면 안 들릴 수 있어요.</p>
+  return `${IN_APP ? '' : /Android/i.test(navigator.userAgent) ? `<section class="panel"><h2>📱 안드로이드 앱</h2><p class="muted" style="font-size:13px">앱으로 하면 크롬이 아니라 「골목대전」 앱 사용 시간으로 잡혀요. 받은 파일(golmok.apk)을 눌러 설치하세요. 처음엔 「출처를 알 수 없는 앱 설치」를 허용해야 할 수 있어요.</p><a class="btn wide" href="${APK_URL}" style="display:block;text-align:center;text-decoration:none">⬇️ 골목대전 앱 받기</a></section>` : ''}<section class="panel"><h2>🔊 대전 효과음</h2><p class="muted" style="font-size:13px">기술마다 다른 소리가 나요. 무음 모드면 안 들릴 수 있어요.</p>
     <div class="row"><button class="btn small ${MoveSfx.off() ? 'paper' : ''}" id="sfx-on">켜기</button><button class="btn small ${MoveSfx.off() ? '' : 'paper'}" id="sfx-off">끄기</button><button class="btn small paper" id="sfx-test">들어보기</button></div></section>
-    <section class="panel"><h2>🔔 푸시 알림</h2><p class="muted" style="font-size:13px">스카우트 준비, 원정 귀환, 대전 신청, 레이드 초대, 우정 선물, 토너먼트 결과를 휴대폰 알림으로 받아요. 게임을 보고 있을 때는 알림이 뜨지 않아요.</p>
-    <div class="row"><button class="btn small" id="push-on">알림 켜기</button><button class="btn small paper" id="push-off">끄기</button><button class="btn small paper" id="push-test">시험 알림</button></div></section>`;
+    ${IN_APP ? '<section class="panel"><h2>🔔 푸시 알림</h2><p class="muted" style="font-size:13px">앱에서는 푸시 알림을 받을 수 없어요. 알림이 필요하면 크롬에서 켜 주세요.</p></section>' : `<section class="panel"><h2>🔔 푸시 알림</h2><p class="muted" style="font-size:13px">스카우트 준비, 원정 귀환, 대전 신청, 레이드 초대, 우정 선물, 토너먼트 결과를 휴대폰 알림으로 받아요. 게임을 보고 있을 때는 알림이 뜨지 않아요.</p>
+    <div class="row"><button class="btn small" id="push-on">알림 켜기</button><button class="btn small paper" id="push-off">끄기</button><button class="btn small paper" id="push-test">시험 알림</button></div></section>`}`;
 }
 function bindPushSettings(root = app) {
   const sfxBtns = () => { root.querySelector('#sfx-on')?.classList.toggle('paper', MoveSfx.off()); root.querySelector('#sfx-off')?.classList.toggle('paper', !MoveSfx.off()); };
