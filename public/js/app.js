@@ -460,7 +460,7 @@ function renderLobby() {
   app.querySelector('#go-settings').onclick = showSettings;
   app.querySelector('#go-mail').onclick = showMail;
   app.querySelector('#go-event').onclick = showEvents;
-  app.querySelector('#go-bot').onclick = () => wsSend({ t: 'practice', size: G.size, level: G.botLevel });
+  app.querySelector('#go-bot').onclick = () => wsSend({ t: 'practice', size: G.size, level: G.botLevel, draft: !!G.draft });
   app.querySelector('#go-train').onclick = () => wsSend({ t: 'training' });
   app.querySelectorAll('[data-level]').forEach((b) => {
     b.onclick = () => {

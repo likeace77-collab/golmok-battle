@@ -1090,7 +1090,7 @@ function startBattle(keys, size, level = 1, tag = false, ranked = false, dungeon
   };
   const players = keys.map((k, i) => (k === BOT
     ? (dungeon ? { name: `${dungeon.rule.icon} ${dungeon.floor + 1}층 골목대장`, avatar: randomAvatar(true), style: randomStyle(), deck: dungeon.rule.n, team: DG.foeTeam(dungeon.rule, dungeon.floor, foeDeck(i)), ...(dungeon.rule.noMega ? { stones: [] } : {}) }
-      : { name: `골목대장(${BOT_LEVELS[level]})`, avatar: randomAvatar(true), style: randomStyle(), deck: `${BOT_LEVELS[level]} 덱`, team: E.botTeam(level, size, foeDeck(i)) })
+      : { name: `골목대장(${BOT_LEVELS[level]})`, avatar: randomAvatar(true), style: randomStyle(), deck: teams ? '밴픽 덱' : `${BOT_LEVELS[level]} 덱`, team: teams ? teams[i] : E.botTeam(level, size, foeDeck(i)) })
     : { name: db.users[k].name, avatar: db.users[k].avatar, style: db.users[k].style, deck: teams ? '밴픽 덱' : deckOf(db.users[k]).name, team: teams ? teams[i] : battleTeam(db.users[k]).slice(0, size), stones: dungeon?.rule.noMega ? [] : db.users[k].stones }));
   openRoom({ id: crypto.randomUUID(), keys, b: E.createBattle(players, undefined, { preview: true }), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: level, tag, ranked, dungeon, draft: !!teams, spectators: new Set() });
 }
@@ -1308,26 +1308,37 @@ function draftCancel(d, text) {
   d.keys.forEach((k) => { send(online.get(k), { t: 'draft_cancel' }); toast(k, text); });
   broadcastLobby();
 }
-function startDraft(keys, size) {
-  const d = { id: crypto.randomBytes(4).toString('hex'), keys, size, pools: keys.map((k) => battleTeam(db.users[k]).slice(0, DRAFT_POOL(size))), bans: [null, null], end: Date.now() + DRAFT_SEC * 1000 };
+function startDraft(keys, size, level = 1) {
+  const pools = keys.map((k) => (k === BOT ? null : battleTeam(db.users[k]).slice(0, DRAFT_POOL(size))));
+  keys.forEach((k, s) => { if (k === BOT) pools[s] = E.botTeam(level, DRAFT_POOL(size), pools[1 - s]); }); // 골목대장도 (인원+1)마리를 들고 옴
+  const d = { id: crypto.randomBytes(4).toString('hex'), keys, size, level, pools, bans: [null, null], end: Date.now() + DRAFT_SEC * 1000 };
+  keys.forEach((k, s) => { if (k === BOT) d.bans[s] = botBan(pools[1 - s], pools[s]); }); // 골목대장은 바로 금지
   drafts.set(d.id, d);
   keys.forEach((k) => { clearChallenges(k); });
   d.timer = setTimeout(() => { d.bans = d.bans.map((x, s) => (x === null ? crypto.randomInt(d.pools[1 - s].length) : x)); draftEnd(d); }, DRAFT_SEC * 1000 + 500);
   draftPush(d); broadcastLobby();
 }
+const draftName = (d, k) => (k === BOT ? `골목대장(${BOT_LEVELS[d.level]})` : db.users[k].name);
+// 골목대장의 금지: 상대 덱에서 가장 위협적인 골목몬 (내 팀에 타입 상성이 좋고 능력치 합이 높은 순)
+function botBan(theirs, mine) {
+  const score = (m) => { const sp = Data.MONSTERS[m.species], tot = Object.values(sp.base).reduce((a, b) => a + b, 0);
+    const edge = mine.reduce((n, x) => n + Math.max(...sp.types.map((t) => E.effOf ? E.effOf(t, Data.MONSTERS[x.species].types) : 1)), 0) / Math.max(1, mine.length);
+    return tot * (0.7 + 0.3 * edge) * (m.shiny ? 1.02 : 1) + Math.random() * 20; };
+  let best = 0; theirs.forEach((m, i) => { if (score(m) > score(theirs[best])) best = i; }); return best;
+}
 function draftPush(d) {
-  d.keys.forEach((k, s) => send(online.get(k), { t: 'draft', id: d.id, size: DRAFT_FIGHT(d.size), end: d.end, oppName: db.users[d.keys[1 - s]].name,
+  d.keys.forEach((k, s) => k !== BOT && send(online.get(k), { t: 'draft', id: d.id, size: DRAFT_FIGHT(d.size), end: d.end, oppName: draftName(d, d.keys[1 - s]), bot: d.keys.includes(BOT),
     mine: d.pools[s].map((m) => ({ species: m.species, shiny: !!m.shiny, costume: m.costume })), opp: d.pools[1 - s].map((m) => ({ species: m.species, shiny: !!m.shiny, costume: m.costume })),
     myBan: d.bans[s], oppDone: d.bans[1 - s] !== null }));
 }
 function draftEnd(d) {
   if (!drafts.has(d.id)) return;
   drafts.delete(d.id); clearTimeout(d.timer);
-  if (d.keys.some((k) => !online.has(k) || inBattle.has(k))) { drafts.set(d.id, d); return draftCancel(d, '상대가 나가서 밴픽 대전이 취소됐어요.'); }
+  if (d.keys.some((k) => k !== BOT && (!online.has(k) || inBattle.has(k)))) { drafts.set(d.id, d); return draftCancel(d, '상대가 나가서 밴픽 대전이 취소됐어요.'); }
   // s의 덱에서 금지된 것은 상대(1-s)가 고른 번호
   const teams = d.pools.map((pool, s) => pool.filter((_, i) => i !== d.bans[1 - s]).slice(0, DRAFT_FIGHT(d.size)));
-  d.keys.forEach((k, s) => toast(k, `상대가 내 ${Data.MONSTERS[d.pools[s][d.bans[1 - s]].species].n}을(를) 금지했어요!`));
-  startBattle(d.keys, DRAFT_FIGHT(d.size), 1, false, false, null, teams);
+  d.keys.forEach((k, s) => k !== BOT && toast(k, `${draftName(d, d.keys[1 - s])}이(가) 내 ${Data.MONSTERS[d.pools[s][d.bans[1 - s]].species].n}을(를) 금지했어요!`));
+  startBattle(d.keys, DRAFT_FIGHT(d.size), d.level || 1, false, false, null, teams);
 }
 
 /* ---------- 주간 토너먼트: 토요일 밤 9시, 신청한 사람들의 덱을 AI가 대신 싸움 ---------- */
@@ -1649,8 +1660,15 @@ function onMessage(key, msg) {
       if (room) return;
       const size = [1, 3, 6].includes(msg.size) ? msg.size : 3;
       if (battleTeam(db.users[key]).length < size) return toast(key, `선택한 덱에 골목몬이 ${size}마리 있어야 합니다.`);
+      const lv = [0, 1, 2, 3].includes(msg.level) ? msg.level : 1;
+      if (msg.draft) { // 골목대장과 밴픽
+        const pool = battleTeam(db.users[key]).slice(0, DRAFT_POOL(size));
+        if (pool.length < DRAFT_POOL(size)) return toast(key, `밴픽 대전은 덱에 골목몬이 ${DRAFT_POOL(size)}마리 있어야 해요. (1마리는 상대가 금지)`);
+        { const bn = bannedIn(db.users[key], pool); if (bn.length) return toast(key, BAN_TEXT(bn)); }
+        clearChallenges(key); startDraft([key, BOT], size, lv); break;
+      }
       { const bn = bannedIn(db.users[key], battleTeam(db.users[key]).slice(0, size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
-      startBattle([key, BOT], size, [0, 1, 2, 3].includes(msg.level) ? msg.level : 1);
+      startBattle([key, BOT], size, lv);
       break;
     }
     case 'challenge': {
