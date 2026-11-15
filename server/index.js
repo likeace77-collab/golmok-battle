@@ -701,7 +701,7 @@ async function progressApi(req, res, route, auth, user) {
   if (route === 'POST /api/fusion') {
     if (busyNow(auth.key)) return json(res, 400, { error: '대전 중에는 합체할 수 없어요.' });
     const busy = new Set([...P.awayUids(user), ...Object.values(db.trades || {}).filter((t) => t.from === auth.key || t.to === auth.key).flatMap((t) => [t.give, t.want])]);
-    const r = F.fuse(user, String(body.a || ''), String(body.b || ''), busy);
+    const r = Array.isArray(body.uids) && body.uids.length === 3 ? F.fuse3(user, body.uids, busy) : F.fuse(user, String(body.a || ''), String(body.b || ''), busy);
     if (r.fusion) for (const ws of online.values()) send(ws, { t: 'fusion', fusion: r.fusion }); // 다른 사람 화면에도 새 골목몬 정보
     return done(r);
   }

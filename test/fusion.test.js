@@ -140,3 +140,29 @@ test('합체몬 거다이맥스: 전용 거다이 기술 이름', () => {
   E.choose(b, 0, { type: 'move', index: 0, gmax: true }); E.choose(b, 1, { type: 'move', index: 0 });
   assert.ok(b.sides[0].mons[0].gmax > 0 || b.sides[0].mons[0].hp === 0);
 });
+
+test('3단 합체: 세 마리 → 한 마리, 기술 8 + 3단 합체기 2, 메가·거다이·특성까지', () => {
+  const P = require('../server/progress');
+  const u = mk(); u.gp = 1e5; u.mons.push({ uid: 'h', species: 'horong', moves: [] }, { uid: 'k', species: 'kettle', moves: [] }, { uid: 'k2', species: 'kettle', moves: [] });
+  assert.ok(F.fuse3(u, ['a', 'b', 'c']).error, '같은 골목몬 둘(연탄이) 안 됨');
+  const r = F.fuse3(u, ['a', 'b', 'h']); assert.ok(r.ok, r.error);
+  assert.equal(u.gp, 1e5 - F.FUSE3_GP);
+  assert.ok(!u.mons.some((m) => ['a', 'b', 'h'].includes(m.uid)));
+  const sp = Data.MONSTERS[r.mon.species];
+  assert.ok(sp.tri && sp.parents.length === 3);
+  for (const k of Object.keys(sp.base)) { const avg = ['yeoubi', 'yeontan', 'horong'].reduce((n, x) => n + Data.MONSTERS[x].base[k], 0) / 3; assert.ok(sp.base[k] >= Math.floor(avg * 0.9) && sp.base[k] <= Math.ceil(avg * 1.13), k); }
+  assert.equal(sp.moves.filter((x) => Data.MOVES[x].fzMove).length, 2); assert.equal(sp.moves.filter((x) => !Data.MOVES[x].fzMove).length, 8);
+  assert.ok(sp.moves.filter((x) => Data.MOVES[x].fzMove).every((x) => /3단 합체기/.test(Data.MOVES[x].d)));
+  assert.ok(sp.trait?.n && sp.mega?.boost && /^거다이 /.test(sp.gmaxN));
+  assert.equal(Object.values(sp.mega.boost).reduce((a, b) => a + b, 0), 100);
+  assert.match(F.fuse3(u, [r.mon.uid, 'k', 'd']).error, /더 합체/);
+  assert.equal(F.tree(u).list[0].c.species, 'horong', '합체 트리에 세 번째 부모까지 기록');
+  // 강화: 세 부모 중 아무거나
+  u.mons.push({ uid: 'h2', species: 'horong', moves: [] });
+  assert.ok(P.enhance(u, r.mon.uid, 'h2', new Set()).ok);
+  // 대전
+  const b = E.createBattle([{ name: 'x', team: [{ species: r.mon.species, moves: sp.moves.slice(0, 4) }] }, { name: 'y', team: [{ species: 'yeontan', moves: ['ember'] }] }], 4);
+  E.choose(b, 0, { type: 'move', index: 0, mega: true }); E.choose(b, 1, { type: 'move', index: 0 });
+  for (let i = 0; i < 80 && b.phase !== 'over'; i++) for (const s of [0, 1]) if (b.needs[s]) E.choose(b, s, E.botAction(b, s, 2));
+  assert.equal(b.phase, 'over');
+});

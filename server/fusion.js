@@ -7,7 +7,7 @@
 // 도감·스카우트·봇 풀(Object.keys로 고르는 곳)에는 섞이지 않게 합니다.
 const Data = require('./data');
 
-const FUSE_GP = 3000;
+const FUSE_GP = 3000, FUSE3_GP = 6000; // 2단 합체 · 3단 합체
 const NO_PARENT = new Set(['dummy']); // 훈련장 허수아비만 빼고 모두 합체 가능 (등신도 OK: 기술은 물려받고 갈증·돌연사 특성은 안 물려받음)
 // 합체몬이 그대로 물려받으면 안 되는 기술 (그 골목몬 몸에만 있는 장치에 기대는 기술)
 const BOUND_KEYS = ['forge', 'tierPow', 'elem', 'hydrate', 'dive', 'ouga', 'trial', 'heatEq', 'loop', 'techUp', 'record', 'rage'];
@@ -68,7 +68,8 @@ function giveTraits() {
 // 합체몬 거다이맥스: 두 부모의 거다이 기술 이름을 섞은 전용 거다이 기술 (모습은 두 부모의 거다이맥스를 꿰매 붙임)
 function gmaxNameOf(sp) {
   const nm = (id) => (Data.GMAX_MOVES[id] || `거다이 ${Data.MONSTERS[id]?.n || ''}`).replace(/^거다이\s*/, '').trim();
-  const [a, b] = (sp.parents || []).map(nm);
+  const ps = (sp.parents || []).map(nm), a = ps[0], b = ps[ps.length - 1];
+  if (ps.length >= 3) { const w = ps.map((x) => (x || sp.n).split(' ')); return `거다이 ${w[0][0]} ${w[1][0]} ${w[2][w[2].length - 1]}`; } // 3단: 셋의 이름을 하나씩
   const wa = (a || sp.n).split(' '), wb = (b || sp.n).split(' ');
   const n = wa.length > 1 || wb.length > 1 ? `${wa[0]} ${wb[wb.length - 1]}` : mixName(a, b);
   return `거다이 ${n === `${a}` ? `${sp.n} 대폭주` : n}`;
@@ -76,14 +77,15 @@ function gmaxNameOf(sp) {
 // 합체몬 메가진화: 두 부모의 메가진화 보너스를 반씩 섞음 (합계 +100). 메가스톤 없이도 할 수 있음
 const MEGA_W = ['폭주', '각성', '극한', '초월', '진(眞)', '울트라'];
 function megaOf(sp) {
-  const [pa, pb] = (sp.parents || []).map((x) => Data.MONSTERS[x]);
+  const ps = (sp.parents || []).map((x) => Data.MONSTERS[x]), [pa, pb] = ps;
   const keys = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
-  const raw = Object.fromEntries(keys.map((k) => [k, ((pa?.mega?.boost?.[k] || 0) + (pb?.mega?.boost?.[k] || 0)) / 2 + Math.random() * 6]));
+  const raw = Object.fromEntries(keys.map((k) => [k, ps.reduce((n, p) => n + (p?.mega?.boost?.[k] || 0), 0) / (ps.length || 1) + Math.random() * 6]));
   const tot = keys.reduce((n, k) => n + raw[k], 0) || 1;
   const boost = Object.fromEntries(keys.map((k) => [k, Math.round(raw[k] / tot * 100)]));
   const fix = 100 - keys.reduce((n, k) => n + boost[k], 0); const top = keys.reduce((a, k) => (boost[k] > boost[a] ? k : a), 'atk'); boost[top] += fix;
   const w = MEGA_W[Math.abs([...sp.n].reduce((h, c) => h * 31 + c.charCodeAt(0), 7)) % MEGA_W.length];
-  return { n: `${w} ${sp.n}`, d: `${jo(pa?.mega?.n || pa?.n || '?', '과', '와')} ${pb?.mega?.n || pb?.n || '?'}의 힘이 한 몸에서 깨어났다. 합체몬은 메가스톤 없이도 메가진화할 수 있다.`, boost, fz: true };
+  const mn = (p) => p?.mega?.n || p?.n || '?';
+  return { n: `${w} ${sp.n}`, d: `${ps.length >= 3 ? `${mn(ps[0])}, ${jo(mn(ps[1]), '과', '와')} ${mn(ps[2])}` : `${jo(mn(pa), '과', '와')} ${mn(pb)}`}의 힘이 한 몸에서 깨어났다. 합체몬은 메가스톤 없이도 메가진화할 수 있다.`, boost, fz: true };
 }
 // 한 번만 하는 손질: suho님의 「콩시락이」에서 정전기를 빼고 합체기 하나 추가 (2026-11-15 요청)
 function oneTimeFixes() {
@@ -130,6 +132,24 @@ function mixName(a, b) {
     if (n !== a && n !== b && n.length >= 2) return n;
   }
   return `${A[0]}${B.slice(-2).join('')}`;
+}
+function mixName3(a, b, c) { // 3단: 앞·가운데·뒤를 한 조각씩
+  const A = syl(a), B = syl(b), C = syl(c);
+  for (let t = 0; t < 10; t++) {
+    const f = A.slice(0, Math.max(1, Math.floor(A.length / 2) - (t % 2))), mi = Math.min(B.length - 1, Math.floor(B.length / 3) + rnd(2)), m = B.slice(mi, mi + 1), k = C.slice(-Math.max(1, Math.floor(C.length / 2) + (t > 4 ? 1 : 0)));
+    const n = [...f, ...m, ...k].slice(0, 6).join('');
+    if (![a, b, c].includes(n) && n.length >= 3) return n;
+  }
+  return `${A[0]}${B[0]}${C.slice(-1).join('')}`;
+}
+function comboMove3(aId, bId, cId) { // 3단 합체기: A 몸에 B·C 효과를 하나씩
+  const A = Data.MOVES[aId], B = Data.MOVES[bId], C = Data.MOVES[cId];
+  const mv = { ...A, n: `${A.n.split(' ')[0]} ${B.n.split(' ')[0]} ${C.n.split(' ').slice(-1)[0]}`, pow: Math.min(150, Math.round(Math.max(A.pow, B.pow, C.pow) * 1.15 / 5) * 5), pp: Math.max(5, Math.min(A.pp, B.pp, C.pp)), sig: true, fzMove: true };
+  delete mv.d; if (mv.hits) mv.pow = Math.min(mv.pow, 40);
+  const got = [];
+  for (const X of [B, C]) { const add = MIX_FROM_B.filter((k) => X[k] != null && mv[k] == null); if (add.length) { const k = pick(add); mv[k] = X[k]; got.push(X); } }
+  mv.d = `「${A.n}」+「${B.n}」+「${C.n}」 3단 합체기.${A.d ? ` ${A.d}` : ''}${got.map((X) => (X.d ? ` / ${X.d}` : '')).join('')}`;
+  return mv;
 }
 function mixMoveName(a, b) {
   const wa = a.split(' '), wb = b.split(' ');
@@ -240,6 +260,70 @@ function makeFusion(u, A, B, sa, sb) {
   return { id, sp, mv };
 }
 
+const LINES3 = ['셋의 마음이 하나가 되자 번개 속에서 태어났다.', '세 골목의 기억이 한 몸에서 소용돌이친다.', '세 목소리로 동시에 울면 골목이 흔들린다.', '셋 중 누구를 닮았는지 아무도 정하지 못했다.', '3단 합체의 빛은 사흘 동안 꺼지지 않았다고 한다.'];
+function makeFusion3(u, mons, sps) {
+  const n = Object.keys(db.fusions).length + 1;
+  const id = `fz${Date.now().toString(36)}${rnd(1296).toString(36)}`;
+  const order = shuffle([0, 1, 2]), P = order.map((i) => sps[i]), PM = order.map((i) => mons[i]);
+  const base = Object.fromEntries(STATS.map((k) => [k, Math.max(20, Math.round(sps.reduce((x, s2) => x + s2.base[k], 0) / 3 * (0.92 + Math.random() * 0.2)))]));
+  // 타입: 세 골목몬 중 두 마리에게서 하나씩
+  const two = shuffle(P).slice(0, 2), ta = pick(two[0].types), tb = pick(two[1].types.filter((t) => t !== ta).length ? two[1].types.filter((t) => t !== ta) : two[1].types);
+  const types = ta === tb ? [ta] : [ta, tb];
+  const pool = shuffle([...new Set(P.flatMap((x) => x.moves))].filter(inheritable));
+  const sigs = P.map((x) => x.sig).filter((x) => x && pool.includes(x));
+  const inherit = [...sigs, ...pool.filter((x) => !sigs.includes(x))].slice(0, 8);
+  const dmg = (x) => Data.MOVES[x] && Data.MOVES[x].cat !== 'x' && Data.MOVES[x].pow > 0 && !Data.MOVES[x].z;
+  const bases = P.map((x) => x.moves.filter(comboBase)), xs = P.map((x) => x.moves.filter(dmg)), anyX = xs.flat();
+  const mv = {};
+  for (let i = 0; i < 2; i++) { // 몸을 맡는 골목몬을 바꿔 가며 2개
+    const bi = [i, i + 1, 2, 0].find((j) => bases[j % 3]?.length) % 3, rest = [0, 1, 2].filter((j) => j !== bi);
+    const A1 = pick(bases[bi].length ? bases[bi] : anyX);
+    const B1 = pick(xs[rest[0]].filter((x) => x !== A1).length ? xs[rest[0]].filter((x) => x !== A1) : anyX.filter((x) => x !== A1));
+    const C1 = pick(xs[rest[1]].filter((x) => x !== A1 && x !== B1).length ? xs[rest[1]].filter((x) => x !== A1 && x !== B1) : anyX.filter((x) => x !== A1 && x !== B1));
+    if (A1 && B1 && C1) mv[`${id}_c${i}`] = comboMove3(A1, B1, C1);
+  }
+  const combos = Object.keys(mv);
+  const sp = {
+    n: mixName3(P[0].n, P[1].n, P[2].n), types, base, moves: [...combos, ...inherit], fz: true, tri: true, parents: PM.map((m) => m.species),
+    flavor: `${P[0].n}, ${jo(P[1].n, '과', '와')} ${jo(P[2].n, '이', '가')} 3단 합체해 태어난 골목몬. ${pick(LINES3)}`,
+    ...(combos[0] ? { sig: combos[0] } : {}), ...((P.find((x) => x.z) || {}).z ? { z: P.find((x) => x.z).z } : {}),
+    look: { split: pick(['y', 'v3', 'h3']), hue: rnd(360), tint: Math.random() < 0.55, mark: rnd(4) },
+    by: u.name, no: n, at: Date.now(),
+  };
+  Object.assign(sp, pickTrait(sp, id)); sp.mega = megaOf(sp); sp.gmaxN = gmaxNameOf(sp);
+  return { id, sp, mv };
+}
+
+// 3단 합체: 서로 다른 골목몬 세 마리 → 새 골목몬 한 마리
+function fuse3(u, uids, busy = new Set()) {
+  uids = [...new Set((uids || []).map(String))];
+  if (uids.length !== 3) return { error: '3단 합체할 골목몬 세 마리를 골라 주세요.' };
+  const ms = uids.map((x) => u.mons.find((m) => m.uid === x));
+  if (ms.some((m) => !m)) return { error: '골목몬을 찾지 못했어요.' };
+  if (uids.some((x) => busy.has(x))) return { error: '원정 중이거나 교환에 걸린 골목몬은 합체할 수 없어요.' };
+  const sps = ms.map((m) => Data.MONSTERS[m.species]);
+  if (sps.some((x) => !x)) return { error: '골목몬 정보를 찾지 못했어요.' };
+  if (sps.some((x) => x.fz)) return { error: '합체몬은 더 합체할 수 없어요.' };
+  if (new Set(ms.map((m) => m.species)).size !== 3) return { error: '서로 다른 골목몬끼리만 합체할 수 있어요.' };
+  if (ms.some((m) => NO_PARENT.has(m.species) || Data.BANNED.includes(m.species))) return { error: '이 골목몬은 합체할 수 없어요.' };
+  if (u.gp < FUSE3_GP) return { error: `3단 합체에 ${FUSE3_GP.toLocaleString('ko-KR')}GP가 필요해요.` };
+  const f = makeFusion3(u, ms, sps);
+  db.fusions[f.id] = f; register(f);
+  u.gp -= FUSE3_GP;
+  u.mons = u.mons.filter((m) => !ms.includes(m));
+  (u.decks || []).forEach((d) => { d.team = d.team.filter((t) => !uids.includes(t.uid)); });
+  const shiny = ms.some((m) => m.shiny), aff = Math.round(ms.reduce((n, m) => n + (m.aff || 0), 0) / 3);
+  const m = { uid: `${Date.now().toString(36)}${rnd(1e6).toString(36)}`, species: f.id, moves: f.sp.moves.slice(0, 4), at: Date.now(), fused: true, ...(shiny ? { shiny: true } : {}), ...(aff ? { aff } : {}) };
+  u.mons.push(m);
+  require('./decks').pruneDecks(u);
+  const rec = (x) => ({ species: x.species, shiny: !!x.shiny, plus: x.plus || 0 });
+  u.fusionLog ||= [];
+  u.fusionLog.unshift({ id: f.id, a: rec(ms[0]), b: rec(ms[1]), c: rec(ms[2]), uid: m.uid, at: Date.now() });
+  u.fusionLog = u.fusionLog.slice(0, 200);
+  u.counts.fusions = (u.counts.fusions || 0) + 1;
+  return { ok: true, mon: m, fusion: pubOf(f.id) };
+}
+
 function fuse(u, uidA, uidB, busy = new Set()) {
   if (!uidA || !uidB || uidA === uidB) return { error: '합체할 골목몬 두 마리를 골라 주세요.' };
   const A = u.mons.find((m) => m.uid === uidA), B = u.mons.find((m) => m.uid === uidB);
@@ -284,7 +368,7 @@ function retrait(u, uid, pay) {
 
 function tree(u) {
   const have = new Set(u.mons.map((m) => m.uid));
-  return { gp: FUSE_GP, list: (u.fusionLog || []).map((e) => ({ ...e, alive: have.has(e.uid), fusion: pubOf(e.id) })).filter((e) => e.fusion), total: Object.keys(db.fusions).length };
+  return { gp: FUSE_GP, gp3: FUSE3_GP, list: (u.fusionLog || []).map((e) => ({ ...e, alive: have.has(e.uid), fusion: pubOf(e.id) })).filter((e) => e.fusion), total: Object.keys(db.fusions).length };
 }
 
-module.exports = { retrait, RETRAIT_TK, RETRAIT_GP, init, register, all, pubOf, fuse, tree, isFusion, mixName, inheritable, comboBase, FUSE_GP, NO_PARENT };
+module.exports = { fuse3, FUSE3_GP, mixName3, retrait, RETRAIT_TK, RETRAIT_GP, init, register, all, pubOf, fuse, tree, isFusion, mixName, inheritable, comboBase, FUSE_GP, NO_PARENT };
