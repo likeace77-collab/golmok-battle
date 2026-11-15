@@ -27,8 +27,35 @@ function register(f) {
   for (const [id, mv] of Object.entries(f.mv || {})) hidden(Data.MOVES, id, mv);
   hidden(Data.MONSTERS, f.id, f.sp);
 }
-function init(_db) { db = _db; db.fusions ||= {}; for (const f of Object.values(db.fusions)) register(f); oneTimeFixes(); giveTraits(); }
+function init(_db) { db = _db; db.fusions ||= {}; for (const f of Object.values(db.fusions)) register(f); oneTimeFixes(); fillSuho(); giveTraits(); }
 // 특성이 생기기 전에 태어난 합체몬에게도 (태어난 순서대로) 서로 다른 특성을
+// 한 번만: suho님의 「콩시락이」 기술이 10개가 되게 채움 (합체기가 2개 미만이면 합체기, 아니면 부모 기술 하나) (2026-11-15 요청)
+function fillSuho() {
+  for (const f of Object.values(db.fusions)) {
+    if (f.fixes?.includes('suho-ten') || f.sp.n !== '콩시락이' || String(f.sp.by || '').toLowerCase() !== 'suho') continue;
+    const [pa, pb] = (f.sp.parents || []).map((x) => Data.MONSTERS[x]);
+    if (!pa || !pb) continue;
+    const dmg = (x) => Data.MOVES[x] && Data.MOVES[x].cat !== 'x' && Data.MOVES[x].pow > 0 && !Data.MOVES[x].z;
+    for (let guard = 0; f.sp.moves.length < 10 && guard < 5; guard++) {
+      const combos = f.sp.moves.filter((x) => Data.MOVES[x]?.fzMove);
+      if (combos.length < 2) {
+        const used = new Set(Object.values(f.mv || {}).map((m) => m.n));
+        let made = null;
+        for (let t = 0; t < 30 && !made; t++) { const A = t % 2 ? pb : pa, B = t % 2 ? pa : pb; const base = A.moves.filter(comboBase), mixes = B.moves.filter(dmg); if (base.length && mixes.length) { const c = comboMove('', pick(base), pick(mixes)); if (!used.has(c.n)) made = c; } }
+        if (!made) break;
+        let i = 0; while (f.mv?.[`${f.id}_c${i}`]) i++;
+        f.mv ||= {}; f.mv[`${f.id}_c${i}`] = made; f.sp.moves.splice(combos.length, 0, `${f.id}_c${i}`);
+      } else {
+        const cand = shuffle([...new Set([...pa.moves, ...pb.moves])].filter((x) => inheritable(x) && x !== 'static' && !f.sp.moves.includes(x)));
+        if (!cand.length) break;
+        f.sp.moves.push(cand[0]);
+      }
+    }
+    (f.fixes ||= []).push('suho-ten');
+    register(f);
+    console.log(`합체몬 손질: ${f.sp.n} 기술 ${f.sp.moves.length}개`);
+  }
+}
 function giveTraits() {
   for (const f of Object.values(db.fusions).sort((a, b) => (a.sp.at || 0) - (b.sp.at || 0))) if (!f.sp.ft) { Object.assign(f.sp, pickTrait(f.sp, f.id)); register(f); }
 }
