@@ -54,8 +54,10 @@ function fusionSVG(id, cls = '', mode = false) { // mode: true면 두 부모의 
 (() => { // monsterSVG가 합체몬을 만나면 이음새 그림으로
   if (typeof monsterSVG !== 'function') return;
   const orig = monsterSVG;
-  monsterSVG = function (id, cls = '', ...rest) { const sp = G.data?.MONSTERS?.[id]; return sp?.fz ? fusionSVG(id, cls, !!rest[0]) : orig(id, cls, ...rest); }; // eslint-disable-line no-global-assign
-  if (typeof gmaxSVG === 'function') { const og = gmaxSVG; gmaxSVG = function (id, cls = '') { return G.data?.MONSTERS?.[id]?.fz ? fusionSVG(id, `gmax ${cls}`, 'gmax') : og(id, cls); }; } // eslint-disable-line no-global-assign
+  // ✨ 대성공 합체몬: 금빛 테두리 + 반짝임
+  const gold = (svg, sp) => (sp?.great ? svg.replace(/<\/svg>\s*$/, '<g class="fz-goldring"><circle cx="100" cy="104" r="97" fill="none" stroke="#FFD23F" stroke-width="5"/><circle cx="100" cy="104" r="91" fill="none" stroke="#fff6c2" stroke-width="1.5" stroke-dasharray="3 7"/><path class="fz-gstar" transform="translate(30 178)" d="M0-9L2-2 9 0 2 2 0 9-2 2-9 0-2-2Z" fill="#fff"/><path class="fz-gstar" transform="translate(172 176)" d="M0-7L2-2 7 0 2 2 0 7-2 2-7 0-2-2Z" fill="#FFD23F"/></g></svg>') : svg);
+  monsterSVG = function (id, cls = '', ...rest) { const sp = G.data?.MONSTERS?.[id]; return sp?.fz ? gold(fusionSVG(id, cls, !!rest[0]), sp) : orig(id, cls, ...rest); }; // eslint-disable-line no-global-assign
+  if (typeof gmaxSVG === 'function') { const og = gmaxSVG; gmaxSVG = function (id, cls = '') { return G.data?.MONSTERS?.[id]?.fz ? gold(fusionSVG(id, `gmax ${cls}`, 'gmax'), G.data.MONSTERS[id]) : og(id, cls); }; } // eslint-disable-line no-global-assign
 })();
 
 const fzName = (id) => esc(G.data.MONSTERS[id]?.n || '???');
@@ -133,14 +135,14 @@ function confirmFuse(sel, redraw) {
     let r; try { r = await api('POST', '/api/fusion', N === 3 ? { uids: ms.map((m) => m.uid) } : { a: ms[0].uid, b: ms[1].uid }); } catch (err) { closeSheet(); return toast(err.message); }
     fzRegisterAll([r.fusion]); setUser(r); closeSheet();
     sel.fill(null);
-    await fusionCine(ms, r.mon);
+    await fusionCine(ms, r.mon, r.great);
     fusionResult(r.mon, redraw);
   };
 }
 
 /* ---------- 합체 연출: 골목몬들이 빙글빙글 하나로… 섬광 … 실루엣 … 등장! ---------- */
-async function fusionCine(ms, mon) {
-  const el = document.createElement('div'); el.className = `fz-cine${ms.length === 3 ? ' tri' : ''}`;
+async function fusionCine(ms, mon, great = false) {
+  const el = document.createElement('div'); el.className = `fz-cine${ms.length === 3 ? ' tri' : ''}${great ? ' great' : ''}`;
   const cls = ms.length === 3 ? ['fz-l', 'fz-t', 'fz-r'] : ['fz-l', 'fz-r'];
   const names = ms.map((m) => fzName(m.species));
   el.innerHTML = `<div class="fz-ring"></div>${ms.map((m, i) => `<div class="${cls[i]} ${m.shiny ? 'is-shiny' : ''}">${monArt(m.species, m.shiny)}</div>`).join('')}
@@ -154,7 +156,8 @@ async function fusionCine(ms, mon) {
   sfx('win'); await step('s2', 700);
   await step('s3', 1500, '…이 모습은…?!');
   sfx('big'); await step('s4', 400);
-  el.classList.add('s5'); cap.innerHTML = `🧬 <b>${fzName(mon.species)}</b> 탄생!`;
+  if (great) { el.classList.add('s4g'); cap.innerHTML = '<b class="fz-great">✨ 합체 대성공!! ✨</b>'; sfx('big'); if (!skip) await wait(1400); }
+  el.classList.add('s5'); cap.innerHTML = `${great ? '✨ ' : '🧬 '}<b>${fzName(mon.species)}</b> 탄생!${great ? '<br><small>능력치 ×1.2 이상 · 합체기 하나 더!</small>' : ''}`;
   await new Promise((ok) => { el.onclick = ok; setTimeout(ok, skip ? 600 : 2400); });
   el.remove();
 }

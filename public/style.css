@@ -2176,3 +2176,60 @@ svg[data-fzin] { transform: none !important; animation: none !important; filter:
 .ch-rep { display: flex; align-items: center; gap: 6px; width: 100%; margin: 4px 0; padding: 8px 10px; font: inherit; text-align: left; border: 2px solid var(--ink); border-radius: 12px; background: linear-gradient(135deg, #2a1650, #4b2a8a); color: #fff; cursor: pointer; }
 .ch-rep span { flex: 1; font-size: 13px; } .ch-rep b { white-space: nowrap; color: #FFD23F; }
 .md-aff .btn { white-space: nowrap; }
+/* 🎨 스킨 등급 */
+.sk-grade { display: inline-block; margin: 0 4px 2px 0; padding: 1px 7px; border-radius: 999px; font-style: normal; font-size: 11px; font-weight: 900; color: #fff; background: var(--gc); border: 2px solid var(--ink); text-shadow: 0 1px 0 #0006; }
+.sk-grade.g-legend { color: var(--ink); text-shadow: none; background: linear-gradient(90deg, #FFD23F, #fff4b0, #FFD23F); background-size: 200%; animation: skShine 2s linear infinite; }
+@keyframes skShine { to { background-position: -200% 0; } }
+.sk-limited { display: inline-block; margin: 0 4px 2px 0; padding: 1px 7px; border-radius: 999px; font-style: normal; font-size: 11px; font-weight: 900; color: #fff; background: linear-gradient(135deg, #ff2e88, #7b4bff); border: 2px solid var(--ink); }
+.sk-card.g-legend { border-color: #E8B400; box-shadow: 0 0 0 3px #FFD23F, 4px 4px 0 var(--ink); background: linear-gradient(135deg, #fffbe6, #fff0c2); }
+.sk-card.g-myth { box-shadow: 0 0 0 3px #FF3B6B66, 4px 4px 0 var(--ink); }
+.sk-card.limited { background: linear-gradient(135deg, #fff0f7, #fff7d6); }
+.sk-filter { display: flex; gap: 5px; overflow-x: auto; padding: 0 2px 10px; } .sk-filter button { flex: none; padding: 6px 12px; font: inherit; font-weight: 800; border: 2px solid var(--ink); border-radius: 999px; background: #fff8e0; color: var(--ink); cursor: pointer; }
+.sk-filter button.on { background: var(--ink); color: #fff; }
+.cos-it .sk-grade { font-size: 10px; padding: 0 5px; }
+/* 스킨 테마 효과 */
+.sko-twinkle > * { animation: skoTw 1.6s ease-in-out infinite; } @keyframes skoTw { 50% { opacity: .15; } }
+.sko-fall > * { animation: skoFall 3.2s linear infinite; } @keyframes skoFall { from { translate: 0 -30px; opacity: 0; } 15% { opacity: 1; } to { translate: 10px 40px; opacity: 0; } }
+.sko-rise > * { animation: skoRise 2.4s ease-in infinite; } @keyframes skoRise { from { translate: 0 0; opacity: 0; } 20% { opacity: 1; } to { translate: 0 -90px; opacity: 0; } }
+.sko-float > * { animation: skoFloat 2.8s ease-in-out infinite; } @keyframes skoFloat { 50% { translate: 0 -8px; } }
+.sko-blink { animation: skoBlink 3s steps(1) infinite; } @keyframes skoBlink { 0%, 92% { opacity: 1; } 93%, 97% { opacity: 0; } }
+.sko-rays { transform-origin: 100px 104px; animation: skoSpin 12s linear infinite; } @keyframes skoSpin { to { rotate: 360deg; } }
+.sko-halo { animation: skoHalo 2s ease-in-out infinite; } @keyframes skoHalo { 50% { translate: 0 -4px; } }
+svg.sk-galaxy { filter: drop-shadow(0 0 8px #b37bff); } svg.sk-crystal { filter: drop-shadow(0 0 6px #9feaff) brightness(1.08); }
+svg.sk-shadow { filter: drop-shadow(0 0 10px #000) drop-shadow(0 0 4px #ff2a4a88); } svg.sk-gold { filter: drop-shadow(0 0 10px #FFD23F); }
+svg.sk-rainbow { animation: skRain 3s linear infinite; } @keyframes skRain { from { filter: hue-rotate(0deg) saturate(1.5) drop-shadow(0 0 8px #fff8); } to { filter: hue-rotate(360deg) saturate(1.5) drop-shadow(0 0 8px #fff8); } }
+/* ✨ 합체 대성공 */
+.fz-goldring { filter: drop-shadow(0 0 4px #FFD23F); } .fz-gstar { animation: skoTw 1.2s ease-in-out infinite; }
+.fz-cine.great.s4g { background: radial-gradient(circle at 50% 45%, #ffe27a, #b07a00 45%, #2a1600 80%); }
+.fz-cine.great.s4g .fz-new { filter: brightness(0) drop-shadow(0 0 18px #FFD23F) drop-shadow(0 0 30px #fff); }
+.fz-great { color: #FFD23F; font-size: 30px; text-shadow: 0 0 12px #fff, 0 3px 0 #000; animation: gotPop .5s; }
+/* 🃏 하이로우 */
+.hl-table { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 6px 0 10px; min-height: 120px; }
+.hl-card { position: relative; width: 74px; height: 104px; border: 3px solid #1a1433; border-radius: 10px; background: #fff; color: #1a1433; display: grid; place-items: center; box-shadow: 3px 3px 0 #1a1433; font-weight: 900; }
+.hl-card.red { color: #E8402C; } .hl-card span { font-size: 34px; } .hl-card b { position: absolute; top: 4px; left: 7px; font-size: 18px; } .hl-card b.bt { top: auto; left: auto; bottom: 4px; right: 7px; rotate: 180deg; }
+.hl-card.old { width: 44px; height: 62px; opacity: .55; } .hl-card.old span { font-size: 18px; } .hl-card.old b { font-size: 11px; }
+.hl-card.back { background: repeating-linear-gradient(45deg, #7B4BFF 0 8px, #5a2fd6 8px 16px); }
+.hl-card.flip { animation: hlFlip .6s ease-out; } @keyframes hlFlip { from { transform: rotateY(90deg) scale(1.1); } }
+.hl-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; } .hl-pick .btn { display: grid; font-size: 18px; } .hl-pick small { font-size: 12px; opacity: .8; }
+/* 🏇 경마 */
+.rc-head { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; } .rc-head > div { display: grid; padding: 8px; border-radius: 12px; background: #1a1433; color: #fff; text-align: center; } .rc-head b { font-size: 22px; color: #FFD23F; } .rc-head small { font-size: 11px; opacity: .8; }
+.rc-track { padding: 6px; border-radius: 12px; background: repeating-linear-gradient(90deg, #6fbf5a 0 30px, #64b04f 30px 60px); border: 3px solid #1a1433; }
+.rc-lane { position: relative; height: 46px; border-bottom: 2px dashed #ffffff88; } .rc-lane:last-child { border-bottom: 0; }
+.rc-lane em { position: absolute; left: 2px; top: 13px; width: 18px; height: 18px; border-radius: 50%; background: #fff; font-style: normal; font-size: 11px; font-weight: 900; text-align: center; line-height: 18px; z-index: 1; }
+.rc-runner { position: absolute; left: 0; top: 2px; width: 42px; height: 42px; margin-left: 20px; transition: left .5s linear; } .rc-runner svg { width: 100%; height: 100%; transform: scaleX(-1); }
+.rc-runner.win { animation: gotPop .6s; filter: drop-shadow(0 0 8px #FFD23F); }
+.rc-goal { position: absolute; right: 2px; top: 10px; font-size: 20px; }
+.rc-list { display: grid; gap: 5px; margin: 10px 0; } .rc-h { display: flex; align-items: center; gap: 8px; padding: 5px 8px; font: inherit; text-align: left; border: 2px solid #1a1433; border-radius: 12px; background: #fff; cursor: pointer; }
+.rc-h.on { background: #fff3c4; outline: 3px solid #FFD23F; } .rc-h em { font-style: normal; font-weight: 900; width: 20px; } .rc-h svg { width: 40px; height: 40px; } .rc-h span { display: grid; } .rc-h small { font-size: 12px; color: #7B4BFF; font-weight: 800; }
+.rc-last { margin-top: 8px; padding: 8px; border-radius: 10px; background: #fff3c4; font-size: 14px; } .rc-last em { font-style: normal; font-weight: 900; color: #E8402C; }
+/* 🎱 로또 */
+.lt-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; } .lt-n { aspect-ratio: 1; font: inherit; font-weight: 900; font-size: 17px; border: 2px solid #1a1433; border-radius: 50%; background: #fff; cursor: pointer; }
+.lt-n.on { background: #FFD23F; box-shadow: 0 0 0 3px #E8402C inset; }
+.lt-ball { display: inline-grid; place-items: center; width: 30px; height: 30px; margin: 2px; border-radius: 50%; font-style: normal; font-weight: 900; font-size: 13px; color: #fff; border: 2px solid #1a1433; text-shadow: 0 1px 0 #0006; }
+.lt-ball.b1 { background: #E8B400; } .lt-ball.b2 { background: #2E6BE8; } .lt-ball.b3 { background: #E8402C; } .lt-ball.b4 { background: #3a3a46; }
+.lt-mine > div, .lt-hist { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; margin: 4px 0; } .lt-hist small { margin: 0 6px; font-size: 12px; }
+/* 🎁 상자 */
+.bx-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; } .bx-it { display: grid; justify-items: center; gap: 4px; padding: 8px 4px; border: 3px solid var(--bc); border-radius: 14px; background: #fff; }
+.bx-pic { font-size: 46px; } .bx-pic.shake { animation: bxShake .12s linear infinite; } @keyframes bxShake { 25% { rotate: -12deg; scale: 1.1; } 75% { rotate: 12deg; scale: 1.1; } }
+.bx-it .btn { width: 100%; } .bx-odds { margin-top: 10px; font-size: 12.5px; } .bx-odds p { margin: 4px 0; }
+.bx-skin { text-align: center; } .bx-skin .cos-prev { width: 160px; height: 160px; margin: 8px auto; box-shadow: 0 0 24px var(--gc); }

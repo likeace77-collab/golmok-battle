@@ -272,6 +272,7 @@ function onServer(m) {
     case 'gift': if (!m.got?.length) toast(m.title); else if (G.screen === 'battle' || typeof showGot !== 'function') toast(`${m.title} 지갑을 확인해 보세요.`); else showGot(m.got, m.title); break;
     case 'bets': onBets(m); break;
     case 'fusion': fzRegisterAll([m.fusion]); break;
+    case 'race_done': onRaceDone(m); break;
     case 'me': G.user = m.user; if (G.screen === 'lobby') renderLobby(); else if (G.screen === 'box' && !sheetRoot.innerHTML) showBox(); break;
     case 'chat': case 'chat_hist': case 'chat_del': onSocialMsg(m); break;
     case 'no_battle': Battle.onNoBattle(); break;
@@ -1327,6 +1328,7 @@ function fzRegisterAll(list) {
 (async () => {
   G.data = await api('GET', '/api/data');
   fzRegisterAll(G.data.FUSIONS);
+  skinsRegister(G.data.SKIN_GEN); // 등급별 스킨 그림·이펙트
   prepareContestArt(() => { // 다듬은 그림이 준비되면 이미 그려진 그림도 바꿔 끼움
     for (const [k, url] of Object.entries(CLEAN_ART)) document.querySelectorAll(`image[href="img/mon/${k}.webp"]`).forEach((el) => el.setAttribute('href', url));
   });

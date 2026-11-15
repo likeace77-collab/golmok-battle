@@ -370,7 +370,7 @@ async function costumeSheet(mon, after) {
       ${mine.length ? `<div class="sk-demo cos-prev${mon.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${pick ? skinArt(monArt(mon.species, mon.shiny), pick) : monArt(mon.species, mon.shiny)}</div>
         ${pick ? demoBtns() : ''}
         <div class="cos-grid"><button class="cos-it ${!pick ? 'on' : ''}" data-sk=""><span class="cos-none">✕</span><b>기본 모습</b></button>
-          ${mine.map((x) => `<button class="cos-it ${pick === x.id ? 'on' : ''} ${x.own ? 'own' : ''}" data-sk="${x.id}">${skinIcon(x.id, 64)}<b>${esc(x.n)}</b><small>${x.own ? '보유' : x.price ? `${fmt(x.price)}GP` : `🍮 ${x.jelly}`}</small></button>`).join('')}</div>
+          ${mine.map((x) => `<button class="cos-it ${pick === x.id ? 'on' : ''} ${x.own ? 'own' : ''}" data-sk="${x.id}">${skinIcon(x.id, 64)}${gradeTag(x.grade)}<b>${esc(x.n)}</b><small>${x.own ? '보유' : x.price ? `${fmt(x.price)}GP` : `🍮 ${x.jelly}`}</small></button>`).join('')}</div>
         ${c ? `<p class="sk-d">${esc(c.d)}</p><ul class="sk-fx">${(c.fx || []).map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}
         <div class="sc-pay">${!pick ? (mon.costume ? '<button class="btn wide" id="sk-wear">기본 모습으로 돌리기</button>' : '') : c?.own ? (mon.costume === pick ? '<p class="muted">지금 입고 있어요!</p>' : `<button class="btn wide" id="sk-wear">${esc(c.n)} 입히기</button>`) : `${c?.price ? `<button class="btn" id="sk-buy">${ICON.gp(18)} ${fmt(c.price)}GP에 사기</button>` : ''}${c?.jelly ? `<button class="btn mint" id="sk-jelly">🍮 젤리 ${c.jelly}개로 사기</button>` : ''}`}</div>`
       : `<p class="muted" style="margin:10px 0">${esc(sp.n)}은(는) 아직 스킨이 없어요. 스킨 공모전에 직접 만들어 내 보세요! 우승작은 진짜 스킨으로 나와요.</p><button class="btn wide" id="sk-contest">🎨 스킨 공모전 가기</button>`}
@@ -393,13 +393,18 @@ async function showSkins(back = showLobby) {
   G.screen = 'skins'; app.className = '';
   app.innerHTML = `${topbar('🎨 스킨')}<p class="wait">불러오는 중…</p>`; app.querySelector('#back').onclick = back;
   try { await loadSkins(); } catch (e) { return toast(e.message); }
+  let gf = 'all';
+  const RANK = { rare: 1, srare: 2, hero: 3, myth: 4, legend: 5 };
   const draw = () => {
-    app.innerHTML = `${topbar('🎨 스킨')}<p class="muted" style="margin:0 4px 10px">스킨은 골목몬마다 전용이에요. 외형이 바뀌고, 공격·맞기·등장할 때 전용 이펙트와 소리가 나요. 그림을 눌러 미리 보세요!</p>
-      ${SKIN_LIST.map((c) => `<section class="panel sk-card" data-id="${c.id}"><div class="sk-row"><div class="sk-demo cos-prev" style="--tc:${G.data.TYPES[G.data.MONSTERS[c.only].types[0]].c}">${skinArt(monArt(c.only, false), c.id)}</div>
-        <div class="sk-info"><b>${esc(c.n)}</b><small>${esc(c.onlyN)} 전용</small><p>${esc(c.d)}</p><ul class="sk-fx">${(c.fx || []).map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
+    const list = SKIN_LIST.filter((c) => gf === 'all' || (gf === 'own' ? c.own : c.grade === gf)).sort((a, b) => (RANK[b.grade] || 0) - (RANK[a.grade] || 0) || (b.limited ? 1 : 0) - (a.limited ? 1 : 0));
+    app.innerHTML = `${topbar('🎨 스킨')}<p style="margin:0 4px 10px;color:#fff;opacity:.9;font-size:14px">스킨은 골목몬마다 전용이에요. 외형이 바뀌고, 공격·맞기·등장할 때 전용 이펙트와 소리가 나요. 등급: 희귀 → 초희귀 → 영웅 → 신화 → 전설. 🎁 미스터리 상자에서도 나와요!</p>
+      <div class="sk-filter">${[['all', `전체 ${SKIN_LIST.length}`], ['legend', '전설'], ['myth', '신화'], ['hero', '영웅'], ['srare', '초희귀'], ['rare', '희귀'], ['own', `보유 ${SKIN_LIST.filter((c) => c.own).length}`]].map(([k, n]) => `<button class="${gf === k ? 'on' : ''} g-${k}" data-gf="${k}">${n}</button>`).join('')}</div>
+      ${list.map((c) => `<section class="panel sk-card g-${c.grade || 'x'}${c.limited ? ' limited' : ''}" data-id="${c.id}"><div class="sk-row"><div class="sk-demo cos-prev" style="--tc:${G.data.TYPES[G.data.MONSTERS[c.only].types[0]].c}">${skinArt(monArt(c.only, false), c.id)}</div>
+        <div class="sk-info">${gradeTag(c.grade)}${c.limited ? '<em class="sk-limited">한정판</em>' : ''}<b>${esc(c.n)}</b><small>${esc(c.onlyN)} 전용</small><p>${esc(c.d)}</p><ul class="sk-fx">${(c.fx || []).map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
         ${c.own ? '<em class="sk-own">✓ 보유 · 내 골목몬에서 입혀요</em>' : `<div class="row" style="gap:6px;flex-wrap:wrap">${c.price ? `<button class="btn small" data-buy="${c.id}">${ICON.gp(14)} ${fmt(c.price)}</button>` : ''}${c.jelly ? `<button class="btn small mint" data-jelly="${c.id}">🍮 ${c.jelly}</button>` : ''}</div>`}</div></div>${demoBtns()}</section>`).join('')}
       <button class="btn wide" id="sk-contest">🎨 스킨 공모전: 내가 만든 스킨 내기</button>`;
     app.querySelector('#back').onclick = back;
+    app.querySelectorAll('[data-gf]').forEach((b) => { b.onclick = () => { gf = b.dataset.gf; draw(); }; });
     app.querySelectorAll('.sk-card').forEach((card) => bindSkinDemo(card, SKIN_LIST.find((c) => c.id === card.dataset.id).only, false, card.dataset.id));
     const buy = async (id, pay) => { try { const r = await api('POST', '/api/costume/buy', { id, pay }); setUser(r); await loadSkins(); showGot(r.got, '스킨을 샀어요!', draw); } catch (e) { toast(e.message); } };
     app.querySelectorAll('[data-buy]').forEach((b) => { b.onclick = () => buy(b.dataset.buy, 'gp'); });

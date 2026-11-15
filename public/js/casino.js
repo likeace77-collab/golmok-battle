@@ -38,7 +38,7 @@ function casHead() {
   el.innerHTML = `<div class="cs-jp"><small>💎 슬롯 잭팟</small><b>${fmt(v.jackpot)} GP</b></div><div class="cs-meta"><span>오늘 ${v.plays}/${v.max}판</span>${net ? `<span class="cs-net">오늘 손익 ${net}</span>` : ''}</div>`;
 }
 function casDraw() {
-  const v = CAS.v, tabs = [['slot', '🎰', '슬롯머신'], ['roulette', '🎡', '룰렛'], ['double', '🪙', '더블업'], ['scratch', '🎫', '복권']];
+  const v = CAS.v, tabs = [['slot', '🎰', '슬롯머신'], ['roulette', '🎡', '룰렛'], ['double', '🪙', '더블업'], ['hilo', '🃏', '하이로우'], ['scratch', '🎫', '복권'], ['race', '🏇', '경마'], ['lotto', '🎱', '로또'], ['box', '🎁', '상자']];
   app.innerHTML = `${topbar('🎰 골목 도박장')}
     <section class="cs-hero"><div class="cs-lights" aria-hidden="true">${'<i></i>'.repeat(18)}</div><div id="cs-head"></div>
       <p class="cs-warn">게임 안 재화만 걸 수 있어요 (진짜 돈 X). 대박은 <b>극악의 확률</b>이고, 길게 하면 대부분 잃어요. 하루 ${v.max}판까지.</p></section>
@@ -48,7 +48,7 @@ function casDraw() {
   app.querySelector('#back').onclick = () => { app.className = ''; CAS.back(); };
   app.querySelectorAll('[data-tab]').forEach((b) => { b.onclick = () => { if (CAS.busy) return; CAS.tab = b.dataset.tab; casDraw(); }; });
   casHead();
-  ({ slot: casSlot, roulette: casRoulette, double: casDouble, scratch: casScratch })[CAS.tab](app.querySelector('#cs-game'));
+  ({ slot: casSlot, roulette: casRoulette, double: casDouble, scratch: casScratch, hilo: casHilo, race: casRace, lotto: casLotto, box: casBox })[CAS.tab](app.querySelector('#cs-game'));
 }
 // 무엇을 얼마나 걸지 (GP·아이템)
 function betBar(box, { gpOnly = false } = {}) {

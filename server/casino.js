@@ -94,6 +94,36 @@ function doubleCash(u) {
   return { cashed: d.pot, cur: d.cur, dbl: null };
 }
 
+/* 하이로우: 카드 한 장을 보고 다음 카드가 높을지 낮을지. 맞히면 배당이 쌓이고, 언제든 멈추고 받기 (최대 10번)
+   배당 = 0.95 × 13 / (이기는 카드 수). 같은 숫자가 나오면 짐 */
+const HILO_MAX = 10;
+const card = () => ({ v: 1 + rnd(13), s: rnd(4) });
+const hiloOdds = (v) => ({ hi: 13 - v ? +(0.95 * 13 / (13 - v)).toFixed(2) : 0, lo: v - 1 ? +(0.95 * 13 / (v - 1)).toFixed(2) : 0 });
+function hiloStart(u, cur, bet) {
+  if (u.hilo) return err('진행 중인 하이로우가 있어요. 먼저 끝내 주세요.');
+  const e = takeBet(u, cur, bet); if (e) return err(e);
+  u.hilo = { cur, bet, pot: bet, step: 0, card: card(), hist: [] };
+  return { hilo: { ...u.hilo, odds: hiloOdds(u.hilo.card.v) } };
+}
+function hiloGuess(u, pick) {
+  const h = u.hilo; if (!h) return err('먼저 걸어 주세요.');
+  if (!['hi', 'lo'].includes(pick)) return err('높음이나 낮음을 골라 주세요.');
+  const odds = hiloOdds(h.card.v)[pick]; if (!odds) return err(pick === 'hi' ? 'K보다 높은 카드는 없어요!' : 'A보다 낮은 카드는 없어요!');
+  const next = card(), win = pick === 'hi' ? next.v > h.card.v : next.v < h.card.v;
+  h.hist.push(h.card); const prev = h.card; h.card = next;
+  if (!win) { delete u.hilo; return { prev, card: next, win: false, lost: h.pot, hilo: null }; }
+  h.pot = Math.floor(h.pot * odds); h.step++;
+  if (h.step >= HILO_MAX) { pay(u, h.cur, h.pot); bigWin(u, '하이로우', h.cur, h.pot, Math.round(h.pot / h.bet)); delete u.hilo; return { prev, card: next, win: true, max: true, cashed: h.pot, cur: h.cur, hilo: null }; }
+  return { prev, card: next, win: true, hilo: { ...h, odds: hiloOdds(next.v) } };
+}
+function hiloCash(u) {
+  const h = u.hilo; if (!h) return err('받을 게 없어요.');
+  if (!h.step) return err('한 번은 맞혀야 받을 수 있어요.');
+  pay(u, h.cur, h.pot); delete u.hilo;
+  if (h.pot / h.bet >= 30) bigWin(u, '하이로우', h.cur, h.pot, Math.round(h.pot / h.bet));
+  return { cashed: h.pot, cur: h.cur, hilo: null };
+}
+
 /* 복권 긁기: 한 장 1,000GP. 1등 100만GP는 20만 장에 한 장 */
 const SCRATCH_PRICE = 1000;
 const PRIZES = [[1000000, 5], [100000, 50], [20000, 500], [5000, 5000], [2000, 30000], [1000, 250000], [500, 250000]]; // [상금, 100만 장 중 몇 장]
@@ -116,7 +146,7 @@ function scratch(u) {
 function view(u) {
   const b = book(u);
   return { cur: CUR, wallet: Object.fromEntries(Object.keys(CUR).map((k) => [k, u[k] || 0])), jackpot: cas().jackpot, plays: b.plays, max: DAILY_PLAYS, net: b.net,
-    wins: cas().wins, dbl: u.dbl || null, slot: { sym: SYM.map(([s]) => s), triple: TRIPLE, pair: PAIR }, scratch: { price: SCRATCH_PRICE, prizes: PRIZES.map(([p]) => p) } };
+    wins: cas().wins, dbl: u.dbl || null, hilo: u.hilo ? { ...u.hilo, odds: hiloOdds(u.hilo.card.v) } : null, slot: { sym: SYM.map(([s]) => s), triple: TRIPLE, pair: PAIR }, scratch: { price: SCRATCH_PRICE, prizes: PRIZES.map(([p]) => p) } };
 }
 function api(route, u, key, b) {
   const cur = String(b.cur || 'gp'), bet = Math.floor(Number(b.bet));
@@ -127,8 +157,11 @@ function api(route, u, key, b) {
     case 'POST /api/casino/double': { const r = doubleStart(u, cur, bet); return r.error ? r : { ...r, casino: view(u) }; }
     case 'POST /api/casino/flip': { const r = doubleFlip(u, String(b.pick || '')); return r.error ? r : { ...r, casino: view(u) }; }
     case 'POST /api/casino/cash': { const r = doubleCash(u); return r.error ? r : { ...r, casino: view(u) }; }
+    case 'POST /api/casino/hilo': { const r = hiloStart(u, cur, bet); return r.error ? r : { ...r, casino: view(u) }; }
+    case 'POST /api/casino/hilo/guess': { const r = hiloGuess(u, String(b.pick || '')); return r.error ? r : { ...r, casino: view(u) }; }
+    case 'POST /api/casino/hilo/cash': { const r = hiloCash(u); return r.error ? r : { ...r, casino: view(u) }; }
     case 'POST /api/casino/scratch': { const r = scratch(u); return r.error ? r : { ...r, casino: view(u) }; }
     default: return undefined;
   }
 }
-module.exports = { init, api, SYM, TRIPLE, PAIR, PRIZES, SCRATCH_PRICE };
+module.exports = { takeBet, pay, bigWin, CUR, hiloOdds, init, api, SYM, TRIPLE, PAIR, PRIZES, SCRATCH_PRICE };

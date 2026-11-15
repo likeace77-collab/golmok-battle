@@ -8,6 +8,7 @@
 const Data = require('./data');
 
 const FUSE_GP = 3000, FUSE3_GP = 6000; // 2단 합체 · 3단 합체
+const GREAT = { p: 0.05 }; // ✨ 합체 대성공 확률 (테스트에서 바꿀 수 있게 객체로)
 const NO_PARENT = new Set(['dummy']); // 훈련장 허수아비만 빼고 모두 합체 가능 (등신도 OK: 기술은 물려받고 갈증·돌연사 특성은 안 물려받음)
 // 합체몬이 그대로 물려받으면 안 되는 기술 (그 골목몬 몸에만 있는 장치에 기대는 기술)
 const BOUND_KEYS = ['forge', 'tierPow', 'elem', 'hydrate', 'dive', 'ouga', 'trial', 'heatEq', 'loop', 'techUp', 'record', 'rage'];
@@ -307,7 +308,7 @@ function fuse3(u, uids, busy = new Set()) {
   if (new Set(ms.map((m) => m.species)).size !== 3) return { error: '서로 다른 골목몬끼리만 합체할 수 있어요.' };
   if (ms.some((m) => NO_PARENT.has(m.species) || Data.BANNED.includes(m.species))) return { error: '이 골목몬은 합체할 수 없어요.' };
   if (u.gp < FUSE3_GP) return { error: `3단 합체에 ${FUSE3_GP.toLocaleString('ko-KR')}GP가 필요해요.` };
-  const f = makeFusion3(u, ms, sps);
+  const f = makeFusion3(u, ms, sps); if (Math.random() < GREAT.p) greatUp(f, sps);
   db.fusions[f.id] = f; register(f);
   u.gp -= FUSE3_GP;
   u.mons = u.mons.filter((m) => !ms.includes(m));
@@ -321,9 +322,28 @@ function fuse3(u, uids, busy = new Set()) {
   u.fusionLog.unshift({ id: f.id, a: rec(ms[0]), b: rec(ms[1]), c: rec(ms[2]), uid: m.uid, at: Date.now() });
   u.fusionLog = u.fusionLog.slice(0, 200);
   u.counts.fusions = (u.counts.fusions || 0) + 1;
-  return { ok: true, mon: m, fusion: pubOf(f.id) };
+  return { ok: true, mon: m, fusion: pubOf(f.id), great: !!f.sp.great };
 }
 
+// ✨ 대성공: 능력치가 부모 평균 ×1.2~1.3, 합체기 하나 더, 금빛 테두리
+function greatUp(f, sps) {
+  const sp = f.sp;
+  sp.base = Object.fromEntries(STATS.map((k) => [k, Math.max(20, Math.round(sps.reduce((n, x) => n + x.base[k], 0) / sps.length * (1.2 + Math.random() * 0.1)))]));
+  const dmg = (x) => Data.MOVES[x] && Data.MOVES[x].cat !== 'x' && Data.MOVES[x].pow > 0 && !Data.MOVES[x].z;
+  const used = new Set(Object.values(f.mv).map((m) => m.n));
+  for (let t = 0; t < 30; t++) {
+    const P = shuffle(sps), base = P[0].moves.filter(comboBase), mix = P[1].moves.filter(dmg);
+    if (!base.length || !mix.length) continue;
+    const c = comboMove('', pick(base), pick(mix.filter((x) => x !== base[0]).length ? mix : mix));
+    if (used.has(c.n)) continue;
+    c.pow = Math.min(150, c.pow + 10); c.d = `✨대성공 합체기. ${c.d}`;
+    const id = `${f.id}_c${Object.keys(f.mv).length}`; f.mv[id] = c; sp.moves.splice(Object.keys(f.mv).length - 1, 0, id);
+    break;
+  }
+  sp.great = true; sp.mega = megaOf(sp);
+  sp.flavor = `✨ 합체 대성공으로 태어난 특별한 골목몬! ${sp.flavor}`;
+  H.sysChat?.(`✨ ${sp.by}님 합체 대성공!! 특별한 합체몬 「${sp.n}」 탄생!`);
+}
 function fuse(u, uidA, uidB, busy = new Set()) {
   if (!uidA || !uidB || uidA === uidB) return { error: '합체할 골목몬 두 마리를 골라 주세요.' };
   const A = u.mons.find((m) => m.uid === uidA), B = u.mons.find((m) => m.uid === uidB);
@@ -335,7 +355,7 @@ function fuse(u, uidA, uidB, busy = new Set()) {
   if (A.species === B.species) return { error: '서로 다른 골목몬끼리만 합체할 수 있어요.' };
   if (NO_PARENT.has(A.species) || NO_PARENT.has(B.species) || Data.BANNED.includes(A.species) || Data.BANNED.includes(B.species)) return { error: '이 골목몬은 합체할 수 없어요.' };
   if (u.gp < FUSE_GP) return { error: `합체에 ${FUSE_GP.toLocaleString('ko-KR')}GP가 필요해요.` };
-  const f = makeFusion(u, A, B, sa, sb);
+  const f = makeFusion(u, A, B, sa, sb); if (Math.random() < GREAT.p) greatUp(f, [sa, sb]);
   db.fusions[f.id] = f; register(f);
   u.gp -= FUSE_GP;
   // 두 골목몬은 사라지고 새 골목몬 한 마리가 태어나요 (덱에서도 빠짐)
@@ -349,7 +369,7 @@ function fuse(u, uidA, uidB, busy = new Set()) {
   u.fusionLog.unshift({ id: f.id, a: { species: A.species, shiny: !!A.shiny, plus: A.plus || 0 }, b: { species: B.species, shiny: !!B.shiny, plus: B.plus || 0 }, uid: m.uid, at: Date.now() });
   u.fusionLog = u.fusionLog.slice(0, 200);
   u.counts.fusions = (u.counts.fusions || 0) + 1;
-  return { ok: true, mon: m, fusion: pubOf(f.id) };
+  return { ok: true, mon: m, fusion: pubOf(f.id), great: !!f.sp.great };
 }
 
 // 특성 다시 뽑기: 리롤권 3장 또는 1,500GP. 지금 특성과 다른 특성, 여전히 다른 합체몬과 안 겹침
@@ -411,4 +431,4 @@ function heart(u, key, id) {
   return { ok: true, on: true, hearts: ks.length };
 }
 
-module.exports = { setHooks, gallery, heart, settleVotes, weekKey, HEART_MAX, fuse3, FUSE3_GP, mixName3, retrait, RETRAIT_TK, RETRAIT_GP, init, register, all, pubOf, fuse, tree, isFusion, mixName, inheritable, comboBase, FUSE_GP, NO_PARENT };
+module.exports = { GREAT, setHooks, gallery, heart, settleVotes, weekKey, HEART_MAX, fuse3, FUSE3_GP, mixName3, retrait, RETRAIT_TK, RETRAIT_GP, init, register, all, pubOf, fuse, tree, isFusion, mixName, inheritable, comboBase, FUSE_GP, NO_PARENT };

@@ -5,7 +5,7 @@ const Data = require('../server/data');
 const E = require('../server/engine');
 const F = require('../server/fusion');
 
-const db = {}; F.init(db);
+const db = {}; F.init(db); F.GREAT.p = 0; // 대성공은 따로 시험
 const mk = () => ({ name: '합체왕', gp: 100000, mons: [
   { uid: 'a', species: 'yeoubi', moves: ['foxrain'], shiny: true, aff: 40 }, { uid: 'b', species: 'yeontan', moves: ['ember'], plus: 2 },
   { uid: 'c', species: 'yeontan', moves: ['ember'] }, { uid: 'd', species: 'deungsin', moves: Data.MONSTERS.deungsin.moves.slice(0, 4) }],
@@ -193,4 +193,15 @@ test('합체몬 갤러리: 하트 투표와 주간 정산', () => {
   db.fzVote.week = '2000-01-03'; // 지난주인 척
   const gp = owner.gp; assert.ok(F.settleVotes()); assert.equal(owner.gp, gp + 10000); assert.deepEqual(mails[0].reward, ['titles:fzstar']);
   assert.equal(Object.keys(db.fzVote.hearts).length, 0); assert.equal(Data.MONSTERS[id].crowns, 1);
+});
+
+test('합체 대성공: 능력치 평균 ×1.2~1.3, 합체기 하나 더', () => {
+  F.GREAT.p = 1;
+  const u = mk(); u.gp = 1e5; u.mons.push({ uid: 'h', species: 'horong', moves: [] });
+  const r = F.fuse(u, 'a', 'b'); assert.ok(r.great);
+  const sp = Data.MONSTERS[r.mon.species];
+  for (const k of Object.keys(sp.base)) { const avg = (Data.MONSTERS.yeoubi.base[k] + Data.MONSTERS.yeontan.base[k]) / 2; assert.ok(sp.base[k] >= Math.floor(avg * 1.19) && sp.base[k] <= Math.ceil(avg * 1.31), k); }
+  assert.equal(sp.moves.filter((x) => Data.MOVES[x].fzMove).length, 3); assert.equal(sp.moves.length, 11); assert.ok(sp.great);
+  const r3 = F.fuse3(u, ['c', 'd', 'h']); assert.ok(r3.great); assert.equal(Data.MONSTERS[r3.mon.species].moves.length, 11);
+  F.GREAT.p = 0;
 });

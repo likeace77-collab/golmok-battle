@@ -13,6 +13,7 @@ const WP = require('./push'); // 웹 푸시
 const C = require('./casino'); // 도박장 (게임 재화만)
 const M = require('./modes'); // 체육관·골목 탈출·월드 보스·친밀도·퍼즐과 미션·메타배틀
 const F = require('./fusion'); // 🧬 합체
+const LK = require('./luck'); // 🏇 경마 · 🎱 로또 · 🎁 미스터리 상자
 const X = require('./extra'); // 공지·관리자·통계·도감 보상·친구 선물·코스튬·이벤트
 const R = require('./rank'); // 랭크전
 const DG = require('./dungeon'); // 이벤트 던전
@@ -485,7 +486,7 @@ async function api(req, res, url) {
   const route = `${req.method} ${url.pathname}`;
   if (route === 'GET /api/data') {
     const { BANNED, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES } = Data;
-    return json(res, 200, { ITEMS: Data.ITEMS, FORMS: Data.FORMS.names, TIERS: Data.TIERS.names, BANNED, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES, PERKS: Data.PERKS, NATURES: Data.NATURES, AVATAR_PAID: Data.AVATAR_PAID, GMAX: E.gmaxInfo(), FUSIONS: F.all(), inviteRequired: !!INVITE_CODE });
+    return json(res, 200, { ITEMS: Data.ITEMS, FORMS: Data.FORMS.names, TIERS: Data.TIERS.names, BANNED, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES, PERKS: Data.PERKS, NATURES: Data.NATURES, SKIN_GRADES: require('./skins').GRADES, SKIN_GEN: Object.fromEntries(Object.entries(X.COSTUMES).filter(([, c]) => c.gen).map(([id, c]) => [id, { n: c.n, only: c.only, ...c.gen }])), AVATAR_PAID: Data.AVATAR_PAID, GMAX: E.gmaxInfo(), FUSIONS: F.all(), inviteRequired: !!INVITE_CODE });
   }
   if (route === 'POST /api/signup' || route === 'POST /api/login') {
     if (limited(req)) return json(res, 429, { error: '시도가 너무 많습니다. 1분 뒤에 다시 해 주세요.' });
@@ -667,6 +668,7 @@ async function progressApi(req, res, route, auth, user) {
   { const sr = S.api(route, user, auth.key, body); if (sr !== undefined) return done(sr); }
   { const xr = X.api(route, user, auth.key, body); if (xr !== undefined) return done(xr); }
   { const mr = M.api(route, user, auth.key, body); if (mr !== undefined) return done(mr); }
+  if (/ \/api\/(race|lotto|boxes)/.test(route)) { const lr = LK.api(route, user, auth.key, body); if (lr !== undefined) return done(lr); }
   if (route.includes(' /api/casino')) { const cr = C.api(route, user, auth.key, body); if (cr !== undefined) return done(cr); }
   if (route === 'POST /api/coupon') return done(useCoupon(user, body.code));
   if (route === 'GET /api/replay') { const r = replayOf(String(new URL(req.url, 'http://x').searchParams.get('id') || '')); return r ? json(res, 200, { replay: r }) : json(res, 404, { error: '리플레이가 없어요. 오래된 기록은 지워져요.' }); }
@@ -1308,6 +1310,9 @@ function finish(room) {
         if (o.title) setTimeout(() => send(online.get(k), { t: 'gift', title: o.title, got: o.got || [] }), 1900 + i * 300);
         if (o.toast) setTimeout(() => toast(k, o.toast), 2400 + i * 500);
       });
+      // 🎁 이기면 가끔 미스터리 상자 (연습·훈련·퍼즐 제외)
+      const box = won && !room.training && room.mode?.kind !== 'puzzle' ? LK.boxDrop(db.users[k], kind) : null;
+      if (box) setTimeout(() => toast(k, `${box.icon} ${box.n}를 주웠어요! (도박장 → 🎁 상자)`), 3000);
     }
     if (room.ranked && winner !== null) {
       const rr = R.result(db.users[k], won, room.keys.includes(BOT)), T = R.TIERS[rr.tier];
@@ -1895,6 +1900,8 @@ setInterval(() => {
   db.meta ||= {}; if (!db.meta.vapid) { db.meta.vapid = WP.makeKeys(); save(); } // 푸시 알림 서명 키 (한 번 만들어 계속 씀)
   R.init({ seasonOf: P.seasonOf, grant: P.grant, sendMail });
   C.init(db, { sysChat: (ch, t) => sysChatAll(t) });
+  LK.init(db, { grant: P.grant, sendMail, save, sysChat: (t) => sysChatAll(t), notify: (k, m) => { const ws = online.get(k); if (ws) send(ws, m); } });
+  setInterval(() => LK.tick(), 5e3); // 경마 출발·로또 추첨 시간 확인
   M.init(db, { grant: P.grant, sendMail, sysChat: (t) => sysChatAll(t) });
   F.setHooks({ keyOf, grant: P.grant, sendMail, sysChat: (t) => sysChatAll(t) }); setInterval(() => { try { if (F.settleVotes()) save(); } catch (e) { console.error('합체몬 투표 정산 실패', e.message); } }, 10 * 60e3);
   X.init(db, { keyOf, online, send, toast, publicUser, grant: P.grant, sendMail, isDev, battleCount: () => battles.size, gistInfo: () => ({ ...gistStat, dirty: gistDirty, on: !!GIST_ID, lastOkAgoSec: gistStat.lastOk ? Math.round((Date.now() - gistStat.lastOk) / 1000) : null }), push: (k, m) => typeof pushTo === 'function' && pushTo(k, m) });
