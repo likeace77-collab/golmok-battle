@@ -295,7 +295,7 @@ function gmaxMoves(m) {
   const gb = sp0.gmaxBuff;
   const dai = types.slice(0, 3).map((t) => ({ n: `다이${TYPES[t].n}`, type: t, cat, pow: Math.round(DAI_POW * (gb?.dpow || 1)), acc: 100, pp: 1, pri: 0, ...DAI_FX[t], dai: true }));
   const gt = baseT[0];
-  const g = { n: GMAX_MOVES[m.species] || `거다이 ${sp.n}`, type: gt, cat, pow: gb?.gpow || G_POW, acc: 100, pp: 1, pri: 0, ...strongFx(DAI_FX[gt] || DAI_FX.normal), breakGuard: true, gmaxMove: true, ...(gb?.heart ? { heart: true } : {}) };
+  const g = { n: GMAX_MOVES[m.species] || sp.gmaxN || `거다이 ${sp.n}`, type: gt, cat, pow: gb?.gpow || G_POW, acc: 100, pp: 1, pri: 0, ...strongFx(DAI_FX[gt] || DAI_FX.normal), breakGuard: true, gmaxMove: true, ...(gb?.heart ? { heart: true } : {}) };
   return [g, ...dai];
 }
 // 도감에 보여 줄 거다이맥스 정보

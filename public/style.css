@@ -2137,3 +2137,6 @@ button.fz-slot { cursor: pointer; }
 .fz-rt .btn { white-space: nowrap; }
 /* 합체몬 그림 속 부모 그림: 대전 화면의 'svg 뒤집기·흔들기' 같은 규칙이 안쪽 그림에 걸리면 사라져 버려서 막음 */
 svg[data-fzin] { transform: none !important; animation: none !important; filter: none !important; width: 200px !important; height: 200px !important; margin: 0 !important; display: inline !important; position: static !important; overflow: visible !important; }
+.fz-gcloud { animation: fzCloud 2.4s ease-in-out infinite; } @keyframes fzCloud { 50% { transform: translateY(-5px); opacity: .7; } }
+.fz-gmax-glow { animation: fzGlow 1.8s ease-in-out infinite; } @keyframes fzGlow { 50% { opacity: .65; } }
+.fz-gm { display: flex; gap: 10px; align-items: center; margin: 8px 0; padding: 8px; border-radius: 12px; background: linear-gradient(120deg, #3a0a2a, #8a1040); color: #fff; } .fz-gm b { color: #FFD23F; } .fz-gm .muted { color: #ffd6e0; }

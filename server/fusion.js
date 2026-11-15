@@ -61,8 +61,17 @@ function giveTraits() {
   for (const f of Object.values(db.fusions).sort((a, b) => (a.sp.at || 0) - (b.sp.at || 0))) {
     if (!f.sp.ft) Object.assign(f.sp, pickTrait(f.sp, f.id));
     if (!f.sp.mega) f.sp.mega = megaOf(f.sp);
+    if (!f.sp.gmaxN) f.sp.gmaxN = gmaxNameOf(f.sp);
     register(f);
   }
+}
+// 합체몬 거다이맥스: 두 부모의 거다이 기술 이름을 섞은 전용 거다이 기술 (모습은 두 부모의 거다이맥스를 꿰매 붙임)
+function gmaxNameOf(sp) {
+  const nm = (id) => (Data.GMAX_MOVES[id] || `거다이 ${Data.MONSTERS[id]?.n || ''}`).replace(/^거다이\s*/, '').trim();
+  const [a, b] = (sp.parents || []).map(nm);
+  const wa = (a || sp.n).split(' '), wb = (b || sp.n).split(' ');
+  const n = wa.length > 1 || wb.length > 1 ? `${wa[0]} ${wb[wb.length - 1]}` : mixName(a, b);
+  return `거다이 ${n === `${a}` ? `${sp.n} 대폭주` : n}`;
 }
 // 합체몬 메가진화: 두 부모의 메가진화 보너스를 반씩 섞음 (합계 +100). 메가스톤 없이도 할 수 있음
 const MEGA_W = ['폭주', '각성', '극한', '초월', '진(眞)', '울트라'];
@@ -227,7 +236,7 @@ function makeFusion(u, A, B, sa, sb) {
     look: { split: pick(['v', 'h', 'd']), hue: rnd(360), tint: Math.random() < 0.55, mark: rnd(4), eyes: rnd(3) },
     by: u.name, no: n, at: Date.now(),
   };
-  Object.assign(sp, pickTrait(sp, id)); sp.mega = megaOf(sp);
+  Object.assign(sp, pickTrait(sp, id)); sp.mega = megaOf(sp); sp.gmaxN = gmaxNameOf(sp);
   return { id, sp, mv };
 }
 

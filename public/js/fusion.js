@@ -4,9 +4,10 @@ const FZ_GP = 3000, FZ_NO = new Set(['dummy']);
 let FZ_N = 0;
 
 /* ---------- 합체몬 그림: 두 골목몬 그림을 이음새로 꿰매 붙여요 ---------- */
-function fusionSVG(id, cls = '', mega = false) { // mega: 두 부모의 메가진화 모습을 꿰매 붙임
+function fusionSVG(id, cls = '', mode = false) { // mode: true면 두 부모의 메가진화 모습, 'gmax'면 두 부모의 거다이맥스 모습을 꿰매 붙임
+  const gmax = mode === 'gmax', mega = mode === true;
   const sp = G.data.MONSTERS[id], [pa, pb] = sp.parents || [], L = sp.look || {}, k = `fzc${++FZ_N}`;
-  const inner = (pid) => (G.data.MONSTERS[pid] ? monsterSVG(pid, '', mega && !!G.data.MONSTERS[pid].mega) : '<svg></svg>').replace('<svg', '<svg x="0" y="0" width="200" height="200" data-fzin="1"');
+  const inner = (pid) => (!G.data.MONSTERS[pid] ? '<svg></svg>' : gmax ? (typeof GMAX_ART !== 'undefined' && GMAX_ART[pid] ? `<svg viewBox="-6 -10 212 212">${GMAX_ART[pid]}</svg>` : monsterSVG(pid, '', !!G.data.MONSTERS[pid].mega)) : monsterSVG(pid, '', mega && !!G.data.MONSTERS[pid].mega)).replace('<svg', '<svg x="0" y="0" width="200" height="200" data-fzin="1"');
   const S = [];
   for (let i = 0; i <= 10; i++) {
     const w = i % 2 ? 7 : -7;
@@ -26,15 +27,17 @@ function fusionSVG(id, cls = '', mega = false) { // mega: 두 부모의 메가�
   return `<svg class="fz-art ${cls}" viewBox="0 0 200 200" aria-hidden="true"><defs><clipPath id="${k}a"><polygon points="${pts(A)}"/></clipPath><clipPath id="${k}b"><polygon points="${pts(B)}"/></clipPath>
     <radialGradient id="${k}g"><stop offset="0" stop-color="${tc}" stop-opacity=".35"/><stop offset="1" stop-color="${tc2}" stop-opacity="0"/></radialGradient></defs>
     ${mega ? `<linearGradient id="${k}m" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF5FA2"/><stop offset=".5" stop-color="#FFD23F"/><stop offset="1" stop-color="#2EF2FF"/></linearGradient>` : ''}
+    ${gmax ? `<radialGradient id="${k}x"><stop offset="0" stop-color="#ff2a4a" stop-opacity=".75"/><stop offset=".6" stop-color="#b0127a" stop-opacity=".35"/><stop offset="1" stop-color="#2a0040" stop-opacity="0"/></radialGradient><ellipse class="fz-gmax-glow" cx="100" cy="104" rx="104" ry="100" fill="url(#${k}x)"/>${[[18, 40], [182, 52], [30, 168], [172, 160], [100, 6]].map(([x, y], i) => `<g transform="translate(${x} ${y})"><g class="fz-gcloud" style="animation-delay:${-i * .4}s"><ellipse rx="22" ry="11" fill="#ff3a5c" opacity=".55"/><ellipse cx="9" cy="-5" rx="13" ry="9" fill="#ff7a8c" opacity=".6"/></g></g>`).join('')}` : ''}
     <ellipse cx="100" cy="108" rx="96" ry="92" fill="url(#${k}g)"/>${mega ? `<ellipse class="fz-mega-ring" cx="100" cy="106" rx="94" ry="90" fill="none" stroke="url(#${k}m)" stroke-width="5" stroke-dasharray="14 8" opacity=".9"/>` : ''}
     <g clip-path="url(#${k}a)">${inner(pa)}</g><g clip-path="url(#${k}b)"${tint}>${inner(pb)}</g>
     <polyline points="${pts(S)}" fill="none" stroke="#fff" stroke-width="6" stroke-linejoin="round" opacity=".9"/><polyline class="fz-seam" points="${pts(S)}" fill="none" stroke="${tc}" stroke-width="2.6" stroke-linejoin="round" stroke-dasharray="7 5"/>
-    ${stitches}${mark}${mega ? `<g transform="translate(176 22)"><circle r="16" fill="url(#${k}m)" stroke="#1a1433" stroke-width="2.5"/><text y="6" text-anchor="middle" font-size="17" font-weight="900" fill="#1a1433">M</text></g>` : ''}</svg>`;
+    ${stitches}${mark}${gmax ? `<g transform="translate(176 22)"><circle r="16" fill="#E8402C" stroke="#1a1433" stroke-width="2.5"/><text y="6" text-anchor="middle" font-size="17" font-weight="900" fill="#fff">G</text></g>` : ''}${mega ? `<g transform="translate(176 22)"><circle r="16" fill="url(#${k}m)" stroke="#1a1433" stroke-width="2.5"/><text y="6" text-anchor="middle" font-size="17" font-weight="900" fill="#1a1433">M</text></g>` : ''}</svg>`;
 }
 (() => { // monsterSVG가 합체몬을 만나면 이음새 그림으로
   if (typeof monsterSVG !== 'function') return;
   const orig = monsterSVG;
   monsterSVG = function (id, cls = '', ...rest) { const sp = G.data?.MONSTERS?.[id]; return sp?.fz ? fusionSVG(id, cls, !!rest[0]) : orig(id, cls, ...rest); }; // eslint-disable-line no-global-assign
+  if (typeof gmaxSVG === 'function') { const og = gmaxSVG; gmaxSVG = function (id, cls = '') { return G.data?.MONSTERS?.[id]?.fz ? fusionSVG(id, `gmax ${cls}`, 'gmax') : og(id, cls); }; } // eslint-disable-line no-global-assign
 })();
 
 const fzName = (id) => esc(G.data.MONSTERS[id]?.n || '???');
@@ -46,6 +49,7 @@ function fzMonBox(m) {
   return `<section class="fz-box" data-uid="${m.uid}"><h3 class="dex-h">🧬 합체몬 <small class="muted">No.${sp.no || '?'} · ${esc(sp.by || '')}</small></h3>
     <div class="fz-fam"><span>${monArt(a)}<small>${fzName(a)}</small></span><b>＋</b><span>${monArt(b)}<small>${fzName(b)}</small></span></div>
     ${sp.trait ? `<div class="fz-rt"><span>✨ 특성 <b>${esc(sp.trait.n)}</b></span><button class="btn small" data-retrait="ticket">🎲 다시 뽑기 (리롤권 3)</button><button class="btn small paper" data-retrait="gp">1,500GP로 뽑기</button></div>` : ''}
+    ${sp.gmaxN ? `<div class="fz-gm"><div class="fz-megapic">${gmaxSVG(m.species)}</div><div><b>거다이맥스 · ${esc(sp.gmaxN)}</b><p class="muted" style="font-size:12.5px">두 골목몬의 거다이맥스가 하나로! 대전에서 거다이맥스하면 이 모습이 돼요.</p></div></div>` : ''}
     <p class="muted" style="font-size:12.5px">세상에 하나뿐인 골목몬이에요. 더 합체할 수 없고, 메가스톤 없이 메가진화할 수 있어요. ${(() => { const c = sp.moves.filter((id) => G.data.MOVES[id]?.fzMove).map((id) => `<b>${esc(G.data.MOVES[id].n)}</b>`); return c.length ? `합체기 ${c.join('·')}를 쓸 수 있어요.` : ''; })()}</p></section>`;
 }
 

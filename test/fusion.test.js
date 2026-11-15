@@ -131,3 +131,12 @@ test('합체몬: 훈련장에 나오고, 부모 골목몬으로 강화돼요', (
   const e = P.enhance(u, r.mon.uid, 'p1', new Set()); assert.ok(e.ok, e.error); assert.equal(e.plus, 1);
   assert.ok(!u.mons.some((m) => m.uid === 'p1'));
 });
+
+test('합체몬 거다이맥스: 전용 거다이 기술 이름', () => {
+  const f = Object.values(db.fusions)[0], sp = Data.MONSTERS[f.id];
+  assert.match(sp.gmaxN, /^거다이 /);
+  const b = E.createBattle([{ name: 'x', team: [{ species: f.id, moves: sp.moves.slice(0, 4) }] }, { name: 'y', team: [{ species: 'yeontan', moves: ['ember'] }] }], 1);
+  assert.equal(E.gmaxMoves(b.sides[0].mons[0])[0].n, sp.gmaxN);
+  E.choose(b, 0, { type: 'move', index: 0, gmax: true }); E.choose(b, 1, { type: 'move', index: 0 });
+  assert.ok(b.sides[0].mons[0].gmax > 0 || b.sides[0].mons[0].hp === 0);
+});
