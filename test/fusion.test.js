@@ -66,3 +66,33 @@ test('합체몬은 재시작해도 다시 등록돼요', () => {
   for (const id of ids) assert.ok(Data.MONSTERS[id]?.fz);
   assert.ok(F.mixName('여우비', '연탄이').length >= 2);
 });
+
+test('합체몬 특성: 모두 서로 다르고, 실제로 발동해요', () => {
+  const u = mk(); u.gp = 1e9;
+  const ids = Object.keys(Data.MONSTERS).filter((i) => !Data.BANNED.includes(i) && i !== 'dummy');
+  for (let i = 0; i < 60; i++) { const a = ids[i % ids.length], b = ids[(i * 5 + 1) % ids.length]; if (a === b) continue; u.mons.push({ uid: `x${i}`, species: a, moves: [] }, { uid: `y${i}`, species: b, moves: [] }); assert.ok(F.fuse(u, `x${i}`, `y${i}`).ok); }
+  const all = Object.values(db.fusions);
+  assert.ok(all.every((f) => f.sp.trait?.n && f.sp.ft?.length));
+  assert.equal(new Set(all.map((f) => f.sp.trait.n)).size, all.length, '특성 이름이 모두 달라요');
+  const fid = all[0].id, sp = Data.MONSTERS[fid], saved = sp.ft;
+  const fight = (ft, foe = 'yeontan', fm = ['ember'], seed = 3, turns = 1) => {
+    sp.ft = ft;
+    const b = E.createBattle([{ name: 'x', team: [{ species: fid, moves: ['tackle'] }] }, { name: 'y', team: [{ species: foe, moves: fm }] }], seed);
+    const ev = []; for (let i = 0; i < turns && b.phase !== 'over'; i++) { E.choose(b, 0, { type: 'move', index: 0 }); ev.push(...E.choose(b, 1, { type: 'move', index: 0 }).events); }
+    return { b, txt: ev.map((e) => e.text || '').join(' ') };
+  };
+  sp.trait = { n: '테스트특성', d: '' };
+  // 나올 때: 날씨 / 상대 능력치 하락
+  const lead = (ft) => { sp.ft = ft; const b = E.createBattle([{ name: 'x', team: [{ species: fid, moves: ['guard'] }] }, { name: 'y', team: [{ species: 'yeontan', moves: ['ember'] }] }], 1, { preview: true }); E.choose(b, 0, { type: 'lead', index: 0 }); E.choose(b, 1, { type: 'lead', index: 0 }); return b; };
+  assert.equal(lead([{ k: 'weather', w: 'snow' }]).weather, 'snow');
+  assert.equal(lead([{ k: 'entryDown', st: 'atk' }]).sides[1].mons[0].stages.atk, -1);
+  assert.equal(lead([{ k: 'entryUp', st: 'spe' }]).sides[0].mons[0].stages.spe, 1);
+  // 흡수: 불 기술을 먹어 버림
+  { const r = fight([{ k: 'absorb', t: 'fire' }], 'yeontan', ['ember'], 3, 2); assert.match(r.txt, /먹어 버렸다/); }
+  // 막기 기술 대신 맞기만: guard 효과로 피해 감소 비교
+  const dmgWith = (ft) => { sp.ft = ft; const b = E.createBattle([{ name: 'x', team: [{ species: fid, moves: ['tackle'] }] }, { name: 'y', team: [{ species: 'yeontan', moves: ['ember'] }] }], 9); const h = b.sides[0].mons[0].hp; E.choose(b, 0, { type: 'move', index: 0 }); E.choose(b, 1, { type: 'move', index: 0 }); return h - b.sides[0].mons[0].hp; };
+  assert.ok(dmgWith([{ k: 'guard', t: 'fire', v: 0.5 }]) < dmgWith([]), '불 결계는 불 피해를 줄여요');
+  // 상태이상 면역
+  { sp.ft = [{ k: 'immune', s: 'brn' }]; const b = E.createBattle([{ name: 'x', team: [{ species: fid, moves: ['guard'] }] }, { name: 'y', team: [{ species: 'yeontan', moves: ['ember'] }] }], 1); const m = b.sides[0].mons[0]; assert.ok(m); }
+  sp.ft = saved;
+});

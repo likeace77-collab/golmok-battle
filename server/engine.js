@@ -62,6 +62,11 @@ const freshVolatile = () => ({
 
 // ===== 등신 (개복치): 돌연사와 갈증 =====
 const DS = 'deungsin';
+// 🧬 합체몬 특성: 종 데이터의 ft 배열 (예: [{ k: 'boost', t: 'fire', v: 1.3 }]). 합체몬마다 다름
+const NOFT = [];
+const fts = (m) => (m && MONSTERS[m.species]?.ft) || NOFT;
+const ftOf = (m, k) => fts(m).filter((e) => e.k === k);
+const ftName = (m) => MONSTERS[m.species]?.trait?.n || '특성';
 function suddenDeath(b, s, m, ev, text) {
   if (!alive(m) || b.training) return false;
   ev.push({ t: 'msg', text });
@@ -357,6 +362,7 @@ function speedOf(b, s) {
   if (m.gmax && MONSTERS[m.species]?.gmaxBuff) v *= MONSTERS[m.species].gmaxBuff.stat;
   if (m.species === 'godeuri' && m.hp * 2 <= m.maxHp) v *= 1.5 + pv(m); // 특성 녹아내림
   if (has(m, 'scarf')) v *= 1.5; // 털 목도리
+  for (const e of ftOf(m, 'quick')) v *= e.v; // 합체몬 특성
   if (m.status === 'par') v *= .5;
   if (b.rules?.side?.[s]?.spe) v *= b.rules.side[s].spe;
   return b.rules?.slowFirst ? 1e6 / Math.max(1, v) : v; // 느린 쪽 먼저 (뒤집힌 골목)
@@ -541,6 +547,8 @@ function faintCheck(b, s, m, ev) {
     tallyFaint(b, s, m);
     if (m.gmax) endGmax(b, s, m, null, true);
     ev.push({ t: 'faint', side: s, text: `${josa(m.name, '은/는')} 쓰러졌다!` });
+    { const k = m.lastBy, km = k != null && teamOf(b, k) !== teamOf(b, s) ? activeOf(b, k) : null; // 합체몬 특성: 쓰러뜨리면 능력치 상승
+      for (const e of ftOf(km, 'moxie')) if (alive(km)) { msg(ev, `${km.name}의 ${ftName(km)}!`); changeStage(b, k, km, e.st, 1, ev); } }
     if (m.species === 'yeonji' && !m.markDone) { // 연지곤지: 공격 말고 다른 이유로 쓰러져도 상대에게 자국
       m.markDone = true;
       const o = foesOf(b, s).find((i) => alive(activeOf(b, i)));
@@ -586,6 +594,7 @@ function applyStatus(b, s, m, st, ev, quiet) {
     if (!quiet) msg(ev, `${m.name}에게는 통하지 않는다! (특성 ${m.species === 'orak' ? '돈지랄' : '불꽃의무장'})`);
     return false;
   }
+  if (ftOf(m, 'immune').some((e) => e.s === st)) { if (!quiet) msg(ev, `${m.name}에게는 통하지 않는다! (특성 ${ftName(m)})`); return false; }
   if (m.status || m.hp === 0 || m.types.includes(immune) || steelImmune) {
     if (!quiet) msg(ev, '그러나 효과가 없었다.');
     return false;
@@ -722,6 +731,19 @@ function damageOf(b, atk, def, mv, crit, roll) {
   if (mv.sound && def.species === 'harmonium') dmg *= .5;
   if (atk.species === 'yangmeori' && mv.type === (isHot(b) ? 'fire' : 'ice')) dmg *= 1.3 + pv(atk); // 특성 온탕냉탕
   if (phys && atk.status === 'brn') dmg *= .5;
+  for (const e of fts(atk)) { // 합체몬 특성 (공격할 때)
+    if (e.k === 'boost' && e.t === mv.type) dmg *= e.v;
+    else if (e.k === 'sePow' && effX > 1) dmg *= e.v;
+    else if (e.k === 'statusPow' && def.status) dmg *= e.v;
+    else if (e.k === 'catPow' && (e.c === 'p') === phys) dmg *= e.v;
+    else if (e.k === 'pinchPow' && atk.hp * 2 <= atk.maxHp) dmg *= e.v;
+  }
+  for (const e of fts(def)) { // 합체몬 특성 (맞을 때)
+    if (e.k === 'guard' && e.t === mv.type) dmg *= e.v;
+    else if (e.k === 'seGuard' && effX > 1) dmg *= e.v;
+    else if (e.k === 'fullGuard' && def.hp === def.maxHp) dmg *= e.v;
+    else if (e.k === 'catGuard' && (e.c === 'p') === phys) dmg *= e.v;
+  }
   return Math.max(1, Math.floor(dmg));
 }
 
@@ -749,6 +771,11 @@ function onEntry(b, s, m, ev) {
     m.techMega = false;
     msg(ev, `기술이 발전했다! ${josa(m.name, '이/가')} 메가진화한다!`);
     doMega(b, s, ev);
+  }
+  for (const e of fts(m)) { // 합체몬 특성 (나올 때)
+    if (e.k === 'weather' && b.weather !== e.w) { b.weather = e.w; b.weatherTurns = 5; ev.push({ t: 'weather', weather: e.w, trait: true, text: `${m.name}의 ${ftName(m)}! ${{ sun: '햇볕이 쨍쨍 내리쬔다!', rain: '비가 내리기 시작했다!', snow: '눈이 내리기 시작했다!', dust: '황사가 불기 시작했다!' }[e.w]}` }); }
+    else if (e.k === 'entryUp') { msg(ev, `${m.name}의 ${ftName(m)}!`); changeStage(b, s, m, e.st, 1, ev); }
+    else if (e.k === 'entryDown') { msg(ev, `${m.name}의 ${ftName(m)}!`); for (const o of foesOf(b, s)) { const f = activeOf(b, o); if (alive(f)) changeStage(b, o, f, e.st, -1, ev); } }
   }
   const sky = { hwangsari: ['dust', '황사 경보', '황사가 불기 시작했다!'], usan: ['rain', '폭우', '비가 쏟아지기 시작했다!'], yeoubi: ['rain', '여우비', '해가 떠 있는데 비가 내리기 시작했다!'], bingsu: ['snow', '설경', '눈이 내리기 시작했다!'] }[m.species];
   if (sky && b.weather !== sky[0]) {
@@ -988,6 +1015,11 @@ function hitOne(b, s, me, o, mv, ev) {
     if (!heal(b, o, foe, foe.maxHp / 4, ev, foe)) msg(ev, `${josa(foe.name, '은/는')} 이미 배가 부르다.`);
     return;
   }
+  if (mv.cat !== 'x' && ftOf(foe, 'absorb').some((e) => e.t === mv.type)) { // 합체몬 특성: 그 타입 기술을 먹어 버림
+    msg(ev, `${foe.name}의 ${ftName(foe)}! 기술을 먹어 버렸다!`);
+    if (!heal(b, o, foe, foe.maxHp / 4, ev)) msg(ev, `${josa(foe.name, '은/는')} 이미 배가 부르다.`);
+    return;
+  }
   const eff = effMon(mv.type, foe, me);
   if (eff === 0) { msg(ev, `${foe.name}에게는 효과가 없는 것 같다...`); return; }
 
@@ -1027,6 +1059,7 @@ function hitOne(b, s, me, o, mv, ev) {
     if (roach) msg(ev, `${josa(foe.name, '은/는')} 불사신이다! 체력 1로 버텼다!`);
     if (reborn) { msg(ev, `${josa(foe.name, '은/는')} 이세계에서 환생해 돌아왔다!`); heal(b, o, foe, foe.maxHp * (.25 + pv(foe)), ev); }
     if (hold) useItem(b, o, foe, ev, hold);
+    for (const e of ftOf(foe, 'pinchHeal')) if (alive(foe) && !foe.ftPinch && foe.hp * 3 <= foe.maxHp) { foe.ftPinch = true; msg(ev, `${foe.name}의 ${ftName(foe)}!`); heal(b, o, foe, foe.maxHp * e.v, ev); }
     if (foe.species === 'bongdari' && mv.cat === 'p') foe.lastPhys = got; // 봉다리 내용물분출용
     landed++;
     if (crit) msg(ev, '급소에 맞았다!');
@@ -1113,6 +1146,7 @@ function hitOne(b, s, me, o, mv, ev) {
 // 맞은 뒤에 발동하는 특성들
 function afterHit(b, s, me, o, foe, mv, total, ev) {
   const phys = mv.cat === 'p';
+  for (const e of ftOf(foe, 'contact')) if (phys && alive(me) && !me.status && chance(b, e.v)) { msg(ev, `${foe.name}의 ${ftName(foe)}!`); applyStatus(b, s, me, e.s, ev, true); }
   if (alive(me) && phys && !me.status && !me.types.includes('fire')) {
     // 땡초 하바네로분출 (반드시), 연탄이 불꽃의무장 (30%): 물리(접촉) 공격을 한 상대를 화상
     if (foe.species === 'ttaengcho' || (foe.species === 'yeontan' && chance(b, 30 + pv(foe)))) {
@@ -1382,6 +1416,10 @@ function endOfTurn(b, ev) {
   for (const s of seats(b)) {
     const m = activeOf(b, s);
     m.protecting = false; m.flinched = false;
+  }
+  for (const s of seats(b)) { // 합체몬 특성: 턴 끝 재생
+    const m = activeOf(b, s);
+    for (const e of ftOf(m, 'regen')) if (alive(m) && m.hp < m.maxHp && heal(b, s, m, m.maxHp * e.v, ev)) msg(ev, `${m.name}의 ${ftName(m)}! 체력이 조금 돌아왔다.`);
   }
   if (b.weather === 'dust') {
     for (const s of seats(b)) {

@@ -27,7 +27,11 @@ function register(f) {
   for (const [id, mv] of Object.entries(f.mv || {})) hidden(Data.MOVES, id, mv);
   hidden(Data.MONSTERS, f.id, f.sp);
 }
-function init(_db) { db = _db; db.fusions ||= {}; for (const f of Object.values(db.fusions)) register(f); oneTimeFixes(); }
+function init(_db) { db = _db; db.fusions ||= {}; for (const f of Object.values(db.fusions)) register(f); oneTimeFixes(); giveTraits(); }
+// 특성이 생기기 전에 태어난 합체몬에게도 (태어난 순서대로) 서로 다른 특성을
+function giveTraits() {
+  for (const f of Object.values(db.fusions).sort((a, b) => (a.sp.at || 0) - (b.sp.at || 0))) if (!f.sp.ft) { Object.assign(f.sp, pickTrait(f.sp, f.id)); register(f); }
+}
 // 한 번만 하는 손질: suho님의 「콩시락이」에서 정전기를 빼고 합체기 하나 추가 (2026-11-15 요청)
 function oneTimeFixes() {
   for (const f of Object.values(db.fusions)) {
@@ -92,6 +96,60 @@ function comboMove(id, aId, bId) {
   return mv;
 }
 
+
+/* ---------- 🧬 합체몬 특성: 합체몬마다 서로 다른 특성 하나 ---------- */
+const TN = (t) => Data.TYPES[t]?.n || t;
+const SN = { atk: '공격', def: '방어', spa: '특공', spd: '특방', spe: '스피드', acc: '명중률' };
+const SNG = { atk: '공격이', def: '방어가', spa: '특공이', spd: '특방이', spe: '스피드가', acc: '명중률이' };
+const STN = { brn: '화상', par: '마비', psn: '독', slp: '잠듦', frz: '얼음' };
+const TYPES = () => Object.keys(Data.TYPES).filter((t) => t !== 'none');
+const pct = (v) => `${Math.round(Math.abs(v - 1) * 100)}%`;
+// 특성 후보 전부: [서명, 효과, 이름, 설명]
+function traitCatalog() {
+  const L = [];
+  const add = (e, n, d) => L.push({ sig: JSON.stringify(e), e, n, d });
+  for (const t of TYPES()) {
+    [[1.2, '기운'], [1.3, '심장'], [1.4, '폭주']].forEach(([v, w]) => add({ k: 'boost', t, v }, `${TN(t)} ${w}`, `${TN(t)} 기술의 위력이 ${pct(v)} 세진다.`));
+    [[0.7, '막이'], [0.6, '방패'], [0.5, '결계']].forEach(([v, w]) => add({ k: 'guard', t, v }, `${TN(t)} ${w}`, `${TN(t)} 기술에 받는 피해가 ${pct(v)} 줄어든다.`));
+    add({ k: 'absorb', t }, `${TN(t)} 먹보`, `${TN(t)} 기술을 맞으면 피해 대신 체력을 1/4 회복한다.`);
+  }
+  for (const [st, n] of [['brn', '내열 피부'], ['par', '절연 몸'], ['psn', '해독 체질'], ['slp', '불면증'], ['frz', '보온 털']]) add({ k: 'immune', s: st }, n, `${STN[st]} 상태가 되지 않는다.`);
+  for (const [st, n] of [['atk', '투지 시동'], ['def', '단단 시동'], ['spa', '집중 시동'], ['spd', '평정 시동'], ['spe', '질주 시동']]) add({ k: 'entryUp', st }, n, `싸움에 나오면 자신의 ${SNG[st]} 오른다.`);
+  for (const [st, n] of [['atk', '위압감'], ['def', '겁주기'], ['spa', '방해 전파'], ['spd', '야유'], ['spe', '끈끈이 발'], ['acc', '모래 뿌리기']]) add({ k: 'entryDown', st }, n, `싸움에 나오면 상대의 ${SNG[st]} 떨어진다.`);
+  for (const [w, n, d] of [['sun', '햇살 부르기', '땡볕'], ['rain', '비 부르기', '비'], ['snow', '눈 부르기', '눈'], ['dust', '황사 부르기', '황사']]) add({ k: 'weather', w }, n, `싸움에 나오면 5턴 동안 ${d}.`);
+  [[1 / 16, '재생'], [1 / 10, '초재생']].forEach(([v, n]) => add({ k: 'regen', v }, n, `턴이 끝날 때마다 체력을 1/${Math.round(1 / v)} 회복한다.`));
+  for (const [st, n] of [['brn', '불꽃 가시'], ['par', '전기 털'], ['psn', '독 가시'], ['slp', '꿀잠 가루'], ['frz', '냉기 비늘']]) add({ k: 'contact', s: st, v: 30 }, n, `물리 공격을 받으면 30% 확률로 상대를 ${STN[st]} 상태로 만든다.`);
+  for (const [st, n] of [['atk', '승리의 함성'], ['def', '승리의 갑옷'], ['spa', '승리의 영감'], ['spd', '승리의 미소'], ['spe', '승리의 질주']]) add({ k: 'moxie', st }, n, `상대를 쓰러뜨리면 자신의 ${SNG[st]} 오른다.`);
+  [[0.25, '비상 간식'], [0.33, '비상 도시락'], [0.5, '비상 보약']].forEach(([v, n]) => add({ k: 'pinchHeal', v }, n, `체력이 1/3 이하가 되면 한 번, 최대 체력의 ${Math.round(v * 100)}%를 회복한다.`));
+  [[1.2, '약점 찌르기'], [1.3, '약점 사냥꾼']].forEach(([v, n]) => add({ k: 'sePow', v }, n, `효과가 굉장한 기술의 위력이 ${pct(v)} 세진다.`));
+  [[0.75, '튼튼 체질'], [0.65, '철벽 체질']].forEach(([v, n]) => add({ k: 'seGuard', v }, n, `효과가 굉장한 기술에 받는 피해가 ${pct(v)} 줄어든다.`));
+  [[0.75, '첫 방 막기'], [0.6, '멀티스케일'], [0.5, '천하무적 첫인상']].forEach(([v, n]) => add({ k: 'fullGuard', v }, n, `체력이 가득할 때 받는 피해가 ${pct(v)} 줄어든다.`));
+  [[1.3, '약자 괴롭히기'], [1.4, '상처 후벼파기']].forEach(([v, n]) => add({ k: 'statusPow', v }, n, `상태이상인 상대에게 주는 피해가 ${pct(v)} 세진다.`));
+  [['p', 1.2, '근육'], ['p', 1.3, '철권'], ['s', 1.2, '두뇌'], ['s', 1.3, '천재']].forEach(([c, v, n]) => add({ k: 'catPow', c, v }, n, `${c === 'p' ? '물리' : '특수'} 기술의 위력이 ${pct(v)} 세진다.`));
+  [['p', 0.8, '두꺼운 가죽'], ['p', 0.7, '강철 피부'], ['s', 0.8, '마법 막'], ['s', 0.7, '마력 결계']].forEach(([c, v, n]) => add({ k: 'catGuard', c, v }, n, `${c === 'p' ? '물리' : '특수'} 기술에 받는 피해가 ${pct(v)} 줄어든다.`));
+  [[1.3, '역경'], [1.5, '배수진']].forEach(([v, n]) => add({ k: 'pinchPow', v }, n, `체력이 절반 이하이면 주는 피해가 ${pct(v)} 세진다.`));
+  [[1.2, '날쌘 발'], [1.3, '번개 발']].forEach(([v, n]) => add({ k: 'quick', v }, n, `스피드가 ${pct(v)} 빨라진다.`));
+  return L;
+}
+const traitSig = (ft) => ft.map((e) => JSON.stringify(e)).sort().join('|');
+// 아직 아무 합체몬도 안 가진 특성을 골라요. 몸에 맞는 타입(자기 타입·기술 타입)을 더 자주. 다 쓰면 두 개를 묶어 새 특성
+function pickTrait(sp, skipId) {
+  const used = new Set(Object.values(db.fusions).filter((f) => f.id !== skipId && f.sp.ft).map((f) => traitSig(f.sp.ft)));
+  const usedNames = new Set(Object.values(db.fusions).filter((f) => f.id !== skipId && f.sp.trait).map((f) => f.sp.trait.n));
+  const all = traitCatalog();
+  const mvTypes = new Set(sp.moves.map((x) => Data.MOVES[x]?.type));
+  const fit = (c) => (c.e.t ? (sp.types.includes(c.e.t) ? 4 : mvTypes.has(c.e.t) ? 2 : 0.4) : 1.5);
+  const free = all.filter((c) => !used.has(traitSig([c.e])) && !usedNames.has(c.n));
+  const roll = (list) => { const tot = list.reduce((n, c) => n + fit(c), 0); let x = Math.random() * tot; for (const c of list) { x -= fit(c); if (x <= 0) return c; } return list[list.length - 1]; };
+  if (free.length) { const c = roll(free); return { ft: [c.e], trait: { n: c.n, d: c.d } }; }
+  for (let t = 0; t < 500; t++) { // 두 특성 묶기
+    const a = roll(all), b2 = roll(all.filter((c) => c.e.k !== a.e.k));
+    const ft = [a.e, b2.e], n = `${a.n}·${b2.n}`;
+    if (!used.has(traitSig(ft)) && !usedNames.has(n)) return { ft, trait: { n, d: `${a.d} 그리고 ${b2.d}` } };
+  }
+  const c = roll(all); return { ft: [c.e], trait: { n: `${c.n} ${Object.keys(db.fusions).length}`, d: c.d } };
+}
+
 const LINES = ['둘의 마음이 하나가 되자 빛 속에서 태어났다.', '처음 보는 모습이지만 어딘가 낯이 익다.', '두 골목의 기억을 모두 가지고 있다고 한다.', '합체한 날 골목에 무지개가 떴다.', '가끔 두 목소리로 동시에 운다.', '누구에게서 태어났는지 아는 건 주인뿐이다.'];
 const STATS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
 
@@ -125,6 +183,7 @@ function makeFusion(u, A, B, sa, sb) {
     look: { split: pick(['v', 'h', 'd']), hue: rnd(360), tint: Math.random() < 0.55, mark: rnd(4), eyes: rnd(3) },
     by: u.name, no: n, at: Date.now(),
   };
+  Object.assign(sp, pickTrait(sp, id));
   return { id, sp, mv };
 }
 

@@ -121,6 +121,7 @@ function fusionResult(mon, back) {
   const sp = G.data.MONSTERS[mon.species], tot = Object.values(sp.base).reduce((x, y) => x + y, 0);
   const bg = openSheet(`<div class="fz-res"><h2>🧬 ${esc(sp.n)}</h2><div class="detail-pic${mon.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c};margin:0 auto 8px">${mon.shiny ? SHINY_TAG : ''}${monArt(mon.species, mon.shiny)}</div>
     <p style="text-align:center">${typesOf(mon.species)}</p><p class="muted" style="font-size:13px">${esc(sp.flavor)}</p>
+    ${sp.trait ? `<p class="trait fz-trait"><b>✨ 특성 ${esc(sp.trait.n)}</b> ${esc(sp.trait.d)}</p>` : ''}
     ${Object.entries(sp.base).map(([k, v]) => `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${v}</span><i style="width:${Math.min(100, v / 1.3)}%"></i></div>`).join('')}<p class="muted" style="text-align:right">합계 ${tot}</p>
     <h3 class="dex-h">기술 ${sp.moves.length}개</h3><div class="fz-moves">${sp.moves.map((id) => { const mv = G.data.MOVES[id]; return mv ? `<span class="${mv.fzMove ? 'fz-combo' : ''}">${typeChip(mv.type)}${esc(mv.n)}${mv.fzMove ? ' <b>합체기</b>' : ''}</span>` : ''; }).join('')}</div>
     <div class="row fz-btns" style="gap:6px;margin-top:10px;flex-wrap:wrap"><button class="btn" data-mon>🔍 자세히</button><button class="btn paper" data-tree>🌳 합체 트리</button><button class="btn paper" data-x>닫기</button></div></div>`);
@@ -143,7 +144,7 @@ async function showFusionTree(back = showLobby) {
     <div class="fz-forest">${t.list.map((e) => { const sp = e.fusion.sp; return `<article class="fz-tree${e.alive ? '' : ' gone'}">
       <div class="fz-par">${parent(e.a)}${parent(e.b)}</div>
       <svg class="fz-lines" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true"><path d="M50 0V14Q50 22 60 22H140Q150 22 150 14V0M100 22V40" fill="none" stroke="currentColor" stroke-width="3"/></svg>
-      <button class="fz-child" ${e.alive ? `data-uid="${e.uid}"` : 'disabled'}>${monArt(e.fusion.id)}<b>${esc(sp.n)}</b><span>${sp.types.map(typeChip).join('')}</span><small>No.${sp.no || '?'} · ${dateStr(e.at)}${e.alive ? '' : ' · 떠남'}</small></button></article>`; }).join('') || '<p class="wait">아직 합체한 골목몬이 없어요. 첫 합체몬을 탄생시켜 보세요!</p>'}</div>`;
+      <button class="fz-child" ${e.alive ? `data-uid="${e.uid}"` : 'disabled'}>${monArt(e.fusion.id)}<b>${esc(sp.n)}</b><span>${sp.types.map(typeChip).join('')}</span>${sp.trait ? `<em class="fz-tt">✨ ${esc(sp.trait.n)}</em>` : ''}<small>No.${sp.no || '?'} · ${dateStr(e.at)}${e.alive ? '' : ' · 떠남'}</small></button></article>`; }).join('') || '<p class="wait">아직 합체한 골목몬이 없어요. 첫 합체몬을 탄생시켜 보세요!</p>'}</div>`;
   app.querySelector('#back').onclick = () => back();
   app.querySelector('#fz-new').onclick = () => showFusion();
   app.querySelectorAll('.fz-child[data-uid]').forEach((b) => { b.onclick = () => openMon(b.dataset.uid, () => showFusionTree(back)); });

@@ -2129,3 +2129,5 @@ button.fz-slot { cursor: pointer; }
 .fz-child svg { width: 96px; height: 96px; } .fz-child b { font-size: 16px; } .fz-child small { font-size: 11px; opacity: .75; } .fz-child:disabled { cursor: default; }
 .fz-hero .btn { color: var(--ink); white-space: nowrap; } .fz-hero .btn:disabled { opacity: .55; }
 .fz-btns .btn { flex: 1 1 auto; white-space: nowrap; }
+.fz-trait { border-color: #7B4BFF; background: linear-gradient(135deg, #fff0f7, #eef3ff); }
+.fz-tt { font-style: normal; font-size: 12px; font-weight: 800; color: #7B4BFF; }
