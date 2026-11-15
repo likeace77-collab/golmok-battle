@@ -43,9 +43,10 @@ function makeMon(spec) {
   const plus = Math.max(0, Math.min(5, spec.plus | 0)); // 강화: +1마다 능력치 4%
   const stats = plusStats(calcStats(sp.base), spec.species, plus);
   return {
+    ...(spec.aff ? { aff: Math.max(0, Math.min(100, spec.aff | 0)) } : {}), ...(spec.uid ? { uid: String(spec.uid) } : {}),
     species: spec.species, name: sp.n, types: sp.types, stats, mega: false, shiny: !!spec.shiny, plus, ...(spec.costume ? { costume: String(spec.costume).slice(0, 20) } : {}),
-    hp: stats.hp, maxHp: stats.hp,
-    status: null, statusTurns: 0, item: ITEMS[spec.item] ? spec.item : null, itemUsed: false,
+    hp: spec.hpPct ? Math.max(1, Math.round(stats.hp * Math.min(100, spec.hpPct) / 100)) : stats.hp, maxHp: stats.hp, // hpPct: 퍼즐 배틀용 시작 체력
+    status: spec.status || null, statusTurns: 0, item: ITEMS[spec.item] ? spec.item : null, itemUsed: false,
     moves: spec.moves.map((id) => ({ id, pp: MOVES[id].pp })),
     ...(spec.species === DS ? { thirst: 100, blaze: 0 } : {}),
     ...freshVolatile(),
@@ -103,7 +104,7 @@ function createTraining(player, seed, exclude = [], shiny = []) {
   return b;
 }
 
-function createBattle(players, seed = (Math.random() * 2 ** 31) | 0, { preview = false, raid = null } = {}) {
+function createBattle(players, seed = (Math.random() * 2 ** 31) | 0, { preview = false, raid = null, rules = null } = {}) {
   const b = {
     seed, turn: 1, phase: preview ? 'preview' : 'choose', winner: null, weather: null, weatherTurns: 0, terrain: null, terrainTurns: 0,
     pending: players.map(() => null), needs: players.map(() => true),
@@ -114,8 +115,25 @@ function createBattle(players, seed = (Math.random() * 2 ** 31) | 0, { preview =
     })),
   };
   if (raid) setupBoss(b);
+  if (rules) applyRules(b, rules);
   return b;
 }
+/* ---------- 특별 규칙 (메타배틀·체육관·골목 탈출): 날씨 고정, 타입 위력, 팀 보너스, 역상성, 필중, 느린 쪽 먼저 등 ---------- */
+function applyRules(b, r) {
+  b.rules = r;
+  if (r.weather) { b.weather = r.weather; b.weatherTurns = 999; }
+  b.sides.forEach((sd, i) => {
+    if (r.noZ) sd.zUsed = true;
+    if (r.noGmax) sd.gmaxUsed = true;
+    if (r.noMega) { sd.megaUsed = true; sd.stones = []; }
+    for (const m of sd.mons) {
+      if (r.noItems) m.item = null;
+      const mul = (r.hpMul || 1) * (r.sideHp?.[i] || 1);
+      if (mul !== 1) m.maxHp = m.hp = Math.round(m.maxHp * mul);
+    }
+  });
+}
+const sideOfMon = (b, m) => b.sides.findIndex((sd) => sd.mons.includes(m));
 
 /* ---------- 레이드: 1~4명이 한 팀(0), 맨 끝 자리가 보스(1팀) ----------
    보스는 한 마리, 체력이 사람 수만큼 커지고, 공격기는 모두 광역. 2턴마다 충격파, 제한 턴 안에 못 잡으면 실패 */
@@ -215,7 +233,7 @@ function legalActions(b, s) {
 
 // 메가진화는 한 판에 한 번. 행동을 쓰지 않고 그 턴의 기술을 바로 이어서 씁니다.
 const hasStone = (b, s) => !b.sides[s].stones || b.sides[s].stones.includes(activeOf(b, s).species); // 메가스톤이 있어야 메가진화 (봇·훈련장은 제한 없음)
-const canMega = (b, s) => b.phase === 'choose' && !b.sides[s].megaUsed && !activeOf(b, s).mega && !activeOf(b, s).gmax && alive(activeOf(b, s)) && hasStone(b, s);
+const canMega = (b, s) => b.phase === 'choose' && !!MONSTERS[activeOf(b, s).species].mega && !b.sides[s].megaUsed && !activeOf(b, s).mega && !activeOf(b, s).gmax && alive(activeOf(b, s)) && hasStone(b, s);
 
 function doMega(b, s, ev) {
   const m = activeOf(b, s);
@@ -339,7 +357,8 @@ function speedOf(b, s) {
   if (m.species === 'godeuri' && m.hp * 2 <= m.maxHp) v *= 1.5 + pv(m); // 특성 녹아내림
   if (has(m, 'scarf')) v *= 1.5; // 털 목도리
   if (m.status === 'par') v *= .5;
-  return v;
+  if (b.rules?.side?.[s]?.spe) v *= b.rules.side[s].spe;
+  return b.rules?.slowFirst ? 1e6 / Math.max(1, v) : v; // 느린 쪽 먼저 (뒤집힌 골목)
 }
 const stageMul = (n) => (n >= 0 ? (2 + n) / 2 : 2 / (2 - n));
 
@@ -453,7 +472,11 @@ function scoreOf(b) {
 }
 
 function hurt(b, s, m, amount, ev, extra) {
-  const dmg = Math.min(m.hp, Math.max(1, Math.floor(amount)));
+  let dmg = Math.min(m.hp, Math.max(1, Math.floor(amount)));
+  if (extra?.moveType && m.aff >= 70 && !m.affUsed && dmg >= m.hp && m.hp > 1 && chance(b, m.aff >= 100 ? 25 : 15)) { // 친밀도: 주인을 위해 버팀
+    m.affUsed = true; dmg = m.hp - 1;
+    ev.push({ t: 'msg', text: `${josa(m.name, '은/는')} 주인을 슬프게 하고 싶지 않아서 버텼다! 💗` });
+  }
   const form0 = formOf(m);
   m.hp -= dmg;
   tally(b, s, m, dmg);
@@ -672,8 +695,17 @@ function damageOf(b, atk, def, mv, crit, roll) {
   if (crit) dmg *= 1.5;
   dmg *= roll;
   if (atk.types.includes(mv.type)) dmg *= 1.5;
-  const effX = effMon(mv.type, def, atk);
+  let effX = effMon(mv.type, def, atk);
+  const R = b.rules;
+  if (R?.inverse) effX = effX === 0 ? 2 : 1 / effX; // 역상성
   dmg *= effX;
+  if (R) {
+    if (R.typeMul?.[mv.type]) dmg *= R.typeMul[mv.type];
+    const sa = R.side?.[sideOfMon(b, atk)];
+    if (sa) { dmg *= (sa.all || 1) * (sa.types?.[mv.type] || 1); if (sa.critMul && crit) dmg *= sa.critMul; }
+    const sd = R.side?.[sideOfMon(b, def)];
+    if (sd?.guard) dmg *= sd.guard;
+  }
   if (has(atk, 'battery')) dmg *= 1.3; // 번개 배터리
   if (has(atk, 'note') && effX > 1) dmg *= 1.25; // 족집게 노트
   if (b.terrain === 'grass' && mv.type === 'grass' && teamOf(b, seats(b).find((i) => activeOf(b, i) === atk) ?? -1) === b.terrainTeam) dmg *= 1.3;
@@ -905,7 +937,7 @@ function hitOne(b, s, me, o, mv, ev) {
   }
 
   if (mv.acc !== null) {
-    const accuracy = mv.acc * stageMul(me.stages.acc) * (has(foe, 'smoke') ? .9 : 1); // 연막탄
+    const accuracy = b.rules?.sureHit ? 100 : mv.acc * stageMul(me.stages.acc) * (has(foe, 'smoke') ? .9 : 1); // 연막탄 (필중 규칙이면 100)
     if (rand(b) * 100 >= accuracy) {
       ev.push({ t: 'miss', side: o, text: `${me.name}의 공격이 빗나갔다!` });
       return;
@@ -1409,6 +1441,7 @@ function endOfTurn(b, ev) {
     if (has(m, 'leftover') && m.hp < m.maxHp) { useItem(b, s, m, ev, '조금 먹고 체력을 회복했다.'); heal(b, s, m, m.maxHp / 16, ev); }
     if (m.whileFrom && alive(m)) { if (alive(m.whileFrom)) { msg(ev, `while문이 돈다... ${josa(m.name, '은/는')} 10 피해!`); hurt(b, s, m, 10, ev); faintCheck(b, s, m, ev); } else { m.whileFrom = null; msg(ev, `선생님이 쓰러져 while문이 끝났다. (break;)`); } }
     if (m.heartbreak && alive(m)) { msg(ev, `${josa(m.name, '은/는')} 마음의 상처가 아프다... 25 피해!`); hurt(b, s, m, 25, ev); faintCheck(b, s, m, ev); }
+    if (m.aff >= 90 && m.status && alive(m) && chance(b, 20)) { const was = STATUS_NAME[m.status]; m.status = null; m.statusTurns = 0; ev.push({ t: 'status', side: s, status: null, text: `${josa(m.name, '은/는')} 주인의 응원을 떠올리고 ${was} 상태를 털어냈다! 💗` }); }
     if (m.yeonjiMark && alive(m)) { msg(ev, `${m.name}의 연지 자국이 화끈거린다!`); hurt(b, s, m, m.maxHp * (m.yeonjiMark === true ? .25 : m.yeonjiMark), ev); faintCheck(b, s, m, ev); }
   }
   if (b.terrain && --b.terrainTurns <= 0) { b.terrain = null; ev.push({ t: 'terrain', terrain: null, text: '그래스필드가 사라졌다.' }); }

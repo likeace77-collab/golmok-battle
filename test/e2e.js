@@ -35,6 +35,8 @@ async function signup(ctx, name) {
   await page.click('[data-ok]');
   await page.waitForSelector('.got [data-x]');
   await page.click('.got [data-x]');
+  await page.waitForSelector('#go-team, .gd-list'); // 스타터를 고르면 가이드가 열림
+  if (await page.$('.gd-list')) await page.click('#back');
   await page.waitForSelector('#go-team');
   // 테스트에서 메가진화할 골목몬의 메가스톤 (이미 있으면 그냥 넘어감)
   await page.evaluate(async () => { for (const species of ['kongsiru', 'maetdol', 'kettle']) await fetch('/api/stone/buy', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ species }) }); });
@@ -189,7 +191,7 @@ async function playStep(page) {
   await a.page.click('#go-dex');
   await a.page.waitForSelector('[data-dex]');
   const cnt = await a.page.locator('[data-dex], [data-soon]').count(); // 곧 공개 카드 포함
-  if (cnt !== 59) throw new Error(`도감 수 ${cnt}`);
+  if (cnt !== 60) throw new Error(`도감 수 ${cnt}`);
   await shot(a.page, 'dex');
   await a.page.click('[data-dex=meokarak]');
   await a.page.waitForSelector('.sheet .mv');

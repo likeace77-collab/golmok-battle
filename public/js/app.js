@@ -266,7 +266,9 @@ function onServer(m) {
       if (G.screen === 'lobby') renderLobby();
       break;
     case 'toast': toast(m.text); break;
-    case 'gift': if (G.screen === 'battle' || typeof showGot !== 'function') toast(`${m.title} 지갑을 확인해 보세요.`); else showGot(m.got, m.title); break;
+    case 'gift': if (!m.got?.length) toast(m.title); else if (G.screen === 'battle' || typeof showGot !== 'function') toast(`${m.title} 지갑을 확인해 보세요.`); else showGot(m.got, m.title); break;
+    case 'bets': onBets(m); break;
+    case 'fusion': fzRegisterAll([m.fusion]); break;
     case 'me': G.user = m.user; if (G.screen === 'lobby') renderLobby(); else if (G.screen === 'box' && !sheetRoot.innerHTML) showBox(); break;
     case 'chat': case 'chat_hist': case 'chat_del': onSocialMsg(m); break;
     case 'no_battle': Battle.onNoBattle(); break;
@@ -335,7 +337,7 @@ function showLobby() {
   // 새 게임: 튜토리얼(스타터 덱)을 끝내야 로비로
   if (!G.user.tutorial) { if (!['tutorial', 'starters'].includes(G.screen)) { closeSheet(); showTutorial(); } return; }
   if (G.user?.tempPw && !G.pwNag) { G.pwNag = true; setTimeout(() => toast('임시 비밀번호로 들어왔어요. 설정에서 새 비밀번호로 바꿔 주세요!'), 300); }
-  G.screen = 'lobby'; app.className = ''; closeSheet(); renderLobby();
+  G.screen = 'lobby'; app.className = ''; closeSheet(); document.getElementById('bet-bar')?.remove(); renderLobby();
 }
 
 function renderLobby() {
@@ -343,7 +345,7 @@ function renderLobby() {
   const others = L.players.filter((p) => p.name !== u.name);
   const rival = Object.entries(u.h2h || {}).map(([n, r]) => `${esc(n)}: ${r.w}승 ${r.l}패${r.d ? ` ${r.d}무` : ''}`).join(', ');
   app.innerHTML = `${newsBanner()}
-    ${L.incoming.map((c) => `<div class="notice"><b>${esc(c.name)}님의 ${c.draft && c.size >= 6 ? '6대6 🚫밴픽 (1마리 금지 → 5대5)' : `${c.size}대${c.size}${c.draft ? ' 🚫밴픽' : ''}`} 대전 신청</b>
+    ${L.incoming.map((c) => `<div class="notice"><b>${esc(c.name)}님의 ${c.meta ? `${c.size}대${c.size} 🧪메타배틀` : c.draft && c.size >= 6 ? '6대6 🚫밴픽 (1마리 금지 → 5대5)' : `${c.size}대${c.size}${c.draft ? ' 🚫밴픽' : ''}`} 대전 신청</b>
       <p style="margin-bottom:8px">내 덱: ${esc(u.decks[u.active]?.name || '')}</p>
       <div class="row"><button class="btn mint" data-acc="${esc(c.from)}">받기</button><button class="btn paper" data-dec="${esc(c.from)}">거절</button></div></div>`).join('')}
     <section class="panel">
@@ -369,6 +371,12 @@ function renderLobby() {
         <button class="g2b chat" id="go-chat"><span>💬</span><b>채팅</b><em class="mailbadge" data-chatbadge hidden></em></button>
         <button class="g2b casino" id="go-casino"><span>🎰</span><b>도박장</b><small>극악의 대박</small></button>
         <button class="g2b tourney" id="go-tourney"><span>🏆</span><b>토너먼트</b><small>토요일 밤 9시</small></button>
+        <button class="g2b gym" id="go-gym"><span>🏟️</span><b>체육관</b><small>배지 ${(u.gym?.badges || []).length}/8</small></button>
+        <button class="g2b rogue" id="go-rogue"><span>🚪</span><b>골목 탈출</b><small>${u.rogueBest ? `최고 ${u.rogueBest}층` : '기록 도전'}</small></button>
+        <button class="g2b wb" id="go-wb"><span>🌍</span><b>월드 보스</b><small>모두 함께</small></button>
+        <button class="g2b mis" id="go-mis"><span>🧩</span><b>퍼즐·미션</b><small>오늘의 도전</small></button>
+        <button class="g2b meta" id="go-meta"><span>🧪</span><b>메타배틀</b><small>주간 규칙</small></button>
+        <button class="g2b fuse" id="go-fuse"><span>🧬</span><b>합체</b><small>새 골목몬 탄생</small></button>
         <button class="g2b guide" id="go-guide"><span>📖</span><b>가이드</b><small>${(() => { try { return localStorage.getItem('guide-read') ? '다시 보기' : '처음이라면!'; } catch { return ''; } })()}</small></button>
         <button class="g2b news" id="go-news"><span>📢</span><b>소식</b>${u.badges.news ? `<em class="mailbadge">${u.badges.news}</em>` : ''}</button>
         <button class="g2b stats" id="go-stats"><span>📊</span><b>전적</b><small>리플레이</small></button>
@@ -443,6 +451,12 @@ function renderLobby() {
   app.querySelector('#go-tourney').onclick = () => showTourney();
   app.querySelector('#go-news').onclick = () => showNews();
   app.querySelector('#go-guide').onclick = () => showGuide();
+  app.querySelector('#go-gym').onclick = () => showGym();
+  app.querySelector('#go-rogue').onclick = () => showRogue();
+  app.querySelector('#go-wb').onclick = () => showWb();
+  app.querySelector('#go-mis').onclick = () => showMissions();
+  app.querySelector('#go-meta').onclick = () => showMeta();
+  app.querySelector('#go-fuse').onclick = () => showFusion();
   app.querySelector('#news-band')?.addEventListener('click', () => showNews());
   app.querySelector('#go-stats').onclick = () => showStats();
   app.querySelector('#go-admin')?.addEventListener('click', () => showAdmin());
@@ -738,7 +752,7 @@ function editMon(team, i, done) {
         </div>
       </div>
       ${sp.trait ? `<p class="trait"><b>특성 ${sp.trait.n}</b> ${sp.trait.d}</p>` : ''}
-      <p class="mega-line">${stoneSVG(slot.species, 34, { lock: !stone })}<span>${stone ? `메가스톤 있음: <b>${sp.mega.n}</b>(으)로 메가진화 가능` : '메가스톤이 없어 메가진화를 못 해요'}</span></p>
+      ${sp.mega ? `<p class="mega-line">${stoneSVG(slot.species, 34, { lock: !stone })}<span>${stone ? `메가스톤 있음: <b>${sp.mega.n}</b>(으)로 메가진화 가능` : '메가스톤이 없어 메가진화를 못 해요'}</span></p>` : '<p class="mega-line">🧬 합체몬은 메가진화를 못 해요.</p>'}
       <h3 style="font-family:var(--ui);font-weight:400;margin-bottom:6px">도구 <small class="muted">전부 무료 · ${slot.item && G.data.ITEMS[slot.item] ? `${G.data.ITEMS[slot.item].i} ${G.data.ITEMS[slot.item].n}` : '없음'}</small></h3>
       <div class="items">${Object.entries(G.data.ITEMS || {}).map(([id, it]) => `<button class="itm" data-item="${id}" aria-pressed="${slot.item === id}" title="${esc(it.d)}"><span class="ii">${it.i}</span><b>${it.n}</b></button>`).join('')}</div>
       <p class="item-desc muted">${slot.item && G.data.ITEMS[slot.item] ? `${G.data.ITEMS[slot.item].n}: ${G.data.ITEMS[slot.item].d}` : '도구를 누르면 들려 주고, 다시 누르면 뺍니다.'}</p>
@@ -1274,7 +1288,7 @@ function openDexEntry(id) {
     </div>
     <p style="margin-bottom:12px">${sp.flavor}</p>
     ${sp.trait ? `<p class="trait"><b>특성 ${sp.trait.n}</b> ${sp.trait.d}</p>` : ''}
-    <section class="megabox">
+    ${sp.mega ? `<section class="megabox">
       <h3>메가진화: ${sp.mega.n}</h3>
       <div class="row" style="align-items:flex-start">
         <div class="detail-pic${sh ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${pic(monsterSVG(id, '', true))}</div>
@@ -1284,7 +1298,7 @@ function openDexEntry(id) {
         </div>
       </div>
       <p style="margin-top:8px;font-size:15px;line-height:1.4">${sp.mega.d}</p>
-    </section>
+    </section>` : ''}
     <section class="panel shinybox"><h3>✨ 이로치</h3><div class="detail-pic is-shiny" style="--tc:${G.data.TYPES[sp.types[0]].c}">${monArt(id, true)}</div><p class="muted" style="font-size:13px;margin-top:6px">스카우트 후보로 나올 때 1/40, 보상으로 받을 때 1/64 확률로 나오는 색이 다른 ${esc(sp.n)}. 능력은 똑같고 반짝여요!</p></section>
     ${gmaxBox(id, sh)}
     ${sp.z ? `<section class="zbox" style="--zc:${G.data.TYPES[G.data.MOVES[sp.z].type].c}"><span>Z기술</span><b>${G.data.MOVES[sp.z].n}</b>
@@ -1297,9 +1311,19 @@ function openDexEntry(id) {
   bg.querySelector('[data-x]').onclick = closeSheet;
 }
 
+/* ---------- 🧬 합체몬 종 등록: 도감·스카우트 목록엔 안 보이게(열거 안 됨) ---------- */
+function fzRegisterAll(list) {
+  for (const f of list || []) {
+    if (!f?.id || !f.sp) continue;
+    for (const [id, mv] of Object.entries(f.mv || {})) Object.defineProperty(G.data.MOVES, id, { value: mv, enumerable: false, configurable: true, writable: true });
+    Object.defineProperty(G.data.MONSTERS, f.id, { value: f.sp, enumerable: false, configurable: true, writable: true });
+  }
+}
+
 /* ---------- 시작 ---------- */
 (async () => {
   G.data = await api('GET', '/api/data');
+  fzRegisterAll(G.data.FUSIONS);
   prepareContestArt(() => { // 다듬은 그림이 준비되면 이미 그려진 그림도 바꿔 끼움
     for (const [k, url] of Object.entries(CLEAN_ART)) document.querySelectorAll(`image[href="img/mon/${k}.webp"]`).forEach((el) => el.setAttribute('href', url));
   });

@@ -11,6 +11,8 @@ const P = require('./progress');
 const S = require('./social'); // 친구·길드·채팅·협업 퀘스트
 const WP = require('./push'); // 웹 푸시
 const C = require('./casino'); // 도박장 (게임 재화만)
+const M = require('./modes'); // 체육관·골목 탈출·월드 보스·친밀도·퍼즐과 미션·메타배틀
+const F = require('./fusion'); // 🧬 합체
 const X = require('./extra'); // 공지·관리자·통계·도감 보상·친구 선물·코스튬·이벤트
 const R = require('./rank'); // 랭크전
 const DG = require('./dungeon'); // 이벤트 던전
@@ -307,12 +309,13 @@ const deckOf = (u) => u.decks[u.active] || { name: '', team: [] };
 const monOf = (u, uid) => u.mons.find((m) => m.uid === uid);
 // 대전에 나갈 팀: 덱의 칸(uid, 도구)을 내 골목몬(종류, 기술)으로 바꿉니다.
 const deckLive = (u) => { const away = P.awayUids(u), all = deckOf(u).team, left = all.filter((t) => !away.has(t.uid)); return left.length ? left : all; }; // 원정 간 골목몬은 빼고 (전부 원정이면 그대로)
-const battleTeam = (u) => deckLive(u).map((t) => { const m = monOf(u, t.uid); return m && { species: m.species, moves: m.moves, ...(m.shiny ? { shiny: true } : {}), ...(m.costume ? { costume: m.costume } : {}), ...(m.plus ? { plus: m.plus } : {}), ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean);
+const battleTeam = (u) => deckLive(u).map((t) => { const m = monOf(u, t.uid); return m && { species: m.species, moves: m.moves, ...(m.shiny ? { shiny: true } : {}), ...(m.costume ? { costume: m.costume } : {}), ...(m.plus ? { plus: m.plus } : {}), ...(m.aff ? { aff: m.aff } : {}), uid: m.uid, ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean);
 const deckView = (u) => u.decks.map((d) => ({ name: d.name, team: d.team.map((t) => { const m = monOf(u, t.uid); return m && { uid: m.uid, species: m.species, moves: m.moves, ...(m.shiny ? { shiny: true } : {}), ...(m.plus ? { plus: m.plus } : {}), ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean) }));
 
 // 예전의 팀 하나짜리 계정을 덱 구조로 옮깁니다.
 function migrate() {
   let changed = false;
+  F.init(db); // 합체몬 종을 먼저 등록해야 아래에서 기술 정리할 때 지워지지 않아요
   X.fix(); // 스킨 이전 등 (처음 켤 때는 아직 init 전이라 그냥 넘어감)
   for (const u of Object.values(db.users)) {
     for (const [k, n] of Object.entries(Data.AVATAR_OPTIONS)) if (!Number.isInteger(u.avatar[k]) || u.avatar[k] < 0 || u.avatar[k] >= n || !ownsPart(u, k, u.avatar[k])) { u.avatar[k] = 0; changed = true; }
@@ -481,7 +484,7 @@ async function api(req, res, url) {
   const route = `${req.method} ${url.pathname}`;
   if (route === 'GET /api/data') {
     const { BANNED, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES } = Data;
-    return json(res, 200, { ITEMS: Data.ITEMS, FORMS: Data.FORMS.names, TIERS: Data.TIERS.names, BANNED, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES, PERKS: Data.PERKS, AVATAR_PAID: Data.AVATAR_PAID, GMAX: E.gmaxInfo(), inviteRequired: !!INVITE_CODE });
+    return json(res, 200, { ITEMS: Data.ITEMS, FORMS: Data.FORMS.names, TIERS: Data.TIERS.names, BANNED, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES, PERKS: Data.PERKS, AVATAR_PAID: Data.AVATAR_PAID, GMAX: E.gmaxInfo(), FUSIONS: F.all(), inviteRequired: !!INVITE_CODE });
   }
   if (route === 'POST /api/signup' || route === 'POST /api/login') {
     if (limited(req)) return json(res, 429, { error: '시도가 너무 많습니다. 1분 뒤에 다시 해 주세요.' });
@@ -662,6 +665,7 @@ async function progressApi(req, res, route, auth, user) {
   if (!user.tutorial) return json(res, 403, { error: '튜토리얼을 먼저 끝내 주세요.', needTutorial: true });
   { const sr = S.api(route, user, auth.key, body); if (sr !== undefined) return done(sr); }
   { const xr = X.api(route, user, auth.key, body); if (xr !== undefined) return done(xr); }
+  { const mr = M.api(route, user, auth.key, body); if (mr !== undefined) return done(mr); }
   if (route.includes(' /api/casino')) { const cr = C.api(route, user, auth.key, body); if (cr !== undefined) return done(cr); }
   if (route === 'POST /api/coupon') return done(useCoupon(user, body.code));
   if (route === 'GET /api/replay') { const r = replayOf(String(new URL(req.url, 'http://x').searchParams.get('id') || '')); return r ? json(res, 200, { replay: r }) : json(res, 404, { error: '리플레이가 없어요. 오래된 기록은 지워져요.' }); }
@@ -694,6 +698,14 @@ async function progressApi(req, res, route, auth, user) {
     const busy = new Set([...P.awayUids(user), ...Object.values(db.trades || {}).filter((t) => t.from === auth.key || t.to === auth.key).flatMap((t) => [t.give, t.want])]);
     return done(P.enhance(user, String(body.uid || ''), String(body.food || ''), busy));
   }
+  if (route === 'POST /api/fusion') {
+    if (busyNow(auth.key)) return json(res, 400, { error: '대전 중에는 합체할 수 없어요.' });
+    const busy = new Set([...P.awayUids(user), ...Object.values(db.trades || {}).filter((t) => t.from === auth.key || t.to === auth.key).flatMap((t) => [t.give, t.want])]);
+    const r = F.fuse(user, String(body.a || ''), String(body.b || ''), busy);
+    if (r.fusion) for (const ws of online.values()) send(ws, { t: 'fusion', fusion: r.fusion }); // 다른 사람 화면에도 새 골목몬 정보
+    return done(r);
+  }
+  if (route === 'GET /api/fusion/tree') return done({ tree: F.tree(user) });
   if (route === 'POST /api/mon/move') return done(P.changeMove(user, String(body.uid ?? ''), Number(body.slot), String(body.move ?? '')));
   if (route === 'POST /api/stone/buy') return done(P.buyStone(user, String(body.species ?? '')));
   // 상점 꾸미기 (칭호·전투카드·핀): ref = 'titles:id' 같은 꼴
@@ -1032,7 +1044,7 @@ function broadcastLobby() {
     names: r.b.sides.map((x) => x.name),
   }));
   for (const [k, ws] of online) {
-    const incoming = [...challenges].filter(([, c]) => c.to === k).map(([from, c]) => ({ from, name: db.users[from].name, size: c.size, draft: !!c.draft }));
+    const incoming = [...challenges].filter(([, c]) => c.to === k).map(([from, c]) => ({ from, name: db.users[from].name, size: c.size, draft: !!c.draft, meta: !!c.meta }));
     send(ws, { t: 'lobby', players, incoming, outgoing: challenges.get(k) || null, tags, live });
   }
 }
@@ -1082,7 +1094,7 @@ function countTraining(room) {
 const KIND_NAME = { titles: '칭호', cards: '전투카드', pins: '핀' };
 const unlockedIds = (u) => Object.entries(Data.COSMETICS).flatMap(([kind, list]) => list.filter((x) => x.cond && isUnlocked(u, x)).map((x) => `${kind}:${KIND_NAME[kind]} ${x.n}`));
 
-function startBattle(keys, size, level = 1, tag = false, ranked = false, dungeon = null, teams = null) {
+function startBattle(keys, size, level = 1, tag = false, ranked = false, dungeon = null, teams = null, extra = {}) {
   const foeDeck = (i) => {
     const mine = tag ? (i < 2 ? 0 : 1) : i;
     const human = keys.find((k, j) => k !== BOT && (tag ? (j < 2 ? 0 : 1) : j) !== mine) ?? keys.find((k) => k !== BOT);
@@ -1092,7 +1104,35 @@ function startBattle(keys, size, level = 1, tag = false, ranked = false, dungeon
     ? (dungeon ? { name: `${dungeon.rule.icon} ${dungeon.floor + 1}층 골목대장`, avatar: randomAvatar(true), style: randomStyle(), deck: dungeon.rule.n, team: DG.foeTeam(dungeon.rule, dungeon.floor, foeDeck(i)), ...(dungeon.rule.noMega ? { stones: [] } : {}) }
       : { name: `골목대장(${BOT_LEVELS[level]})`, avatar: randomAvatar(true), style: randomStyle(), deck: teams ? '밴픽 덱' : `${BOT_LEVELS[level]} 덱`, team: teams ? teams[i] : E.botTeam(level, size, foeDeck(i)) })
     : { name: db.users[k].name, avatar: db.users[k].avatar, style: db.users[k].style, deck: teams ? '밴픽 덱' : deckOf(db.users[k]).name, team: teams ? teams[i] : battleTeam(db.users[k]).slice(0, size), stones: dungeon?.rule.noMega ? [] : db.users[k].stones }));
-  openRoom({ id: crypto.randomUUID(), keys, b: E.createBattle(players, undefined, { preview: true }), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: level, tag, ranked, dungeon, draft: !!teams, spectators: new Set() });
+  openRoom({ id: crypto.randomUUID(), keys, b: E.createBattle(players, undefined, { preview: true, rules: extra.rules || null }), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: level, tag, ranked, dungeon, draft: !!teams, meta: !!extra.meta, spectators: new Set() });
+}
+// 관전 승부 예측: 팀별로 건 GP와 내 예측
+const betNames = (room) => [0, 1].map((t) => room.b.sides.filter((_, i) => E.teamOf(room.b, i) === t).map((x) => x.name).join(', '));
+function pushBets(room) {
+  const pools = [0, 0]; for (const x of Object.values(room.bets || {})) pools[x.team] += x.amt;
+  for (const k of room.spectators) send(online.get(k), { t: 'bets', id: room.id, names: betNames(room), pools, mine: room.bets?.[k] || null, open: room.b.turn <= 3 && !room.ended });
+}
+function settleBets(room) {
+  const bets = Object.entries(room.bets || {}); if (!bets.length) return;
+  const w = room.b.winner, pools = [0, 0]; for (const [, x] of bets) pools[x.team] += x.amt;
+  for (const [k, x] of bets) {
+    const u = db.users[k]; if (!u) continue;
+    let pay = 0, text;
+    if (w === null) { pay = x.amt; text = `🔮 무승부라 ${x.amt.toLocaleString('ko-KR')}GP를 돌려받았어요.`; }
+    else if (x.team === w) { const odds = Math.max(0.3, (pools[1 - x.team] * 0.9) / Math.max(1, pools[x.team])); pay = x.amt + Math.floor(x.amt * odds); text = `🔮 예측 성공! +${(pay - x.amt).toLocaleString('ko-KR')}GP (배당 ×${(pay / x.amt).toFixed(2)})`; }
+    else text = `🔮 예측 실패… ${x.amt.toLocaleString('ko-KR')}GP를 잃었어요.`;
+    if (pay) u.gp += pay;
+    if (online.has(k)) { toast(k, text); send(online.get(k), { t: 'me', user: publicUser(u) }); }
+  }
+}
+// 새 모드 대전 (체육관·골목 탈출·월드 보스·퍼즐·메타배틀): 나 대 골목대장, 규칙과 상대 팀은 M.battle이 정함
+function startModeBattle(key, sp) {
+  const u = db.users[key];
+  const players = [{ name: u.name, avatar: u.avatar, style: u.style, deck: sp.mode.kind === 'rogue' ? '빌린 골목몬' : sp.mode.kind === 'puzzle' ? '퍼즐 덱' : deckOf(u).name, team: sp.team, stones: sp.noStones || sp.mode.kind === 'rogue' ? [] : u.stones },
+    { name: sp.foe.name, avatar: randomAvatar(true), style: randomStyle(), deck: sp.foe.deck, team: sp.foe.team }];
+  const b = E.createBattle(players, undefined, { preview: true, raid: sp.raid || null, rules: sp.rules || null });
+  openRoom({ id: crypto.randomUUID(), keys: [key, BOT], b, deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: sp.level, tag: false, ranked: false, dungeon: null, mode: sp.mode, spectators: new Set() });
+  if (sp.intro) setTimeout(() => toast(key, sp.intro), 600);
 }
 function openRoom(room) {
   const { keys } = room;
@@ -1213,6 +1253,7 @@ function afterTurn(room, events) {
   });
   for (const k of room.spectators) send(online.get(k), { t: 'turn', events, view: watchView(room), remain: remaining(room) });
   if (room.rep && room.rep.turns.length < 400) room.rep.turns.push({ events, view: watchView(room) });
+  if (room.spectators.size && room.b.turn <= 4) pushBets(room); // 예측 마감 알림
   if (room.b.phase === 'over') { if (room.rep) room.rep.id = saveReplay(room.rep); return finish(room); }
   pumpBot(room);
 }
@@ -1247,6 +1288,17 @@ function finish(room) {
       const dr = DG.result(db.users[k], room.dungeon.floor, won, P.grant);
       if (dr) setTimeout(() => send(online.get(k), { t: 'gift', title: dr.cleared ? `🏆 ${room.dungeon.rule.n} 완전 정복!` : `${room.dungeon.floor + 1}층 돌파!`, got: dr.got }), 1800);
     }
+    { // 새 모드 결과 + 모든 대전의 경험치·친밀도·오늘의 미션
+      const sd = room.b.sides[s], foeSeats = room.b.sides.map((_, i) => i).filter((i) => E.teamOf(room.b, i) !== E.teamOf(room.b, s));
+      const bossM = room.mode?.kind === 'wb' ? room.b.sides[foeSeats[0]]?.mons[0] : null;
+      const ctx = { won, size: sd.mons.length, mons: sd.mons, mega: !!sd.megaUsed, z: !!sd.zUsed, gmax: !!sd.gmaxUsed, turns: room.b.turn, pvp, botLevel: room.keys.includes(BOT) ? room.botLevel : 0, training: !!room.training, meta: !!room.meta, bossDmg: bossM ? bossM.maxHp - Math.max(0, bossM.hp) : 0 };
+      const outs = M.result(db.users[k], k, room.mode, ctx);
+      outs.forEach((o, i) => {
+        if (o.mail) sendMail(db.users[k], { from: '골목대전', ...o.mail });
+        if (o.title) setTimeout(() => send(online.get(k), { t: 'gift', title: o.title, got: o.got || [] }), 1900 + i * 300);
+        if (o.toast) setTimeout(() => toast(k, o.toast), 2400 + i * 500);
+      });
+    }
     if (room.ranked && winner !== null) {
       const rr = R.result(db.users[k], won, room.keys.includes(BOT)), T = R.TIERS[rr.tier];
       const msg = `🏆 랭크 ${rr.delta >= 0 ? '+' : ''}${rr.delta}점 (${T.icon} ${T.n} ${rr.pts})${rr.up ? ` · ${T.n} 승급!` : ''}`;
@@ -1266,6 +1318,7 @@ function finish(room) {
     }
   }
   if (room.raid && winner === 0) raidTarget(room);
+  settleBets(room);
   save();
   humans.forEach(([k]) => send(online.get(k), { t: 'me', user: publicUser(db.users[k]) }));
   dissolve(room);
@@ -1515,6 +1568,7 @@ function onMessage(key, msg) {
       target.spectators.add(key);
       spectating.set(key, target);
       send(online.get(key), { t: 'battle', view: watchView(target), remain: remaining(target), oppOnline: true, practice: isPractice(target), tag: target.tag, spectator: true });
+      if (!target.training) setTimeout(() => pushBets(target), 400);
       broadcastLobby();
       break;
     }
@@ -1656,6 +1710,29 @@ function onMessage(key, msg) {
       startTraining(key);
       break;
     }
+    case 'mode_battle': {
+      if (room) return;
+      const u = db.users[key], kind = String(msg.kind || '');
+      const sp = M.battle(u, kind, msg.arg, battleTeam(u));
+      if (sp.error) return toast(key, sp.error);
+      if (!['rogue', 'puzzle'].includes(kind)) { if (bannedIn(u, sp.team).length || secretIn(sp.team).length) return toast(key, '덱에 공개 전 골목몬이 있어 시작할 수 없어요.'); }
+      startModeBattle(key, sp);
+      break;
+    }
+    case 'bet': { // 관전 승부 예측: 3턴까지 한 번만, 100~5000GP
+      const r = spectating.get(key), u = db.users[key];
+      if (!r || r.ended || r.training) return toast(key, '관전 중인 대전에만 걸 수 있어요.');
+      if (r.b.turn > 3) return toast(key, '예측은 3턴까지만 걸 수 있어요.');
+      const team = msg.team === 1 ? 1 : 0, amt = Math.floor(Number(msg.amount));
+      if (!(amt >= 100 && amt <= 5000)) return toast(key, '100~5,000GP까지 걸 수 있어요.');
+      r.bets ||= {};
+      if (r.bets[key]) return toast(key, '이 대전에는 이미 걸었어요.');
+      if (u.gp < amt) return toast(key, 'GP가 모자라요.');
+      u.gp -= amt; r.bets[key] = { team, amt }; save();
+      send(online.get(key), { t: 'me', user: publicUser(u) });
+      pushBets(r);
+      break;
+    }
     case 'practice': {
       if (room) return;
       const size = [1, 3, 6].includes(msg.size) ? msg.size : 3;
@@ -1680,8 +1757,8 @@ function onMessage(key, msg) {
       { const bn = bannedIn(db.users[key], battleTeam(db.users[key]).slice(0, size)); if (bn.length) return toast(key, BAN_TEXT(bn)); }
       if (secretIn(battleTeam(db.users[key]).slice(0, size)).length) return toast(key, SECRET_TEXT);
       if (msg.draft && battleTeam(db.users[key]).length < DRAFT_POOL(size)) return toast(key, `밴픽 대전은 덱에 골목몬이 ${DRAFT_POOL(size)}마리 있어야 해요. (1마리는 상대가 금지)`);
-      challenges.set(key, { to, size, draft: !!msg.draft });
-      pushTo(to, { title: '⚔️ 대전 신청', body: `${db.users[key].name}님이 ${size}대${size}${msg.draft ? ' 밴픽' : ''} 대전을 신청했어요!`, tag: 'challenge' });
+      challenges.set(key, { to, size, draft: !!msg.draft && !msg.meta, meta: !!msg.meta });
+      pushTo(to, { title: '⚔️ 대전 신청', body: `${db.users[key].name}님이 ${size}대${size}${msg.meta ? ' 🧪메타' : msg.draft ? ' 밴픽' : ''} 대전을 신청했어요!`, tag: 'challenge' });
       broadcastLobby();
       break;
     }
@@ -1710,7 +1787,7 @@ function onMessage(key, msg) {
         { const mine = battleTeam(db.users[key]).slice(0, DRAFT_POOL(c.size)), bn = bannedIn(db.users[key], mine); if (bn.length) return toast(key, BAN_TEXT(bn)); if (secretIn(mine).length) return toast(key, SECRET_TEXT); }
         { const theirs = battleTeam(db.users[from]).slice(0, DRAFT_POOL(c.size)); if (bannedIn(db.users[from], theirs).length || secretIn(theirs).length) return toast(key, '상대 덱에 공개 전 골목몬이 있어 시작할 수 없습니다.'); }
         startDraft([from, key], c.size);
-      } else startBattle([from, key], c.size);
+      } else startBattle([from, key], c.size, 1, false, false, null, null, c.meta ? { rules: M.metaRule().rules, meta: true } : {});
       break;
     }
     case 'draft_ban': {
@@ -1804,6 +1881,7 @@ setInterval(() => {
   db.meta ||= {}; if (!db.meta.vapid) { db.meta.vapid = WP.makeKeys(); save(); } // 푸시 알림 서명 키 (한 번 만들어 계속 씀)
   R.init({ seasonOf: P.seasonOf, grant: P.grant, sendMail });
   C.init(db, { sysChat: (ch, t) => sysChatAll(t) });
+  M.init(db, { grant: P.grant, sendMail, sysChat: (t) => sysChatAll(t) });
   X.init(db, { keyOf, online, send, toast, publicUser, grant: P.grant, sendMail, isDev, battleCount: () => battles.size, gistInfo: () => ({ ...gistStat, dirty: gistDirty, on: !!GIST_ID, lastOkAgoSec: gistStat.lastOk ? Math.round((Date.now() - gistStat.lastOk) / 1000) : null }), push: (k, m) => typeof pushTo === 'function' && pushTo(k, m) });
   S.init(db, { keyOf, online, send, toast, publicUser, save, grant: P.grant, bump: P.bump, isDev, inBattle, sendMail, fixStyle, seasonOf: P.seasonOf, cosmetic: (kind, id) => Data.COSMETICS[kind]?.find((x) => x.id === id), owns });
   server.listen(PORT, () => console.log(`골목대전 서버 실행 중: http://localhost:${PORT}`));

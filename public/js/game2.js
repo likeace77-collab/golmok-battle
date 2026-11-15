@@ -312,14 +312,17 @@ function openMon(uid, after) {
       <div style="flex:1;min-width:0"><p style="margin-bottom:4px">${typesOf(m.species)}</p>${Object.entries(sp.base).map(([k, v]) => `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${v}</span><i style="width:${Math.min(100, v / 1.3)}%"></i></div>`).join('')}</div></div>
     <button class="btn small cos-open" id="cos-open">🎨 스킨${m.costume ? ' 바꾸기' : ''}</button>
     ${sp.trait ? `<p class="trait"><b>특성 ${sp.trait.n}</b> ${sp.trait.d}</p>` : ''}
-    ${m.shiny ? `<section class="shiny-forms"><h3 class="dex-h">✨ 이로치 변신 모습</h3><div><figure class="is-shiny">${monArt(m.species, true, '', true)}<figcaption>메가진화 · ${esc(sp.mega.n)}</figcaption></figure>${typeof GMAX_ART !== 'undefined' && GMAX_ART[m.species] ? `<figure class="is-shiny">${shinify(gmaxSVG(m.species), m.species)}<figcaption>거다이맥스</figcaption></figure>` : ''}</div></section>` : ''}
+    ${sp.fz && typeof fzMonBox === 'function' ? fzMonBox(m) : ''}
+    ${m.shiny && !sp.fz ? `<section class="shiny-forms"><h3 class="dex-h">✨ 이로치 변신 모습</h3><div><figure class="is-shiny">${monArt(m.species, true, '', true)}<figcaption>메가진화 · ${esc(sp.mega.n)}</figcaption></figure>${typeof GMAX_ART !== 'undefined' && GMAX_ART[m.species] ? `<figure class="is-shiny">${shinify(gmaxSVG(m.species), m.species)}<figcaption>거다이맥스</figcaption></figure>` : ''}</div></section>` : ''}
+    ${typeof modeMonBox === 'function' ? modeMonBox(m) : ''}
     ${enhanceBox(m)}
-    <section class="mon-stone ${stone ? 'have' : ''}">${stoneSVG(m.species, 64, { lock: !stone })}<div><b>${esc(sp.n)} 메가스톤</b><p>${stone ? `있어요! 대전에서 <b>${esc(sp.mega.n)}</b>(으)로 메가진화할 수 있어요.` : '없으면 이 골목몬은 메가진화를 못 해요.'}</p>
-      ${stone ? '' : `<button class="btn small" data-stone>${ICON.gp(16)} ${fmt(STONE_PRICE)}GP로 사기</button>`}</div></section>
+${sp.mega ? `    <section class="mon-stone ${stone ? 'have' : ''}">${stoneSVG(m.species, 64, { lock: !stone })}<div><b>${esc(sp.n)} 메가스톤</b><p>${stone ? `있어요! 대전에서 <b>${esc(sp.mega.n)}</b>(으)로 메가진화할 수 있어요.` : '없으면 이 골목몬은 메가진화를 못 해요.'}</p>
+      ${stone ? '' : `<button class="btn small" data-stone>${ICON.gp(16)} ${fmt(STONE_PRICE)}GP로 사기</button>`}</div></section>` : ''}
     <h3 class="dex-h">기술 <small class="muted">하나 바꿀 때마다 500GP</small></h3>
     ${[0, 1, 2, 3].map((i) => { const id = m.moves[i]; return id ? `<div class="mv mvrow">${typeChip(G.data.MOVES[id].type)}<b>${G.data.MOVES[id].n}</b>${sigTag(id)}<small>${moveLine(id)}</small><button class="btn small paper" data-slot="${i}">바꾸기</button></div>` : `<div class="mv mvrow"><b class="muted">빈 칸</b><button class="btn small paper" data-slot="${i}">기술 넣기</button></div>`; }).join('')}`);
   bg.querySelector('[data-x]').onclick = () => { closeSheet(); after?.(); };
   bg.querySelector('#cos-open')?.addEventListener('click', () => { closeSheet(); costumeSheet(m, () => openMon(uid, after)); });
+  if (typeof bindModeMon === 'function') bindModeMon(bg, m, () => openMon(uid, after));
   bg.querySelectorAll('[data-food]').forEach((b) => { b.onclick = async () => {
     const f = G.user.mons.find((x) => x.uid === b.dataset.food);
     if (!confirm(`${sp.n}${f?.plus ? ` +${f.plus}` : ''}${f?.shiny ? ' (이로치)' : ''}을(를) 먹여서 강화할까요? 먹인 골목몬은 사라져요.`)) return;
