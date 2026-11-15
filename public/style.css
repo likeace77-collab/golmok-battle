@@ -2153,3 +2153,26 @@ svg[data-fzin] { transform: none !important; animation: none !important; filter:
 .fz-cine.s1 .fz-t { animation: fzSpinT 1.5s ease-in forwards; } .fz-cine.s2 .fz-t { opacity: 0; }
 @keyframes fzSpinT { 0% { transform: translateY(-70%) scale(.7); } 60% { transform: translate(-20%, -30%) rotate(220deg) scale(.55); filter: brightness(1.6); } 100% { transform: translate(0, 0) rotate(540deg) scale(.15); filter: brightness(4) saturate(0); } }
 .fz-pair.n3 .fz-slot svg { width: 78%; } .fz-pair.n3 .fz-slot b { font-size: 11px; color: var(--ink); }
+.md-nat { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 2px dashed #0002; } .md-nat p { margin: 4px 0 8px; font-weight: 800; }
+.md-nat .up { color: #E8402C; } .md-nat .down { color: #2E6BE8; } .md-nat h3 b { color: #2E9E5B; }
+/* 🖼️ 합체몬 갤러리 */
+.fz-tabs.three { grid-template-columns: repeat(3, 1fr); }
+.fzg-last { padding: 6px 10px; border-radius: 10px; background: #ffffff22; }
+.fzg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(46%, 170px), 1fr)); gap: 10px; }
+.fzg-card { position: relative; display: grid; justify-items: center; gap: 2px; padding: 8px; border: var(--line); border-radius: 14px; background: #fff8e0; box-shadow: 3px 3px 0 var(--ink); cursor: pointer; text-align: center; }
+.fzg-card.own { background: linear-gradient(135deg, #fff0f7, #eef3ff); }
+.fzg-pic { width: 100%; aspect-ratio: 1; } .fzg-pic svg { width: 100%; height: 100%; }
+.fzg-card b { font-size: 15px; } .fzg-card small { font-size: 11px; opacity: .7; } .fzg-tr { font-style: normal; font-size: 11.5px; font-weight: 800; color: #7B4BFF; }
+.fzg-types { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; }
+.fzg-heart { margin-top: 4px; padding: 4px 12px; font: inherit; border: 2px solid var(--ink); border-radius: 999px; background: #fff; cursor: pointer; }
+.fzg-heart.on { background: #ffe3ee; border-color: #FF2E88; } .fzg-heart:disabled { opacity: .5; cursor: default; }
+.fzg-crown { position: absolute; top: 6px; left: 8px; font-style: normal; font-size: 18px; }
+.fzg-forms { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; } .fzg-forms div { display: grid; justify-items: center; } .fzg-forms svg { width: 100%; aspect-ratio: 1; } .fzg-forms small { font-size: 11px; font-weight: 700; text-align: center; }
+/* 📼 리플레이 공유 */
+.st-repb { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.rp-share h2 { text-align: center; } .rp-msg { display: grid; gap: 4px; margin: 8px 0; font-weight: 700; } .rp-msg input, .rp-link input { padding: 8px; font: inherit; border: 2px solid var(--ink); border-radius: 10px; }
+.rp-dest { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; } .rp-dest .btn { flex: 1 1 45%; }
+.rp-link { display: flex; gap: 6px; } .rp-link input { flex: 1; min-width: 0; font-size: 12px; }
+.ch-rep { display: flex; align-items: center; gap: 6px; width: 100%; margin: 4px 0; padding: 8px 10px; font: inherit; text-align: left; border: 2px solid var(--ink); border-radius: 12px; background: linear-gradient(135deg, #2a1650, #4b2a8a); color: #fff; cursor: pointer; }
+.ch-rep span { flex: 1; font-size: 13px; } .ch-rep b { white-space: nowrap; color: #FFD23F; }
+.md-aff .btn { white-space: nowrap; }

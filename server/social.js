@@ -307,17 +307,18 @@ function resolve(key, c) {
   if (c.startsWith('dm:')) { const o = c.slice(3); return userOf(o) && o !== key ? dmCh(key, o) : null; }
   return null;
 }
-function chatSend(key, c, text) {
+function chatSend(key, c, text, extra = null) { // extra.rep: 리플레이 공유
   const u = userOf(key), ch = resolve(key, c);
   if (!ch) return H.toast(key, c === 'guild' ? '길드에 들어가야 길드 채팅을 할 수 있어요.' : '보낼 수 없는 채팅방이에요.');
   if (ch.startsWith('dm:') && !isFriend(key, ch.slice(3).split('|').find((x) => x !== key))) return H.toast(key, '친구에게만 1:1 메시지를 보낼 수 있어요.');
   text = String(text || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, CHAT_LEN);
+  if (!text && extra?.rep) text = '📼 리플레이를 공유했어요!';
   if (!text) return;
   const now = Date.now();
   if (now - (lastSent.get(key) || 0) < 800) return H.toast(key, '너무 빨라요! 잠깐만요.');
   lastSent.set(key, now);
   const g = u.guild && db.guilds[u.guild];
-  const m = { from: key, name: u.name, avatar: u.avatar, title: u.style?.title, guild: g ? g.emblem : '', text, at: now };
+  const m = { from: key, name: u.name, avatar: u.avatar, title: u.style?.title, guild: g ? g.emblem : '', text, at: now, ...(extra?.rep ? { rep: extra.rep } : {}) };
   store(ch, m);
   listeners(ch).forEach((k) => push(k, { t: 'chat', ch: clientCh(k, ch), m }));
   H.save();

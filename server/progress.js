@@ -486,7 +486,21 @@ function afterBattle(u, kind, won, side) {
   return battlePass(u, kind, won);
 }
 
-module.exports = {
+// 🌱 성격: 없는 골목몬에게 무작위 성격 (새로 얻은 골목몬도 처음 보여 줄 때/대전 나갈 때 정해짐)
+const NAT_IDS = Object.keys(Data.NATURES);
+function ensureNature(m) { if (m && !Data.NATURES[m.nature]) m.nature = NAT_IDS[Math.floor(Math.random() * NAT_IDS.length)]; return m; }
+// 성격 바꾸기: 리롤권 1장 또는 1,000GP. 지금과 다른 성격으로
+const NATURE_TK = 1, NATURE_GP = 1000;
+function rerollNature(u, uid, pay) {
+  const m = u.mons.find((x) => x.uid === uid); if (!m) return { error: '골목몬을 찾지 못했어요.' };
+  if (pay === 'gp') { if (u.gp < NATURE_GP) return { error: `${NATURE_GP.toLocaleString('ko-KR')}GP가 필요해요.` }; } else if ((u.rerolls || 0) < NATURE_TK) return { error: '리롤권이 없어요.' };
+  ensureNature(m); const old = m.nature;
+  let n = old; while (n === old) n = NAT_IDS[Math.floor(Math.random() * NAT_IDS.length)];
+  if (pay === 'gp') u.gp -= NATURE_GP; else u.rerolls -= NATURE_TK;
+  m.nature = n;
+  return { ok: true, old, nature: n };
+}
+module.exports = { ensureNature, rerollNature, NATURE_TK, NATURE_GP,
   SHOP_ITEMS, buyItem, shopView, claimFree, buyDeal, SCOUT_HOURS, SKIP_GP, SCOUT_GP, STONE_GP, STONE_DUPE_GP, MOVE_GP, STARTERS, TUTORIAL_REWARD, ATTEND, DAILY, WEEKLY,
   newProgress, addMon, grant, finishTutorial, scoutState, scoutSkip, scoutReroll, scoutAuto, enhance, PLUS_MAX, PLUS_PCT, plusCost, expeState, expeSend, expeClaim, expeRecall, awayUids, scoutPick, changeMove, buyStone,
   bump, attendState, attend, questState, claimQuest, achState, claimAch, passState, claimPass, takePassGp, claimable, afterBattle, seasonOf, passBook, dayKey, released,

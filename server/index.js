@@ -309,13 +309,14 @@ const deckOf = (u) => u.decks[u.active] || { name: '', team: [] };
 const monOf = (u, uid) => u.mons.find((m) => m.uid === uid);
 // 대전에 나갈 팀: 덱의 칸(uid, 도구)을 내 골목몬(종류, 기술)으로 바꿉니다.
 const deckLive = (u) => { const away = P.awayUids(u), all = deckOf(u).team, left = all.filter((t) => !away.has(t.uid)); return left.length ? left : all; }; // 원정 간 골목몬은 빼고 (전부 원정이면 그대로)
-const battleTeam = (u) => deckLive(u).map((t) => { const m = monOf(u, t.uid); return m && { species: m.species, moves: m.moves, ...(m.shiny ? { shiny: true } : {}), ...(m.costume ? { costume: m.costume } : {}), ...(m.plus ? { plus: m.plus } : {}), ...(m.aff ? { aff: m.aff } : {}), uid: m.uid, ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean);
+const battleTeam = (u) => deckLive(u).map((t) => { const m = monOf(u, t.uid); P.ensureNature(m); return m && { species: m.species, moves: m.moves, ...(m.nature ? { nature: m.nature } : {}), ...(m.shiny ? { shiny: true } : {}), ...(m.costume ? { costume: m.costume } : {}), ...(m.plus ? { plus: m.plus } : {}), ...(m.aff ? { aff: m.aff } : {}), uid: m.uid, ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean);
 const deckView = (u) => u.decks.map((d) => ({ name: d.name, team: d.team.map((t) => { const m = monOf(u, t.uid); return m && { uid: m.uid, species: m.species, moves: m.moves, ...(m.shiny ? { shiny: true } : {}), ...(m.plus ? { plus: m.plus } : {}), ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean) }));
 
 // 예전의 팀 하나짜리 계정을 덱 구조로 옮깁니다.
 function migrate() {
   let changed = false;
   F.init(db); // 합체몬 종을 먼저 등록해야 아래에서 기술 정리할 때 지워지지 않아요
+  for (const u of Object.values(db.users)) for (const m of u.mons || []) if (!m.nature) { P.ensureNature(m); changed = true; } // 성격이 생기기 전 골목몬에게도
   X.fix(); // 스킨 이전 등 (처음 켤 때는 아직 init 전이라 그냥 넘어감)
   for (const u of Object.values(db.users)) {
     for (const [k, n] of Object.entries(Data.AVATAR_OPTIONS)) if (!Number.isInteger(u.avatar[k]) || u.avatar[k] < 0 || u.avatar[k] >= n || !ownsPart(u, k, u.avatar[k])) { u.avatar[k] = 0; changed = true; }
@@ -421,7 +422,7 @@ const publicUser = (u) => ({
   dev: isDev(u), owned: u.owned || [], avatarOwned: u.avatarOwned || [], mailNew: (u.mail || []).filter((m) => !m.read || !m.claimed).length, tempPw: !!u.tempPw, birthYear: u.birthYear || null, needAge: !u.birthYear, adult: isAdult(u), uncensored: uncensored(u), settings: { mosaic: !!u.settings?.mosaic },
   name: u.name, avatar: u.avatar, decks: deckView(u), active: u.active, stats: u.stats, style: u.style,
   wins: u.wins, losses: u.losses, draws: u.draws, h2h: u.h2h,
-  tutorial: !!u.tutorial, gp: u.gp, tickets: u.tickets, skips: u.skips, rerolls: u.rerolls || 0, stones: u.stones, mons: u.mons,
+  tutorial: !!u.tutorial, gp: u.gp, tickets: u.tickets, skips: u.skips, rerolls: u.rerolls || 0, stones: u.stones, mons: u.mons.map(P.ensureNature),
   premium: P.passState(u).premium, badges: { ...P.claimable(u), social: (u.freq?.in || []).filter((k) => db.users[k] && !(u.friends || []).includes(k)).length + (db.guilds ? S.tradeIn(keyOf(u.name)) : 0) + (u.fgiftIn || []).length, guild: db.guilds ? S.guildClaimable(u, keyOf(u.name)) : 0, ...(db.news ? X.badges(u) : {}) }, jelly: u.jelly || 0, fp: u.fp || 0, costumes: u.costumes || [], guild: u.guild && db.guilds?.[u.guild] ? { id: u.guild, name: db.guilds[u.guild].name, emblem: db.guilds[u.guild].emblem, color: db.guilds[u.guild].color, role: S.roleOf(u) } : null, gpt: u.gpt || 0, friendsN: (u.friends || []).length, rank: u.rank ? { pts: u.rank.pts, tier: R.tierOf(u.rank.pts), ever: u.rank.ever || 0 } : { pts: 1000, tier: 0, ever: 0 }, scoutReady: !!P.scoutState(u).cands, gym: { badges: u.gym?.badges || [], champ: u.gym?.champ || 0 }, rogueBest: u.rogueBest || 0, surveyDone: !!db.surveys?.[keyOf(u.name)], sunfish: !!u.sunfishDone,
 });
 
@@ -484,7 +485,7 @@ async function api(req, res, url) {
   const route = `${req.method} ${url.pathname}`;
   if (route === 'GET /api/data') {
     const { BANNED, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES } = Data;
-    return json(res, 200, { ITEMS: Data.ITEMS, FORMS: Data.FORMS.names, TIERS: Data.TIERS.names, BANNED, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES, PERKS: Data.PERKS, AVATAR_PAID: Data.AVATAR_PAID, GMAX: E.gmaxInfo(), FUSIONS: F.all(), inviteRequired: !!INVITE_CODE });
+    return json(res, 200, { ITEMS: Data.ITEMS, FORMS: Data.FORMS.names, TIERS: Data.TIERS.names, BANNED, TYPES, CHART, MOVES, MONSTERS, AVATAR_OPTIONS, COSMETICS, STAT_NAMES, PERKS: Data.PERKS, NATURES: Data.NATURES, AVATAR_PAID: Data.AVATAR_PAID, GMAX: E.gmaxInfo(), FUSIONS: F.all(), inviteRequired: !!INVITE_CODE });
   }
   if (route === 'POST /api/signup' || route === 'POST /api/login') {
     if (limited(req)) return json(res, 429, { error: '시도가 너무 많습니다. 1분 뒤에 다시 해 주세요.' });
@@ -706,12 +707,15 @@ async function progressApi(req, res, route, auth, user) {
     return done(r);
   }
   if (route === 'GET /api/fusion/tree') return done({ tree: F.tree(user) });
+  if (route === 'GET /api/fusion/gallery') return done({ gallery: F.gallery(user, auth.key, String(new URL(req.url, 'http://x').searchParams.get('sort') || 'hot')) });
+  if (route === 'POST /api/fusion/heart') return done(F.heart(user, auth.key, String(body.id || '')));
   if (route === 'POST /api/fusion/retrait') {
     if (busyNow(auth.key)) return json(res, 400, { error: '대전 중에는 바꿀 수 없어요.' });
     const r = F.retrait(user, String(body.uid || ''), body.pay === 'gp' ? 'gp' : 'ticket');
     if (r.fusion) for (const ws of online.values()) send(ws, { t: 'fusion', fusion: r.fusion });
     return done(r);
   }
+  if (route === 'POST /api/mon/nature') return done(P.rerollNature(user, String(body.uid || ''), body.pay === 'gp' ? 'gp' : 'ticket'));
   if (route === 'POST /api/mon/move') return done(P.changeMove(user, String(body.uid ?? ''), Number(body.slot), String(body.move ?? '')));
   if (route === 'POST /api/stone/buy') return done(P.buyStone(user, String(body.species ?? '')));
   // 상점 꾸미기 (칭호·전투카드·핀): ref = 'titles:id' 같은 꼴
@@ -1665,7 +1669,11 @@ function onMessage(key, msg) {
       for (const k of room.spectators) send(online.get(k), out);
       break;
     }
-    case 'chat': S.chatSend(key, msg.ch, msg.text); break;
+    case 'chat': { // 리플레이를 붙이면 채팅에 「▶ 보기」 카드로
+      const rid = msg.rep && String(msg.rep), r = rid && replays[rid];
+      S.chatSend(key, msg.ch, msg.text, r ? { rep: { id: rid, kind: r.kind, names: (r.names || []).slice(0, 4) } } : null);
+      break;
+    }
     case 'chat_hist': send(online.get(key), { t: 'chat_hist', ch: String(msg.ch || ''), list: S.chatHistory(key, msg.ch) }); break;
     case 'tag_create': {
       if (room || tagOf(key)) return;
@@ -1888,6 +1896,7 @@ setInterval(() => {
   R.init({ seasonOf: P.seasonOf, grant: P.grant, sendMail });
   C.init(db, { sysChat: (ch, t) => sysChatAll(t) });
   M.init(db, { grant: P.grant, sendMail, sysChat: (t) => sysChatAll(t) });
+  F.setHooks({ keyOf, grant: P.grant, sendMail, sysChat: (t) => sysChatAll(t) }); setInterval(() => { try { if (F.settleVotes()) save(); } catch (e) { console.error('합체몬 투표 정산 실패', e.message); } }, 10 * 60e3);
   X.init(db, { keyOf, online, send, toast, publicUser, grant: P.grant, sendMail, isDev, battleCount: () => battles.size, gistInfo: () => ({ ...gistStat, dirty: gistDirty, on: !!GIST_ID, lastOkAgoSec: gistStat.lastOk ? Math.round((Date.now() - gistStat.lastOk) / 1000) : null }), push: (k, m) => typeof pushTo === 'function' && pushTo(k, m) });
   S.init(db, { keyOf, online, send, toast, publicUser, save, grant: P.grant, bump: P.bump, isDev, inBattle, sendMail, fixStyle, seasonOf: P.seasonOf, cosmetic: (kind, id) => Data.COSMETICS[kind]?.find((x) => x.id === id), owns });
   server.listen(PORT, () => console.log(`골목대전 서버 실행 중: http://localhost:${PORT}`));

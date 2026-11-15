@@ -166,3 +166,31 @@ test('3단 합체: 세 마리 → 한 마리, 기술 8 + 3단 합체기 2, 메�
   for (let i = 0; i < 80 && b.phase !== 'over'; i++) for (const s of [0, 1]) if (b.needs[s]) E.choose(b, s, E.botAction(b, s, 2));
   assert.equal(b.phase, 'over');
 });
+
+test('성격: 능력치 ±10%, 메가진화해도 유지, 바꾸기', () => {
+  const P = require('../server/progress');
+  const plain = E.createBattle([{ name: 'x', team: [{ species: 'yeontan', moves: ['ember'] }] }, { name: 'y', team: [{ species: 'yeontan', moves: ['ember'] }] }], 1).sides[0].mons[0].stats;
+  const brave = E.createBattle([{ name: 'x', team: [{ species: 'yeontan', moves: ['ember'], nature: '용감' }] }, { name: 'y', team: [{ species: 'yeontan', moves: ['ember'] }] }], 1).sides[0].mons[0];
+  assert.equal(brave.stats.atk, Math.round(plain.atk * 1.1)); assert.equal(brave.stats.spe, Math.round(plain.spe * 0.9));
+  const b = E.createBattle([{ name: 'x', team: [{ species: 'yeontan', moves: ['ember'], nature: '용감' }] }, { name: 'y', team: [{ species: 'yeontan', moves: ['ember'] }] }], 1);
+  const before = b.sides[0].mons[0].stats.spe; E.choose(b, 0, { type: 'move', index: 0, mega: true }); E.choose(b, 1, { type: 'move', index: 0 });
+  if (b.sides[0].mons[0].mega) assert.ok(b.sides[0].mons[0].stats.atk > b.sides[0].mons[0].stats.spe * 0 && b.sides[0].mons[0].nature === '용감');
+  assert.ok(before > 0);
+  const u = mk(); u.rerolls = 1; u.gp = 1000; const m = P.ensureNature(u.mons[0]); assert.ok(Data.NATURES[m.nature]);
+  const old = m.nature; const r = P.rerollNature(u, m.uid, 'ticket'); assert.ok(r.ok); assert.notEqual(m.nature, old); assert.equal(u.rerolls, 0);
+  assert.ok(P.rerollNature(u, m.uid, 'ticket').error); assert.ok(P.rerollNature(u, m.uid, 'gp').ok); assert.equal(u.gp, 0);
+});
+
+test('합체몬 갤러리: 하트 투표와 주간 정산', () => {
+  const mails = [], grants = [];
+  const owner = mk(); owner.name = '만든이'; owner.gp = 1e5;
+  db.users = { mandeuni: owner, fan: { name: '팬', gp: 0 } };
+  F.setHooks({ keyOf: (n) => (n === '만든이' ? 'mandeuni' : 'fan'), grant: (u, r) => { grants.push(r); u.gp += r.gp; }, sendMail: (u, m) => mails.push(m), sysChat: () => {} });
+  const r = F.fuse(owner, 'a', 'b'); const id = r.mon.species;
+  assert.ok(F.heart(owner, 'mandeuni', id).error, '내 합체몬엔 하트 못 줌');
+  assert.ok(F.heart({ name: '팬' }, 'fan', id).on);
+  const g = F.gallery({ name: '팬' }, 'fan'); assert.equal(g.list[0].id, id); assert.equal(g.list[0].hearts, 1); assert.ok(g.list[0].mine);
+  db.fzVote.week = '2000-01-03'; // 지난주인 척
+  const gp = owner.gp; assert.ok(F.settleVotes()); assert.equal(owner.gp, gp + 10000); assert.deepEqual(mails[0].reward, ['titles:fzstar']);
+  assert.equal(Object.keys(db.fzVote.hearts).length, 0); assert.equal(Data.MONSTERS[id].crowns, 1);
+});

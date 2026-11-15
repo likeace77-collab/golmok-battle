@@ -76,6 +76,9 @@ function showAuth(mode = 'login') {
 function enterGame() {
   if (G.user.needAge) return showAgeGate();
   connect(); showLobby();
+  // 공유받은 리플레이 링크(?replay=…)로 들어왔으면 바로 재생
+  const rp = new URLSearchParams(location.search).get('replay');
+  if (rp && G.user.mons?.length) { history.replaceState(null, '', location.pathname); setTimeout(() => playReplay(rp, showLobby), 300); }
 }
 
 function showAgeGate() {

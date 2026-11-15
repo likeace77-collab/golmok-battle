@@ -1,5 +1,5 @@
 // 배틀 엔진. 서버에서만 돌고, 모든 판정은 여기서 결정됩니다.
-const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP, BANNED, TIERS, FORMS, ITEMS, TYPES, GMAX_MOVES, PERKS } = require('./data');
+const { CHART, MOVES, STRUGGLE, MONSTERS, STRIP, BANNED, TIERS, FORMS, ITEMS, TYPES, GMAX_MOVES, PERKS, NATURES } = require('./data');
 // 강화 고유 효과: pv = 특성 수치 변화량, plusStats = 공통 4% + 고유 능력치 3%
 const perkOf = (m) => (m?.plus ? PERKS[m.species] || {} : {});
 const pv = (m) => (perkOf(m).v || 0) * (m?.plus || 0);
@@ -38,13 +38,16 @@ function calcStats(base) {
   };
 }
 
+// 성격: 하나 +10%, 하나 −10%
+function natStats(stats, nature) { const n = nature && NATURES[nature]; if (n?.up) { stats[n.up] = Math.round(stats[n.up] * 1.1); stats[n.down] = Math.round(stats[n.down] * 0.9); } return stats; }
 function makeMon(spec) {
   const sp = MONSTERS[spec.species];
   const plus = Math.max(0, Math.min(5, spec.plus | 0)); // 강화: +1마다 능력치 4%
   const stats = plusStats(calcStats(sp.base), spec.species, plus);
+  natStats(stats, spec.nature);
   return {
     ...(spec.aff ? { aff: Math.max(0, Math.min(100, spec.aff | 0)) } : {}), ...(spec.uid ? { uid: String(spec.uid) } : {}),
-    species: spec.species, name: sp.n, types: sp.types, stats, mega: false, shiny: !!spec.shiny, plus, ...(spec.costume ? { costume: String(spec.costume).slice(0, 20) } : {}),
+    species: spec.species, name: sp.n, types: sp.types, stats, mega: false, ...(NATURES[spec.nature] ? { nature: spec.nature } : {}), shiny: !!spec.shiny, plus, ...(spec.costume ? { costume: String(spec.costume).slice(0, 20) } : {}),
     hp: spec.hpPct ? Math.max(1, Math.round(stats.hp * Math.min(100, spec.hpPct) / 100)) : stats.hp, maxHp: stats.hp, // hpPct: 퍼즐 배틀용 시작 체력
     status: spec.status || null, statusTurns: 0, item: ITEMS[spec.item] ? spec.item : null, itemUsed: false,
     moves: spec.moves.map((id) => ({ id, pp: MOVES[id].pp })),
@@ -248,7 +251,7 @@ function doMega(b, s, ev) {
   const sp = MONSTERS[m.species];
   const base = Object.fromEntries(Object.entries(sp.base).map(([k, v]) => [k, v + sp.mega.boost[k]]));
   const oldName = m.name, oldMax = m.maxHp;
-  m.stats = plusStats(calcStats(base), m.species, m.plus || 0); // 강화 보너스 유지
+  m.stats = natStats(plusStats(calcStats(base), m.species, m.plus || 0), m.nature); // 강화·성격 유지
   m.maxHp = m.stats.hp + tierHp(m);
   m.hp += m.maxHp - oldMax;
   m.name = sp.mega.n; m.mega = true;

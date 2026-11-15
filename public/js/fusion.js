@@ -98,11 +98,12 @@ async function showFusion(mode) {
       <section class="fz-hero${N === 3 ? ' tri' : ''}"><div class="fz-pair${N === 3 ? ' n3' : ''}">${sel.map((_, i) => slot(i)).join('<b class="fz-plus">＋</b>')}<b class="fz-arrow">➜</b><div class="fz-slot fz-mystery${ready ? ' ready' : ''}"><i>?</i><small>${ready ? '무엇이 태어날까…?' : '새 골목몬'}</small></div></div>
         <p>${N === 3 ? '세' : '두'} 골목몬을 합쳐 <b>세상에 하나뿐인 새 골목몬</b>을 탄생시켜요. 능력치는 ${N === 3 ? '세' : '두'} 골목몬의 평균에서 조금 흔들리고, 기술은 ${N === 3 ? '셋' : '둘'}의 기술 중 <b>8개</b>를 물려받고, ${N === 3 ? '세' : '두'} 기술을 <b>합친</b> 합체기 <b>2개</b>가 생겨요. 특성·메가진화·거다이맥스도 전용으로!</p>
         <p class="fz-warn">⚠️ 모습·이름·기술·능력치는 <b>합체해 봐야 알아요.</b> 되돌릴 수 없고, ${N === 3 ? '세' : '두'} 골목몬은 사라져요. 합체몬은 다시 합체할 수 없어요.</p>
-        <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn" id="fz-go" ${ready ? '' : 'disabled'}>🧬 ${N === 3 ? '3단 ' : ''}합체하기 (${fmt(cost)}GP)</button><button class="btn paper" id="fz-tree">🌳 합체 트리</button></div></section>
+        <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn" id="fz-go" ${ready ? '' : 'disabled'}>🧬 ${N === 3 ? '3단 ' : ''}합체하기 (${fmt(cost)}GP)</button><button class="btn paper" id="fz-tree">🌳 합체 트리</button><button class="btn paper" id="fz-gal">🖼️ 갤러리·투표</button></div></section>
       <section class="panel"><h2>합체할 골목몬 ${N}마리 고르기 <small class="muted">${mons.length}마리 · 이미 합체한 골목몬은 안 보여요</small></h2>
         <div class="box-grid fz-grid">${mons.map((m) => { const sp = G.data.MONSTERS[m.species], on = sel.includes(m.uid), same = !on && chosen.has(m.species); return `<button class="box-card${m.shiny ? ' is-shiny' : ''}${on ? ' fz-on' : ''}" data-uid="${m.uid}" ${same ? 'disabled title="같은 골목몬끼리는 합체할 수 없어요"' : ''} style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? '<em class="shiny-dot">✨</em>' : ''}${m.plus ? `<em class="plus-dot">+${m.plus}</em>` : ''}${monArt(m.species, m.shiny)}<b>${esc(sp.n)}</b>${deckUids.has(m.uid) ? '<small class="fz-deck">덱</small>' : ''}</button>`; }).join('') || '<p class="wait">합체할 수 있는 골목몬이 없어요.</p>'}</div></section>`;
     app.querySelector('#back').onclick = () => { app.className = ''; showLobby(); };
     app.querySelector('#fz-tree').onclick = () => showFusionTree(showFusion);
+    app.querySelector('#fz-gal').onclick = () => showFusionGallery(showFusion);
     app.querySelectorAll('[data-mode]').forEach((b) => { b.onclick = () => showFusion(+b.dataset.mode); });
     app.querySelectorAll('[data-slot]').forEach((b) => { b.onclick = () => { sel[+b.dataset.slot] = null; pack(); draw(); }; });
     app.querySelectorAll('.fz-grid [data-uid]').forEach((b) => { b.onclick = () => {
@@ -189,4 +190,44 @@ async function showFusionTree(back = showLobby) {
   app.querySelector('#back').onclick = () => back();
   app.querySelector('#fz-new').onclick = () => showFusion();
   app.querySelectorAll('.fz-child[data-uid]').forEach((b) => { b.onclick = () => openMon(b.dataset.uid, () => showFusionTree(back)); });
+}
+
+/* ---------- 🖼️ 합체몬 갤러리 · 주간 하트 투표 ---------- */
+async function showFusionGallery(back = showLobby, sort = 'hot') {
+  G.screen = 'fzgal'; app.className = '';
+  app.innerHTML = `${topbar('🖼️ 합체몬 갤러리')}<p class="wait">불러오는 중…</p>`; app.querySelector('#back').onclick = () => back();
+  let g; try { g = (await api('GET', `/api/fusion/gallery?sort=${sort}`)).gallery; } catch (e) { return toast(e.message); }
+  if (G.screen !== 'fzgal') return;
+  fzRegisterAll(g.fusions);
+  const card = (x) => { const sp = G.data.MONSTERS[x.id]; if (!sp) return ''; return `<article class="fzg-card${x.own ? ' own' : ''}" data-id="${x.id}">
+      ${x.crowns ? `<em class="fzg-crown">👑${x.crowns > 1 ? x.crowns : ''}</em>` : ''}<div class="fzg-pic">${monArt(x.id)}</div>
+      <b>${sp.tri ? '🧬🧬 ' : ''}${esc(sp.n)}</b><small>${esc(sp.by || '?')} · No.${sp.no || '?'}${x.alive ? '' : ' · 떠남'}</small>
+      <span class="fzg-types">${sp.types.map(typeChip).join('')}</span>${sp.trait ? `<i class="fzg-tr">✨ ${esc(sp.trait.n)}</i>` : ''}
+      <button class="fzg-heart${x.mine ? ' on' : ''}" data-heart="${x.id}" ${x.own ? 'disabled title="내 합체몬"' : ''}>${x.mine ? '❤️' : '🤍'} <b>${x.hearts}</b></button></article>`; };
+  app.innerHTML = `${topbar('🖼️ 합체몬 갤러리')}
+    <section class="fz-hero"><h2>이 주의 합체몬 투표</h2><p>마음에 드는 합체몬에 하트를 주세요. 한 주에 <b>${g.maxHearts}개</b>까지 (지금 ${g.myHearts}개 줌). 월요일에 하트가 가장 많은 합체몬 주인에게 <b>10,000GP + 칭호 「이 주의 합체몬」</b>, 2등 5,000GP, 3등 3,000GP!</p>
+      ${g.last?.top?.length ? `<p class="fzg-last">지난주 1등 👑 <b>${esc(g.last.top[0].n)}</b> (${esc(g.last.top[0].by)}님 · 하트 ${g.last.top[0].hearts})</p>` : ''}</section>
+    <div class="fz-tabs three">${[['hot', '🔥 인기'], ['new', '🆕 최신'], ['mine', '🙋 내 합체몬']].map(([k, n]) => `<button class="${sort === k ? 'on' : ''}" data-sort="${k}">${n}</button>`).join('')}</div>
+    <div class="fzg-grid">${g.list.map(card).join('') || '<p class="wait">아직 합체몬이 없어요. 첫 합체몬을 탄생시켜 보세요!</p>'}</div>`;
+  app.querySelector('#back').onclick = () => back();
+  app.querySelectorAll('[data-sort]').forEach((b) => { b.onclick = () => showFusionGallery(back, b.dataset.sort); });
+  app.querySelectorAll('[data-heart]').forEach((b) => { b.onclick = async (e) => {
+    e.stopPropagation(); b.disabled = true;
+    try { const r = await api('POST', '/api/fusion/heart', { id: b.dataset.heart }); b.classList.toggle('on', r.on); b.innerHTML = `${r.on ? '❤️' : '🤍'} <b>${r.hearts}</b>`; if (r.on) b.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.35)' }, { transform: 'scale(1)' }], { duration: 350 }); } catch (err) { toast(err.message); }
+    b.disabled = false;
+  }; });
+  app.querySelectorAll('.fzg-card').forEach((c) => { c.onclick = () => fusionPeek(c.dataset.id); });
+}
+// 남의 합체몬 구경 (읽기 전용)
+function fusionPeek(id) {
+  const sp = G.data.MONSTERS[id]; if (!sp) return;
+  const tot = Object.values(sp.base).reduce((x, y) => x + y, 0);
+  const bg = openSheet(`<div class="fz-res"><h2>${sp.tri ? '🧬🧬' : '🧬'} ${esc(sp.n)}</h2><p class="muted" style="text-align:center">${esc(sp.by || '?')}님의 합체몬 · No.${sp.no || '?'}</p>
+    <div class="fzg-forms"><div>${monArt(id)}<small>기본</small></div><div>${monArt(id, false, '', true)}<small>${esc(sp.mega?.n || '메가')}</small></div><div>${gmaxSVG(id)}<small>거다이맥스</small></div></div>
+    <p style="text-align:center">${sp.types.map(typeChip).join('')}</p><div class="fz-fam">${(sp.parents || []).map((a) => `<span>${monArt(a)}<small>${fzName(a)}</small></span>`).join('<b>＋</b>')}</div>
+    ${sp.trait ? `<p class="trait fz-trait"><b>✨ 특성 ${esc(sp.trait.n)}</b> ${esc(sp.trait.d)}</p>` : ''}
+    ${Object.entries(sp.base).map(([k, v]) => `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${v}</span><i style="width:${Math.min(100, v / 1.3)}%"></i></div>`).join('')}<p class="muted" style="text-align:right">합계 ${tot}</p>
+    <h3 class="dex-h">기술 ${sp.moves.length}개 · 거다이: ${esc(sp.gmaxN || '')}</h3><div class="fz-moves">${sp.moves.map((m) => { const mv = G.data.MOVES[m]; return mv ? `<span class="${mv.fzMove ? 'fz-combo' : ''}">${typeChip(mv.type)}${esc(mv.n)}${mv.fzMove ? ' <b>합체기</b>' : ''}</span>` : ''; }).join('')}</div>
+    <div class="row" style="margin-top:10px"><button class="btn paper" data-x>닫기</button></div></div>`);
+  bg.querySelector('[data-x]').onclick = closeSheet;
 }

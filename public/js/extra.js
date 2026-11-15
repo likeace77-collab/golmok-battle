@@ -260,12 +260,29 @@ async function showStats(back = showLobby) {
     ${s.daily.length ? `<section class="panel"><h2>최근 2주 대전 수</h2><div class="st-bars">${s.daily.map((d) => `<div title="${d.d}: ${d.g}판 ${d.w}승"><i style="height:${(d.g / maxG) * 100}%"><u style="height:${d.g ? (d.w / d.g) * 100 : 0}%"></u></i><small>${d.d.slice(8)}</small></div>`).join('')}</div><p class="muted" style="font-size:12px">진한 부분이 이긴 판</p></section>` : ''}
     <section class="panel"><h2>골목몬별 기록</h2>${s.mons.length ? `<div class="st-mons">${s.mons.map((m) => `<div class="st-mon"><div class="st-art">${monArt(m.sp)}</div><div><b>${esc(m.n)}</b><small>${m.g}판 · 승률 ${Math.round((m.w / m.g) * 100)}% · 평균 딜 ${fmt(Math.round(m.dmg / m.g))} · ${m.kills}킬 · 최고 ${fmt(m.best)}</small><div class="qbar"><i style="width:${(m.w / m.g) * 100}%"></i></div></div></div>`).join('')}</div>` : '<p class="muted">대전을 하면 여기에 쌓여요. (이번 업데이트부터 기록돼요)</p>'}</section>
     ${s.h2h.length ? `<section class="panel"><h2>상대 전적</h2>${s.h2h.map((h) => `<div class="adm-row"><b>vs ${esc(h.n)}</b><small>${h.w}승 ${h.l}패${h.d ? ` ${h.d}무` : ''}</small></div>`).join('')}</section>` : ''}
-    <section class="panel"><h2>최근 대전 · 리플레이</h2>${s.matches.length ? s.matches.map((m) => `<div class="st-match ${m.draw ? 'draw' : m.won ? 'win' : 'lose'}"><em>${m.draw ? '무' : m.won ? '승' : '패'}</em><div><b>${KIND_N[m.kind] || m.kind} · vs ${esc(m.opp || '?')}</b><small>${timeAgo(m.at)} · ${m.turns}턴 · ${m.mons.map((x) => esc(G.data.MONSTERS[x.s]?.n || x.s)).join(', ')}</small></div>${m.rep ? `<button class="btn small" data-rep="${m.rep}">▶ 다시 보기</button>` : ''}</div>`).join('') : '<p class="muted">아직 기록이 없어요.</p>'}</section>`;
+    <section class="panel"><h2>최근 대전 · 리플레이</h2>${s.matches.length ? s.matches.map((m) => `<div class="st-match ${m.draw ? 'draw' : m.won ? 'win' : 'lose'}"><em>${m.draw ? '무' : m.won ? '승' : '패'}</em><div><b>${KIND_N[m.kind] || m.kind} · vs ${esc(m.opp || '?')}</b><small>${timeAgo(m.at)} · ${m.turns}턴 · ${m.mons.map((x) => esc(G.data.MONSTERS[x.s]?.n || x.s)).join(', ')}</small></div>${m.rep ? `<span class="st-repb"><button class="btn small" data-rep="${m.rep}">▶ 다시 보기</button><button class="btn small paper" data-share="${m.rep}" title="공유">🔗 공유</button></span>` : ''}</div>`).join('') : '<p class="muted">아직 기록이 없어요.</p>'}</section>`;
   app.querySelector('#back').onclick = back;
   app.querySelectorAll('[data-rep]').forEach((b) => { b.onclick = () => playReplay(b.dataset.rep, () => showStats(back)); });
+  app.querySelectorAll('[data-share]').forEach((b) => { b.onclick = () => shareReplay(b.dataset.share); });
 }
 
 /* ---------- 리플레이 ---------- */
+// 📼 리플레이 공유: 채팅방(전체·길드·친구)에 「▶ 보기」 카드로 올리거나 링크 복사
+async function shareReplay(id) {
+  if (!Social.view) { try { await loadSocial(); } catch { /* 친구 목록 없이 */ } }
+  const fr = Social.view?.friends || [];
+  const url = `${location.origin}/?replay=${encodeURIComponent(id)}`;
+  const bg = openSheet(`<div class="rp-share"><h2>📼 리플레이 공유</h2>
+    <label class="rp-msg">한마디 <input id="rp-txt" maxlength="120" placeholder="예: 이거 역전한 거 봐!!"></label>
+    <div class="rp-dest"><button class="btn" data-to="world">🌏 전체 채팅에</button>${G.user.guild ? `<button class="btn" data-to="guild">${G.user.guild.emblem} 길드 채팅에</button>` : ''}
+      ${fr.map((f) => `<button class="btn paper" data-to="dm:${esc(f.key)}">💬 ${esc(f.name)}에게</button>`).join('')}</div>
+    <div class="rp-link"><input readonly value="${esc(url)}"><button class="btn small" data-copy>🔗 링크 복사</button></div>
+    <p class="muted" style="font-size:12px">링크를 열면 로그인한 뒤 바로 리플레이가 재생돼요. 오래된 리플레이는 지워질 수 있어요.</p>
+    <div class="row"><button class="btn paper" data-x>닫기</button></div></div>`);
+  bg.querySelector('[data-x]').onclick = closeSheet;
+  bg.querySelectorAll('[data-to]').forEach((b) => { b.onclick = () => { wsSend({ t: 'chat', ch: b.dataset.to, text: bg.querySelector('#rp-txt').value.trim(), rep: id }); toast('📼 채팅에 올렸어요!'); closeSheet(); }; });
+  bg.querySelector('[data-copy]').onclick = async () => { try { await navigator.clipboard.writeText(url); toast('🔗 링크를 복사했어요!'); } catch { bg.querySelector('.rp-link input').select(); toast('링크를 길게 눌러 복사해 주세요.'); } };
+}
 let REPLAY_BACK = null;
 async function playReplay(id, back = showLobby) {
   let r; try { r = (await api('GET', `/api/replay?id=${encodeURIComponent(id)}`)).replay; } catch (e) { return toast(e.message); }

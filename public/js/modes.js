@@ -11,8 +11,11 @@ const modeGo = (kind, arg) => wsSend({ t: 'mode_battle', kind, arg });
 
 /* ---------- 💗 친밀도 (내 골목몬 상세) ---------- */
 function modeMonBox(m) {
-  const aff = m.aff || 0;
-  return `<section class="md-mon">
+  const aff = m.aff || 0, nat = G.data.NATURES?.[m.nature], SN = { atk: '공격', def: '방어', spa: '특공', spd: '특방', spe: '스피드' };
+  const natBox = nat ? `<div class="md-nat"><h3 class="dex-h">🌱 성격 <b>${esc(nat.n)}</b></h3>
+      <p>${nat.up ? `<span class="up">${SN[nat.up]} ▲10%</span> <span class="down">${SN[nat.down]} ▼10%</span>` : '<span class="muted">능력치 변화 없음 (무난한 성격)</span>'}</p>
+      <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn small" data-nat="ticket">🎲 성격 바꾸기 (리롤권 1)</button><button class="btn small paper" data-nat="gp">1,000GP로 바꾸기</button></div></div>` : '';
+  return `<section class="md-mon">${natBox}
     <div class="md-aff"><h3 class="dex-h">💗 친밀도 <b>${aff}</b><small class="muted">/100</small></h3>
       <div class="md-hearts">${Array.from({ length: 10 }, (_, i) => `<i class="${aff >= (i + 1) * 10 ? 'on' : aff > i * 10 ? 'half' : ''}">♥</i>`).join('')}</div>
       <p class="muted" style="font-size:12.5px">70 이상: 쓰러질 공격을 가끔 버텨요 · 90 이상: 상태이상을 가끔 털어내요. 쓰다듬기(하루 1번), 간식, 같이 이기면 올라요.</p>
@@ -21,6 +24,11 @@ function modeMonBox(m) {
 function bindModeMon(bg, m, reopen) {
   const heartBurst = (el) => { const r = el.getBoundingClientRect(); for (let i = 0; i < 8; i++) { const h = document.createElement('i'); h.className = 'md-burst'; h.textContent = '♥'; h.style.left = `${r.left + r.width / 2}px`; h.style.top = `${r.top}px`; document.body.appendChild(h); h.animate([{ transform: 'translate(0,0) scale(.6)', opacity: 1 }, { transform: `translate(${(Math.random() - .5) * 140}px, ${-60 - Math.random() * 80}px) scale(1.3)`, opacity: 0 }], { duration: 900 + Math.random() * 300, easing: 'ease-out' }).onfinish = () => h.remove(); } };
   const act = async (path, btn) => { try { const r = await api('POST', path, { uid: m.uid }); setUser(r); heartBurst(btn); toast(`${G.data.MONSTERS[m.species].n}: ${r.line} (친밀도 ${r.aff})`); setTimeout(reopen, 500); } catch (e) { toast(e.message); } };
+  bg.querySelectorAll('[data-nat]').forEach((b) => b.addEventListener('click', async () => {
+    if (!confirm(`성격을 다시 뽑을까요? (${b.dataset.nat === 'gp' ? '1,000GP' : '리롤권 1장'})`)) return;
+    b.disabled = true;
+    try { const r = await api('POST', '/api/mon/nature', { uid: m.uid, pay: b.dataset.nat }); setUser(r); toast(`🌱 성격이 바뀌었어요: ${r.old} → ${r.nature}`); reopen(); } catch (e) { toast(e.message); b.disabled = false; }
+  }));
   bg.querySelector('#md-pet')?.addEventListener('click', (e) => act('/api/mon/pet', e.currentTarget));
   bg.querySelector('#md-snack')?.addEventListener('click', (e) => act('/api/mon/snack', e.currentTarget));
 }

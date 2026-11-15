@@ -294,8 +294,9 @@ function drawChatLog(stick) {
   log.innerHTML = list.length ? list.map((m) => m.sys ? `<p class="ch-sys">${esc(m.text)}</p>` : `<div class="ch-msg ${m.from === me ? 'me' : ''}">
       ${m.from === me ? '' : `<div class="ava">${avatarSVG(m.avatar)}</div>`}
       <div class="ch-b">${m.from === me ? '' : `<span class="ch-who">${m.guild ? `${m.guild} ` : ''}<b>${esc(m.name)}</b>${m.title ? ` ${titleTag(m.title, 'mini')}` : ''}</span>`}
-        <p>${esc(m.text)}</p><time>${timeText(m.at)}${G.user.dev && ch === 'world' ? ` <button class="ch-del" data-del="${m.at}" title="지우기">🗑</button>` : ''}</time></div></div>`).join('')
+        <p>${esc(m.text)}</p>${m.rep ? `<button class="ch-rep" data-rep="${esc(m.rep.id)}">📼 <span>${esc(KIND_N[m.rep.kind] || '대전')} · ${(m.rep.names || []).map(esc).join(' vs ')}</span><b>▶ 보기</b></button>` : ''}<time>${timeText(m.at)}${G.user.dev && ch === 'world' ? ` <button class="ch-del" data-del="${m.at}" title="지우기">🗑</button>` : ''}</time></div></div>`).join('')
     : `<p class="wait">${ch === 'world' ? '아직 아무도 말하지 않았어요. 첫 인사를 남겨 보세요! 👋' : ch === 'guild' ? '길드 채팅방이에요. 반갑게 인사해요!' : '친구와의 1:1 채팅방이에요.'}</p>`;
   if (stick || near) log.scrollTop = log.scrollHeight;
+  log.querySelectorAll('.ch-rep').forEach((b) => { b.onclick = () => { app.className = ''; playReplay(b.dataset.rep, () => showChat()); }; });
   log.querySelectorAll('[data-del]').forEach((b) => { b.onclick = async () => { try { await api('POST', '/api/chat/delete', { ch: 'world', at: Number(b.dataset.del) }); } catch (e) { toast(e.message); } }; });
 }

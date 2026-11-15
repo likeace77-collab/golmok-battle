@@ -14,7 +14,7 @@ const BOUND_KEYS = ['forge', 'tierPow', 'elem', 'hydrate', 'dive', 'ouga', 'tria
 const SIMPLE = new Set(['n', 'type', 'cat', 'pow', 'acc', 'pp', 'pri', 'st', 'd', 'recoil', 'fl', 'crit', 'drain', 'self', 'foe', 'hits', 'selfAfter', 'sound', 'breakGuard', 'sig']);
 const MIX_FROM_B = ['st', 'drain', 'foe', 'fl', 'crit', 'sound'];
 
-let db = null;
+let db = null, H = {}; // H: 우편·지급 같은 서버 기능 (setHooks)
 const jo = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1) - 0xac00; return `${w}${c >= 0 && c <= 11171 && c % 28 ? a : b}`; }; // 받침 따라 조사
 const rnd = (n) => Math.floor(Math.random() * n);
 const pick = (a) => a[rnd(a.length)];
@@ -371,4 +371,44 @@ function tree(u) {
   return { gp: FUSE_GP, gp3: FUSE3_GP, list: (u.fusionLog || []).map((e) => ({ ...e, alive: have.has(e.uid), fusion: pubOf(e.id) })).filter((e) => e.fusion), total: Object.keys(db.fusions).length };
 }
 
-module.exports = { fuse3, FUSE3_GP, mixName3, retrait, RETRAIT_TK, RETRAIT_GP, init, register, all, pubOf, fuse, tree, isFusion, mixName, inheritable, comboBase, FUSE_GP, NO_PARENT };
+/* ---------- 🖼️ 합체몬 갤러리 · 주간 하트 투표 ---------- */
+const KST = 9 * 3600e3;
+const weekKey = (t = Date.now()) => { const d = new Date(t + KST); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); return d.toISOString().slice(0, 10); };
+const VOTE_R = [{ gp: 10000 }, { gp: 5000 }, { gp: 3000 }];
+function setHooks(h) { H = h; }
+const voteBook = () => { db.fzVote ||= { week: weekKey(), hearts: {}, hist: [] }; return db.fzVote; };
+function settleVotes() { // 주가 바뀌면 지난주 1~3등 합체몬 주인에게 상
+  const v = voteBook(), wk = weekKey();
+  if (v.week === wk) return false;
+  const top = Object.entries(v.hearts).map(([id, ks]) => [id, ks.length]).filter(([id, n]) => n > 0 && db.fusions[id]).sort((a, b) => b[1] - a[1] || (db.fusions[a[0]].sp.at - db.fusions[b[0]].sp.at)).slice(0, 3);
+  top.forEach(([id, n], i) => {
+    const f = db.fusions[id]; f.sp.crowns = (f.sp.crowns || 0) + (i === 0 ? 1 : 0);
+    const owner = H.keyOf && db.users?.[H.keyOf(f.sp.by)];
+    if (owner && H.grant) { H.grant(owner, VOTE_R[i]); H.sendMail?.(owner, { from: '합체몬 갤러리', title: `🧬 지난주 합체몬 투표 ${i + 1}위!`, body: `내가 만든 「${f.sp.n}」이(가) 하트 ${n}개로 ${i + 1}위를 했어요! ${VOTE_R[i].gp.toLocaleString('ko-KR')}GP는 지갑에 들어갔어요.${i === 0 ? ' 칭호 「이 주의 합체몬」을 받아 가세요.' : ''}`, reward: i === 0 ? ['titles:fzstar'] : [] }); }
+  });
+  if (top[0]) H.sysChat?.(`🧬 지난주 최고의 합체몬은 ${db.fusions[top[0][0]].sp.by}님의 「${db.fusions[top[0][0]].sp.n}」! (하트 ${top[0][1]}개)`);
+  v.hist.unshift({ week: v.week, top: top.map(([id, n]) => ({ id, n: db.fusions[id].sp.n, by: db.fusions[id].sp.by, hearts: n })) }); v.hist = v.hist.slice(0, 12);
+  v.week = wk; v.hearts = {};
+  return true;
+}
+function gallery(u, key, sort = 'hot') {
+  settleVotes();
+  const v = voteBook(), alive = new Set(Object.values(db.users || {}).flatMap((x) => (x.mons || []).map((m) => m.species).filter((sp) => db.fusions[sp])));
+  let list = Object.values(db.fusions).map((f) => ({ id: f.id, hearts: (v.hearts[f.id] || []).length, all: (f.sp.heartsAll || 0), mine: (v.hearts[f.id] || []).includes(key), own: f.sp.by === u.name, alive: alive.has(f.id), crowns: f.sp.crowns || 0, at: f.sp.at || 0 }));
+  if (sort === 'new') list.sort((a, b) => b.at - a.at); else if (sort === 'mine') list = list.filter((x) => x.own).sort((a, b) => b.at - a.at); else list.sort((a, b) => b.hearts - a.hearts || b.all - a.all || b.at - a.at);
+  const ids = list.slice(0, 80).map((x) => x.id);
+  return { week: v.week, list: list.slice(0, 80), fusions: ids.map(pubOf), last: v.hist[0] || null, total: Object.keys(db.fusions).length, myHearts: Object.values(v.hearts).filter((ks) => ks.includes(key)).length, maxHearts: HEART_MAX };
+}
+const HEART_MAX = 5; // 한 주에 하트 5개까지 (합체몬마다 하나)
+function heart(u, key, id) {
+  settleVotes();
+  const f = db.fusions[id]; if (!f) return { error: '없는 합체몬이에요.' };
+  if (f.sp.by === u.name) return { error: '내가 만든 합체몬에는 하트를 줄 수 없어요.' };
+  const v = voteBook(), ks = (v.hearts[id] ||= []), i = ks.indexOf(key);
+  if (i >= 0) { ks.splice(i, 1); f.sp.heartsAll = Math.max(0, (f.sp.heartsAll || 1) - 1); return { ok: true, on: false, hearts: ks.length }; }
+  if (Object.values(v.hearts).filter((x) => x.includes(key)).length >= HEART_MAX) return { error: `하트는 한 주에 ${HEART_MAX}개까지 줄 수 있어요. 다른 하트를 빼고 주세요.` };
+  ks.push(key); f.sp.heartsAll = (f.sp.heartsAll || 0) + 1;
+  return { ok: true, on: true, hearts: ks.length };
+}
+
+module.exports = { setHooks, gallery, heart, settleVotes, weekKey, HEART_MAX, fuse3, FUSE3_GP, mixName3, retrait, RETRAIT_TK, RETRAIT_GP, init, register, all, pubOf, fuse, tree, isFusion, mixName, inheritable, comboBase, FUSE_GP, NO_PARENT };

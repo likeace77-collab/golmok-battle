@@ -639,6 +639,7 @@ const COSMETICS = {
     C('tchamp', '골목 토너먼트 챔피언', ['gift', 'titles:tchamp'], { tier: 5, glow: '#FFD23F' }), C('tfinal', '토너먼트 준우승', ['gift', 'titles:tfinal'], { tier: 4, glow: '#c3ccd8' }), // 선생님을 만든 pshrocket
     C('kkaak', '까악까악', ['gift', 'titles:kkaak'], { tier: 9, icon: '🪶' }),
     C('iconmaker', '골목의 얼굴', ['gift', 'titles:iconmaker'], { tier: 9, icon: '📱' }), // 아이콘 공모전 우승
+    C('fzstar', '이 주의 합체몬', ['gift', 'titles:fzstar'], { tier: 6, icon: '🧬', glow: '#FF5FA2' }), // 합체몬 갤러리 주간 1등
     C('gymchamp', '골목 챔피언', ['gift', 'titles:gymchamp'], { tier: 5, glow: '#FFD23F' }), C('escapee', '골목 탈출자', ['gift', 'titles:escapee'], { tier: 5, glow: '#B44BFF' }), // 까모를 만든 티키티키펑크
     C('dimension', '차원을 넘어온 자', ['gift', 'titles:dimension'], { tier: 10 }), // 옛 골목대전에서 넘어온 계정 기념
     // 랭크전 (한 번이라도 그 티어에 오르면)
@@ -976,4 +977,14 @@ for (const [id, p] of Object.entries(PERKS)) {
   if (p.type) p.d = `${TYPES[p.type].n} 기술 위력 +3%`;
 }
 
-module.exports = { GMAX_MOVES, ITEMS, FORMS, TIERS, BANNED, DEV_ACCOUNTS, STRIP, TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, AVATAR_PAID, COSMETICS, STAT_NAMES, PERKS };
+// 🌱 성격: 능력치 하나 +10%, 하나 −10% (같은 걸 고르면 변화 없음)
+const NAT_STATS = ['atk', 'def', 'spa', 'spd', 'spe'];
+const NAT_NAMES = [
+  ['노력', '외로움', '고집', '개구쟁이', '용감'],
+  ['대담', '온순', '장난꾸러기', '촐랑', '무사태평'],
+  ['조심', '의젓', '수줍음', '덜렁', '냉정'],
+  ['차분', '얌전', '신중', '변덕', '건방'],
+  ['겁쟁이', '성급', '명랑', '천진난만', '성실'],
+];
+const NATURES = Object.fromEntries(NAT_NAMES.flatMap((row, i) => row.map((n, j) => [n, { n, up: i === j ? null : NAT_STATS[i], down: i === j ? null : NAT_STATS[j] }])));
+module.exports = { NATURES, GMAX_MOVES, ITEMS, FORMS, TIERS, BANNED, DEV_ACCOUNTS, STRIP, TYPES, CHART, MOVES, STRUGGLE, MONSTERS, AVATAR_OPTIONS, AVATAR_PAID, COSMETICS, STAT_NAMES, PERKS };
