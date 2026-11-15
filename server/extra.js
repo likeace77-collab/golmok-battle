@@ -9,11 +9,13 @@ function fix() { if (!db) return; db.news ||= []; migrateSkins(); }
 const DAY = 864e5, KST = 9 * 3600e3;
 const dayKey = (t = Date.now()) => new Date(t + KST).toISOString().slice(0, 10);
 const err = (error) => ({ error });
+const GUIDE_REWARD = { gp: 5000, tickets: 1, rerolls: 3 }; // 골목대전 가이드 완주 보상
 const fmt = (n) => Number(n).toLocaleString('ko-KR');
 
 /* ---------- 공지·패치노트 ---------- */
 // 코드에 적어 두는 패치노트 (개발자가 화면에서 쓴 글은 db.news)
 const PATCH_NOTES = [
+  { id: 'p-1115i', kind: 'patch', at: Date.parse('2026-11-15T14:50:00+09:00'), title: '📖 골목대전 가이드 + 골목대장 밴픽', body: '• 로비에 「📖 가이드」: 게임의 모든 시스템을 8장 46가지로 알려 줘요. 「직접 가 보기」로 바로 그 화면에!\n• 가이드를 끝까지 보면 5,000GP + 입수권 1장 + 리롤권 3장 (한 번만)\n• 골목대장과도 밴픽 대전을 할 수 있어요.\n• 6대6 밴픽은 6마리 중 1마리 금지 → 5대5' },
   { id: 'p-1115h', kind: 'patch', at: Date.parse('2026-11-15T12:50:00+09:00'), title: '⚖️ 여우비 밸런스 조정 + 밴픽 고침', body: '• 여우비 거다이맥스 너프: 체력 2배→1.5배, 능력치 1.5배→1.2배, 거다이기술 위력 250→200, 다이기술 1.3배→기본\n• 기본 여우비 버프: 체력 85→90, 방어 70→75, 특방 95→100\n• 밴픽: 나가기 버튼 추가, 새로고침해도 밴픽 화면으로 돌아와요, 밴픽 중엔 다른 대전 신청이 안 와요, 취소되면 로비로 돌아가요.' },
   { id: 'p-1115g', kind: 'event', at: Date.parse('2026-11-15T12:20:00+09:00'), title: '📱 아이콘 공모전 시작!', body: '• 골목대전 앱 아이콘을 직접 그려 내 주세요. (11/15 ~ 11/29)\n• 우승작은 진짜 앱 아이콘이 되고, 만든 사람에게 50,000GP + 신화 칭호 「골목의 얼굴」!\n• 이벤트 탭에서 참여할 수 있어요. 한 사람당 3개까지.' },
   { id: 'p-1115f', kind: 'patch', at: Date.parse('2026-11-15T05:10:00+09:00'), title: '🦊 여우비 개편: 물·페어리 + 전용기 3종', body: '• 여우비 타입이 물·페어리로 바뀌었어요.\n• 새 전용기: 유혹하기·꼬리치기 / 살랑살랑 / 여우 할퀴기 (몸통 박치기·물총 쏘기·요정의 춤은 빠짐)\n• 거다이맥스가 매우 강해졌어요: 체력 2배, 모든 능력치 1.5배, 거다이기술 위력 250.' },
@@ -295,6 +297,11 @@ function api(route, u, key, b) {
     case 'POST /api/costume/wear': return costumeWear(u, String(b.uid || ''), b.id ? String(b.id) : '', dev);
     case 'GET /api/event': return { event: eventView(u) };
     case 'POST /api/event/buy': return eventBuy(u, String(b.id || ''));
+    case 'GET /api/guide': return { guide: { done: !!u.guideDone, reward: GUIDE_REWARD } };
+    case 'POST /api/guide/claim': { // 가이드를 끝까지 보면 한 번만
+      if (u.guideDone) return err('가이드 보상은 이미 받았어요.');
+      u.guideDone = Date.now(); return { ok: true, got: H.grant(u, GUIDE_REWARD), guide: { done: true, reward: GUIDE_REWARD } };
+    }
     default: return undefined;
   }
 }

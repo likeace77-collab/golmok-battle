@@ -150,7 +150,7 @@ async function showStarters() {
         try {
           const res = await api('POST', '/api/tutorial', { starter: +b.dataset.st });
           setUser(res); closeSheet();
-          showGot(res.got, '골목대전 시작 선물!', () => { toast('스카우트로 골목몬을 더 모아 보세요!'); showLobby(); });
+          showGot(res.got, '골목대전 시작 선물!', () => { toast('가이드를 끝까지 보면 선물이 또 있어요!'); showGuide(); });
         } catch (e) { toast(e.message); ev.currentTarget.disabled = false; }
       };
     };

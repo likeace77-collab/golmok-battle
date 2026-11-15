@@ -2012,3 +2012,27 @@ svg.sk-neon { filter: drop-shadow(0 0 4px #2EF2FF) drop-shadow(0 0 10px #FF3DCB8
 .ybc-splat { position: absolute; inset: 70px; pointer-events: none; z-index: 1; }
 .ybc-splat i { position: absolute; opacity: 0; background: radial-gradient(circle at 40% 35%, #d8102a, #8a0018 55%, #3a0008); filter: drop-shadow(0 0 3px #000); }
 .ybc.reveal .ybc-splat { transition: opacity 1.2s; opacity: .55; }
+
+/* ---------- 골목대전 가이드 ---------- */
+.g2b.guide { background: linear-gradient(135deg, #4CD964, #2EA8E0); }
+.gd-hero { margin: 10px 0; padding: 16px; border: var(--line); border-radius: 16px; background: linear-gradient(135deg, #2340A8, #6a2aff); color: #fff; box-shadow: 3px 3px 0 var(--ink); display: grid; gap: 8px; }
+.gd-hero > b { font-size: 28px; font-family: var(--display); }
+.gd-hero > i { display: block; height: 12px; border-radius: 99px; background: #ffffff33; overflow: hidden; position: relative; }
+.gd-hero > i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p); background: linear-gradient(90deg, #FFD23F, #6CF2C2); }
+.gd-hero p { margin: 0; font-size: 14px; }
+.gd-rw { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-weight: 700; font-size: 14px; } .gd-rw.done { opacity: .85; }
+.gd-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr)); gap: 8px; }
+.gd-ch { display: grid; gap: 2px; justify-items: start; text-align: left; padding: 12px; border: var(--line); border-radius: 14px; background: #FFF3D4; box-shadow: 3px 3px 0 var(--ink); font: inherit; cursor: pointer; }
+.gd-ch span { font-size: 30px; } .gd-ch b { font-size: 16px; } .gd-ch small { color: #776; } .gd-ch.done { background: #D8F7E6; }
+.gd-card { position: relative; }
+.gd-step { display: block; text-align: center; color: #776; margin-top: 4px; }
+.gd-card p { text-align: left; line-height: 1.6; }
+.gd-go { margin: 6px 0 10px; }
+.gd-mon { display: inline-block; width: 92px; height: 92px; } .gd-mon svg { width: 100%; height: 100%; }
+.gd-big { font-size: 44px; letter-spacing: 4px; }
+.gd-type { display: inline-block; padding: 2px 10px; border: 2px solid var(--ink); border-radius: 8px; background: var(--c); color: #fff; font-weight: 800; text-shadow: 1px 1px 0 #0006; }
+.gd-eff { line-height: 2.2; font-weight: 800; } .gd-eff i { font-style: normal; margin: 0 6px; } .gd-eff em { font-style: normal; margin-left: 8px; color: #E8402C; }
+.gd-moves { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; } .gd-moves b { padding: 6px 10px; border: 2px solid var(--ink); border-radius: 10px; background: #fff; }
+.gd-wallet .wallet { justify-content: center; }
+.gd-pill { position: fixed; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 60; padding: 10px 14px; border: var(--line); border-radius: 999px; background: #FFD23F; font: inherit; font-weight: 800; box-shadow: 3px 3px 0 var(--ink); cursor: pointer; }
+.gd-rw .rw { color: var(--ink, #1a1433); background: #fff; }
