@@ -109,12 +109,25 @@ test('합체몬 메가진화: 스톤 없이 가능, 보너스 합계 +100', () =
   assert.ok(b.sides[0].mons[0].stats.atk >= spa);
 });
 
-test('합체몬 특성 다시 뽑기: 리롤권 3장 또는 5000GP, 다른 특성으로', () => {
+test('합체몬 특성 다시 뽑기: 리롤권 3장 또는 1500GP, 다른 특성으로', () => {
   const u = mk(); u.gp = 10000; u.rerolls = 3;
   const r = F.fuse(u, 'a', 'b'); const old = Data.MONSTERS[r.mon.species].trait.n;
   const x = F.retrait(u, r.mon.uid, 'ticket'); assert.ok(x.ok, x.error); assert.notEqual(x.trait.n, old); assert.equal(u.rerolls, 0);
   assert.ok(F.retrait(u, r.mon.uid, 'ticket').error, '리롤권 부족');
-  const gp = u.gp; assert.ok(F.retrait(u, r.mon.uid, 'gp').ok); assert.equal(u.gp, gp - 5000);
+  const gp = u.gp; assert.ok(F.retrait(u, r.mon.uid, 'gp').ok); assert.equal(u.gp, gp - 1500);
   assert.ok(F.retrait(u, 'c', 'gp').error, '합체몬만');
   const names = Object.values(db.fusions).map((f) => f.sp.trait.n); assert.equal(new Set(names).size, names.length, '여전히 안 겹침');
+});
+
+test('합체몬: 훈련장에 나오고, 부모 골목몬으로 강화돼요', () => {
+  const P = require('../server/progress');
+  const u = mk(); u.counts = {}; const r = F.fuse(u, 'a', 'b'); const fid = r.mon.species;
+  const tr = E.createTraining({ name: 't' }, 1, [], [], [fid]);
+  assert.ok(tr.sides[0].mons.some((m) => m.species === fid), '훈련장 목록에 합체몬');
+  assert.ok(!E.createTraining({ name: 't' }, 1).sides[0].mons.some((m) => m.species === fid), '남의 훈련장엔 없음');
+  const [pa] = Data.MONSTERS[fid].parents;
+  u.mons.push({ uid: 'p1', species: pa, moves: [] }, { uid: 'p2', species: 'horong', moves: [] });
+  assert.ok(P.enhance(u, r.mon.uid, 'p2', new Set()).error, '부모가 아니면 안 됨');
+  const e = P.enhance(u, r.mon.uid, 'p1', new Set()); assert.ok(e.ok, e.error); assert.equal(e.plus, 1);
+  assert.ok(!u.mons.some((m) => m.uid === 'p1'));
 });

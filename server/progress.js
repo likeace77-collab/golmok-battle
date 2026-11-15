@@ -153,7 +153,8 @@ const PLUS_MAX = 5, PLUS_PCT = 0.04, plusCost = (n) => (n + 1) * 1000;
 function enhance(u, uid, food, busy) {
   const m = u.mons.find((x) => x.uid === uid), f = u.mons.find((x) => x.uid === food);
   if (!m || !f || uid === food) return { error: '강화할 골목몬과 먹일 골목몬을 다시 골라 주세요.' };
-  if (m.species !== f.species) return { error: '같은 골목몬만 먹일 수 있어요.' };
+  const fz = Data.MONSTERS[m.species]?.fz ? Data.MONSTERS[m.species].parents || [] : null; // 합체몬은 합체한 두 골목몬 중 아무거나
+  if (fz ? !fz.includes(f.species) : m.species !== f.species) return { error: fz ? '합체한 두 골목몬 중 하나만 먹일 수 있어요.' : '같은 골목몬만 먹일 수 있어요.' };
   const n = m.plus || 0;
   if (n >= PLUS_MAX) return { error: `이미 최대 강화(+${PLUS_MAX})예요.` };
   if (busy.has(food)) return { error: '원정 중이거나 교환에 걸린 골목몬은 먹일 수 없어요.' };

@@ -293,13 +293,14 @@ function perkLine(species, n) {
 function enhanceBox(m) {
   const n = m.plus || 0, sp = G.data.MONSTERS[m.species];
   const deckUids = new Set((G.user.decks[G.user.active]?.team || []).map((t) => t.uid));
-  const food = G.user.mons.filter((x) => x.uid !== m.uid && x.species === m.species);
+  const par = sp.fz ? sp.parents || [] : null; // 합체몬: 합체한 두 골목몬 중 아무거나 먹이면 강화
+  const food = G.user.mons.filter((x) => x.uid !== m.uid && (par ? par.includes(x.species) : x.species === m.species));
   return `<section class="enh"><h3 class="dex-h">강화 <b class="plus-tag">${n ? `+${n}` : '+0'}</b> <small class="muted">+1마다 모든 능력치 4% (최대 +5)</small></h3>
     <div class="enh-bar">${[1, 2, 3, 4, 5].map((i) => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</div>
     ${perkLine(m.species, n)}
-    ${n >= 5 ? '<p class="muted">최대로 강화했어요! 🔥</p>' : food.length ? `<p class="muted" style="font-size:13px">같은 ${esc(sp.n)}을(를) 먹이면 +1. 비용 ${ICON.gp(14)} ${fmt((n + 1) * 1000)}GP</p>
+    ${n >= 5 ? '<p class="muted">최대로 강화했어요! 🔥</p>' : food.length ? `<p class="muted" style="font-size:13px">${par ? `${par.map((p) => esc(G.data.MONSTERS[p]?.n || p)).join(' 또는 ')}을(를)` : `같은 ${esc(sp.n)}을(를)`} 먹이면 +1. 비용 ${ICON.gp(14)} ${fmt((n + 1) * 1000)}GP</p>
       <div class="enh-food">${food.map((f) => `<button class="tr-pick" data-food="${f.uid}"><div class="tr-mon${f.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${f.plus ? `<em class="plus-dot">+${f.plus}</em>` : ''}${f.shiny ? '<em class="shiny-dot">✨</em>' : ''}${monArt(f.species, f.shiny)}<b>${deckUids.has(f.uid) ? '덱에 있음' : '먹이기'}</b></div></button>`).join('')}</div>`
-      : `<p class="muted" style="font-size:13px">같은 골목몬이 한 마리 더 있으면 먹여서 강화할 수 있어요. 스카우트나 교환으로 모아 보세요!</p>`}
+      : `<p class="muted" style="font-size:13px">${par ? `${par.map((p) => esc(G.data.MONSTERS[p]?.n || p)).join(' 또는 ')}이(가) 있으면 먹여서 강화할 수 있어요.` : '같은 골목몬이 한 마리 더 있으면 먹여서 강화할 수 있어요.'} 스카우트나 교환으로 모아 보세요!</p>`}
   </section>`;
 }
 
@@ -325,7 +326,7 @@ ${sp.fz ? `<section class="mon-stone have"><div class="fz-megapic">${monArt(m.sp
   if (typeof bindModeMon === 'function') bindModeMon(bg, m, () => openMon(uid, after));
   bg.querySelectorAll('[data-food]').forEach((b) => { b.onclick = async () => {
     const f = G.user.mons.find((x) => x.uid === b.dataset.food);
-    if (!confirm(`${sp.n}${f?.plus ? ` +${f.plus}` : ''}${f?.shiny ? ' (이로치)' : ''}을(를) 먹여서 강화할까요? 먹인 골목몬은 사라져요.`)) return;
+    if (!confirm(`${G.data.MONSTERS[f?.species]?.n || sp.n}${f?.plus ? ` +${f.plus}` : ''}${f?.shiny ? ' (이로치)' : ''}을(를) 먹여서 강화할까요? 먹인 골목몬은 사라져요.`)) return;
     try { const r = await api('POST', '/api/mon/enhance', { uid, food: b.dataset.food }); setUser(r); toast(`✨ ${sp.n} +${r.plus} 강화 성공!${r.shinyMoved ? ' 이로치가 옮겨 붙었어요!' : ''}`); openMon(uid, after); } catch (e) { toast(e.message); }
   }; });
   bg.querySelector('[data-stone]')?.addEventListener('click', async () => {

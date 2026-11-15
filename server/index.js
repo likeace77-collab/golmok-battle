@@ -1078,7 +1078,7 @@ const BOT_LEVELS = ['쉬움', '보통', '어려움', '지옥'];
 const shinyOwned = (u) => [...new Set(u.mons.filter((m) => m.shiny).map((m) => m.species))];
 function startTraining(key) {
   const u = db.users[key];
-  const room = { id: crypto.randomUUID(), keys: [key, BOT], b: E.createTraining({ name: u.name, avatar: u.avatar, style: u.style, deck: '모든 골목몬' }, undefined, bannedFor(u), shinyOwned(u)), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: 0, tag: false, training: true, counted: 0, spectators: new Set() };
+  const room = { id: crypto.randomUUID(), keys: [key, BOT], b: E.createTraining({ name: u.name, avatar: u.avatar, style: u.style, deck: '모든 골목몬' }, undefined, bannedFor(u), shinyOwned(u), [...new Set(u.mons.filter((m) => Data.MONSTERS[m.species]?.fz).map((m) => m.species))]), deadline: 0, timer: null, ended: false, leaveTimers: {}, botLevel: 0, tag: false, training: true, counted: 0, spectators: new Set() };
   battles.set(room.id, room);
   inBattle.set(key, room); clearChallenges(key); removeFromTag(key); stopWatching(key);
   syncBattle(room, 0);

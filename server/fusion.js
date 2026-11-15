@@ -259,8 +259,8 @@ function fuse(u, uidA, uidB, busy = new Set()) {
   return { ok: true, mon: m, fusion: pubOf(f.id) };
 }
 
-// 특성 다시 뽑기: 리롤권 3장 (없으면 5,000GP). 지금 특성과 다른 특성, 여전히 다른 합체몬과 안 겹침
-const RETRAIT_TK = 3, RETRAIT_GP = 5000;
+// 특성 다시 뽑기: 리롤권 3장 또는 1,500GP. 지금 특성과 다른 특성, 여전히 다른 합체몬과 안 겹침
+const RETRAIT_TK = 3, RETRAIT_GP = 1500;
 function retrait(u, uid, pay) {
   const m = u.mons.find((x) => x.uid === uid), f = m && db.fusions[m.species];
   if (!f) return { error: '합체몬을 골라 주세요.' };

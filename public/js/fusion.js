@@ -45,7 +45,7 @@ function fzMonBox(m) {
   const sp = G.data.MONSTERS[m.species], [a, b] = sp.parents || [];
   return `<section class="fz-box" data-uid="${m.uid}"><h3 class="dex-h">🧬 합체몬 <small class="muted">No.${sp.no || '?'} · ${esc(sp.by || '')}</small></h3>
     <div class="fz-fam"><span>${monArt(a)}<small>${fzName(a)}</small></span><b>＋</b><span>${monArt(b)}<small>${fzName(b)}</small></span></div>
-    ${sp.trait ? `<div class="fz-rt"><span>✨ 특성 <b>${esc(sp.trait.n)}</b></span><button class="btn small" data-retrait="ticket">🎲 다시 뽑기 (리롤권 3)</button><button class="btn small paper" data-retrait="gp">5,000GP로 뽑기</button></div>` : ''}
+    ${sp.trait ? `<div class="fz-rt"><span>✨ 특성 <b>${esc(sp.trait.n)}</b></span><button class="btn small" data-retrait="ticket">🎲 다시 뽑기 (리롤권 3)</button><button class="btn small paper" data-retrait="gp">1,500GP로 뽑기</button></div>` : ''}
     <p class="muted" style="font-size:12.5px">세상에 하나뿐인 골목몬이에요. 더 합체할 수 없고, 메가스톤 없이 메가진화할 수 있어요. ${(() => { const c = sp.moves.filter((id) => G.data.MOVES[id]?.fzMove).map((id) => `<b>${esc(G.data.MOVES[id].n)}</b>`); return c.length ? `합체기 ${c.join('·')}를 쓸 수 있어요.` : ''; })()}</p></section>`;
 }
 
@@ -53,7 +53,7 @@ function fzMonBox(m) {
 document.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-retrait]'); if (!b) return;
   const uid = document.querySelector('.fz-box')?.dataset.uid; if (!uid) return;
-  if (!confirm(`특성을 다시 뽑을까요? (${b.dataset.retrait === 'gp' ? '5,000GP' : '리롤권 3장'}) 지금 특성은 사라져요.`)) return;
+  if (!confirm(`특성을 다시 뽑을까요? (${b.dataset.retrait === 'gp' ? '1,500GP' : '리롤권 3장'}) 지금 특성은 사라져요.`)) return;
   b.disabled = true;
   try { const r = await api('POST', '/api/fusion/retrait', { uid, pay: b.dataset.retrait }); fzRegisterAll([r.fusion]); setUser(r); toast(`✨ 새 특성: ${r.trait.n}! (${r.old} → ${r.trait.n})`); openMon(uid, typeof G.fzBack === 'function' ? G.fzBack : undefined); } catch (err) { toast(err.message); b.disabled = false; }
 });
