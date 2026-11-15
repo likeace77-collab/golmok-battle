@@ -569,7 +569,7 @@ async function showIconContest(back = showEvents) {
     const i = v.info, mine = v.list.filter((e) => e.mine), list = tab === 'mine' ? mine : v.list;
     app.innerHTML = `${topbar('📱 아이콘 공모전')}
       <section class="skc-hero icc-hero"><s aria-hidden="true"></s><small>EVENT · ${dateStr(i.start)} ~ ${dateStr(i.ends)}</small><h2>골목대전 아이콘 공모전</h2>
-        <p>휴대폰 홈 화면에 들어갈 <b>골목대전 앱 아이콘</b>을 그려 주세요! 우승작은 <b>진짜 앱 아이콘</b>이 되고, 만든 사람에게 <b>${fmt(i.prize)}GP</b>를 드려요.</p>
+        <p>휴대폰 홈 화면에 들어갈 <b>골목대전 앱 아이콘</b>을 그려 주세요! 우승작은 <b>진짜 앱 아이콘</b>이 되고, 만든 사람에게 <b>${fmt(i.prize)}GP</b>와 신화 칭호 <b>「${esc(i.titleName)}」</b>을 드려요.</p>
         <p class="muted" style="color:#fffc">한 사람당 ${i.perUser}개 · 지금까지 ${i.count}개 · 마음에 드는 작품에 ❤️를 눌러 주세요</p>
         ${i.closed ? '<b class="skc-closed">접수 마감</b>' : mine.length < i.perUser ? '<button class="btn wide" id="icc-new">✏️ 아이콘 내기</button>' : '<p>최대 개수까지 냈어요. 고치거나 지우고 다시 낼 수 있어요.</p>'}</section>
       <div class="tabs styletabs">${[['all', `전체 ${v.list.length}`], ['mine', `내 작품 ${mine.length}`]].map(([k, n]) => `<button data-tab="${k}" aria-selected="${tab === k}">${n}</button>`).join('')}</div>
@@ -625,4 +625,4 @@ function iconContestForm(old, done, back) {
     } catch (err) { toast(err.message); btn.disabled = false; btn.textContent = old ? '고친 내용 저장' : '공모전에 내기'; }
   };
 }
-if (typeof EVENTS !== 'undefined') EVENTS.unshift({ id: 'iconcontest', title: '📱 아이콘 공모전', period: '11월 15일 ~ 11월 29일', desc: '골목대전 앱 아이콘을 그려 주세요! 우승작은 진짜 앱 아이콘이 되고 30,000GP를 드려요.', ends: Date.parse('2026-11-29T23:59:59+09:00'), open: () => showIconContest() });
+if (typeof EVENTS !== 'undefined') EVENTS.unshift({ id: 'iconcontest', title: '📱 아이콘 공모전', period: '11월 15일 ~ 11월 29일', desc: '골목대전 앱 아이콘을 그려 주세요! 우승작은 진짜 앱 아이콘이 되고 50,000GP + 신화 칭호를 드려요.', ends: Date.parse('2026-11-29T23:59:59+09:00'), open: () => showIconContest() });

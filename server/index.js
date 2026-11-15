@@ -850,7 +850,7 @@ async function skinContestApi(req, res, route, auth, user, url) {
   return json(res, 404, { error: '없는 경로입니다.' });
 }
 /* ---------- 아이콘 공모전: 골목대전 앱 아이콘을 그려서 내기 ---------- */
-const ICON_CONTEST = { title: '아이콘 공모전', start: Date.parse('2026-11-15T00:00:00+09:00'), ends: Date.parse('2026-11-29T23:59:59+09:00'), prize: 30000 };
+const ICON_CONTEST = { title: '아이콘 공모전', start: Date.parse('2026-11-15T00:00:00+09:00'), ends: Date.parse('2026-11-29T23:59:59+09:00'), prize: 50000, titleName: '골목의 얼굴' };
 const ICON_PER_USER = 3;
 async function iconContestApi(req, res, route, auth, user, url) {
   const dev = isDev(user), closed = Date.now() > ICON_CONTEST.ends;
@@ -885,7 +885,18 @@ async function iconContestApi(req, res, route, auth, user, url) {
   if (!e) return json(res, 404, { error: '없는 출품작이에요.' });
   if (route === 'POST /api/iconcontest/like') { e.likes ||= []; const i = e.likes.indexOf(auth.key); if (i >= 0) e.likes.splice(i, 1); else if (e.key !== auth.key) e.likes.push(auth.key); else return json(res, 400, { error: '내 작품에는 좋아요를 못 눌러요.' }); saveContest(); return json(res, 200, view()); }
   if (route === 'POST /api/iconcontest/delete') { if (!dev && !(e.key === auth.key && !closed)) return json(res, 403, { error: '지울 수 없는 출품작이에요.' }); contest.icons = list.filter((x) => x !== e); saveContest(); return json(res, 200, view()); }
-  if (route === 'POST /api/iconcontest/winner') { if (!dev) return json(res, 403, { error: '개발자만 뽑을 수 있어요.' }); e.winner = !e.winner; saveContest(); return json(res, 200, view()); }
+  if (route === 'POST /api/iconcontest/winner') {
+    if (!dev) return json(res, 403, { error: '개발자만 뽑을 수 있어요.' });
+    e.winner = !e.winner;
+    const w = db.users[e.key];
+    if (e.winner && !e.prized && w) { // 상금 50,000GP + 신화 칭호 「골목의 얼굴」 (한 번만)
+      e.prized = true; P.grant(w, { gp: ICON_CONTEST.prize });
+      sendMail(w, { from: '골목대전 운영팀', title: '📱 아이콘 공모전 우승!', body: `「${e.name}」이(가) 아이콘 공모전 우승작으로 뽑혔어요! 상금 ${ICON_CONTEST.prize.toLocaleString('ko-KR')}GP는 지갑에 들어갔어요. 신화 칭호 「${ICON_CONTEST.titleName}」을 받아 가세요.`, reward: ['titles:iconmaker'] });
+      if (online.has(e.key)) send(online.get(e.key), { t: 'me', user: publicUser(w) });
+      sysChatAll(`📱 아이콘 공모전 우승: ${e.user}님의 「${e.name}」!`); save();
+    }
+    saveContest(); return json(res, 200, view());
+  }
   return json(res, 404, { error: '없는 경로입니다.' });
 }
 async function contestApi(req, res, route, auth, user) {
