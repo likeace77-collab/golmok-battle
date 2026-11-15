@@ -1311,7 +1311,7 @@ function finish(room) {
         if (o.toast) setTimeout(() => toast(k, o.toast), 2400 + i * 500);
       });
       // 🎁 이기면 가끔 미스터리 상자 (연습·훈련·퍼즐 제외)
-      const box = won && !room.training && room.mode?.kind !== 'puzzle' ? LK.boxDrop(db.users[k], kind) : null;
+      const box = won && !room.training && room.mode?.kind !== 'puzzle' ? LK.boxDrop(db.users[k], room.raid ? 'raid' : room.tag ? 'tag' : room.ranked ? 'rank' : pvp ? 'pvp' : 'practice') : null;
       if (box) setTimeout(() => toast(k, `${box.icon} ${box.n}를 주웠어요! (도박장 → 🎁 상자)`), 3000);
     }
     if (room.ranked && winner !== null) {
