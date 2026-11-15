@@ -2133,3 +2133,5 @@ button.fz-slot { cursor: pointer; }
 .fz-tt { font-style: normal; font-size: 12px; font-weight: 800; color: #7B4BFF; }
 .fz-megapic { width: 72px; height: 72px; flex: none; } .fz-megapic svg { width: 100%; height: 100%; overflow: visible; }
 .fz-mega-ring { animation: fzSeam 1.6s linear infinite; }
+.fz-rt { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; } .fz-rt span { flex: 1 1 100%; font-size: 14px; } .fz-rt b { color: #7B4BFF; }
+.fz-rt .btn { white-space: nowrap; }

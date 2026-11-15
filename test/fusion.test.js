@@ -108,3 +108,13 @@ test('합체몬 메가진화: 스톤 없이 가능, 보너스 합계 +100', () =
   assert.ok(b.sides[0].mons[0].mega); assert.equal(b.sides[0].mons[0].name, sp.mega.n);
   assert.ok(b.sides[0].mons[0].stats.atk >= spa);
 });
+
+test('합체몬 특성 다시 뽑기: 리롤권 3장 또는 5000GP, 다른 특성으로', () => {
+  const u = mk(); u.gp = 10000; u.rerolls = 3;
+  const r = F.fuse(u, 'a', 'b'); const old = Data.MONSTERS[r.mon.species].trait.n;
+  const x = F.retrait(u, r.mon.uid, 'ticket'); assert.ok(x.ok, x.error); assert.notEqual(x.trait.n, old); assert.equal(u.rerolls, 0);
+  assert.ok(F.retrait(u, r.mon.uid, 'ticket').error, '리롤권 부족');
+  const gp = u.gp; assert.ok(F.retrait(u, r.mon.uid, 'gp').ok); assert.equal(u.gp, gp - 5000);
+  assert.ok(F.retrait(u, 'c', 'gp').error, '합체몬만');
+  const names = Object.values(db.fusions).map((f) => f.sp.trait.n); assert.equal(new Set(names).size, names.length, '여전히 안 겹침');
+});

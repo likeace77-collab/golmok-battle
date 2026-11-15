@@ -706,6 +706,12 @@ async function progressApi(req, res, route, auth, user) {
     return done(r);
   }
   if (route === 'GET /api/fusion/tree') return done({ tree: F.tree(user) });
+  if (route === 'POST /api/fusion/retrait') {
+    if (busyNow(auth.key)) return json(res, 400, { error: '대전 중에는 바꿀 수 없어요.' });
+    const r = F.retrait(user, String(body.uid || ''), body.pay === 'gp' ? 'gp' : 'ticket');
+    if (r.fusion) for (const ws of online.values()) send(ws, { t: 'fusion', fusion: r.fusion });
+    return done(r);
+  }
   if (route === 'POST /api/mon/move') return done(P.changeMove(user, String(body.uid ?? ''), Number(body.slot), String(body.move ?? '')));
   if (route === 'POST /api/stone/buy') return done(P.buyStone(user, String(body.species ?? '')));
   // 상점 꾸미기 (칭호·전투카드·핀): ref = 'titles:id' 같은 꼴

@@ -259,9 +259,23 @@ function fuse(u, uidA, uidB, busy = new Set()) {
   return { ok: true, mon: m, fusion: pubOf(f.id) };
 }
 
+// 특성 다시 뽑기: 리롤권 3장 (없으면 5,000GP). 지금 특성과 다른 특성, 여전히 다른 합체몬과 안 겹침
+const RETRAIT_TK = 3, RETRAIT_GP = 5000;
+function retrait(u, uid, pay) {
+  const m = u.mons.find((x) => x.uid === uid), f = m && db.fusions[m.species];
+  if (!f) return { error: '합체몬을 골라 주세요.' };
+  if (pay === 'gp') { if (u.gp < RETRAIT_GP) return { error: `${RETRAIT_GP.toLocaleString('ko-KR')}GP가 필요해요.` }; }
+  else if ((u.rerolls || 0) < RETRAIT_TK) return { error: `리롤권이 ${RETRAIT_TK}장 필요해요. (지금 ${u.rerolls || 0}장)` };
+  const old = f.sp.trait?.n;
+  let next = null; for (let t = 0; t < 20 && (!next || next.trait.n === old); t++) next = pickTrait(f.sp, f.id);
+  if (pay === 'gp') u.gp -= RETRAIT_GP; else u.rerolls -= RETRAIT_TK;
+  Object.assign(f.sp, next); register(f);
+  return { ok: true, old, trait: f.sp.trait, fusion: pubOf(f.id) };
+}
+
 function tree(u) {
   const have = new Set(u.mons.map((m) => m.uid));
   return { gp: FUSE_GP, list: (u.fusionLog || []).map((e) => ({ ...e, alive: have.has(e.uid), fusion: pubOf(e.id) })).filter((e) => e.fusion), total: Object.keys(db.fusions).length };
 }
 
-module.exports = { init, register, all, pubOf, fuse, tree, isFusion, mixName, inheritable, comboBase, FUSE_GP, NO_PARENT };
+module.exports = { retrait, RETRAIT_TK, RETRAIT_GP, init, register, all, pubOf, fuse, tree, isFusion, mixName, inheritable, comboBase, FUSE_GP, NO_PARENT };
