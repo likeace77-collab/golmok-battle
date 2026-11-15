@@ -2241,3 +2241,4 @@ svg.sk-rainbow { animation: skRain 3s linear infinite; } @keyframes skRain { fro
 .rp-povs { display: flex; gap: 4px; } .rp-povs button { flex: 1; padding: 3px; font: inherit; font-size: 12px; border: 2px solid #ffffff66; border-radius: 8px; background: transparent; color: #fff; cursor: pointer; } .rp-povs button.on { background: #fff; color: var(--ink); font-weight: 900; }
 body:has(.rp-bar) #app.in-battle { padding-bottom: 130px; }
 body:has(.rp-bar) #toast { bottom: 150px; z-index: 90; }
+.rp-row button:disabled { opacity: .35; }

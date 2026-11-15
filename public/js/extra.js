@@ -301,7 +301,7 @@ const rpViewAt = (i) => { const { r, pov } = RP, alt = pov && r.start2; return r
 // i번째 턴이 끝난 장면으로 바로 이동 (play면 거기서부터 이어서 재생)
 function rpSeek(i, play = RP.play) {
   const N = RP.r.turns.length; i = Math.max(0, Math.min(N, i));
-  const tok = ++RP.tok; RP.i = i; RP.play = play;
+  const tok = ++RP.tok; RP.i = i; RP.play = play; RP.anim = false;
   Battle.stop();
   Battle.enter({ t: 'battle', view: rpViewAt(i), spectator: true, practice: true, replay: true });
   rpExitBtn(i < N);
@@ -310,10 +310,11 @@ function rpSeek(i, play = RP.play) {
 }
 async function rpStep(tok) { // 다음 한 턴을 연출과 함께
   const { r, pov } = RP, t = r.turns[RP.i]; if (!t) return false;
+  RP.anim = true;
   Battle.onTurn({ t: 'turn', events: t.events, view: rpView(pov && t.view2 ? t.view2 : t.view) });
   await Battle.whenIdle();
   if (tok !== RP.tok) return false;
-  RP.i++; rpBarSync();
+  RP.anim = false; RP.i++; rpBarSync();
   if (RP.i >= r.turns.length) rpExitBtn(false);
   return true;
 }
@@ -342,9 +343,10 @@ function rpBar() {
   const N = r.turns.length;
   bar.querySelector('[data-rp="first"]').onclick = () => rpSeek(0, false);
   bar.querySelector('[data-rp="last"]').onclick = () => rpSeek(N, false);
-  bar.querySelector('[data-rp="back"]').onclick = () => rpSeek(RP.i - 1, false);
-  bar.querySelector('[data-rp="next"]').onclick = async () => { if (RP.i >= N) return; if (RP.play) { RP.play = false; await Battle.whenIdle(); } const tok = ++RP.tok; rpBarSync(); rpStep(tok); };
-  bar.querySelector('[data-rp="play"]').onclick = () => { if (RP.play) { RP.play = false; rpBarSync(); return; } if (RP.i >= N) return rpSeek(0, true); RP.play = true; rpBarSync(); rpLoop(++RP.tok); };
+  // 연출 중에 누르면 기다리지 않고 바로: 뒤로 = 지금 턴 시작, 앞으로 = 지금 턴 끝, 일시정지 = 지금 턴 끝에서 멈춤
+  bar.querySelector('[data-rp="back"]').onclick = () => rpSeek(RP.anim ? RP.i : RP.i - 1, false);
+  bar.querySelector('[data-rp="next"]').onclick = () => { if (RP.anim) return rpSeek(RP.i + 1, false); if (RP.i >= N) return; RP.play = false; const tok = ++RP.tok; rpBarSync(); rpStep(tok).then((ok) => { if (ok && tok === RP.tok) rpBarSync(); }); };
+  bar.querySelector('[data-rp="play"]').onclick = () => { if (RP.play) { if (RP.anim) rpSeek(RP.i + 1, false); else { RP.play = false; rpBarSync(); } return; } if (RP.i >= N) return rpSeek(0, true); RP.play = true; rpBarSync(); rpLoop(++RP.tok); };
   bar.querySelector('[data-rp="speed"]').onclick = () => { RP.speed = { 1: 2, 2: 4, 4: 0.5, 0.5: 1 }[RP.speed] || 1; Battle.setSpeed(RP.speed); rpBarSync(); };
   const pov = (p) => { RP.pov = p; rpSeek(RP.i, false); toast(`👁 ${names[p]} 쪽에서 봐요`); };
   bar.querySelector('[data-rp="pov"]')?.addEventListener('click', () => pov(RP.pov ? 0 : 1));
@@ -359,6 +361,7 @@ function rpBarSync() {
   bar.querySelector('#rp-t').textContent = `${RP.i}/${N}턴`;
   bar.querySelector('#rp-range').value = RP.i;
   bar.querySelector('.rp-play').textContent = RP.play ? '⏸' : RP.i >= N ? '↻' : '▶️';
+  bar.querySelector('[data-rp="back"]').disabled = RP.i <= 0 && !RP.anim; bar.querySelector('[data-rp="next"]').disabled = RP.i >= N;
   bar.querySelector('.rp-speed').textContent = `${RP.speed}×`;
   bar.querySelectorAll('[data-pov]').forEach((b) => b.classList.toggle('on', +b.dataset.pov === RP.pov));
 }
