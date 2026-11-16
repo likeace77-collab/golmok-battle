@@ -37,7 +37,7 @@ async function showRookie() {
 async function showInvite(back = showLobby) {
   G.screen = 'invite'; app.className = '';
   app.innerHTML = `${topbar('🎉 친구 초대')}<p class="wait">불러오는 중…</p>`; app.querySelector('#back').onclick = () => back();
-  let v; try { v = (await api('GET', '/api/invite')).invite; } catch (e) { return toast(e.message); }
+  let v; try { const r = await api('GET', '/api/invite'); v = r.invite; const before = G.user.gp; setUser(r); if (G.user.gp > before) toast('🎁 밀려 있던 초대 선물을 받았어요!'); } catch (e) { return toast(e.message); }
   if (G.screen !== 'invite') return;
   const link = `${location.origin}/?ref=${encodeURIComponent(v.code)}`;
   app.innerHTML = `${topbar('🎉 친구 초대')}

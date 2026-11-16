@@ -1910,6 +1910,7 @@ setInterval(() => {
   setInterval(() => LK.tick(), 5e3); // 경마 출발·로또 추첨 시간 확인
   M.init(db, { grant: P.grant, sendMail, sysChat: (t) => sysChatAll(t) });
   IV.init(db, { keyOf, grant: P.grant, giveBox: (u, t, n) => LK.giveBox(u, t, n), sendMail, notify: (k, t) => { if (online.has(k)) toast(k, t); }, sysChat: (t) => sysChatAll(t) });
+  { const before = JSON.stringify(Object.values(db.users).map((u) => u.refRewarded || 0)); for (const u of Object.values(db.users)) if (u.invited?.length) IV.settlePending(u); if (JSON.stringify(Object.values(db.users).map((u) => u.refRewarded || 0)) !== before) save(); } // 서버 켤 때 밀린 초대 선물
   F.setHooks({ keyOf, grant: P.grant, sendMail, sysChat: (t) => sysChatAll(t) }); setInterval(() => { try { if (F.settleVotes()) save(); } catch (e) { console.error('합체몬 투표 정산 실패', e.message); } }, 10 * 60e3);
   X.init(db, { keyOf, online, send, toast, publicUser, grant: P.grant, sendMail, isDev, battleCount: () => battles.size, gistInfo: () => ({ ...gistStat, dirty: gistDirty, on: !!GIST_ID, lastOkAgoSec: gistStat.lastOk ? Math.round((Date.now() - gistStat.lastOk) / 1000) : null }), push: (k, m) => typeof pushTo === 'function' && pushTo(k, m) });
   S.init(db, { keyOf, online, send, toast, publicUser, save, grant: P.grant, bump: P.bump, isDev, inBattle, sendMail, fixStyle, seasonOf: P.seasonOf, cosmetic: (kind, id) => Data.COSMETICS[kind]?.find((x) => x.id === id), owns });

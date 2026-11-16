@@ -59,7 +59,12 @@ function onBattle(u, key) {
   H.sendMail?.(ref, { from: '골목대전', title: `🎁 초대 선물 도착! (${u.name}님 대전 ${REF_GAMES}판 완료)`, body: `${REF_FRIEND.gp.toLocaleString('ko-KR')}GP와 입수권 ${REF_FRIEND.tickets}장, 🎁 희귀 상자 1개는 바로 넣어 뒀어요.${title ? ` 친구 ${REF_TITLE_AT}명을 데려온 기념 칭호 「골목 마당발」도 받아 가세요!` : ''}`, reward: title ? ['titles:recruiter'] : [] });
   H.notify?.(u.refBy, `🎁 ${u.name}님 덕분에 초대 선물이 왔어요!`);
 }
+// 조건(대전 판 수)이 바뀌거나 대전 끝 처리 전에 이미 채운 친구도 챙겨요: 이미 조건을 채운 초대 친구에게 선물을 줌
+function settlePending(u) {
+  for (const x of u.invited || []) { const nu = db.users[x.key]; if (nu && !nu.refPaid) onBattle(nu, x.key); }
+}
 function inviteView(u, key) {
+  settlePending(u);
   return {
     code: u.name, refBy: u.refBy ? db.users[u.refBy]?.name || null : null,
     canSet: !u.refBy && Date.now() - (u.createdAt || 0) <= REF_LATE_DAYS * DAY,
@@ -108,4 +113,4 @@ function api(route, u, key, b) {
     default: return null;
   }
 }
-module.exports = { init, api, onSignup, onBattle, rookieState, rookieClaim, inviteView, ROOKIE, REF_NEWBIE, REF_FRIEND, REF_GAMES, dayKey };
+module.exports = { settlePending, init, api, onSignup, onBattle, rookieState, rookieClaim, inviteView, ROOKIE, REF_NEWBIE, REF_FRIEND, REF_GAMES, dayKey };

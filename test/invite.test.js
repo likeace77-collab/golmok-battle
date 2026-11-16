@@ -42,3 +42,11 @@ test('뉴비 7일 연속 출석: 날마다 선물, 7일째 막대한 선물, 끊
   assert.ok(IV.rookieClaim(u).error, '끝');
   assert.equal(IV.rookieState(mk('Vet', 40 * 86400e3)).active, false, '가입 30일 넘으면 없음');
 });
+
+test('이미 대전을 한 친구도 초대 화면을 열면 선물', () => {
+  db.users.late = mk('Late'); db.users.nn = mk('Nn');
+  IV.onSignup(db.users.nn, 'nn', 'Late'); db.users.nn.counts.games = 1; // 대전은 했는데 선물 처리 전
+  assert.equal(db.users.late.gp, 0);
+  const v = IV.inviteView(db.users.late, 'late');
+  assert.equal(db.users.late.gp, 15000); assert.equal(v.rewarded, 1); assert.ok(v.invited[0].done);
+});
