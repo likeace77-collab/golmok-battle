@@ -56,6 +56,7 @@ function showAuth(mode = 'login') {
       <label class="field">비밀번호<input name="password" type="password" autocomplete="${signup ? 'new-password' : 'current-password'}" required></label>
       ${signup ? `<label class="field">태어난 해<input name="birthYear" type="number" inputmode="numeric" min="1900" max="${new Date().getFullYear()}" placeholder="예: 1998" required></label>
         <p class="muted" style="margin:-4px 0 10px;font-size:13px">19세 이하는 일부 캐릭터 의상이 모자이크로 보입니다. 나중에 바꿀 수 없어요.</p>` : ''}
+      ${signup ? `<label class="field">추천인 아이디 <small class="muted">(선택 · 넣으면 나도 친구도 선물!)</small><input name="ref" maxlength="12" value="${esc((() => { try { return new URLSearchParams(location.search).get('ref') || localStorage.getItem('gb-ref') || ''; } catch { return ''; } })())}" placeholder="나를 초대한 친구 아이디"></label>` : ''}
       ${signup && G.data.inviteRequired ? '<label class="field">초대 코드<input name="invite" required></label>' : ''}
       <p class="err" id="err"></p>
       <button class="btn wide">${signup ? '계정 만들기' : '로그인'}</button>
@@ -66,12 +67,16 @@ function showAuth(mode = 'login') {
     const body = Object.fromEntries(new FormData(e.target));
     try {
       if (body.birthYear) body.birthYear = Number(body.birthYear);
-      const { user } = await api('POST', signup ? '/api/signup' : '/api/login', body);
-      G.user = user; enterGame();
+      const r = await api('POST', signup ? '/api/signup' : '/api/login', body);
+      G.user = r.user;
+      if (r.refGot) G.refWelcome = { name: r.refName, got: r.refGot }; // 튜토리얼 끝나고 보여 줌
+      if (r.refError) G.refWelcome = { error: r.refError };
+      enterGame();
     } catch (err) { app.querySelector('#err').textContent = err.message; }
   };
 }
 
+try { const rf = new URLSearchParams(location.search).get('ref'); if (rf) localStorage.setItem('gb-ref', rf); } catch { /* 저장 못 해도 괜찮아요 */ }
 // 로그인 뒤: 나이를 안 정한 계정은 나이 설정부터
 function enterGame() {
   if (G.user.needAge) return showAgeGate();
@@ -380,6 +385,7 @@ function renderLobby() {
         <button class="g2b wb" id="go-wb"><span>🌍</span><b>월드 보스</b><small>모두 함께</small></button>
         <button class="g2b mis" id="go-mis"><span>🧩</span><b>퍼즐·미션</b><small>오늘의 도전</small></button>
         <button class="g2b meta" id="go-meta"><span>🧪</span><b>메타배틀</b><small>주간 규칙</small></button>
+        <button class="g2b invite" id="go-invite"><span>🎉</span><b>친구 초대</b><small>둘 다 선물!</small></button>
         <button class="g2b fuse" id="go-fuse"><span>🧬</span><b>합체</b><small>새 골목몬 탄생</small></button>
         <button class="g2b guide" id="go-guide"><span>📖</span><b>가이드</b><small>${(() => { try { return localStorage.getItem('guide-read') ? '다시 보기' : '처음이라면!'; } catch { return ''; } })()}</small></button>
         <button class="g2b news" id="go-news"><span>📢</span><b>소식</b>${u.badges.news ? `<em class="mailbadge">${u.badges.news}</em>` : ''}</button>
@@ -455,6 +461,8 @@ function renderLobby() {
   app.querySelector('#go-tourney').onclick = () => showTourney();
   app.querySelector('#go-news').onclick = () => showNews();
   app.querySelector('#go-guide').onclick = () => showGuide();
+  app.querySelector('#go-invite').onclick = () => showInvite();
+  rookieBanner();
   app.querySelector('#go-gym').onclick = () => showGym();
   app.querySelector('#go-rogue').onclick = () => showRogue();
   app.querySelector('#go-wb').onclick = () => showWb();

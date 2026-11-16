@@ -94,6 +94,9 @@ function gotItem(x) {
   if (x.k === 'stone') return `<div class="got-i">${stoneSVG(x.id, 60)}<b>${esc(G.data.MONSTERS[x.id].n)} 메가스톤</b></div>`;
   if (x.k === 'gpt') return `<div class="got-i">${ICON.gpt(52)}<b>길P +${fmt(x.n)}</b></div>`;
   if (x.k === 'pass') return `<div class="got-i">${ICON.pass(50)}<b>패스 포인트 +${x.n}</b></div>`;
+  if (x.k === 'box') return `<div class="got-i"><span class="got-dice">${{ '일반 상자': '📦', '희귀 상자': '🎁', '전설 상자': '💝' }[x.n] || '🎁'}</span><b>${esc(x.n)} ×${x.count || 1}</b><small>도박장 → 🎁 상자에서 열어요</small></div>`;
+  if (x.k === 'title') return `<div class="got-i"><span class="got-dice">🏷️</span><b>칭호 「${esc(x.n)}」</b><small>꾸미기에서 달아요</small></div>`;
+  if (x.k === 'costume') return `<div class="got-i"><span class="got-dice">🎨</span><b>${esc(x.n)}</b><small>스킨</small></div>`;
   if (x.k === 'mon') return `<div class="got-i got-mon${x.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[G.data.MONSTERS[x.id].types[0]].c}">${x.shiny ? SHINY_TAG : ''}${monArt(x.id, x.shiny)}<b>${esc(G.data.MONSTERS[x.id].n)}</b></div>`;
   return '';
 }

@@ -13,6 +13,7 @@ const WP = require('./push'); // 웹 푸시
 const C = require('./casino'); // 도박장 (게임 재화만)
 const M = require('./modes'); // 체육관·골목 탈출·월드 보스·친밀도·퍼즐과 미션·메타배틀
 const F = require('./fusion'); // 🧬 합체
+const IV = require('./invite'); // 🎉 친구 초대 · 🌱 뉴비 7일 출석
 const LK = require('./luck'); // 🏇 경마 · 🎱 로또 · 🎁 미스터리 상자
 const X = require('./extra'); // 공지·관리자·통계·도감 보상·친구 선물·코스튬·이벤트
 const R = require('./rank'); // 랭크전
@@ -424,7 +425,7 @@ const publicUser = (u) => ({
   name: u.name, avatar: u.avatar, decks: deckView(u), active: u.active, stats: u.stats, style: u.style,
   wins: u.wins, losses: u.losses, draws: u.draws, h2h: u.h2h,
   tutorial: !!u.tutorial, gp: u.gp, tickets: u.tickets, skips: u.skips, rerolls: u.rerolls || 0, stones: u.stones, mons: u.mons.map(P.ensureNature),
-  premium: P.passState(u).premium, badges: { ...P.claimable(u), social: (u.freq?.in || []).filter((k) => db.users[k] && !(u.friends || []).includes(k)).length + (db.guilds ? S.tradeIn(keyOf(u.name)) : 0) + (u.fgiftIn || []).length, guild: db.guilds ? S.guildClaimable(u, keyOf(u.name)) : 0, ...(db.news ? X.badges(u) : {}) }, jelly: u.jelly || 0, fp: u.fp || 0, costumes: u.costumes || [], guild: u.guild && db.guilds?.[u.guild] ? { id: u.guild, name: db.guilds[u.guild].name, emblem: db.guilds[u.guild].emblem, color: db.guilds[u.guild].color, role: S.roleOf(u) } : null, gpt: u.gpt || 0, friendsN: (u.friends || []).length, rank: u.rank ? { pts: u.rank.pts, tier: R.tierOf(u.rank.pts), ever: u.rank.ever || 0 } : { pts: 1000, tier: 0, ever: 0 }, scoutReady: !!P.scoutState(u).cands, gym: { badges: u.gym?.badges || [], champ: u.gym?.champ || 0 }, rogueBest: u.rogueBest || 0, surveyDone: !!db.surveys?.[keyOf(u.name)], sunfish: !!u.sunfishDone,
+  premium: P.passState(u).premium, badges: { ...P.claimable(u), social: (u.freq?.in || []).filter((k) => db.users[k] && !(u.friends || []).includes(k)).length + (db.guilds ? S.tradeIn(keyOf(u.name)) : 0) + (u.fgiftIn || []).length, guild: db.guilds ? S.guildClaimable(u, keyOf(u.name)) : 0, ...(db.news ? X.badges(u) : {}) }, jelly: u.jelly || 0, fp: u.fp || 0, costumes: u.costumes || [], guild: u.guild && db.guilds?.[u.guild] ? { id: u.guild, name: db.guilds[u.guild].name, emblem: db.guilds[u.guild].emblem, color: db.guilds[u.guild].color, role: S.roleOf(u) } : null, gpt: u.gpt || 0, friendsN: (u.friends || []).length, rank: u.rank ? { pts: u.rank.pts, tier: R.tierOf(u.rank.pts), ever: u.rank.ever || 0 } : { pts: 1000, tier: 0, ever: 0 }, scoutReady: !!P.scoutState(u).cands, gym: { badges: u.gym?.badges || [], champ: u.gym?.champ || 0 }, rogueBest: u.rogueBest || 0, rookie: (() => { const r = IV.rookieState(u); return r.active ? { streak: r.streak, can: r.can, next: r.next } : null; })(), surveyDone: !!db.surveys?.[keyOf(u.name)], sunfish: !!u.sunfishDone,
 });
 
 function createSession(res, req, key) {
@@ -514,8 +515,10 @@ async function api(req, res, url) {
       wins: 0, losses: 0, draws: 0, h2h: {}, birthYear, settings: { mosaic: false },
     };
     if (isDev(db.users[key])) { migrate(); save(); }
+    const refR = IV.onSignup(db.users[key], key, body.ref); // 추천인 (틀려도 가입은 돼요)
+    save();
     createSession(res, req, key);
-    return json(res, 200, { user: publicUser(db.users[key]) });
+    return json(res, 200, { user: publicUser(db.users[key]), ...(refR?.ok ? { refGot: refR.got, refName: refR.ref } : refR?.error ? { refError: refR.error } : {}) });
   }
 
   const auth = userFromReq(req);
@@ -668,6 +671,7 @@ async function progressApi(req, res, route, auth, user) {
   { const sr = S.api(route, user, auth.key, body); if (sr !== undefined) return done(sr); }
   { const xr = X.api(route, user, auth.key, body); if (xr !== undefined) return done(xr); }
   { const mr = M.api(route, user, auth.key, body); if (mr !== undefined) return done(mr); }
+  { const ir = IV.api(route, user, auth.key, body); if (ir) return done(ir); }
   if (/ \/api\/(race|lotto|boxes)/.test(route)) { const lr = LK.api(route, user, auth.key, body); if (lr !== undefined) return done(lr); }
   if (route.includes(' /api/casino')) { const cr = C.api(route, user, auth.key, body); if (cr !== undefined) return done(cr); }
   if (route === 'POST /api/coupon') return done(useCoupon(user, body.code));
@@ -1295,6 +1299,7 @@ function finish(room) {
       if (jelly && online.has(k)) setTimeout(() => toast(k, `🍮 말랑 젤리 +${jelly}`), 900);
     }
     { const team = E.teamOf(room.b, s); const mates = humans.filter(([k2, s2]) => k2 !== k && E.teamOf(room.b, s2) === team).map(([k2]) => k2), foes = humans.filter(([, s2]) => E.teamOf(room.b, s2) !== team).map(([k2]) => k2);
+      IV.onBattle(db.users[k], k);
       S.afterBattle(k, { won, mega: !!room.b.sides[s].megaUsed, mates, foes, kind: room.tag || room.raid ? 'tag' : pvp ? 'pvp' : 'practice' }); }
     if (pts) { const bg = P.takePassGp(db.users[k]), msg = `시즌 패스 포인트 +${pts}${bg ? ` · 패스 보너스 +${bg.toLocaleString('ko-KR')}GP` : ''}`; if (online.has(k)) toast(k, msg); else notices.set(k, [notices.get(k), msg].filter(Boolean).join(' · ')); }
     if (room.dungeon) {
@@ -1904,6 +1909,7 @@ setInterval(() => {
   LK.init(db, { grant: P.grant, sendMail, save, sysChat: (t) => sysChatAll(t), notify: (k, m) => { const ws = online.get(k); if (ws) send(ws, m); } });
   setInterval(() => LK.tick(), 5e3); // 경마 출발·로또 추첨 시간 확인
   M.init(db, { grant: P.grant, sendMail, sysChat: (t) => sysChatAll(t) });
+  IV.init(db, { keyOf, grant: P.grant, giveBox: (u, t, n) => LK.giveBox(u, t, n), sendMail, notify: (k, t) => { if (online.has(k)) toast(k, t); }, sysChat: (t) => sysChatAll(t) });
   F.setHooks({ keyOf, grant: P.grant, sendMail, sysChat: (t) => sysChatAll(t) }); setInterval(() => { try { if (F.settleVotes()) save(); } catch (e) { console.error('합체몬 투표 정산 실패', e.message); } }, 10 * 60e3);
   X.init(db, { keyOf, online, send, toast, publicUser, grant: P.grant, sendMail, isDev, battleCount: () => battles.size, gistInfo: () => ({ ...gistStat, dirty: gistDirty, on: !!GIST_ID, lastOkAgoSec: gistStat.lastOk ? Math.round((Date.now() - gistStat.lastOk) / 1000) : null }), push: (k, m) => typeof pushTo === 'function' && pushTo(k, m) });
   S.init(db, { keyOf, online, send, toast, publicUser, save, grant: P.grant, bump: P.bump, isDev, inBattle, sendMail, fixStyle, seasonOf: P.seasonOf, cosmetic: (kind, id) => Data.COSMETICS[kind]?.find((x) => x.id === id), owns });

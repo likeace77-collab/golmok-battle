@@ -640,6 +640,8 @@ const COSMETICS = {
     C('kkaak', '까악까악', ['gift', 'titles:kkaak'], { tier: 9, icon: '🪶' }),
     C('iconmaker', '골목의 얼굴', ['gift', 'titles:iconmaker'], { tier: 9, icon: '📱' }), // 아이콘 공모전 우승
     C('fzstar', '이 주의 합체몬', ['gift', 'titles:fzstar'], { tier: 6, icon: '🧬', glow: '#FF5FA2' }), // 합체몬 갤러리 주간 1등
+    C('recruiter', '골목 마당발', ['gift', 'titles:recruiter'], { tier: 5, icon: '🎉' }), // 친구 3명 초대
+    C('sprout', '골목 새싹 졸업', ['gift', 'titles:sprout'], { tier: 4, icon: '🌱' }), // 뉴비 7일 연속 출석
     C('gymchamp', '골목 챔피언', ['gift', 'titles:gymchamp'], { tier: 5, glow: '#FFD23F' }), C('escapee', '골목 탈출자', ['gift', 'titles:escapee'], { tier: 5, glow: '#B44BFF' }), // 까모를 만든 티키티키펑크
     C('dimension', '차원을 넘어온 자', ['gift', 'titles:dimension'], { tier: 10 }), // 옛 골목대전에서 넘어온 계정 기념
     // 랭크전 (한 번이라도 그 티어에 오르면)
