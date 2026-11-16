@@ -117,7 +117,7 @@ function casRoulette(box) {
     <div class="rl-opts">${opts.map(([k, n, m]) => `<button data-k="${k}" class="${CAS.rk.kind === k ? 'on' : ''}">${n}<small>×${m}</small></button>`).join('')}
       ${[1, 2, 3].map((d) => `<button data-k="dozen" data-p="${d}" class="${CAS.rk.kind === 'dozen' && CAS.rk.pick === d ? 'on' : ''}">${d * 12 - 11}~${d * 12}<small>×3</small></button>`).join('')}</div>
     <details class="rl-nums" ${CAS.rk.kind === 'num' ? 'open' : ''}><summary>숫자 하나에 걸기 (×36)</summary><div class="rl-grid">${Array.from({ length: 37 }, (_, n) => `<button data-k="num" data-p="${n}" class="${n === 0 ? 'z' : RED_N.has(n) ? 'r' : 'b'}${CAS.rk.kind === 'num' && CAS.rk.pick === n ? ' on' : ''}">${n}</button>`).join('')}</div></details>
-    <div id="cs-bet"></div><button class="btn wide cs-go" id="rl-go">🎡 돌리기</button><p class="muted">0이 나오면 숫자 0에 건 사람 말고는 다 잃어요.</p></section>`;
+    <div id="cs-bet"></div><button class="btn wide cs-go" id="rl-go">🎡 돌리기</button><p class="muted">0이 나오면 빨강·검정·홀짝·1~18/19~36에 건 판돈은 절반을 돌려받아요. 묶음·숫자는 잃어요 (숫자 0에 건 사람만 당첨).</p></section>`;
   betBar(box.querySelector('#cs-bet'));
   box.querySelectorAll('[data-k]').forEach((b) => { b.onclick = () => { if (CAS.busy) return; CAS.rk = { kind: b.dataset.k, pick: b.dataset.p !== undefined ? +b.dataset.p : null }; casRoulette(box); }; });
   const go = box.querySelector('#rl-go');
@@ -132,7 +132,7 @@ function casRoulette(box) {
     let k = 0; const ti = setInterval(() => { if (++k % (1 + Math.floor(k / 12)) === 0) CasSfx.tick(); }, 60);
     await new Promise((ok) => setTimeout(ok, 4100)); clearInterval(ti); CasSfx.stop();
     const msg = box.querySelector('#rl-msg');
-    msg.innerHTML = `<span class="rl-n ${r.n === 0 ? 'z' : r.red ? 'r' : 'b'}">${r.n}</span> ${r.hit ? `당첨! ${casName(cur)} +${fmt(r.win)}` : '아쉬워요…'}`;
+    msg.innerHTML = `<span class="rl-n ${r.n === 0 ? 'z' : r.red ? 'r' : 'b'}">${r.n}</span> ${r.hit ? `당첨! ${casName(cur)} +${fmt(r.win)}` : r.half ? `0! 판돈 절반 ${fmt(r.win)} 돌려받음` : '아쉬워요…'}`;
     msg.className = `sl-msg ${r.hit ? 'w' : 'l'}`;
     casCelebrate(r.win, r.mult, cur); casSet(r); betBar(box.querySelector('#cs-bet'));
     CAS.busy = false; go.disabled = false;
@@ -148,7 +148,7 @@ function casDouble(box) {
     ${d ? `<div class="db-pot"><small>지금 판돈</small><b>${casIcon(d.cur, 22)} ${fmt(d.pot)}</b><small>${d.step}번 맞힘 · 10번이면 ×1024 자동 지급</small></div>
       <div class="db-pick"><button class="btn" data-f="head">앞면!</button><button class="btn" data-f="tail">뒷면!</button></div>
       <button class="btn wide paper" id="db-cash" ${d.step ? '' : 'disabled'}>💰 ${fmt(d.pot)} 받고 그만하기</button>`
-    : `<p class="sl-msg">동전 앞뒤를 맞히면 판돈이 두 배! 틀리면 다 잃어요.<br><small>한 번 맞힐 확률 47% · 10번 연속이면 ×1024 (약 1900번에 한 번)</small></p><div id="cs-bet"></div><button class="btn wide cs-go" id="db-go">🪙 판돈 걸기</button>`}</section>`;
+    : `<p class="sl-msg">동전 앞뒤를 맞히면 판돈이 두 배! 틀리면 다 잃어요.<br><small>한 번 맞힐 확률 49% · 10번 연속이면 ×1024 (약 1250번에 한 번)</small></p><div id="cs-bet"></div><button class="btn wide cs-go" id="db-go">🪙 판돈 걸기</button>`}</section>`;
   if (!d) betBar(box.querySelector('#cs-bet'));
   box.querySelector('#db-go')?.addEventListener('click', async () => { const r = await casPost('/api/casino/double', { cur: CAS.cur, bet: casBet() }); if (r) { casSet(r); casDouble(box); } });
   box.querySelector('#db-cash')?.addEventListener('click', async () => { const r = await casPost('/api/casino/cash', {}); if (r) { casCelebrate(r.cashed, 2 ** d.step, r.cur); toast(`${casName(r.cur)} ${fmt(r.cashed)} 받았어요!`); casSet(r); casDouble(box); } });

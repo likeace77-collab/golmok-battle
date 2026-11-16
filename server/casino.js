@@ -38,7 +38,7 @@ function bigWin(u, game, cur, n, mult) {
 /* 슬롯머신: 릴 3개. 💎💎💎 = 잭팟(쌓인 GP 전부 + ×1000) — 12만 5천 번에 한 번 꼴 */
 const SYM = [['🍒', 30], ['🍋', 25], ['🔔', 18], ['🍀', 12], ['⭐', 8], ['7️⃣', 5], ['💎', 2]];
 const TRIPLE = { '🍒': 5, '🍋': 8, '🔔': 15, '🍀': 30, '⭐': 80, '7️⃣': 300, '💎': 1000 };
-const PAIR = { '🍒': .5, '🍋': .5, '🔔': 1, '🍀': 1.5, '⭐': 2, '7️⃣': 4, '💎': 8 };
+const PAIR = { '🍒': .6, '🍋': .6, '🔔': 1.2, '🍀': 1.5, '⭐': 2, '7️⃣': 4, '💎': 8 };
 const spinReel = () => { let r = rnd(100); for (const [s, w] of SYM) { if (r < w) return s; r -= w; } return '🍒'; };
 function slot(u, cur, bet) {
   const e = takeBet(u, cur, bet); if (e) return err(e);
@@ -64,13 +64,14 @@ function roulette(u, cur, bet, kind, pick) {
   const e = takeBet(u, cur, bet); if (e) return err(e);
   const n = rnd(37);
   const hit = n !== 0 && ({ red: RED.has(n), black: !RED.has(n), odd: n % 2 === 1, even: n % 2 === 0, low: n <= 18, high: n >= 19, dozen: Math.ceil(n / 12) === pick })[kind] || (kind === 'num' && n === pick);
-  const win = hit ? bet * ok[kind] : 0;
+  const half = n === 0 && ok[kind] === 2; // 0이 나오면 두 배 칸(빨강·검정·홀짝·높낮이)은 판돈 절반을 돌려줘요
+  const win = hit ? bet * ok[kind] : half ? Math.floor(bet / 2) : 0;
   pay(u, cur, win);
   if (hit && kind === 'num') bigWin(u, '룰렛', cur, win, 36);
-  return { n, red: RED.has(n), hit, win, mult: hit ? ok[kind] : 0 };
+  return { n, red: RED.has(n), hit, win, half, mult: hit ? ok[kind] : 0 };
 }
 
-/* 더블업: 동전 앞뒤를 맞히면 두 배, 틀리면 전부 잃음. 10번 연속 = ×1024. 한 번 맞힐 확률 47% */
+/* 더블업: 동전 앞뒤를 맞히면 두 배, 틀리면 전부 잃음. 10번 연속 = ×1024. 한 번 맞힐 확률 49% */
 function doubleStart(u, cur, bet) {
   if (u.dbl) return err('진행 중인 더블업이 있어요. 먼저 끝내 주세요.');
   const e = takeBet(u, cur, bet); if (e) return err(e);
@@ -80,7 +81,7 @@ function doubleStart(u, cur, bet) {
 function doubleFlip(u, pick) {
   const d = u.dbl; if (!d) return err('먼저 걸어 주세요.');
   if (!['head', 'tail'].includes(pick)) return err('앞면이나 뒷면을 골라 주세요.');
-  const win = rnd(100) < 47, side = win ? pick : pick === 'head' ? 'tail' : 'head';
+  const win = rnd(100) < 49, side = win ? pick : pick === 'head' ? 'tail' : 'head';
   if (!win) { delete u.dbl; return { side, win: false, lost: d.pot, dbl: null }; }
   d.pot *= 2; d.step++;
   if (d.step >= 10) { pay(u, d.cur, d.pot); bigWin(u, '더블업', d.cur, d.pot, 1024); delete u.dbl; return { side, win: true, max: true, cashed: d.pot, cur: d.cur, dbl: null }; }
@@ -95,10 +96,10 @@ function doubleCash(u) {
 }
 
 /* 하이로우: 카드 한 장을 보고 다음 카드가 높을지 낮을지. 맞히면 배당이 쌓이고, 언제든 멈추고 받기 (최대 10번)
-   배당 = 0.95 × 13 / (이기는 카드 수). 같은 숫자가 나오면 짐 */
+   배당 = 0.97 × 13 / (이기는 카드 수). 같은 숫자가 나오면 짐 */
 const HILO_MAX = 10;
 const card = () => ({ v: 1 + rnd(13), s: rnd(4) });
-const hiloOdds = (v) => ({ hi: 13 - v ? +(0.95 * 13 / (13 - v)).toFixed(2) : 0, lo: v - 1 ? +(0.95 * 13 / (v - 1)).toFixed(2) : 0 });
+const hiloOdds = (v) => ({ hi: 13 - v ? +(0.97 * 13 / (13 - v)).toFixed(2) : 0, lo: v - 1 ? +(0.97 * 13 / (v - 1)).toFixed(2) : 0 });
 function hiloStart(u, cur, bet) {
   if (u.hilo) return err('진행 중인 하이로우가 있어요. 먼저 끝내 주세요.');
   const e = takeBet(u, cur, bet); if (e) return err(e);
@@ -126,7 +127,7 @@ function hiloCash(u) {
 
 /* 복권 긁기: 한 장 1,000GP. 1등 100만GP는 20만 장에 한 장 */
 const SCRATCH_PRICE = 1000;
-const PRIZES = [[1000000, 5], [100000, 50], [20000, 500], [5000, 5000], [2000, 30000], [1000, 250000], [500, 250000]]; // [상금, 100만 장 중 몇 장]
+const PRIZES = [[1000000, 5], [100000, 50], [20000, 500], [5000, 5000], [2000, 30000], [1000, 280000], [500, 330000]]; // [상금, 100만 장 중 몇 장]
 function scratch(u) {
   const e = takeBet(u, 'gp', SCRATCH_PRICE); if (e) return err(e);
   let r = rnd(1000000), prize = 0;

@@ -14,7 +14,7 @@ function init(_db, helpers) { db = _db; H = helpers; db.luck ||= {}; }
 const L = () => (db.luck ||= {});
 
 /* ===================== 🏇 골목몬 경마: 20분마다 한 판 ===================== */
-const RACE_MS = 20 * 60e3, RACE_N = 5, RACE_LEGS = 12, RACE_MIN = 100, RACE_MAX = 20000, RACE_BETS = 5, RACE_EDGE = 0.9;
+const RACE_MS = 20 * 60e3, RACE_N = 5, RACE_LEGS = 12, RACE_MIN = 100, RACE_MAX = 20000, RACE_BETS = 5, RACE_EDGE = 0.93;
 const nextRaceAt = (t = Date.now()) => Math.floor(t / RACE_MS) * RACE_MS + RACE_MS;
 // 한 구간마다: 스피드 + 운(돌풍). 몇 번 미리 돌려 보고 배당을 정해요
 function legs(horses, R = Math.random) {
@@ -78,7 +78,7 @@ function raceView(key) {
 
 /* ===================== 🎱 주간 로또: 1~20 중 5개, 일요일 밤 8시 추첨 ===================== */
 const LOTTO_N = 20, LOTTO_PICK = 5, LOTTO_PRICE = 1000, LOTTO_MAX = 10, LOTTO_BASE = 100000;
-const LOTTO_FIX = { 4: 20000, 3: 2000, 2: 1000 }; // 5개 = 1등(쌓인 상금을 나눠 가짐)
+const LOTTO_FIX = { 4: 25000, 3: 2500, 2: 1200 }; // 5개 = 1등(쌓인 상금을 나눠 가짐)
 function nextDraw(t = Date.now()) { const d = new Date(t + KST); const dow = d.getUTCDay(); let at = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + ((7 - dow) % 7), 20) - KST; if (at <= t) at += 7 * 864e5; return at; }
 function lottoBook() {
   const l = L();
