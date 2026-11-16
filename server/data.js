@@ -115,7 +115,7 @@ const MOVES = {
   foxscratch:M('여우 할퀴기', 'normal', 'p', 25, 100, 15, { hits: [2, 5], sig: true, d: '상대를 마구 할퀸다 (2~5번 연속 공격)' }),
   finish:    M('피니쉬', 'elec', 'p', 40, 100, 5, { finisher: 30, sig: true, d: '체력이 30% 이하로 남은 상대를 타입·도구와 상관없이 그 자리에서 쓰러뜨린다. 그보다 많이 남았으면 그냥 가볍게 친다' }),
   sideattack:M('사이드 어택', 'earth', 'p', 70, 100, 10, { side: true, sig: true, d: '상대 골목몬을 차고, 대기 중인 상대 골목몬 하나를 골라 발차기를 날린다 (둘 다 같은 피해)' }),
-  jabrush:   M('잽 러쉬', 'elec', 'p', 20, 100, 15, { hits: [3, 6], sig: true, d: '빛처럼 질주하며 상대를 3~6번 연속으로 때린다' }),
+  jabrush:   M('잽 러쉬', 'elec', 'p', 20, 100, 15, { hits: [3, 6], rush: true, sig: true, d: '빛처럼 질주하며 상대를 3~6번 연속으로 때린다' }),
   thtackle:  M('태클', 'earth', 'p', 100, 95, 10, { fl: 30, sig: true, d: '상대를 강하게 들이받는다. 30% 확률로 넘어뜨려 이번 턴에 공격하지 못하게 한다 (풀죽음)' }),
   foxrain:   M('여우비 내리기', 'water', 's', 85, 100, 10, { foe: { atk: -1 }, sc: 30, d: '해가 떠 있는데 비가 쏟아진다. 30% 확률로 상대 공격 하락' }),
   backflow:  M('역류', 'water', 's', 80, 100, 10, { rainBoost: true, d: '소나기 중에는 위력 2배' }),
@@ -567,7 +567,7 @@ const ZMOVES = {
   deungsin: ['3억 개의 알', 'normal', 230, '개복치가 평생 낳는 3억 개의 알이 한꺼번에 부화해 상대를 덮친다. 맞은 상대는 공포에 질려 다음 행동을 못 한다', { fear: true }],
   hwangsari: ['누런 하늘', 'earth', 180, '하늘이 누렇게 덮인다. 상대 명중률 하락', { foe: { acc: -1 } }],
   kkamo: ['종말을 부르는 칠흑의 날갯짓', 'spirit', 200, '반드시 명중. 상대를 교체 불가 상태로 만들고 자신은 모든 능력치가 1단계씩 오른다', { cage: true, self: { atk: 1, def: 1, spa: 1, spd: 1, spe: 1 }, selfAfter: true }],
-  thunder: ['분노의 질주 러쉬', 'normal', 22, '분노가 폭발해 질주하며 상대가 쓰러질 때까지 애매한 위력으로 무자비하게 계속 팬다', { untilKO: true }],
+  thunder: ['분노의 질주 러쉬', 'normal', 36, '분노가 폭발해 질주하며 상대가 쓰러질 때까지 눈에 보이지도 않는 속도로 무자비하게 계속 팬다', { untilKO: true }],
   yeoubi: ['천년 여우의 무지개', 'water', 180, '무지개 너머에서 여우비가 쏟아진다. 사용 후 자신의 특공 상승', { self: { spa: 1 }, selfAfter: true }],
   seonsaeng: ['생기부 작성', 'normal', 170, '반드시 명중. 생기부를 나쁘게 적어 상대가 Z기술이나 메가진화를 못 쓰게 한다', { cat: 's', record: true }],
 };

@@ -355,6 +355,12 @@ const Battle = (() => {
     box.appendChild(s);
     setTimeout(() => s.remove(), 420);
   }
+  function rushPop(key, dmg, crit, n) { // 숫자가 여기저기 흩어져 튀어요
+    const d = document.createElement('div');
+    d.className = `pop rush${crit ? ' big' : ''}`; d.textContent = crit ? `급소! ${dmg}` : String(dmg);
+    d.style.setProperty('--dx', `${((n * 37) % 120) - 60}px`); d.style.setProperty('--dy', `${((n * 53) % 60) - 30}px`);
+    $(`#m-${key}`).appendChild(d); setTimeout(() => d.remove(), 520);
+  }
   function pop(key, text, big) {
     const d = document.createElement('div');
     d.className = `pop${big ? ' big' : ''}`;
@@ -414,6 +420,15 @@ const Battle = (() => {
           }
         }
         if (e.quiet) break;
+        if (e.rush && e.dmg !== undefined) { // ⚡ 타다다닥 연타: 한 대마다 아주 짧게
+          const n = (G.rushN = (G.rushN || 0) + 1);
+          if (n % 2 || e.rush === 1) MoveSfx.hit(e);
+          anim(key, 'hit', 140);
+          Fx.rushHit(key, e.rush);
+          rushPop(key, e.dmg, e.crit, n);
+          if (m.hp <= 0) { await wait(380); break; }
+          await wait(e.rush === 2 ? 75 : 150); break;
+        }
         if (e.dmg !== undefined && m.costume && !m.gmax && e.moveType) { // 스킨: 맞을 때 이펙트·소리 (왁뿌말랑왕은 껍질이 부서짐)
           const box = $(`#m-${key}`);
           if (box) { if (m.costume === 'wakppu' && (m.hits || 0) <= 6) box.innerHTML = art(m, ''); skinFx(m.costume, 'hit', box, m); }
@@ -686,7 +701,7 @@ const Battle = (() => {
     tr?.destroy();
     cut.remove();
     trainer(key)?.play('thrust', { dur: 2 });
-    await wait(Fx.zmove(e.type, key, sideKey(e.target)));
+    await wait(Fx.zmove(e.type, key, sideKey(e.target), e.mon.species));
   }
 
   function onChosen(m) { view = m.view; if (view.phase === 'preview') renderPreview(); else renderPanel(); }

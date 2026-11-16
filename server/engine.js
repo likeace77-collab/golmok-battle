@@ -1056,7 +1056,7 @@ function hitOne(b, s, me, o, mv, ev) {
     suddenDeath(b, s, me, ev, `${josa(me.name, '은/는')} 충격을 이기지 못하고 함께 쓰러졌다!`);
     return;
   }
-  const hits = mv.untilKO ? (isBoss(b, o) ? 12 : 60) : mv.hits ? randInt(b, mv.hits[0], mv.hits[1]) : 1; // 분노의 질주 러쉬: 쓰러질 때까지
+  const hits = mv.untilKO ? (isBoss(b, o) ? 16 : 60) : mv.hits ? randInt(b, mv.hits[0], mv.hits[1]) : 1; // 분노의 질주 러쉬: 쓰러질 때까지
   let total = 0, landed = 0;
   for (let i = 0; i < hits && alive(foe); i++) {
     const crit = (mv.critAll || rand(b) < (has(me, 'scope') ? (mv.crit ? 1 / 2 : 1 / 8) : (mv.crit ? 1 / 8 : 1 / 24))) && foe.species !== 'ppeondegi'; // 망원경, 뻔데기 단단한 껍질
@@ -1079,7 +1079,7 @@ function hitOne(b, s, me, o, mv, ev) {
     if (reborn) { foe.reborn = true; dmg = foe.hp; }
     let hold = null;
     if (!sturdy && !roach && !reborn && dmg >= foe.hp && foe.hp > 1 && has(foe, 'sash')) { hold = '기합으로 버텼다!'; dmg = foe.hp - 1; } // 기합의띠
-    const got = hurt(b, o, foe, dmg, ev, { eff, crit, moveType: mv.type });
+    const got = hurt(b, o, foe, dmg, ev, { eff, crit, moveType: mv.type, ...(mv.untilKO ? { rush: 2 } : mv.rush ? { rush: 1 } : {}) }); // rush: 화면에서 타다다닥 빠르게
     total += got;
     if (sturdy) msg(ev, `${josa(foe.name, '은/는')} 옹골참으로 버텼다!`);
     if (roach) msg(ev, `${josa(foe.name, '은/는')} 불사신이다! 체력 1로 버텼다!`);
@@ -1088,7 +1088,7 @@ function hitOne(b, s, me, o, mv, ev) {
     for (const e of ftOf(foe, 'pinchHeal')) if (alive(foe) && !foe.ftPinch && foe.hp * 3 <= foe.maxHp) { foe.ftPinch = true; msg(ev, `${foe.name}의 ${ftName(foe)}!`); heal(b, o, foe, foe.maxHp * e.v, ev); }
     if (foe.species === 'bongdari' && mv.cat === 'p') foe.lastPhys = got; // 봉다리 내용물분출용
     landed++;
-    if (crit) msg(ev, '급소에 맞았다!');
+    if (crit && !mv.untilKO) msg(ev, '급소에 맞았다!');
   }
   if (mv.untilKO) msg(ev, `${landed}번이나 두들겨 팼다!!`); else if (hits > 1) msg(ev, `${landed}번 맞았다!`);
   if (landed && total > 0) { foe.hurtFrom.includes(me) || foe.hurtFrom.push(me); }

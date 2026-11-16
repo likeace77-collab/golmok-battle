@@ -2346,3 +2346,6 @@ body:has(.rp-bar) #toast { bottom: 150px; z-index: 90; }
 .rq-dev { display: flex; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 2px dashed #ddd; }
 .rq-dev input { flex: 1; min-width: 0; border: 2px solid #1a1433; border-radius: 8px; padding: 4px 6px; font: inherit; font-size: 12px; }
 .rq-dev select { border: 2px solid #1a1433; border-radius: 8px; font: inherit; font-size: 12px; }
+
+.pop.rush { animation: pop-rush .5s ease-out forwards; font-size: clamp(16px, 4.6vw, 22px); color: #FFE45C; }
+@keyframes pop-rush { 0% { transform: translate(var(--dx), var(--dy)) scale(1.5); opacity: 1; } 100% { transform: translate(var(--dx), calc(var(--dy) - 34px)) scale(.9); opacity: 0; } }

@@ -592,7 +592,7 @@ const Fx = (() => {
   const MOVE_FX = {
     finish(A, T, k, t) { thunderPose(k, 1300); act(k, 'dash', 900); zip(A, T, { n: 10, dur: 650, spread: 70 }); zip(T, T, { n: 8, dur: 420, delay: 600, spread: 55, w: 9 }); thSlash(T, 1000, 4); flash('#fff', 140, 1050, .7); flash('#FFE45C', 260, 1180, .45); shake(14, 420, 1060); bang(above(T, 80), '피니쉬!!', { delay: 1100, color: '#FFE45C', size: 38 }); return 1600; },
     sideattack(A, T, k, t) { thunderPose(k, 1100); act(k, 'dash', 800); zip(A, T, { n: 4, dur: 360 }); slash(T, { delay: 340, angle: -.4, len: 120, color: '#FFE45C', w: 8 }); const side = { ...T, x: T.x + (k === 'me' ? 1 : -1) * 120 * u, y: T.y + 40 * u }; zip(T, side, { n: 3, dur: 300, delay: 460, back: false, spread: 20 }); burst('dust', side, { delay: 700, n: 10, dist: 50 }); bang(side, '💨', { delay: 700, size: 34 }); shake(9, 300, 360); return 1150; },
-    jabrush(A, T, k, t) { thunderPose(k, 1300); act(k, 'dash', 1100); zip(A, T, { n: 14, dur: 1050, spread: 55 }); for (let i = 0; i < 6; i++) { burst('spark', T, { delay: 150 + i * 150, n: 4, dist: 34, size: 6 }); } flash('#FFE45C', 120, 500, .3); shake(7, 700, 200); return 1300; },
+    jabrush(A, T, k, t) { thunderPose(k, 1500); act(k, 'dash', 1300); zip(A, T, { n: 8, dur: 420, spread: 55 }); flash('#FFE45C', 100, 300, .3); return 420; }, // 이후 한 대마다 rushHit
     thtackle(A, T, k, t) { thunderPose(k, 1000); act(k, 'lunge', 700); zip(A, T, { n: 3, dur: 300, spread: 20 }); comet(A, T, { color: '#FFE45C', size: 22, dur: 320, delay: 240, trail: 14 }); shockwave(T, '#FFE45C', { delay: 540 }); burst('rock', T, { delay: 560, n: 8, dist: 60 }); shake(16, 380, 540); return 1100; },
     // 불
     ember: (A, T, k, t) => { act(k, 'cast', 420); spray('flame', A, T, { n: 6, gap: 70, arc: 24, size: 8 }); burst('flame', T, { delay: 500, n: 6, dist: 34 }); return 850; },
@@ -1503,6 +1503,28 @@ const Fx = (() => {
     return 1550;
   }
 
+  // ⚡ 타다다닥: 연타 한 대마다 아주 짧게 (rush 2 = 분노의 질주 러쉬, 1 = 잽 러쉬)
+  const RUSH = { n: 0, dark: 0 };
+  function rushHit(key, lvl = 1) {
+    if (REDUCED) return;
+    measure();
+    const T = spot(key), A = spot(key === 'me' ? 'opp' : 'me'), k = RUSH.n++;
+    const r = (lvl === 2 ? 70 : 45) * u, j = { x: T.x + rnd(-r, r), y: T.y + rnd(-r, r) * .8 };
+    if (lvl === 2) {
+      if (k % 6 === 0) thunderPose(key === 'me' ? 'opp' : 'me', 520); // 때리는 동안 공격 자세·잔상 유지
+      if (performance.now() > RUSH.dark - 200) { RUSH.dark = performance.now() + 260; add(260, (p) => { ctx.globalAlpha = .38 * (1 - p * .3); ctx.fillStyle = '#05060c'; ctx.fillRect(0, 0, W, H); }); }
+      const from = { x: j.x + rnd(-160, 160) * u, y: j.y + rnd(-110, 110) * u };
+      zip(from, j, { n: 1, dur: 110, spread: 10, w: 6, back: false });
+      slash(j, { angle: rnd(-1.5, 1.5), len: rnd(70, 130), color: k % 3 ? '#FFE45C' : '#fff', w: 5, dur: 150 });
+      burst('spark', j, { n: 3, dist: 30, size: 5 });
+      if (k % 4 === 0) shake(5, 90); if (k % 7 === 0) flash('#FFE45C', 70, 0, .18);
+      if (k % 9 === 0) zip({ x: 0, y: T.y + rnd(-40, 40) * u }, { x: W, y: T.y + rnd(-40, 40) * u }, { n: 1, dur: 150, w: 4, color: '#FFB800', back: false, spread: 0 });
+    } else {
+      zip(A, j, { n: 1, dur: 120, spread: 12, w: 5, back: false });
+      slash(j, { angle: rnd(-1.2, 1.2), len: 80, color: '#FFE45C', w: 5, dur: 160 });
+      burst('spark', j, { n: 3, dist: 26, size: 5 }); shake(4, 80);
+    }
+  }
   function zmove(type, key, target, species) {
     if (REDUCED) return 900;
     measure();
@@ -1510,13 +1532,15 @@ const Fx = (() => {
     const A = { ...spot(key), key }, T = { ...spot(foe), key: foe };
     if (species === 'lumina' || species === 'silvia') return zFinish(species, A, T) + 200;
     if (species === 'thunder') { // 분노의 질주 러쉬: 화면을 가로지르는 노란 빛이 끝없이
-      thunderPose(key, 3200); act(key, 'dash', 3000);
-      add(3000, (p) => { ctx.globalAlpha = .45 * Math.min(1, p * 4) * (1 - Math.max(0, p - .9) * 10); ctx.fillStyle = '#05060c'; ctx.fillRect(0, 0, W, H); });
-      for (let i = 0; i < 5; i++) zip(A, T, { n: 10, dur: 560, delay: i * 520, spread: 90, w: 8 });
-      zip({ x: 0, y: T.y }, { x: W, y: T.y }, { n: 16, dur: 2600, delay: 200, spread: 80, w: 5, color: '#FFB800' });
-      for (let i = 0; i < 14; i++) { thSlash(T, 250 + i * 190, 1); burst('spark', T, { delay: 250 + i * 190, n: 3, dist: 40 }); }
-      shake(10, 2600, 250); flash('#FFE45C', 300, 2800, .6); bang(above(T, 90), '분노의 질주 러쉬!!', { delay: 2700, color: '#FFE45C', size: 34 });
-      return 3300;
+      // 짧게 분노를 모으고 → 바로 타다다닥 (맞는 건 hp 이벤트마다 rushHit이 이어서 그림)
+      thunderPose(key, 1600); act(key, 'charge', 600);
+      RUSH.dark = performance.now() + 1500;
+      add(1500, (p) => { ctx.globalAlpha = .5 * Math.min(1, p * 5); ctx.fillStyle = '#05060c'; ctx.fillRect(0, 0, W, H); });
+      zip(A, T, { n: 14, dur: 700, delay: 350, spread: 90, w: 9 });
+      zip({ x: 0, y: T.y }, { x: W, y: T.y }, { n: 10, dur: 900, delay: 400, spread: 70, w: 5, color: '#FFB800' });
+      flash('#FFE45C', 160, 900, .5); shake(8, 500, 900);
+      bang(above(T, 90), '분노의 질주 러쉬!!', { delay: 300, color: '#FFE45C', size: 34 });
+      return 1250;
     }
     const color = { fire: '#F2622E', water: '#2F7DE1', grass: '#3FA34D', elec: '#FFE45C', ice: '#7fe0f0', earth: '#C98F5E', wind: '#CFEDE1', poison: '#B86BE0', steel: '#D7DDE5', spirit: '#7A6BE0', fairy: '#F27FA5', normal: '#F5EBD0' }[type] || '#fff';
     zAura(A, color);
@@ -1789,5 +1813,5 @@ const Fx = (() => {
   function weather(w) { if (REDUCED || !w) return 700; measure(); return weatherFx(w); }
 
   function item(key) { if (REDUCED) return; measure(); const at = spot(key); ring(at, { color: '#FFD23F', r0: 10, r1: 70, w: 4, dur: 380 }); burst('sparkle', at, { n: 8, dist: 46, size: 7 }); }
-  return { attach, play, ignite, spiky, hydrate, dice, splash, reflectReady, reflect, counter, terrain, rage, item, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, awaken, entrance, forge, ids: () => Object.keys(MOVE_FX) };
+  return { rushHit, attach, play, ignite, spiky, hydrate, dice, splash, reflectReady, reflect, counter, terrain, rage, item, status, statusTick, heal, stage, weather, megaStart, megaEnd, zmove, awaken, entrance, forge, ids: () => Object.keys(MOVE_FX) };
 })();
