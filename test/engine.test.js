@@ -935,3 +935,10 @@ test('썬더: 신속(항상 먼저), 피니쉬, 사이드 어택(대기 골목�
   assert.equal(b4.sides[1].mons[0].hp, 0, 'Z기술로 끝까지 팸');
   assert.ok(ev4.some((e) => /번이나 두들겨 팼다/.test(e.text || '')));
 });
+
+test('훈련장: 내가 입힌 스킨이 그대로 나옴', () => {
+  const b = E.createTraining({ name: 't' }, 1, [], [], [], { yeontan: 'wakppu' });
+  const m = b.sides[0].mons.find((x) => x.species === 'yeontan');
+  assert.strictEqual(m.costume, 'wakppu');
+  assert.ok(b.sides[0].mons.filter((x) => x.species !== 'yeontan').every((x) => !x.costume));
+});

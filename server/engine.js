@@ -103,10 +103,10 @@ function makeDummy() {
   };
 }
 // 훈련장: 모든 골목몬이 기술 10개를 다 가진 채로 나옵니다.
-function createTraining(player, seed, exclude = [], shiny = [], extra = []) { // extra: 내 합체몬 (도감 목록엔 없어서 따로)
+function createTraining(player, seed, exclude = [], shiny = [], extra = [], costumes = {}) { // costumes: 골목몬별 내가 입힌 스킨 // extra: 내 합체몬 (도감 목록엔 없어서 따로)
   const ids = [...Object.keys(MONSTERS).filter((species) => !exclude.includes(species)), ...extra.filter((x) => MONSTERS[x])];
   const head = ids.shift(); ids.splice(0, 0, head, ...ids.splice(ids.length - extra.filter((x) => MONSTERS[x]).length)); // 합체몬은 첫 골목몬 바로 뒤 (교체 목록 앞쪽에 보이게)
-  const team = ids.map((species) => ({ species, moves: MONSTERS[species].moves, shiny: shiny.includes(species) }));
+  const team = ids.map((species) => ({ species, moves: MONSTERS[species].moves, shiny: shiny.includes(species), ...(costumes[species] ? { costume: costumes[species] } : {}) }));
   const b = createBattle([{ ...player, team }, { name: '훈련장', avatar: null, style: null, deck: '더미', team: [] }], seed);
   b.training = true;
   b.sides[1].mons = [makeDummy()];
