@@ -14,7 +14,7 @@ function init(_db, helpers) { db = _db; H = helpers; db.luck ||= {}; }
 const L = () => (db.luck ||= {});
 
 /* ===================== 🏇 골목몬 경마: 20분마다 한 판 ===================== */
-const RACE_MS = 20 * 60e3, RACE_N = 5, RACE_LEGS = 12, RACE_MIN = 100, RACE_MAX = 20000, RACE_BETS = 5, RACE_EDGE = 0.93;
+const RACE_MS = 20 * 60e3, RACE_N = 5, RACE_LEGS = 12, RACE_MIN = 1, RACE_MAX = 200, RACE_BETS = 5, RACE_EDGE = 0.93;
 const nextRaceAt = (t = Date.now()) => Math.floor(t / RACE_MS) * RACE_MS + RACE_MS;
 // 한 구간마다: 스피드 + 운(돌풍). 몇 번 미리 돌려 보고 배당을 정해요
 function legs(horses, R = Math.random) {
@@ -49,7 +49,7 @@ function runRace(r) {
   const payouts = [];
   for (const b of r.bets) {
     const u = db.users[b.key]; if (!u) continue;
-    if (b.horse === win) { const n = Math.floor(b.bet * r.horses[win].odds); C.pay(u, 'gp', n); payouts.push({ key: b.key, name: u.name, n }); if (n >= 100000) C.bigWin(u, '경마', 'gp', n, r.horses[win].odds); }
+    if (b.horse === win) { const cur = b.cur || 'gp', n = Math.floor(b.bet * r.horses[win].odds); C.pay(u, cur, n); payouts.push({ key: b.key, name: u.name, n, cur }); if (n >= (cur === 'gp' ? 100000 : 1000)) C.bigWin(u, '경마', cur, n, r.horses[win].odds); }
   }
   const res = { id: r.id, at: r.at, horses: r.horses.map(({ species, n, odds, no }) => ({ species, n, odds, no })), win, order, frames: norm, bettors: new Set(r.bets.map((b) => b.key)).size, payouts: payouts.slice(0, 20) };
   L().races = [res, ...(L().races || [])].slice(0, 12);
@@ -64,10 +64,10 @@ function raceBet(u, key, horse, bet) {
   horse = Math.floor(Number(horse)); bet = Math.floor(Number(bet));
   if (!(horse >= 0 && horse < RACE_N)) return err('말을 골라 주세요.');
   if (r.at - Date.now() < 15e3) return err('곧 출발해요! 이번 판 베팅은 마감됐어요.');
-  if (!(bet >= RACE_MIN && bet <= RACE_MAX)) return err(`한 번에 ${fmt(RACE_MIN)}~${fmt(RACE_MAX)}GP까지 걸 수 있어요.`);
+  if (!(bet >= RACE_MIN && bet <= RACE_MAX)) return err(`한 번에 도박코인 ${fmt(RACE_MIN)}~${fmt(RACE_MAX)}개까지 걸 수 있어요.`);
   if (r.bets.filter((b) => b.key === key).length >= RACE_BETS) return err(`한 판에 ${RACE_BETS}번까지 걸 수 있어요.`);
-  const e = C.takeBet(u, 'gp', bet); if (e) return err(e);
-  r.bets.push({ key, horse, bet, at: Date.now() });
+  const e = C.takeBet(u, 'coins', bet); if (e) return err(e);
+  r.bets.push({ key, horse, bet, cur: 'coins', at: Date.now() });
   return { ok: true };
 }
 function raceView(key) {
@@ -77,12 +77,13 @@ function raceView(key) {
 }
 
 /* ===================== 🎱 주간 로또: 1~20 중 5개, 일요일 밤 8시 추첨 ===================== */
-const LOTTO_N = 20, LOTTO_PICK = 5, LOTTO_PRICE = 1000, LOTTO_MAX = 10, LOTTO_BASE = 100000;
-const LOTTO_FIX = { 4: 25000, 3: 2500, 2: 1200 }; // 5개 = 1등(쌓인 상금을 나눠 가짐)
+const LOTTO_N = 20, LOTTO_PICK = 5, LOTTO_PRICE = 10, LOTTO_MAX = 10, LOTTO_BASE = 1000; // 도박코인
+const LOTTO_FIX = { 4: 250, 3: 25, 2: 12 }; // 5개 = 1등(쌓인 상금을 나눠 가짐)
 function nextDraw(t = Date.now()) { const d = new Date(t + KST); const dow = d.getUTCDay(); let at = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + ((7 - dow) % 7), 20) - KST; if (at <= t) at += 7 * 864e5; return at; }
 function lottoBook() {
   const l = L();
-  l.lotto ||= { round: 1, at: nextDraw(), pot: LOTTO_BASE, tickets: [], hist: [] };
+  l.lotto ||= { round: 1, at: nextDraw(), pot: LOTTO_BASE, tickets: [], hist: [], coin: true, coinFrom: 1 };
+  if (!l.lotto.coin) { l.lotto.pot = Math.max(LOTTO_BASE, Math.floor(l.lotto.pot / C.COIN_GP)); l.lotto.coin = true; l.lotto.coinFrom = l.lotto.round; } // GP로 쌓였던 상금을 도박코인으로
   if (Date.now() >= l.lotto.at) drawLotto();
   return l.lotto;
 }
@@ -99,10 +100,10 @@ function drawLotto() {
     byUser.set(h.key, (byUser.get(h.key) || 0) + prize);
   }
   for (const [k, n] of byUser) {
-    const u = db.users[k]; if (!u) continue; C.pay(u, 'gp', n);
-    H.sendMail?.(u, { from: '골목 로또', title: `🎱 ${t.round}회 로또 당첨!`, body: `당첨 번호 ${nums.join(', ')}. 당첨금 ${fmt(n)}GP는 지갑에 들어갔어요.`, reward: [] });
+    const u = db.users[k]; if (!u) continue; C.pay(u, 'coins', n);
+    H.sendMail?.(u, { from: '골목 로또', title: `🎱 ${t.round}회 로또 당첨!`, body: `당첨 번호 ${nums.join(', ')}. 당첨금 도박코인 ${fmt(n)}개는 지갑에 들어갔어요.`, reward: [] });
   }
-  H.sysChat?.(`🎱 ${t.round}회 골목 로또 당첨 번호: ${nums.join(' · ')}${firsts.length ? ` — 1등 ${firsts.length}명! (${fmt(share)}GP씩)` : ` — 1등 없음! 상금 ${fmt(t.pot)}GP는 다음 회로 넘어가요`}`);
+  H.sysChat?.(`🎱 ${t.round}회 골목 로또 당첨 번호: ${nums.join(' · ')}${firsts.length ? ` — 1등 ${firsts.length}명! (도박코인 ${fmt(share)}개씩)` : ` — 1등 없음! 상금 도박코인 ${fmt(t.pot)}개는 다음 회로 넘어가요`}`);
   t.hist = [{ round: t.round, at: t.at, nums, tickets: t.tickets.length, firsts: firsts.length, share, win: Object.fromEntries(Object.entries(win).map(([k, v]) => [k, v.length])) }, ...t.hist].slice(0, 10);
   const carry = firsts.length ? LOTTO_BASE : t.pot;
   Object.assign(t, { round: t.round + 1, at: nextDraw(t.at + 1000), pot: carry, tickets: [] });
@@ -115,20 +116,20 @@ function lottoBuy(u, key, nums) {
   if (nums.length !== LOTTO_PICK) return err(`1~${LOTTO_N} 중에서 숫자 ${LOTTO_PICK}개를 골라 주세요.`);
   if (t.at - Date.now() < 60e3) return err('곧 추첨해요! 이번 회 판매는 마감됐어요.');
   if (t.tickets.filter((x) => x.key === key).length >= LOTTO_MAX) return err(`한 회에 ${LOTTO_MAX}장까지 살 수 있어요.`);
-  const e = C.takeBet(u, 'gp', LOTTO_PRICE); if (e) return err(e);
+  const e = C.takeBet(u, 'coins', LOTTO_PRICE); if (e) return err(e);
   t.pot += Math.floor(LOTTO_PRICE * 0.3); // 판매액의 30%가 1등 상금에 쌓여요
   t.tickets.push({ key, nums, at: Date.now() });
   return { ok: true, nums };
 }
 function lottoView(key) {
   const t = lottoBook();
-  return { round: t.round, at: t.at, pot: t.pot, sold: t.tickets.length, mine: t.tickets.filter((x) => x.key === key).map((x) => x.nums), hist: t.hist, n: LOTTO_N, pick: LOTTO_PICK, price: LOTTO_PRICE, max: LOTTO_MAX, fix: LOTTO_FIX };
+  return { round: t.round, at: t.at, pot: t.pot, sold: t.tickets.length, mine: t.tickets.filter((x) => x.key === key).map((x) => x.nums), hist: t.hist, n: LOTTO_N, pick: LOTTO_PICK, price: LOTTO_PRICE, max: LOTTO_MAX, fix: LOTTO_FIX, coinFrom: t.coinFrom || 1 };
 }
 
 /* ===================== 🎁 미스터리 상자 ===================== */
 const BOX = {
-  c: { n: '일반 상자', price: 2000, icon: '📦' },
-  r: { n: '희귀 상자', price: 8000, icon: '🎁' },
+  c: { n: '일반 상자', price: 20, icon: '📦' }, // 값은 도박코인
+  r: { n: '희귀 상자', price: 80, icon: '🎁' },
   l: { n: '전설 상자', price: 0, icon: '💠' }, // 사지 못하고 얻기만
 };
 const BOX_PITY = 40; // 상자를 40번 열 동안 이로치가 안 나오면 다음 상자는 이로치 확정
@@ -163,8 +164,8 @@ function boxOpen(u, tier) {
 }
 function boxBuy(u, tier) {
   const b = BOX[tier]; if (!b?.price) return err('살 수 없는 상자예요.');
-  if (u.gp < b.price) return err(`${fmt(b.price)}GP가 필요해요.`);
-  u.gp -= b.price; u.boxes ||= { c: 0, r: 0, l: 0 }; u.boxes[tier]++;
+  if ((u.coins || 0) < b.price) return err(`도박코인 ${fmt(b.price)}개가 필요해요.`);
+  u.coins -= b.price; u.boxes ||= { c: 0, r: 0, l: 0 }; u.boxes[tier]++;
   return { ok: true, boxes: u.boxes };
 }
 // 대전에서 이기면 가끔 상자 (연습·훈련·퍼즐 제외)

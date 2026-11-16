@@ -8,27 +8,28 @@ const X = require('../server/extra');
 
 const db = { users: {} }; const mails = [];
 C.init(db, {}); L.init(db, { grant: P.grant, sendMail: (u, m) => mails.push(m), save: () => {}, sysChat: () => {}, notify: () => {} });
-const mk = (name) => ({ name, gp: 1e6, tickets: 0, skips: 0, rerolls: 0, mons: [], stones: [], costumes: [], counts: {} });
+const mk = (name) => ({ name, gp: 1e6, coins: 1e5, tickets: 0, skips: 0, rerolls: 0, mons: [], stones: [], costumes: [], counts: {} });
 
 test('하이로우: 맞히면 판돈이 불어나고, 받고 그만하기', () => {
   const u = mk('h');
-  assert.ok(!C.api('POST /api/casino/hilo', u, 'h', { cur: 'gp', bet: 1000 }).error);
-  assert.equal(u.gp, 1e6 - 1000);
+  assert.ok(C.api('POST /api/casino/hilo', u, 'h', { cur: 'gp', bet: 1000 }).error, 'GP는 못 걸음');
+  assert.ok(!C.api('POST /api/casino/hilo', u, 'h', { cur: 'coins', bet: 10 }).error);
+  assert.equal(u.coins, 1e5 - 10);
   let r; for (let i = 0; i < 30 && u.hilo; i++) { const v = u.hilo.card.v; r = C.api('POST /api/casino/hilo/guess', u, 'h', { pick: v <= 7 ? 'hi' : 'lo' }); if (r.win && u.hilo && u.hilo.step >= 2) break; }
-  if (u.hilo?.step) { const pot = u.hilo.pot, gp = u.gp; const c = C.api('POST /api/casino/hilo/cash', u, 'h', {}); assert.equal(c.cashed, pot); assert.equal(u.gp, gp + pot); }
+  if (u.hilo?.step) { const pot = u.hilo.pot, co = u.coins; const c = C.api('POST /api/casino/hilo/cash', u, 'h', {}); assert.equal(c.cashed, pot); assert.equal(u.coins, co + pot); }
   const o = C.hiloOdds(7); assert.ok(o.hi > 1.5 && o.lo > 1.5); assert.equal(C.hiloOdds(13).hi, 0);
 });
 
 test('경마: 출발 전 베팅, 1등이면 배당만큼', () => {
   const u = mk('rc'); db.users.rc = u;
   const r = L.raceBook(); r.at = Date.now() + 60e3;
-  assert.ok(L.api('POST /api/race/bet', u, 'rc', { horse: 0, bet: 50 }).error, '최소 금액');
-  for (let i = 0; i < 5; i++) assert.ok(!L.api('POST /api/race/bet', u, 'rc', { horse: i, bet: 1000 }).error);
-  assert.ok(L.api('POST /api/race/bet', u, 'rc', { horse: 0, bet: 1000 }).error, '한 판에 5번까지');
-  const before = u.gp; r.at = Date.now() - 1; L.raceBook();
+  assert.ok(L.api('POST /api/race/bet', u, 'rc', { horse: 0, bet: 201 }).error, '최대 금액');
+  for (let i = 0; i < 5; i++) assert.ok(!L.api('POST /api/race/bet', u, 'rc', { horse: i, bet: 100 }).error);
+  assert.ok(L.api('POST /api/race/bet', u, 'rc', { horse: 0, bet: 100 }).error, '한 판에 5번까지');
+  const before = u.coins; r.at = Date.now() - 1; L.raceBook();
   const last = L.api('GET /api/race', u, 'rc', {}).race.last[0];
   assert.equal(last.id, r.id); assert.equal(last.frames.length, 12);
-  assert.equal(u.gp, before + Math.floor(1000 * r.horses[last.win].odds), '5마리 다 걸었으니 1등 몫을 받음');
+  assert.equal(u.coins, before + Math.floor(100 * r.horses[last.win].odds), '5마리 다 걸었으니 1등 몫을 받음');
   assert.ok(r.horses.every((h) => h.odds >= 1.2));
 });
 
@@ -48,7 +49,7 @@ test('미스터리 상자: 사고 열기, 등급 스킨, 이로치 천장', () =
   const u = mk('bx');
   assert.ok(L.api('POST /api/boxes/open', u, 'bx', { tier: 'c' }).error, '상자 없음');
   assert.ok(L.api('POST /api/boxes/buy', u, 'bx', { tier: 'l' }).error, '전설 상자는 못 삼');
-  assert.ok(L.api('POST /api/boxes/buy', u, 'bx', { tier: 'c' }).ok); assert.equal(u.gp, 1e6 - 2000);
+  assert.ok(L.api('POST /api/boxes/buy', u, 'bx', { tier: 'c' }).ok); assert.equal(u.coins, 1e5 - 20);
   L.giveBox(u, 'l', 200);
   let skins = 0, mons = 0; for (let i = 0; i < 200; i++) { const r = L.boxOpen(u, 'l'); assert.ok(r.ok); if (r.got.some((g) => g.k === 'costume')) skins++; if (r.got.some((g) => g.k === 'mon')) mons++; }
   assert.ok(skins > 0 && mons > 0);

@@ -61,6 +61,7 @@ function grant(u, r) {
   if (r.stones) addStones(u, r.stones, got);
   if (r.mon) { const m = addMon(u, r.mon === 'random' ? released()[rnd(released().length)] : r.mon, null, r.shiny || (r.mon === 'random' && rollShiny(SHINY_GIFT))); got.push({ k: 'mon', id: m.species, ...(m.shiny ? { shiny: true } : {}) }); }
   if (r.pass) { const bonus = addPass(u, r.pass); got.push({ k: 'pass', n: r.pass }); if (bonus) { passBook(u).newGp = 0; got.push({ k: 'gp', n: bonus }); } }
+  if (r.coins) { u.coins = (u.coins || 0) + r.coins; got.push({ k: 'coin', n: r.coins }); } // 도박코인
   if (r.gpt) { u.gpt = (u.gpt || 0) + r.gpt; got.push({ k: 'gpt', n: r.gpt }); } // 길드 포인트(길P)
   return got;
 }

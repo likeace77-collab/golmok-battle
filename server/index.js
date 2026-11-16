@@ -248,7 +248,7 @@ function couponMake(b) {
   const code = couponKey(b.code);
   if (code.length < 2 || code.length > 60) return { error: '쿠폰 코드는 2~60자로 정해 주세요.' };
   const n = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
-  const r = {}; for (const [k, max] of [['gp', 10000000], ['tickets', 1000], ['skips', 10000], ['rerolls', 10000], ['stones', 60], ['gpt', 100000]]) { const v = n(b.r?.[k], max); if (v) r[k] = v; }
+  const r = {}; for (const [k, max] of [['gp', 10000000], ['tickets', 1000], ['skips', 10000], ['rerolls', 10000], ['stones', 60], ['gpt', 100000], ['coins', 1000000]]) { const v = n(b.r?.[k], max); if (v) r[k] = v; }
   if (b.r?.mon === 'random' || Data.MONSTERS[b.r?.mon]) r.mon = b.r.mon;
   if (b.r?.mon && b.r?.shiny) r.shiny = true;
   if (!Object.keys(r).length) return { error: '보상을 하나 이상 넣어 주세요.' };
@@ -424,7 +424,7 @@ const publicUser = (u) => ({
   dev: isDev(u), owned: u.owned || [], avatarOwned: u.avatarOwned || [], mailNew: (u.mail || []).filter((m) => !m.read || !m.claimed).length, tempPw: !!u.tempPw, birthYear: u.birthYear || null, needAge: !u.birthYear, adult: isAdult(u), uncensored: uncensored(u), settings: { mosaic: !!u.settings?.mosaic },
   name: u.name, avatar: u.avatar, decks: deckView(u), active: u.active, stats: u.stats, style: u.style,
   wins: u.wins, losses: u.losses, draws: u.draws, h2h: u.h2h,
-  tutorial: !!u.tutorial, gp: u.gp, tickets: u.tickets, skips: u.skips, rerolls: u.rerolls || 0, stones: u.stones, mons: u.mons.map(P.ensureNature),
+  tutorial: !!u.tutorial, gp: u.gp, coins: u.coins || 0, tickets: u.tickets, skips: u.skips, rerolls: u.rerolls || 0, stones: u.stones, mons: u.mons.map(P.ensureNature),
   premium: P.passState(u).premium, badges: { ...P.claimable(u), social: (u.freq?.in || []).filter((k) => db.users[k] && !(u.friends || []).includes(k)).length + (db.guilds ? S.tradeIn(keyOf(u.name)) : 0) + (u.fgiftIn || []).length, guild: db.guilds ? S.guildClaimable(u, keyOf(u.name)) : 0, ...(db.news ? X.badges(u) : {}) }, jelly: u.jelly || 0, fp: u.fp || 0, costumes: u.costumes || [], guild: u.guild && db.guilds?.[u.guild] ? { id: u.guild, name: db.guilds[u.guild].name, emblem: db.guilds[u.guild].emblem, color: db.guilds[u.guild].color, role: S.roleOf(u) } : null, gpt: u.gpt || 0, friendsN: (u.friends || []).length, rank: u.rank ? { pts: u.rank.pts, tier: R.tierOf(u.rank.pts), ever: u.rank.ever || 0 } : { pts: 1000, tier: 0, ever: 0 }, scoutReady: !!P.scoutState(u).cands, gym: { badges: u.gym?.badges || [], champ: u.gym?.champ || 0 }, rogueBest: u.rogueBest || 0, rookie: (() => { const r = IV.rookieState(u); return r.active ? { streak: r.streak, can: r.can, next: r.next } : null; })(), surveyDone: !!db.surveys?.[keyOf(u.name)], sunfish: !!u.sunfishDone,
 });
 

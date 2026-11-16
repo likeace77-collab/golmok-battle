@@ -84,6 +84,7 @@ function rewardChips(r) {
   if (r.pass) out.push(`<span class="rw">${ICON.pass(16)}${r.pass}</span>`);
   if (r.mon) out.push(`<span class="rw">${esc(G.data.MONSTERS[r.mon].n)}</span>`);
   if (r.gpt) out.push(`<span class="rw">${ICON.gpt(18)}${fmt(r.gpt)}</span>`);
+  if (r.coins) out.push(`<span class="rw"><i class="cs-ci" style="--s:16px"></i>도박코인 ×${fmt(r.coins)}</span>`);
   return out.join('');
 }
 function gotItem(x) {
@@ -92,6 +93,7 @@ function gotItem(x) {
   if (x.k === 'reroll') return `<div class="got-i"><span class="got-dice">🎲</span><b>리롤권 ×${x.n}</b><small>스카우트 후보 다시 뽑기 1번</small></div>`;
   if (x.k === 'skip') return `<div class="got-i">${ICON.skip(46)}<b>1시간 스킵권 ×${x.n}</b></div>`;
   if (x.k === 'stone') return `<div class="got-i">${stoneSVG(x.id, 60)}<b>${esc(G.data.MONSTERS[x.id].n)} 메가스톤</b></div>`;
+  if (x.k === 'coin') return `<div class="got-i"><i class="cs-ci big" style="--s:54px"></i><b>도박코인 ×${fmt(x.n)}</b><small>도박장에서 써요 (1개 = 100GP)</small></div>`;
   if (x.k === 'gpt') return `<div class="got-i">${ICON.gpt(52)}<b>길P +${fmt(x.n)}</b></div>`;
   if (x.k === 'pass') return `<div class="got-i">${ICON.pass(50)}<b>패스 포인트 +${x.n}</b></div>`;
   if (x.k === 'box') return `<div class="got-i"><span class="got-dice">${{ '일반 상자': '📦', '희귀 상자': '🎁', '전설 상자': '💝' }[x.n] || '🎁'}</span><b>${esc(x.n)} ×${x.count || 1}</b><small>도박장 → 🎁 상자에서 열어요</small></div>`;

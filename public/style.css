@@ -2271,3 +2271,56 @@ body:has(.rp-bar) #toast { bottom: 150px; z-index: 90; }
 .thg-main { animation: thgShake .18s steps(2) infinite; } @keyframes thgShake { 50% { translate: 2px -1px; } }
 .thg-sparks circle { animation: skoTw .6s ease-in-out infinite; }
 .thg-speed path { animation: thgSpeed .4s linear infinite; } @keyframes thgSpeed { from { translate: 230px 0; opacity: 0; } 30% { opacity: 1; } to { translate: -60px 0; opacity: 0; } }
+
+/* ---------- 🪙 도박코인 ---------- */
+.cs-ci { --s: 18px; display: inline-block; width: var(--s); height: var(--s); border-radius: 50%; vertical-align: -0.18em; flex: none; position: relative;
+  background: radial-gradient(circle at 35% 30%, #fff8c9 0 12%, #ffe063 30%, #f5b50f 62%, #b86f00 100%);
+  box-shadow: inset 0 0 0 calc(var(--s) * .09) #d48a00, inset 0 0 0 calc(var(--s) * .16) #ffe36b, 0 1px 0 #6b3d00; }
+.cs-ci::after { content: '¢'; position: absolute; inset: 0; display: grid; place-items: center; font-size: calc(var(--s) * .62); font-weight: 900; color: #a8600a; text-shadow: 0 1px 0 #fff3a6; line-height: 1; }
+.cs-ci.big { animation: ci-spin 2.4s ease-in-out infinite; }
+@keyframes ci-spin { 0%, 60% { transform: rotateY(0); } 80% { transform: rotateY(180deg) scale(1.08); } 100% { transform: rotateY(360deg); } }
+.cs-purse { display: inline-flex; align-items: center; gap: 8px; margin: 8px auto 2px; padding: 6px 14px 6px 8px; border: 2px solid #FFD23F; border-radius: 999px; background: linear-gradient(180deg, #3a1450, #1a0b26); color: #fff; font: inherit; cursor: pointer; box-shadow: 0 0 0 3px #1a1433, 0 0 18px #ffb30066; position: relative; }
+.cs-hero #cs-head { text-align: center; }
+.cs-purse b { font-size: 22px; color: #FFD23F; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 #7a3c00; min-width: 2ch; }
+.cs-purse small { font-size: 11px; opacity: .8; }
+.cs-purse.up b { animation: purse-up .9s ease-out; } .cs-purse.dn b { animation: purse-dn .6s ease-out; }
+.cs-purse.gulp { animation: purse-gulp .18s ease-out; }
+@keyframes purse-up { 0% { color: #fff; text-shadow: 0 0 16px #fff, 0 0 30px #FFD23F; transform: scale(1.25); } 100% { transform: scale(1); } }
+@keyframes purse-dn { 0% { color: #ff6b81; transform: translateY(2px); } 100% { transform: none; } }
+@keyframes purse-gulp { 50% { transform: scale(1.08); box-shadow: 0 0 0 3px #1a1433, 0 0 34px #FFD23F; } }
+.cs-fly { position: fixed; left: 0; top: 0; z-index: 120; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; pointer-events: none; will-change: transform;
+  background: radial-gradient(circle at 35% 30%, #fffbe0 0 14%, #ffe063 32%, #f5b50f 64%, #a86200 100%); box-shadow: inset 0 0 0 2px #d48a00, 0 0 10px #ffd23faa; }
+#cs-game.cs-glow > section { animation: cs-glow .8s ease-out; }
+@keyframes cs-glow { 0% { box-shadow: 0 0 0 4px #FFD23F, 0 0 40px #FFD23F; } 100% { box-shadow: none; } }
+#cs-game.cs-miss > section { animation: cs-miss .35s; }
+@keyframes cs-miss { 25% { transform: translateX(-5px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-2px); } }
+/* 대박 연출: BIG / MEGA / JACKPOT */
+.cs-bigwin { overflow: visible; pointer-events: auto; cursor: pointer; animation: cs-bw2 .6s cubic-bezier(.2,1.6,.4,1) both; min-width: 220px; }
+.cs-bigwin.out { animation: cs-bwout .5s forwards; }
+.cs-bigwin small { font-size: 22px; letter-spacing: .08em; background: linear-gradient(180deg, #fff, #ffe46b 45%, #ff9d00); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-stroke: 1.5px #7a2a00; font-weight: 900; }
+.cs-bigwin b { font-size: 56px; color: #d62839; text-shadow: 0 3px 0 #1a1433; }
+.cs-bigwin span { display: inline-flex; align-items: center; gap: 6px; font-size: 24px; font-variant-numeric: tabular-nums; }
+.cs-bigwin .bw-rays { position: absolute; left: 50%; top: 50%; width: 560px; height: 560px; margin: -280px 0 0 -280px; z-index: -1; border-radius: 50%; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, #ffd23f55 0 10deg, transparent 10deg 20deg); -webkit-mask: radial-gradient(circle, #000 20%, transparent 68%); mask: radial-gradient(circle, #000 20%, transparent 68%); animation: bw-spin 6s linear infinite; }
+.cs-bigwin.mega { background: radial-gradient(#ffffff, #9ff3ff 45%, #2EF2FF); box-shadow: 0 6px 0 #1a1433, 0 0 80px #2EF2FF; }
+.cs-bigwin.mega .bw-rays { background: repeating-conic-gradient(#2ef2ff66 0 8deg, transparent 8deg 16deg); }
+.cs-bigwin.jp { background: radial-gradient(#fff, #ffd1f0 40%, #ff4fb4); box-shadow: 0 6px 0 #1a1433, 0 0 120px #ff4fb4, 0 0 60px #FFD23F; }
+.cs-bigwin.jp .bw-rays { background: repeating-conic-gradient(#ffd23f88 0 6deg, #ff4fb455 6deg 12deg, transparent 12deg 18deg); animation-duration: 3s; }
+.cs-bigwin.jp b { animation: jp-pulse .5s ease-in-out infinite alternate; }
+@keyframes bw-spin { to { transform: rotate(360deg); } }
+@keyframes jp-pulse { to { transform: scale(1.08); } }
+@keyframes cs-bw2 { 0% { transform: translate(-50%, -50%) scale(.2) rotate(-8deg); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+@keyframes cs-bwout { to { transform: translate(-50%, -50%) scale(.6); opacity: 0; } }
+/* 💱 환전소 */
+.cs-xc { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.xc-board { display: flex; align-items: center; gap: 8px; width: 100%; justify-content: space-between; padding: 12px; border: 3px solid #1a1433; border-radius: 16px; background: linear-gradient(180deg, #2b1040, #12081d); color: #fff; box-shadow: inset 0 0 24px #ffb30033; }
+.xc-side { flex: 1; text-align: center; } .xc-side small { display: block; font-size: 11px; opacity: .75; } .xc-side b { display: inline-flex; align-items: center; gap: 4px; font-size: 18px; color: #FFD23F; font-variant-numeric: tabular-nums; }
+.xc-arrow { text-align: center; } .xc-arrow span { display: block; font-size: 26px; color: #2EF2FF; transition: transform .6s; } .xc-arrow small { font-size: 10px; opacity: .7; }
+.xc-arrow.spin span { transform: rotate(540deg) scale(1.3); }
+.xc-tabs { display: flex; gap: 6px; } .xc-tabs button { border: 2px solid #1a1433; border-radius: 999px; background: #fff; font: inherit; font-weight: 800; font-size: 13px; padding: 6px 12px; cursor: pointer; } .xc-tabs button.on { background: #FFD23F; box-shadow: 0 3px 0 #1a1433; }
+.cs-xc .cs-amt input { width: 110px; border: 0; background: transparent; font: inherit; font-size: 22px; font-weight: 900; text-align: center; -moz-appearance: textfield; }
+.cs-xc .cs-amt input::-webkit-inner-spin-button { -webkit-appearance: none; }
+@media (prefers-reduced-motion: reduce) { .cs-ci.big, .cs-bigwin .bw-rays, .cs-bigwin.jp b { animation: none; } }
+.cs-tabs button[data-tab="xchg"] { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 6px; background: linear-gradient(90deg, #fff3b0, #FFD23F, #fff3b0); }
+.cs-tabs button[data-tab="xchg"] span { display: inline; font-size: 20px; }
+.cs-tabs button[data-tab="xchg"].on { background: linear-gradient(90deg, #2EF2FF, #9ff3ff, #2EF2FF); }

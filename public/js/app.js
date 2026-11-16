@@ -194,6 +194,7 @@ function showSettings() {
           <label>리롤권<input type="number" name="rerolls" min="0" placeholder="0"></label>
           <label>메가스톤<input type="number" name="stones" min="0" placeholder="0"></label>
           <label>길P<input type="number" name="gpt" min="0" placeholder="0"></label>
+          <label>도박코인<input type="number" name="coins" min="0" placeholder="0"></label>
           <label>골목몬<select name="mon"><option value="">없음</option><option value="random">랜덤 1마리</option>${Object.keys(G.data.MONSTERS).map((id) => `<option value="${id}">${esc(G.data.MONSTERS[id].n)}</option>`).join('')}</select></label>
         </div>
         <label class="toggle"><input type="checkbox" name="shiny"> 골목몬을 이로치로</label>
@@ -214,7 +215,7 @@ function showSettings() {
   app.querySelector('#back').onclick = showLobby;
   bindPushSettings();
   if (u.dev) {
-    const rw = (r) => [r.gp && `${fmt(r.gp)}GP`, r.tickets && `입수권 ${r.tickets}`, r.skips && `스킵권 ${r.skips}`, r.rerolls && `리롤권 ${r.rerolls}`, r.stones && `메가스톤 ${r.stones}`, r.gpt && `길P ${r.gpt}`, r.mon && `${r.shiny ? '✨이로치 ' : ''}${r.mon === 'random' ? '랜덤 골목몬' : G.data.MONSTERS[r.mon]?.n}`].filter(Boolean).join(' · ');
+    const rw = (r) => [r.gp && `${fmt(r.gp)}GP`, r.tickets && `입수권 ${r.tickets}`, r.skips && `스킵권 ${r.skips}`, r.rerolls && `리롤권 ${r.rerolls}`, r.stones && `메가스톤 ${r.stones}`, r.gpt && `길P ${r.gpt}`, r.coins && `도박코인 ${r.coins}`, r.mon && `${r.shiny ? '✨이로치 ' : ''}${r.mon === 'random' ? '랜덤 골목몬' : G.data.MONSTERS[r.mon]?.n}`].filter(Boolean).join(' · ');
     const drawList = (list) => {
       const box = app.querySelector('#cplist'); if (!box) return;
       box.innerHTML = list.map((c) => { const over = c.until && c.until < Date.now(); return `<div class="cp-row ${over ? 'over' : ''}"><div><b>${esc(c.code)}</b><small>${esc(rw(c.r))}</small>
@@ -226,7 +227,7 @@ function showSettings() {
     api('GET', '/api/dev/coupons').then((r) => drawList(r.list)).catch(() => {});
     app.querySelector('#cpmake').onsubmit = async (e) => {
       e.preventDefault(); const f = e.target;
-      const r = { gp: f.gp.value, tickets: f.tickets.value, skips: f.skips.value, rerolls: f.rerolls.value, stones: f.stones.value, gpt: f.gpt.value, ...(f.mon.value ? { mon: f.mon.value, shiny: f.shiny.checked } : {}) };
+      const r = { gp: f.gp.value, tickets: f.tickets.value, skips: f.skips.value, rerolls: f.rerolls.value, stones: f.stones.value, gpt: f.gpt.value, coins: f.coins.value, ...(f.mon.value ? { mon: f.mon.value, shiny: f.shiny.checked } : {}) };
       try { const x = await api('POST', '/api/dev/coupon', { code: f.code.value, title: f.title.value, r, until: f.until.value ? new Date(f.until.value).toISOString() : '' }); drawList(x.list); toast(`쿠폰 「${f.code.value.trim()}」을 만들었어요!`); f.reset(); }
       catch (err) { toast(err.message); }
     };
