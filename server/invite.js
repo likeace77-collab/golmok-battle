@@ -1,6 +1,6 @@
 'use strict';
 // 🎉 친구 초대(추천인) + 🌱 뉴비 7일 연속 출석
-// - 가입할 때 추천인 아이디를 넣으면: 뉴비는 바로 환영 선물, 추천한 친구는 뉴비가 대전 3판을 하면 선물 (빈 계정 만들기로 보상만 받는 걸 막으려고)
+// - 가입할 때 추천인 아이디를 넣으면: 뉴비는 바로 환영 선물, 추천한 친구는 뉴비가 대전 1판을 하면 선물 (빈 계정 만들기로 보상만 받는 걸 막으려고)
 // - 가입 3일 안이면 나중에라도 추천인을 한 번 넣을 수 있어요.
 // - 뉴비(가입 30일 안): 7일 연속 접속하면 날마다 선물, 7일째 막대한 선물
 const KST = 9 * 3600e3, DAY = 86400e3;
@@ -8,7 +8,7 @@ const dayKey = (t = Date.now()) => new Date(t + KST).toISOString().slice(0, 10);
 
 const REF_NEWBIE = { gp: 10000, tickets: 3, rerolls: 5 }; // + 일반 상자 2
 const REF_FRIEND = { gp: 15000, tickets: 2 }; // + 희귀 상자 1
-const REF_GAMES = 3, REF_MAX = 20, REF_TITLE_AT = 3, REF_LATE_DAYS = 3;
+const REF_GAMES = 1, REF_MAX = 20, REF_TITLE_AT = 3, REF_LATE_DAYS = 3;
 const ROOKIE_DAYS = 30;
 const ROOKIE = [
   { gp: 3000 },
@@ -45,7 +45,7 @@ function link(u, key, refName, atSignup) {
   H.notify?.(rk, `🎉 ${u.name}님이 나를 추천했어요!`);
   return { ok: true, got, ref: ref.name };
 }
-// 대전이 끝날 때마다: 뉴비가 3판을 채우면 추천한 친구에게 선물
+// 대전이 끝날 때마다: 뉴비가 대전 1판을 하면 추천한 친구에게 선물
 function onBattle(u, key) {
   if (!u.refBy || u.refPaid) return;
   if ((u.counts?.games || 0) < REF_GAMES) return;

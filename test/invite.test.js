@@ -8,7 +8,7 @@ const db = { users: {} }; const mails = []; const boxes = [];
 IV.init(db, { keyOf: (n) => n.toLowerCase(), grant: P.grant, giveBox: (u, t, n) => boxes.push([u.name, t, n || 1]), sendMail: (u, m) => mails.push([u.name, m]), notify: () => {}, sysChat: () => {} });
 const mk = (name, ago = 0) => ({ ...P.newProgress(), name, createdAt: Date.now() - ago, owned: [] });
 
-test('추천: 뉴비는 바로, 친구는 뉴비가 3판 하면', () => {
+test('추천: 뉴비는 바로, 친구는 뉴비가 1판 하면', () => {
   db.users.friend = mk('Friend'); db.users.newbie = mk('Newbie');
   assert.ok(IV.onSignup(db.users.newbie, 'newbie', 'nobody').error);
   assert.ok(IV.onSignup(db.users.newbie, 'newbie', 'Newbie').error, '자기 자신 X');
@@ -16,8 +16,8 @@ test('추천: 뉴비는 바로, 친구는 뉴비가 3판 하면', () => {
   assert.equal(db.users.newbie.gp, 10000); assert.equal(db.users.newbie.tickets, 3);
   assert.deepEqual(boxes.at(-1), ['Newbie', 'c', 2]);
   assert.ok(IV.onSignup(db.users.newbie, 'newbie', 'Friend').error, '두 번 X');
-  IV.onBattle(db.users.newbie, 'newbie'); assert.equal(db.users.friend.gp, 0, '아직 3판 전');
-  db.users.newbie.counts.games = 3; IV.onBattle(db.users.newbie, 'newbie');
+  IV.onBattle(db.users.newbie, 'newbie'); assert.equal(db.users.friend.gp, 0, '아직 대전 전');
+  db.users.newbie.counts.games = 1; IV.onBattle(db.users.newbie, 'newbie');
   assert.equal(db.users.friend.gp, 15000); assert.equal(db.users.friend.tickets, 2);
   IV.onBattle(db.users.newbie, 'newbie'); assert.equal(db.users.friend.gp, 15000, '한 번만');
   assert.equal(IV.inviteView(db.users.friend, 'friend').invited[0].done, true);
