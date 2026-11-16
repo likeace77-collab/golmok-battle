@@ -2255,3 +2255,19 @@ body:has(.rp-bar) #toast { bottom: 150px; z-index: 90; }
 .iv-ul { margin: 6px 0 10px 18px; font-size: 14px; line-height: 1.6; }
 .iv-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px dashed #0002; } .iv-row b { flex: 1; } .iv-row small { font-size: 11px; opacity: .7; } .iv-row span { font-size: 13px; font-weight: 800; } .iv-row span.ok { color: #2E9E5B; }
 .iv-hero input, .fz-hero input { color: var(--ink); background: #fff; }
+/* ⚡ 썬더: 공격할 때 잔상 (노란 빛 + 번쩍이는 순간이동) */
+.mon.th-blur svg { filter: drop-shadow(0 0 10px #FFE45C) drop-shadow(-26px 0 0 #FFE45C55) drop-shadow(-52px 0 0 #FFB80033); animation: thBlink .16s steps(2) infinite; }
+.mon.opp.th-blur svg { filter: drop-shadow(0 0 10px #FFE45C) drop-shadow(26px 0 0 #FFE45C55) drop-shadow(52px 0 0 #FFB80033); }
+@keyframes thBlink { 0% { translate: -6px 0; } 50% { translate: 8px -3px; } 100% { translate: -2px 2px; } }
+.sa-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 6px; margin: 6px 0 8px; }
+.sa-b { display: grid; justify-items: center; padding: 6px; font: inherit; border: var(--line); border-radius: 12px; background: #fff8e0; cursor: pointer; box-shadow: 3px 3px 0 var(--ink); } .sa-b svg { width: 64px; height: 64px; } .sa-b b { font-size: 12px; }
+/* ⚡ 썬더 거다이맥스 */
+.thg-spin { animation: skoSpin .5s linear infinite; }
+.thg-inf path { animation: thgRoad .45s linear infinite; } .thg-inf .thg-inf2 { animation-duration: .3s; } @keyframes thgRoad { to { stroke-dashoffset: -96; } }
+.thg-bolt { animation: thgBolt .5s steps(2) infinite; } @keyframes thgBolt { 50% { opacity: 0; } }
+.thg-cloud { animation: fzCloud 2.2s ease-in-out infinite; }
+.thg-pulse { animation: fzGlow .9s ease-in-out infinite; }
+.thg-gh1 { animation: thgGhost .35s ease-in-out infinite; } .thg-gh2 { animation: thgGhost .35s ease-in-out infinite reverse; } @keyframes thgGhost { 50% { translate: -10px 2px; opacity: .15; } }
+.thg-main { animation: thgShake .18s steps(2) infinite; } @keyframes thgShake { 50% { translate: 2px -1px; } }
+.thg-sparks circle { animation: skoTw .6s ease-in-out infinite; }
+.thg-speed path { animation: thgSpeed .4s linear infinite; } @keyframes thgSpeed { from { translate: 230px 0; opacity: 0; } 30% { opacity: 1; } to { translate: -60px 0; opacity: 0; } }

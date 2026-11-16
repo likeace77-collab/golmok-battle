@@ -61,7 +61,7 @@ test('모든 골목몬에게 그림이 있고 스킬이 겹치지 않는다', ()
     assert.match(mega + newArt, new RegExp(`\\b${id}: (L\\(|")|MEGA_ART\\.${id} =`), `메가 ${id}`);
     assert.equal(new Set(m.moves).size, m.moves.length, id);
   }
-  assert.equal(Object.keys(MONSTERS).length, 60);
+  assert.equal(Object.keys(MONSTERS).length, 61);
 });
 
 test('역류는 소나기에서 2배, 뻥 뚫기는 막기를 뚫고 압정을 치운다', () => {
@@ -145,7 +145,7 @@ test('모든 골목몬에게 전용기가 있고 다른 골목몬은 배울 수 
     owner[m.sig] = (owner[m.sig] || 0) + 1;
     assert.equal(Object.values(m.mega.boost).reduce((a, c) => a + c), 100, id);
   }
-  assert.equal(Object.keys(owner).length, 60);
+  assert.equal(Object.keys(owner).length, 61);
   // 전용기는 한 골목몬만 배운다 (단조처럼 전용기가 여럿일 수는 있음)
   const who = {};
   for (const [id, m] of Object.entries(MONSTERS)) for (const mv of m.moves) if (MOVES[mv].sig) (who[mv] ||= new Set()).add(id);
@@ -254,7 +254,7 @@ test('태그: 봇 넷이서 200판 모두 끝나고 불법 행동이 없다', ()
 });
 
 test('Z기술: 메가와 따로 한 번씩, 행동 하나로 메가와 같이 쓸 수 있고, 막기를 뚫는다', () => {
-  for (const [id, m] of Object.entries(MONSTERS)) assert.ok(MOVES[m.z]?.z && MOVES[m.z].pow >= 170, id);
+  for (const [id, m] of Object.entries(MONSTERS)) assert.ok(MOVES[m.z]?.z && (MOVES[m.z].pow >= 170 || MOVES[m.z].untilKO), id); // 썬더는 쓰러질 때까지 여러 번
   const b = battle([{ species: 'kkaebi', moves: ['club'] }, { species: 'horong', moves: ['ember'] }], custom('maetdol', ['guard']), 4);
   const foe = b.sides[1].mons[0]; foe.hp = foe.maxHp = 5000;
   assert.equal(E.choose(b, 0, { type: 'switch', index: 1, z: true }).ok, false);
@@ -910,4 +910,28 @@ test('여우비 유혹하기 → 꼬리치기: 표식, 50 피해, 마음의 상�
   assert.equal(foe.charmed, false); assert.equal(foe.heartbreak, true);
   assert.ok(JSON.stringify(r).includes('꼬리치기'));
   assert.equal(hp - foe.hp, 75, '꼬리치기 50 + 마음의 상처 25');
+});
+
+test('썬더: 신속(항상 먼저), 피니쉬, 사이드 어택(대기 골목몬 고르기), 분노의 질주 러쉬', () => {
+  const T = (moves) => [{ species: 'thunder', moves }];
+  // 신속: 상대가 선공기를 써도 썬더가 먼저
+  const prio = Object.keys(MOVES).find((k) => MOVES[k].pri > 0 && MOVES[k].cat !== 'x' && !MOVES[k].sig && !MOVES[k].z);
+  const b1 = battle(T(['thtackle']), [{ species: 'yeontan', moves: [prio] }]);
+  const ev1 = E.choose(b1, 0, { type: 'move', index: 0 }) && E.choose(b1, 1, { type: 'move', index: 0 }).events;
+  const firstMove = ev1.find((e) => e.t === 'move'); assert.equal(firstMove.side, 0, '썬더가 먼저');
+  // 피니쉬: 15% 이하면 타입(땅은 전기 무효)과 기합의띠를 무시하고 끝
+  const b2 = battle(T(['finish']), [{ species: 'yeontan', moves: ['tackle'], item: 'sash' }, { species: 'daeya', moves: ['tackle'] }]);
+  const foe = b2.sides[1].mons[0]; foe.hp = Math.floor(foe.maxHp * .14);
+  E.choose(b2, 0, { type: 'move', index: 0 }); E.choose(b2, 1, { type: 'move', index: 0 });
+  assert.equal(foe.hp, 0, '피니쉬로 쓰러짐');
+  // 사이드 어택: 고른 대기 골목몬도 피해
+  const b3 = battle(T(['sideattack']), [{ species: 'maetdol', moves: ['tackle'] }, { species: 'daeya', moves: ['tackle'] }, { species: 'horong', moves: ['tackle'] }]);
+  const h2 = b3.sides[1].mons[2].hp, h1 = b3.sides[1].mons[1].hp;
+  E.choose(b3, 0, { type: 'move', index: 0, bench: 2 }); E.choose(b3, 1, { type: 'move', index: 0 });
+  assert.ok(b3.sides[1].mons[2].hp < h2, '고른 대기 골목몬이 맞음'); assert.equal(b3.sides[1].mons[1].hp, h1, '안 고른 골목몬은 그대로');
+  // 분노의 질주 러쉬: 쓰러질 때까지 (혼 타입도)
+  const b4 = battle(T(['jabrush']), [{ species: 'tuhon', moves: ['tackle'] }, { species: 'daeya', moves: ['tackle'] }]);
+  const ev4 = E.choose(b4, 0, { type: 'move', index: 0, z: true }) && E.choose(b4, 1, { type: 'move', index: 0 }).events;
+  assert.equal(b4.sides[1].mons[0].hp, 0, 'Z기술로 끝까지 팸');
+  assert.ok(ev4.some((e) => /번이나 두들겨 팼다/.test(e.text || '')));
 });

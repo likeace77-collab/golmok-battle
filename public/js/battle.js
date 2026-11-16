@@ -765,6 +765,17 @@ const Battle = (() => {
           menu = 'target';
           return renderPanel();
         }
+        if (mv?.side) { // 썬더 사이드 어택: 발차기를 날릴 대기 골목몬 고르기
+          const opp = view.opp, bench = (opp?.roster || []).map((r, i) => ({ r, i })).filter(({ r }) => !r.out && r.slot !== opp.active?.slot);
+          if (bench.length > 1) {
+            const keepMega = armed;
+            panel.innerHTML = `<p class="wait">💨 발차기를 날릴 대기 골목몬을 골라요</p><div class="sa-pick">${bench.map(({ r, i }) => `<button class="sa-b" data-bench="${i}">${monArt(r.species, r.shiny)}<b>${esc(r.name)}</b></button>`).join('')}</div><button class="btn paper wide" id="sa-x">돌아가기</button>`;
+            panel.querySelectorAll('[data-bench]').forEach((x) => { x.onclick = () => act({ type: 'move', index, mega: keepMega, target: live[0]?.seat, bench: +x.dataset.bench }); });
+            panel.querySelector('#sa-x').onclick = () => renderPanel();
+            return;
+          }
+          return act({ type: 'move', index, mega: armed, target: live[0]?.seat, ...(bench[0] ? { bench: bench[0].i } : {}) });
+        }
         act({ type: 'move', index, mega: armed, target: live[0]?.seat });
       };
     });

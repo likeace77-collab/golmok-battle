@@ -555,7 +555,45 @@ const Fx = (() => {
   const above = (p, h = 120) => ({ x: p.x, y: Math.max(52 * u, p.y - h * u), foot: p.foot, r: p.r });
   const ground = (p) => ({ x: p.x, y: p.foot, foot: p.foot, r: p.r });
 
+  /* ---------- ⚡ 썬더: 노란 빛줄기가 엄청 빠르게 왔다 갔다 (질주 잔상) ---------- */
+  // zip: 빛나는 머리가 점들을 빠르게 오가며 꼬리를 남김. pts가 없으면 A·T 주변을 무작위로 왕복
+  function zip(A, T, { n = 8, dur = 700, delay = 0, w = 7, color = '#FFE45C', core = '#fffbe0', spread = 60, back = true } = {}) {
+    const P = [];
+    for (let i = 0; i <= n; i++) {
+      const at = (i % 2 === 0) === back ? A : T;
+      P.push({ x: at.x + rnd(-spread, spread) * u, y: at.y + rnd(-spread * .7, spread * .5) * u });
+    }
+    add(dur, (p) => {
+      const seg = p * n, k = Math.min(n - 1, Math.floor(seg)), f = seg - k;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.shadowColor = color; ctx.shadowBlur = 18 * u;
+      for (let j = Math.max(0, k - 2); j <= k; j++) { // 지나간 두 구간은 꼬리로
+        const a = P[j], b = P[j + 1], t = j === k ? f : 1, age = k - j + (1 - (j === k ? f : 1));
+        const x = lerp(a.x, b.x, t), y = lerp(a.y, b.y, t), al = Math.max(0, 1 - age * .45);
+        ctx.globalAlpha = al; ctx.strokeStyle = color; ctx.lineWidth = w * u * (j === k ? 1 : .6);
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(x, y); ctx.stroke();
+        ctx.strokeStyle = core; ctx.lineWidth = w * u * .35; ctx.stroke();
+      }
+      const a = P[k], b = P[k + 1]; ctx.globalAlpha = 1; ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(lerp(a.x, b.x, f), lerp(a.y, b.y, f), w * .9 * u, 0, 7); ctx.fill();
+    }, delay);
+    return delay + dur;
+  }
+  // 공격 자세 그림으로 바꾸고, 잔상을 남기며 번쩍번쩍 이동
+  function thunderPose(key, ms) {
+    const el = document.getElementById(`m-${key}`), img = el?.querySelector('image');
+    if (!img) return;
+    const href = img.getAttribute('href') || '';
+    if (/thunder\.webp$/.test(href)) { img.setAttribute('href', href.replace('thunder.webp', 'thunder-atk.webp')); later(() => img.setAttribute('href', href), ms); }
+    el.classList.add('th-blur'); later(() => el.classList.remove('th-blur'), ms);
+  }
+  const thSlash = (T, delay, n = 3) => { for (let i = 0; i < n; i++) slash(T, { delay: delay + i * 70, angle: rnd(-1.4, 1.4), len: 110, color: '#FFE45C', w: 6, dur: 200 }); };
+
   const MOVE_FX = {
+    finish(A, T, k, t) { thunderPose(k, 1300); act(k, 'dash', 900); zip(A, T, { n: 10, dur: 650, spread: 70 }); zip(T, T, { n: 8, dur: 420, delay: 600, spread: 55, w: 9 }); thSlash(T, 1000, 4); flash('#fff', 140, 1050, .7); flash('#FFE45C', 260, 1180, .45); shake(14, 420, 1060); bang(above(T, 80), '피니쉬!!', { delay: 1100, color: '#FFE45C', size: 38 }); return 1600; },
+    sideattack(A, T, k, t) { thunderPose(k, 1100); act(k, 'dash', 800); zip(A, T, { n: 4, dur: 360 }); slash(T, { delay: 340, angle: -.4, len: 120, color: '#FFE45C', w: 8 }); const side = { ...T, x: T.x + (k === 'me' ? 1 : -1) * 120 * u, y: T.y + 40 * u }; zip(T, side, { n: 3, dur: 300, delay: 460, back: false, spread: 20 }); burst('dust', side, { delay: 700, n: 10, dist: 50 }); bang(side, '💨', { delay: 700, size: 34 }); shake(9, 300, 360); return 1150; },
+    jabrush(A, T, k, t) { thunderPose(k, 1300); act(k, 'dash', 1100); zip(A, T, { n: 14, dur: 1050, spread: 55 }); for (let i = 0; i < 6; i++) { burst('spark', T, { delay: 150 + i * 150, n: 4, dist: 34, size: 6 }); } flash('#FFE45C', 120, 500, .3); shake(7, 700, 200); return 1300; },
+    thtackle(A, T, k, t) { thunderPose(k, 1000); act(k, 'lunge', 700); zip(A, T, { n: 3, dur: 300, spread: 20 }); comet(A, T, { color: '#FFE45C', size: 22, dur: 320, delay: 240, trail: 14 }); shockwave(T, '#FFE45C', { delay: 540 }); burst('rock', T, { delay: 560, n: 8, dist: 60 }); shake(16, 380, 540); return 1100; },
     // 불
     ember: (A, T, k, t) => { act(k, 'cast', 420); spray('flame', A, T, { n: 6, gap: 70, arc: 24, size: 8 }); burst('flame', T, { delay: 500, n: 6, dist: 34 }); return 850; },
     flame: (A, T, k, t) => { act(k, 'cast', 800); spray('flame', A, T, { n: 24, gap: 26, dur: 340, size: 10, grow: .7, spread: 18 }); tint(t, 'burn', 600, 350); return 1050; },
@@ -1471,6 +1509,15 @@ const Fx = (() => {
     const foe = target || (key === 'me' ? 'opp' : 'me');
     const A = { ...spot(key), key }, T = { ...spot(foe), key: foe };
     if (species === 'lumina' || species === 'silvia') return zFinish(species, A, T) + 200;
+    if (species === 'thunder') { // 분노의 질주 러쉬: 화면을 가로지르는 노란 빛이 끝없이
+      thunderPose(key, 3200); act(key, 'dash', 3000);
+      add(3000, (p) => { ctx.globalAlpha = .45 * Math.min(1, p * 4) * (1 - Math.max(0, p - .9) * 10); ctx.fillStyle = '#05060c'; ctx.fillRect(0, 0, W, H); });
+      for (let i = 0; i < 5; i++) zip(A, T, { n: 10, dur: 560, delay: i * 520, spread: 90, w: 8 });
+      zip({ x: 0, y: T.y }, { x: W, y: T.y }, { n: 16, dur: 2600, delay: 200, spread: 80, w: 5, color: '#FFB800' });
+      for (let i = 0; i < 14; i++) { thSlash(T, 250 + i * 190, 1); burst('spark', T, { delay: 250 + i * 190, n: 3, dist: 40 }); }
+      shake(10, 2600, 250); flash('#FFE45C', 300, 2800, .6); bang(above(T, 90), '분노의 질주 러쉬!!', { delay: 2700, color: '#FFE45C', size: 34 });
+      return 3300;
+    }
     const color = { fire: '#F2622E', water: '#2F7DE1', grass: '#3FA34D', elec: '#FFE45C', ice: '#7fe0f0', earth: '#C98F5E', wind: '#CFEDE1', poison: '#B86BE0', steel: '#D7DDE5', spirit: '#7A6BE0', fairy: '#F27FA5', normal: '#F5EBD0' }[type] || '#fff';
     zAura(A, color);
     beam(A, T, { delay: 760, color, core: '#fff', w: 36, dur: 520 });

@@ -336,7 +336,7 @@ function choose(b, s, action) {
   if (b.pending[s]) return { ok: false };
   if (action.mega && (action.type !== 'move' || !canMega(b, s))) return { ok: false };
   if (action.z && (action.type !== 'move' || !canZ(b, s))) return { ok: false };
-  b.pending[s] = { type: action.type, index: action.index, mega: !!action.mega, z: !!action.z, gmax: !!action.gmax, target: action.target };
+  b.pending[s] = { type: action.type, index: action.index, mega: !!action.mega, z: !!action.z, gmax: !!action.gmax, target: action.target, ...(Number.isInteger(action.bench) ? { bench: action.bench } : {}) };
   const ready = seats(b).every((i) => !b.needs[i] || b.pending[i]);
   return ready ? { ok: true, events: resolve(b) } : { ok: true, events: null };
 }
@@ -392,7 +392,8 @@ function runTurn(b, ev) {
     if (rush) msg(ev, `${mon.name}의 배달의민족! 신호등을 건너뛰고 먼저 출발했다!`);
     const quick = has(mon, 'shoes') && chance(b, 20) ? .5 : 0; // 운동화
     if (quick) useItem(b, o.s, mon, ev, '재빨리 먼저 움직인다!');
-    return { ...o, pri: mv.pri + ride + rush + quick, spe: speedOf(b, o.s), tie: rand(b) };
+    const swift = MONSTERS[mon.species].swift ? 50 : 0; // 썬더 신속: 선공기보다도 항상 먼저
+    return { ...o, pri: mv.pri + ride + rush + quick + swift, spe: speedOf(b, o.s), tie: rand(b) };
   });
   movers.sort((x, y) => y.pri - x.pri || y.spe - x.spe || x.tie - y.tie);
 
@@ -400,7 +401,7 @@ function runTurn(b, ev) {
     if (b.phase === 'over') break;
     const mon = activeOf(b, s);
     b.actor = s;
-    if (alive(mon)) useMove(b, s, a.index, ev, a.target, a.z);
+    if (alive(mon)) { mon._bench = a.bench; useMove(b, s, a.index, ev, a.target, a.z); }
     b.actor = null;
     if (checkOver(b, ev)) break;
   }
@@ -483,9 +484,22 @@ function scoreOf(b) {
     mons: sd.mons.map((m) => ({ species: m.species, name: m.name, shiny: !!m.shiny, costume: m.costume || undefined, mega: !!m.mega, dealt: m.dealt || 0, healed: m.healed || 0, kills: m.kills || 0, out: m.hp <= 0 })) }));
 }
 
+// 썬더 사이드 어택: 상대 대기석의 골목몬 하나(고른 것, 없으면 체력이 가장 적은 것)에게 발차기
+function sideKick(b, s, me, o, mv, ev) {
+  const sd = b.sides[o], act = sd.mons[sd.active];
+  const bench = sd.mons.map((m, i) => ({ m, i })).filter(({ m }) => m !== act && alive(m));
+  if (!bench.length) return;
+  const pick = bench.find(({ i }) => i === me._bench) || bench.sort((x, y) => x.m.hp / x.m.maxHp - y.m.hp / y.m.maxHp)[0];
+  const bm = pick.m, eff = effMon(mv.type, bm, me);
+  if (eff === 0) { msg(ev, `대기 중인 ${bm.name}에게는 발차기가 통하지 않았다!`); return; }
+  const dmg = Math.min(bm.hp, Math.max(1, Math.floor(damageOf(b, me, bm, mv, false, .85 + rand(b) * .15) * .75)));
+  bm.hp -= dmg; tally(b, o, bm, dmg);
+  ev.push({ t: 'bench', side: o, slot: pick.i, dmg, hp: bm.hp, text: `💨 발차기가 대기 중인 ${josa(bm.name, '에게')} 날아갔다! (${dmg} 피해${bm.hp <= 0 ? ', 쓰러졌다!' : ''})` });
+  if (bm.hp <= 0) { bm.hp = 0; tallyFaint(b, o, bm); }
+}
 function hurt(b, s, m, amount, ev, extra) {
   let dmg = Math.min(m.hp, Math.max(1, Math.floor(amount)));
-  if (extra?.moveType && m.aff >= 70 && !m.affUsed && dmg >= m.hp && m.hp > 1 && chance(b, m.aff >= 100 ? 25 : 15)) { // 친밀도: 주인을 위해 버팀
+  if (extra?.moveType && !extra.finish && m.aff >= 70 && !m.affUsed && dmg >= m.hp && m.hp > 1 && chance(b, m.aff >= 100 ? 25 : 15)) { // 친밀도: 주인을 위해 버팀
     m.affUsed = true; dmg = m.hp - 1;
     ev.push({ t: 'msg', text: `${josa(m.name, '은/는')} 주인을 슬프게 하고 싶지 않아서 버텼다! 💗` });
   }
@@ -713,6 +727,7 @@ function damageOf(b, atk, def, mv, crit, roll) {
   let effX = effMon(mv.type, def, atk);
   const R = b.rules;
   if (R?.inverse) effX = effX === 0 ? 2 : 1 / effX; // 역상성
+  if (mv.untilKO && effX === 0) effX = 1; // 분노의 질주 러쉬는 막을 수 없음
   dmg *= effX;
   if (R) {
     if (R.typeMul?.[mv.type]) dmg *= R.typeMul[mv.type];
@@ -1025,7 +1040,13 @@ function hitOne(b, s, me, o, mv, ev) {
     if (!heal(b, o, foe, foe.maxHp / 4, ev)) msg(ev, `${josa(foe.name, '은/는')} 이미 배가 부르다.`);
     return;
   }
-  const eff = effMon(mv.type, foe, me);
+  if (mv.finisher && alive(foe) && foe.hp <= foe.maxHp * mv.finisher / 100) { // 썬더 피니쉬: 체력이 조금 남은 상대는 타입·도구 무시하고 끝
+    ev.push({ t: 'msg', text: `⚡ 피니쉬!! ${josa(me.name, '은/는')} 눈에 보이지 않는 속도로 ${josa(foe.name, '을/를')} 끝냈다!` });
+    hurt(b, o, foe, isBoss(b, o) ? Math.min(foe.hp, foe.maxHp * .15) : foe.hp, ev, { eff: 1, moveType: mv.type, finish: 1 });
+    faintCheck(b, o, foe, ev);
+    return;
+  }
+  const eff = effMon(mv.type, foe, me) || (mv.untilKO ? 1 : 0);
   if (eff === 0) { msg(ev, `${foe.name}에게는 효과가 없는 것 같다...`); return; }
 
   if (mv.kamikaze) { // 돌연사-들이박기: 상대와 함께 사망
@@ -1035,7 +1056,7 @@ function hitOne(b, s, me, o, mv, ev) {
     suddenDeath(b, s, me, ev, `${josa(me.name, '은/는')} 충격을 이기지 못하고 함께 쓰러졌다!`);
     return;
   }
-  const hits = mv.hits ? randInt(b, mv.hits[0], mv.hits[1]) : 1;
+  const hits = mv.untilKO ? (isBoss(b, o) ? 12 : 60) : mv.hits ? randInt(b, mv.hits[0], mv.hits[1]) : 1; // 분노의 질주 러쉬: 쓰러질 때까지
   let total = 0, landed = 0;
   for (let i = 0; i < hits && alive(foe); i++) {
     const crit = (mv.critAll || rand(b) < (has(me, 'scope') ? (mv.crit ? 1 / 2 : 1 / 8) : (mv.crit ? 1 / 8 : 1 / 24))) && foe.species !== 'ppeondegi'; // 망원경, 뻔데기 단단한 껍질
@@ -1069,7 +1090,7 @@ function hitOne(b, s, me, o, mv, ev) {
     landed++;
     if (crit) msg(ev, '급소에 맞았다!');
   }
-  if (hits > 1) msg(ev, `${landed}번 맞았다!`);
+  if (mv.untilKO) msg(ev, `${landed}번이나 두들겨 팼다!!`); else if (hits > 1) msg(ev, `${landed}번 맞았다!`);
   if (landed && total > 0) { foe.hurtFrom.includes(me) || foe.hurtFrom.push(me); }
   if (landed && me.probation === foe && alive(me)) { me.probation = null; msg(ev, `집행유예 기간에 또 때렸다! ${josa(me.name, '은/는')} 같은 만큼 벌을 받는다!`); hurt(b, s, me, total, ev); }
   if (landed && mv.ohko && foe.hp <= 0) msg(ev, '마왕이 아이를 데려갔다...');
@@ -1093,6 +1114,7 @@ function hitOne(b, s, me, o, mv, ev) {
   }
   if (eff > 1) msg(ev, '효과가 굉장했다!');
   else if (eff < 1) msg(ev, '효과가 별로인 듯하다...');
+  if (landed && mv.side && alive(me)) sideKick(b, s, me, o, mv, ev); // 사이드 어택: 대기 중인 골목몬에게도
 
   if (landed) afterHit(b, s, me, o, foe, mv, total, ev);
   if (mv.type === 'fire' && foe.status === 'frz' && alive(foe)) {
