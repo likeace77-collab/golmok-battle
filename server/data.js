@@ -113,10 +113,10 @@ const MOVES = {
   foxcharm:  M('유혹하기·꼬리치기', 'fairy', 'x', 0, 100, 10, { foxcharm: true, sig: true, d: '상대를 유혹해 공격·명중률·특공을 떨어뜨리고 유혹 표식을 남긴다 (표식이 있으면 30% 확률로 공격 실패). 표식이 있는 상대에게 쓰면 꼬리치기! 표식을 없애고 50 피해 + 마음의 상처(10% 확률로 풀죽음, 매 턴 25 피해)' }),
   swish:     M('살랑살랑', 'fairy', 'x', 0, 100, 10, { sway: true, sig: true, d: '살랑살랑 꼬리를 흔든다. 50% 확률로 상대를 재우고, 아니면 상대 명중률을 2단계 떨어뜨린다' }),
   foxscratch:M('여우 할퀴기', 'normal', 'p', 25, 100, 15, { hits: [2, 5], sig: true, d: '상대를 마구 할퀸다 (2~5번 연속 공격)' }),
-  finish:    M('피니쉬', 'elec', 'p', 40, 100, 5, { finisher: 15, sig: true, d: '체력이 15% 이하로 남은 상대를 타입·도구와 상관없이 그 자리에서 쓰러뜨린다. 그보다 많이 남았으면 그냥 가볍게 친다' }),
-  sideattack:M('사이드 어택', 'earth', 'p', 70, 100, 10, { side: true, sig: true, d: '상대 골목몬을 차고, 대기 중인 상대 골목몬 하나를 골라 발차기를 날린다 (대기 골목몬은 피해 3/4)' }),
+  finish:    M('피니쉬', 'elec', 'p', 40, 100, 5, { finisher: 30, sig: true, d: '체력이 30% 이하로 남은 상대를 타입·도구와 상관없이 그 자리에서 쓰러뜨린다. 그보다 많이 남았으면 그냥 가볍게 친다' }),
+  sideattack:M('사이드 어택', 'earth', 'p', 70, 100, 10, { side: true, sig: true, d: '상대 골목몬을 차고, 대기 중인 상대 골목몬 하나를 골라 발차기를 날린다 (둘 다 같은 피해)' }),
   jabrush:   M('잽 러쉬', 'elec', 'p', 20, 100, 15, { hits: [3, 6], sig: true, d: '빛처럼 질주하며 상대를 3~6번 연속으로 때린다' }),
-  thtackle:  M('태클', 'earth', 'p', 90, 95, 10, { fl: 30, sig: true, d: '상대를 강하게 들이받는다. 30% 확률로 넘어뜨려 이번 턴에 공격하지 못하게 한다 (풀죽음)' }),
+  thtackle:  M('태클', 'earth', 'p', 100, 95, 10, { fl: 30, sig: true, d: '상대를 강하게 들이받는다. 30% 확률로 넘어뜨려 이번 턴에 공격하지 못하게 한다 (풀죽음)' }),
   foxrain:   M('여우비 내리기', 'water', 's', 85, 100, 10, { foe: { atk: -1 }, sc: 30, d: '해가 떠 있는데 비가 쏟아진다. 30% 확률로 상대 공격 하락' }),
   backflow:  M('역류', 'water', 's', 80, 100, 10, { rainBoost: true, d: '소나기 중에는 위력 2배' }),
   tangle:    M('엉겨붙기', 'spirit', 'x', 0, 90, 10, { seed: 'any', d: '매 턴 상대 체력을 빼앗음' }),
@@ -210,16 +210,16 @@ const MOVES = {
   shadowdive:M('섀도다이브', 'spirit', 'p', 90, 95, 10, { dive: true, breakGuard: true, steal: true, d: '골목길 바닥의 어둠 속으로 들어가 1턴 숨은 뒤(그동안 공격을 안 받음) 공격한다. 막기를 뚫고, 상대 도구를 빼앗는다' }),
   featherdance: M('깃털댄스', 'wind', 'p', 40, 100, 8, { self: { spe: 2 }, selfAfter: true, d: '깃털을 날려 공격하고 몸을 가볍게 해 스피드를 2단계 올린다' }),
   // ── 신캐 공모전 출시작: 선생님 (만든 사람 pshrocket) ──
-  factorize: M('수학-인수분해', 'normal', 'p', 30, 80, 5, { hits: [2, 5], d: '상대에게 여러 번의 참격을 내 산산조각 낸다 (2~5번 연속 공격)' }),
-  linearcut: M('수학-일차함수 참격', 'normal', 'p', 100, 70, 1, { d: '파워를 담은 1방. 하지만 정직하게 딱 한 번의 참격이라 피하기 쉽다' }),
-  ouga:      M('국어-오우가·친구 부르기', 'normal', 'p', 75, 100, 3, { ouga: true, d: '친구 수석·송죽·달 중 하나를 랜덤으로 불러 공격. 물: 물 공격 / 바위: 땅 공격 / 소나무: 풀 공격, 체력 1/3 회복 / 대나무: 풀 공격, 양분 빼앗기 / 달: 노말, 막기 뚫음' }),
+  factorize: M('수학-인수분해', 'normal', 'p', 30, 85, 10, { hits: [2, 5], d: '상대에게 여러 번의 참격을 내 산산조각 낸다 (2~5번 연속 공격)' }),
+  linearcut: M('수학-일차함수 참격', 'normal', 'p', 110, 80, 5, { d: '파워를 담은 1방. 하지만 정직하게 딱 한 번의 참격이라 피하기 쉽다' }),
+  ouga:      M('국어-오우가·친구 부르기', 'normal', 'p', 80, 100, 10, { ouga: true, d: '친구 수석·송죽·달 중 하나를 랜덤으로 불러 공격. 물: 물 공격 / 바위: 땅 공격 / 소나무: 풀 공격, 체력 1/3 회복 / 대나무: 풀 공격, 양분 빼앗기 / 달: 노말, 막기 뚫음' }),
   trial:     M('사회-법과 재판·폭행죄', 'normal', 'p', 0, null, 3, { trial: true, d: '나에게 피해를 준 상대에게만 쓸 수 있다. 재판을 열어 집행유예(다시 때리면 그만큼 돌려받음) / 벌금(체력 절반 몰수) / 징역(5턴 정지)의 형이 내려진다' }),
-  heateq:    M('과학-열평형', 'normal', 'p', 0, null, 3, { heatEq: true, d: '자신과 상대의 체력을 같게 만든다 (둘의 체력 평균으로)' }),
+  heateq:    M('과학-열평형', 'normal', 'p', 0, null, 5, { heatEq: true, d: '자신과 상대의 체력을 같게 만든다 (둘의 체력 평균으로)' }),
   recursion: M('영어-재귀대명사·재귀용법', 'normal', 'p', 0, null, 5, { mirror: true, d: '상대가 나한테 가장 마지막으로 썼던 기술을 돌려준다' }),
   erlking:   M('음악-슈베르트·마왕', 'normal', 'p', 0, 20, 3, { ohko: true, d: '마왕이 아이를 데려간다. 명중하면(20%) 상대를 즉사시킴' }),
-  whileloop: M('정보-while·죽을때까지', 'normal', 'p', 10, 90, 6, { loop: true, d: 'while문을 걸어, 선생님이 쓰러지기 전까지 상대는 매 턴 10 피해를 입는다' }),
+  whileloop: M('정보-while·죽을때까지', 'normal', 'p', 10, 90, 10, { loop: true, d: 'while문을 걸어, 선생님이 쓰러지기 전까지 상대는 매 턴 10 피해를 입는다' }),
   techup:    M('기가-기술의 발전', 'normal', 'x', 0, null, 1, { techUp: true, self_: true, d: '대기 중인 우리 편 전기 타입 골목몬 하나를 메가진화시킨다 (나오면 바로 메가진화)' }),
-  shuttle:   M('체육-셔틀런', 'normal', 'p', 0, 100, 2, { pctDmg: 1 / 3, d: '상대 최대 체력의 1/3을 깎는다' }),
+  shuttle:   M('체육-셔틀런', 'normal', 'p', 0, 100, 5, { pctDmg: 1 / 3, d: '상대 최대 체력의 1/3을 깎는다' }),
   // 보통
   tackle:    M('몸통 박치기', 'normal', 'p', 50, 100, 30, { d: '기본 공격' }),
   guard:     M('막기', 'normal', 'x', 0, null, 10, { protect: true, pri: 3, self_: true, d: '이번 턴 공격을 막음 (연속 사용 시 실패하기 쉬움)' }),
@@ -798,6 +798,11 @@ const BUFFS2 = {
   ppeondegi: [5, 0, 0, 10, 0, 5], hotteok: [5, 5, 5, 0, 0, 0], fan: [5, 0, 5, 5, 0, 0], sigung: [5, 5, 5, 0, 0, 0],
   bonaeng: [5, 5, 0, 0, 5, 0], jangseung: [5, 5, 0, 0, 5, 0], kkangtong: [5, 5, 0, 0, 5, 0], yangmeori: [5, 5, 0, 5, 0, 0],
 };
+// 3차 상향 (11/16 승률 테스트 꼴찌권: 선생님 22% · 단조 33% · 시궁이 39%)
+const BUFFS3 = {
+  seonsaeng: [0, 50, 40, 20, 55, 55], danjo: [25, 35, 25, 0, 25, 30], sigung: [15, 15, 15, 10, 15, 10],
+};
+for (const [id, add] of Object.entries(BUFFS3)) BUFFS2[id] = (BUFFS2[id] || [0, 0, 0, 0, 0, 0]).map((v, i) => v + add[i]);
 for (const [id, add] of Object.entries(BUFFS2)) BUFFS[id] = (BUFFS[id] || [0, 0, 0, 0, 0, 0]).map((v, i) => v + add[i]);
 for (const [id, add] of Object.entries(BUFFS)) ['hp', 'atk', 'def', 'spa', 'spd', 'spe'].forEach((k, i) => { MONSTERS[id].base[k] += add[i]; });
 // 친구가 정한 특성들

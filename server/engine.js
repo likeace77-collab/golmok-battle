@@ -492,7 +492,7 @@ function sideKick(b, s, me, o, mv, ev) {
   const pick = bench.find(({ i }) => i === me._bench) || bench.sort((x, y) => x.m.hp / x.m.maxHp - y.m.hp / y.m.maxHp)[0];
   const bm = pick.m, eff = effMon(mv.type, bm, me);
   if (eff === 0) { msg(ev, `대기 중인 ${bm.name}에게는 발차기가 통하지 않았다!`); return; }
-  const dmg = Math.min(bm.hp, Math.max(1, Math.floor(damageOf(b, me, bm, mv, false, .85 + rand(b) * .15) * .75)));
+  const dmg = Math.min(bm.hp, Math.max(1, Math.floor(damageOf(b, me, bm, mv, false, .85 + rand(b) * .15))));
   bm.hp -= dmg; tally(b, o, bm, dmg);
   ev.push({ t: 'bench', side: o, slot: pick.i, dmg, hp: bm.hp, text: `💨 발차기가 대기 중인 ${josa(bm.name, '에게')} 날아갔다! (${dmg} 피해${bm.hp <= 0 ? ', 쓰러졌다!' : ''})` });
   if (bm.hp <= 0) { bm.hp = 0; tallyFaint(b, o, bm); }
@@ -1042,7 +1042,7 @@ function hitOne(b, s, me, o, mv, ev) {
   }
   if (mv.finisher && alive(foe) && foe.hp <= foe.maxHp * mv.finisher / 100) { // 썬더 피니쉬: 체력이 조금 남은 상대는 타입·도구 무시하고 끝
     ev.push({ t: 'msg', text: `⚡ 피니쉬!! ${josa(me.name, '은/는')} 눈에 보이지 않는 속도로 ${josa(foe.name, '을/를')} 끝냈다!` });
-    hurt(b, o, foe, isBoss(b, o) ? Math.min(foe.hp, foe.maxHp * .15) : foe.hp, ev, { eff: 1, moveType: mv.type, finish: 1 });
+    hurt(b, o, foe, isBoss(b, o) ? Math.min(foe.hp, foe.maxHp * .3) : foe.hp, ev, { eff: 1, moveType: mv.type, finish: 1 });
     faintCheck(b, o, foe, ev);
     return;
   }
@@ -1051,7 +1051,7 @@ function hitOne(b, s, me, o, mv, ev) {
 
   if (mv.kamikaze) { // 돌연사-들이박기: 상대와 함께 사망
     msg(ev, `${josa(me.name, '은/는')} 온몸을 던져 ${foe.name}에게 들이박았다!`);
-    hurt(b, o, foe, isBoss(b, o) ? Math.min(foe.hp, foe.maxHp * .15) : foe.hp, ev, { eff: 1, moveType: mv.type, kamikaze: 1 });
+    hurt(b, o, foe, isBoss(b, o) ? Math.min(foe.hp, foe.maxHp * .3) : foe.hp, ev, { eff: 1, moveType: mv.type, kamikaze: 1 });
     faintCheck(b, o, foe, ev);
     suddenDeath(b, s, me, ev, `${josa(me.name, '은/는')} 충격을 이기지 못하고 함께 쓰러졌다!`);
     return;
@@ -1657,6 +1657,7 @@ function easyAction(b, s) {
 
 // 기술 하나의 예상 피해. 면역이면 0.
 function rawDamage(b, atk, def, mv) {
+  if (mv.finisher && def.hp > 0 && def.hp <= def.maxHp * mv.finisher / 100) return def.hp; // 피니쉬로 끝낼 수 있음
   if (mv.cat === 'x' || effOf(mv.type, def.types) === 0) return 0;
   const hits = mv.hits ? (mv.hits[0] + mv.hits[1]) / 2 : 1;
   return damageOf(b, atk, def, mv, false, .92) * hits;
@@ -1764,7 +1765,7 @@ function botAction(b, s, level = 1) {
   if (a && a.type === 'move' && level >= 1 && b.phase === 'choose') {
     const me = activeOf(b, s), fi = me.moves.findIndex((x) => MOVES[x.id].forge && x.pp > 0);
     const t = tierOf(me), want = t < TIERS.base ? (level >= 2 ? 65 : 45) : 20; // 네더라이트 뒤로는 가끔만
-    if (fi >= 0 && t < (MONSTERS[me.species].tiers || 0) && me.hp > me.maxHp * .5 && chance(b, want)) return { type: 'move', index: fi, ...(multi(b) ? { target: o } : {}) };
+    if (fi >= 0 && legalActions(b, s).some((x) => x.type === 'move' && x.index === fi) && t < (MONSTERS[me.species].tiers || 0) && me.hp > me.maxHp * .5 && chance(b, want)) return { type: 'move', index: fi, ...(multi(b) ? { target: o } : {}) };
   }
   if (a && a.type === 'move' && level >= 1 && canZ(b, s)) {
     // Z기술: 쓰러뜨릴 수 있거나, 판이 무르익었을 때 씁니다.
@@ -1798,14 +1799,15 @@ function smartMoves(species, enemyTypes) {
   };
   const attacks = sp.moves.filter((m) => MOVES[m].cat !== 'x').sort((x, y) => worth(y) - worth(x));
   const chosen = [];
-  const sigMove = MOVES[sp.sig].cat !== 'x' ? sp.sig : null;
+  const late = MOVES[sp.sig].finisher ? sp.sig : null; // 피니쉬처럼 마무리용 전용기는 주력 셋을 고른 뒤 마지막 칸에
+  const sigMove = MOVES[sp.sig].cat !== 'x' && !late ? sp.sig : null;
   for (const m of [...(sigMove ? [sigMove] : []), ...attacks]) {
     if (chosen.length >= 3) break;
     if (!chosen.includes(m) && !chosen.some((c) => MOVES[c].type === MOVES[m].type)) chosen.push(m);
   }
   const rank = (id) => { const m = MOVES[id]; return m.sig ? 6 : m.self ? 5 : m.heal ? 4 : m.st ? 3 : m.seed || m.hazard ? 2 : m.weather ? 1 : 0; };
   const extras = sp.moves.filter((m) => MOVES[m].cat === 'x' && !MOVES[m].protect).sort((x, y) => rank(y) - rank(x));
-  return [...chosen, ...extras, ...attacks.filter((m) => !chosen.includes(m))].slice(0, 4);
+  return [...new Set([...chosen, ...(late ? [late] : []), ...extras, ...attacks.filter((m) => !chosen.includes(m))])].slice(0, 4);
 }
 
 // 봇 도구: 공격형이면 공격 도구, 아니면 버티는 도구 중에서 고름
