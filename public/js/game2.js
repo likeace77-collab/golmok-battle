@@ -858,3 +858,39 @@ document.addEventListener('click', (e) => {
   if (here === 'stones') return;
   showStones(again ? () => again() : showLobby);
 });
+
+/* ---------- 💡 요청사항 게시판 ---------- */
+const RQ = { sort: 'hot', st: { new: ['접수', '#9bb4d6'], review: ['검토 중', '#4FA3FF'], doing: ['만드는 중', '#FFB020'], done: ['반영 완료', '#2fbf71'], no: ['보류', '#b8b8b8'] } };
+async function showRequests() {
+  G.screen = 'requests'; app.className = '';
+  app.innerHTML = `${topbar('💡 요청사항')}<p class="wait">불러오는 중…</p>`; app.querySelector('#back').onclick = showEvents;
+  try { RQ.v = await api('GET', '/api/requests'); } catch (e) { return toast(e.message); }
+  if (G.screen === 'requests') rqDraw();
+}
+function rqDraw() {
+  const v = RQ.v, draft = app.querySelector('#rq-text')?.value ?? RQ.draft ?? '';
+  const sorted = [...v.list].sort(RQ.sort === 'new' ? (a, b) => b.at - a.at : RQ.sort === 'mine' ? (a, b) => b.at - a.at : (a, b) => (b.likes - a.likes) || (b.at - a.at))
+    .filter((r) => RQ.sort === 'mine' ? r.mine : RQ.sort === 'done' ? r.status === 'done' || r.status === 'doing' : true);
+  app.innerHTML = `${topbar('💡 요청사항')}
+    <section class="panel rq-write"><h2>원하는 시스템을 자유롭게!</h2>
+      <p class="muted">새 골목몬, 게임 모드, 불편한 점, 바꿨으면 하는 것… 무엇이든 좋아요. 개발자가 직접 읽고 답해 드려요.</p>
+      <textarea id="rq-text" maxlength="500" rows="4" placeholder="예) 친구랑 같이 하는 협동 던전이 있으면 좋겠어요!">${esc(draft)}</textarea>
+      <div class="rq-row"><small id="rq-n">${[...draft].length}/500</small><button class="btn" id="rq-send">✉️ 요청 보내기</button></div></section>
+    <nav class="rq-tabs">${[['hot', '🔥 인기순'], ['new', '🆕 최신순'], ['done', '🛠️ 반영'], ['mine', '✍️ 내 요청']].map(([k, n]) => `<button data-sort="${k}" class="${RQ.sort === k ? 'on' : ''}">${n}</button>`).join('')}</nav>
+    <div class="rq-list">${sorted.map((r) => { const [sn, sc] = RQ.st[r.status] || RQ.st.new; return `<article class="rq-card${r.mine ? ' mine' : ''}">
+      <header><b>${esc(r.user)}</b><small>${dateStr(r.at)}</small><em class="rq-st" style="--c:${sc}">${sn}</em></header>
+      <p>${esc(r.text)}</p>
+      ${r.reply ? `<div class="rq-reply"><b>🛠️ 개발자</b> ${esc(r.reply)}</div>` : ''}
+      <footer><button class="rq-like${r.liked ? ' on' : ''}" data-like="${r.id}">${r.liked ? '💖' : '🤍'} 나도 원해요 <b>${r.likes}</b></button>
+        ${r.mine || v.dev ? `<button class="btn small paper" data-del="${r.id}">지우기</button>` : ''}</footer>
+      ${v.dev ? `<div class="rq-dev"><select data-st="${r.id}">${Object.entries(RQ.st).map(([k, [n]]) => `<option value="${k}" ${k === r.status ? 'selected' : ''}>${n}</option>`).join('')}</select><input data-rp="${r.id}" maxlength="300" placeholder="답변 (선택)" value="${esc(r.reply)}"><button class="btn small" data-save="${r.id}">저장</button></div>` : ''}
+    </article>`; }).join('') || `<p class="wait">${RQ.sort === 'mine' ? '아직 보낸 요청이 없어요.' : '아직 요청이 없어요. 첫 요청을 남겨 보세요!'}</p>`}</div>`;
+  app.querySelector('#back').onclick = showEvents;
+  const ta = app.querySelector('#rq-text'); ta.oninput = () => { RQ.draft = ta.value; app.querySelector('#rq-n').textContent = `${[...ta.value].length}/500`; };
+  const run = async (url, body, msg) => { try { RQ.v = await api('POST', url, body); if (msg) toast(msg); rqDraw(); } catch (e) { toast(e.message); } };
+  app.querySelector('#rq-send').onclick = async () => { const text = ta.value.trim(); if ([...text].length < 5) return toast('5글자 이상 적어 주세요.'); RQ.draft = ''; ta.value = ''; RQ.sort = 'new'; await run('/api/requests', { text }, '💡 요청을 보냈어요! 고마워요'); };
+  app.querySelectorAll('[data-sort]').forEach((b) => { b.onclick = () => { RQ.sort = b.dataset.sort; rqDraw(); }; });
+  app.querySelectorAll('[data-like]').forEach((b) => { b.onclick = () => { b.classList.add('pop'); run('/api/requests/like', { id: b.dataset.like }); }; });
+  app.querySelectorAll('[data-del]').forEach((b) => { b.onclick = () => { if (confirm('이 요청을 지울까요?')) run('/api/requests/delete', { id: b.dataset.del }, '지웠어요.'); }; });
+  app.querySelectorAll('[data-save]').forEach((b) => { b.onclick = () => run('/api/requests/status', { id: b.dataset.save, status: app.querySelector(`[data-st="${b.dataset.save}"]`).value, reply: app.querySelector(`[data-rp="${b.dataset.save}"]`).value }, '저장했어요. 요청한 사람에게 알림이 가요.'); });
+}

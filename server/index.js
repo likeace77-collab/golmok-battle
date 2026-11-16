@@ -791,6 +791,42 @@ async function progressApi(req, res, route, auth, user) {
     const got = first ? P.grant(user, { gp: 1000 }) : [];
     return done({ got });
   }
+  /* 💡 요청사항 게시판: 원하는 시스템을 자유롭게 적고, 다른 사람 글에 「나도 원해요」 */
+  if (route.startsWith('GET /api/requests') || route.startsWith('POST /api/requests')) {
+    const RQ_ST = ['new', 'review', 'doing', 'done', 'no'];
+    const list = (db.requests ||= []);
+    const view = () => ({ dev: isDev(user), list: list.map((r) => ({ id: r.id, user: r.user, text: r.text, at: r.at, likes: r.likes.length, liked: r.likes.includes(auth.key), mine: r.key === auth.key, status: r.status, reply: r.reply || '', replyAt: r.replyAt || 0 })) });
+    const find = () => list.find((r) => r.id === String(body.id || ''));
+    if (route === 'GET /api/requests') return json(res, 200, view());
+    if (route === 'POST /api/requests') {
+      const text = cut(body.text, 500);
+      if ([...text].length < 5) return json(res, 400, { error: '5글자 이상 적어 주세요.' });
+      const today = Date.now() - 864e5;
+      if (list.filter((r) => r.key === auth.key && r.at > today).length >= 5) return json(res, 400, { error: '요청은 하루에 5개까지 올릴 수 있어요.' });
+      list.unshift({ id: `q${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, key: auth.key, user: user.name, text, at: Date.now(), likes: [], status: 'new' });
+      if (list.length > 500) list.length = 500;
+      save(); return json(res, 200, view());
+    }
+    const r = find(); if (!r) return json(res, 404, { error: '없는 요청이에요.' });
+    if (route === 'POST /api/requests/like') { const i = r.likes.indexOf(auth.key); if (i >= 0) r.likes.splice(i, 1); else r.likes.push(auth.key); save(); return json(res, 200, view()); }
+    if (route === 'POST /api/requests/delete') {
+      if (r.key !== auth.key && !isDev(user)) return json(res, 403, { error: '내 요청만 지울 수 있어요.' });
+      list.splice(list.indexOf(r), 1); save(); return json(res, 200, view());
+    }
+    if (route === 'POST /api/requests/status') {
+      if (!isDev(user)) return json(res, 403, { error: '개발자만 할 수 있어요.' });
+      const st = String(body.status || ''); if (!RQ_ST.includes(st)) return json(res, 400, { error: '상태를 골라 주세요.' });
+      const reply = cut(body.reply, 300), changed = st !== r.status || reply !== (r.reply || '');
+      r.status = st; r.reply = reply; if (changed) r.replyAt = Date.now();
+      const au = db.users[r.key];
+      if (changed && au && r.key !== auth.key) {
+        const nm = { new: '접수', review: '검토 중', doing: '만드는 중', done: '반영 완료', no: '보류' }[st];
+        sendMail(au, { from: '골목대전 개발자', title: `💡 내 요청이 「${nm}」이 됐어요!`, body: `「${[...r.text].slice(0, 40).join('')}${[...r.text].length > 40 ? '…' : ''}」${reply ? `\n\n개발자 답변: ${reply}` : ''}` });
+        if (online.has(r.key)) toast(r.key, `💡 내 요청이 「${nm}」이 됐어요!`); else notices.set(r.key, `💡 내 요청이 「${nm}」이 됐어요!`);
+      }
+      save(); return json(res, 200, view());
+    }
+  }
   if (route === 'POST /api/sunfish/start') { user.sunfishRun = Date.now(); save(); return json(res, 200, { ok: true }); }
   if (route === 'POST /api/sunfish/clear') {
     const size = Number(body.size);

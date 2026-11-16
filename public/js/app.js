@@ -2,6 +2,7 @@
 const EVENTS = [
   { id: 'contest', title: '신캐 만들기 공모전', ends: Date.parse('2026-11-13T23:59:59+09:00'), period: '11월 13일(금)까지', desc: '나만의 골목몬을 만들어 올려 주세요! 우승작은 실제 게임에 출시되고, 만든 사람에게 그 골목몬의 신화 등급 칭호를 드려요.', open: () => showContest() },
   { id: 'sunfish', title: '미니게임: 개복치 키우기', period: '상시', desc: '해파리를 먹여 개복치를 300cm까지 키워 보세요. 처음 성공하면 골목몬 등신을 무료로!', open: () => showSunfish() },
+  { id: 'requests', title: '💡 요청사항', period: '상시', desc: '이런 시스템이 있으면 좋겠다! 원하는 걸 자유롭게 적어 주세요. 다른 사람 요청에 「나도 원해요」를 누르면 많이 원하는 것부터 개발자가 봐요.', open: () => showRequests() },
   { id: 'survey', title: '설문조사', period: '상시', desc: '지금 게임이 만족스러운지, 어떤 시스템이 생겼으면 좋겠는지 알려 주세요. 처음 답하면 1,000GP!', open: () => showSurvey() },
 ];
 const liveEvents = () => EVENTS.filter((e) => !e.ends || Date.now() <= e.ends);
@@ -930,7 +931,7 @@ function showEvents() {
   const dday = (t) => { if (Date.now() > t) return '마감'; const d = Math.ceil((t - Date.now()) / 86400000) - 1; return d > 0 ? `D-${d}` : 'D-DAY'; }; // 마감일 자정 기준
   app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>EVENT</h1></div>
     ${EVENTS.length ? EVENTS.map((e) => `<button class="ev-card ev-${e.id}" data-ev="${e.id}">
-      <span class="ev-badge ${e.ends && Date.now() > e.ends ? 'off' : ''}">${e.ends ? dday(e.ends) : e.id === 'sunfish' ? (G.user.sunfish ? '클리어' : 'GAME') : (G.user.surveyDone ? '답함' : 'NEW')}</span>
+      <span class="ev-badge ${e.ends && Date.now() > e.ends ? 'off' : ''}">${e.ends ? dday(e.ends) : e.id === 'sunfish' ? (G.user.sunfish ? '클리어' : 'GAME') : e.id === 'requests' ? 'OPEN' : (G.user.surveyDone ? '답함' : 'NEW')}</span>
       <h2>${esc(e.title)}</h2><small>${esc(e.period)}</small>
       <p>${esc(e.desc)}</p>
       <b class="ev-go">자세히 보기 ›</b></button>`).join('')
