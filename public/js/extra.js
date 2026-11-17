@@ -304,7 +304,7 @@ function rpSeek(i, play = RP.play) {
   const tok = ++RP.tok; RP.i = i; RP.play = play; RP.anim = false;
   Battle.stop();
   Battle.enter({ t: 'battle', view: rpViewAt(i), spectator: true, practice: true, replay: true });
-  rpExitBtn(i < N);
+  rpExitBtn(true); // 끝까지 봐도 위쪽 나가기 버튼은 남김
   rpBarSync();
   if (play) rpLoop(tok);
 }
@@ -315,7 +315,7 @@ async function rpStep(tok) { // 다음 한 턴을 연출과 함께
   await Battle.whenIdle();
   if (tok !== RP.tok) return false;
   RP.anim = false; RP.i++; rpBarSync();
-  if (RP.i >= r.turns.length) rpExitBtn(false);
+  rpExitBtn(true);
   return true;
 }
 async function rpLoop(tok) {

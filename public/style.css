@@ -2360,3 +2360,6 @@ body:has(.rp-bar) #toast { bottom: 150px; z-index: 90; }
 .nick-in input { width: 100%; box-sizing: border-box; border: 3px solid #1a1433; border-radius: 12px; padding: 10px 56px 10px 12px; font: inherit; font-size: 18px; font-weight: 800; }
 .nick-in small { position: absolute; right: 12px; top: 50%; translate: 0 -50%; opacity: .6; } .nick-in small.over { color: #d62839; opacity: 1; font-weight: 800; }
 .box-card b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; display: block; }
+/* 리플레이 결과 화면: 아래 조작 막대(rp-bar) 위로 내용이 올라오게, 나가기 버튼은 결과 화면 위에 */
+.result.rp-res { padding-bottom: 170px; }
+.rp-exit { z-index: 90; }

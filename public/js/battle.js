@@ -898,7 +898,8 @@ const Battle = (() => {
       <button class="btn" id="to-lobby">로비로 돌아가기</button>`;
     app.appendChild(div);
     div.querySelector('#to-lobby').onclick = () => { view = null; showLobby(); };
-    if (G.replaying) { document.querySelector('.rp-exit')?.remove(); div.querySelector('#to-lobby').textContent = '리플레이 끝! 돌아가기'; } // 리플레이가 끝나면 위쪽 나가기 버튼은 치움
+    // 리플레이: 결과 화면이 아래 조작 막대에 가려지지 않게 띄우고, 위쪽 나가기 버튼도 그대로 둠 (0턴 기권 대전도 나갈 수 있게)
+    if (G.replaying) { div.classList.add('rp-res'); div.querySelector('#to-lobby').textContent = '리플레이 끝! 돌아가기'; if (typeof rpExitBtn === 'function' && !document.querySelector('.rp-exit')) rpExitBtn(true); }
   }
 
   /* ---------- 응원·이모티콘 ---------- */
