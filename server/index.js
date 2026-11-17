@@ -224,6 +224,8 @@ const secretIn = (team) => team.filter((m) => Data.BANNED.includes(m.species)).m
 const SECRET_TEXT = '공개 전 골목몬은 다른 사람과의 대전에 데려갈 수 없습니다. 덱에서 빼 주세요.';
 const BAN_TEXT = (names) => `${names.join(', ')}${names.length > 1 ? '는' : '는'} 지금 테스트 중이라 쓸 수 없습니다. 덱에서 빼 주세요.`;
 
+const NICK_MAX = 8;
+const validNick = (s) => [...s].length <= NICK_MAX && !/[\u0000-\u001f<>&"'`\\]/.test(s);
 function validTeam(t) {
   if (!Array.isArray(t) || t.length < 3 || t.length > 6) return null;
   const seen = new Set(), out = [];
@@ -235,7 +237,10 @@ function validTeam(t) {
     if (!mv.every((id) => sp.moves.includes(id))) return null;
     seen.add(m.species);
     const item = Data.ITEMS[m.item] ? m.item : undefined; // 도구 (없거나 모르는 도구면 빈손)
-    out.push({ species: m.species, moves: mv, ...(item ? { item } : {}) });
+    // 별명: 8자까지. 비었거나 원래 이름과 같으면 저장하지 않음
+    const nick = m.nick == null ? '' : String(m.nick).trim();
+    if (!validNick(nick)) return null;
+    out.push({ species: m.species, moves: mv, ...(item ? { item } : {}), ...(nick && nick !== sp.n ? { nick } : {}) });
   }
   return out;
 }
@@ -444,7 +449,7 @@ async function api(req, res, url) {
   if (route === 'PUT /api/decks') {
     const body = await readBody(req);
     const decks = validDecks(body.decks);
-    if (!decks) return json(res, 400, { error: '덱은 1개 이상, 이름은 12자 이내, 골목몬은 서로 다른 3~6마리, 기술은 1~4개여야 합니다.' });
+    if (!decks) return json(res, 400, { error: '덱은 1개 이상, 이름은 12자 이내, 골목몬은 서로 다른 3~6마리, 기술은 1~4개, 골목몬 별명은 8자 이내(특수문자 < > & " \' 제외)여야 합니다.' });
     const banned = bannedIn(user, decks.flatMap((d) => d.team)).filter((n, i, a) => a.indexOf(n) === i);
     if (banned.length) {
       // 예전에 넣어 둔 덱은 그대로 둘 수 있게, 새로 넣은 경우만 막습니다.

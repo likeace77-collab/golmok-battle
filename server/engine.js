@@ -38,7 +38,7 @@ function makeMon(spec) {
   const sp = MONSTERS[spec.species];
   const stats = calcStats(sp.base);
   return {
-    species: spec.species, name: sp.n, types: sp.types, stats, mega: false,
+    species: spec.species, name: spec.nick || sp.n, nick: spec.nick || null, types: sp.types, stats, mega: false,
     hp: stats.hp, maxHp: stats.hp,
     status: null, statusTurns: 0, item: ITEMS[spec.item] ? spec.item : null, itemUsed: false,
     moves: spec.moves.map((id) => ({ id, pp: MOVES[id].pp })),
@@ -176,9 +176,9 @@ function doMega(b, s, ev) {
   m.stats = calcStats(base);
   m.maxHp = m.stats.hp + tierHp(m);
   m.hp += m.maxHp - oldMax;
-  m.name = sp.mega.n; m.mega = true;
+  m.name = m.nick || sp.mega.n; m.mega = true; // 별명이 있으면 메가진화해도 별명 그대로
   b.sides[s].megaUsed = true;
-  ev.push({ t: 'mega', side: s, mon: publicMon(m), text: `${josa(oldName, '이/가')} 메가진화했다! ${m.name}!` });
+  ev.push({ t: 'mega', side: s, mon: publicMon(m), text: `${josa(oldName, '이/가')} 메가진화했다! ${sp.mega.n}!` });
   if (m.species === DS && m.thirst != null) { m.thirst = null; ev.push({ t: 'thirst', side: s, v: null, text: '바다의 왕이 되어 더는 목마르지 않다! 죽을 확률도 절반이 되었다!' }); }
 }
 

@@ -804,3 +804,15 @@ test('등신: 돌연사·갈증, 전용기 10개', () => {
   for (let seed = 1; seed < 30; seed++) { const b = battle(custom('deungsin', ['overcome']), custom('maetdol', ['wall']), seed); turn(b, 'overcome', 'wall'); const x = E.activeOf(b, 0); if (x.hp > 0 && x.thirst === null) freed++; }
   assert.ok(freed > 5, String(freed));
 });
+
+test('골목몬 이름 바꾸기: 별명으로 싸우고, 메가진화해도 별명이 남는다', () => {
+  const b = battle([{ species: 'kkaebi', moves: ['club', 'guard'], nick: '뭉치' }, { species: 'horong', moves: ['ember'] }], custom('daeya', ['tackle']), 4);
+  const m = E.activeOf(b, 0);
+  assert.equal(m.name, '뭉치');
+  assert.equal(E.viewFor(b, 1).opp.active.name, '뭉치');
+  E.choose(b, 0, { type: 'move', index: 0, mega: true });
+  const { events } = E.choose(b, 1, { type: 'move', index: 0 });
+  assert.equal(m.name, '뭉치');
+  assert.match(events.find((e) => e.t === 'mega').text, /뭉치가 메가진화했다! 도깨비대장!/);
+  assert.equal(E.viewFor(b, 0).me.mons[1].name, MONSTERS.horong.n); // 별명 없는 골목몬은 원래 이름
+});

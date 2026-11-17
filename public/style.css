@@ -1181,3 +1181,9 @@ button.ev-card h2 { margin: 6px 0 2px; font-size: 24px; } button.ev-card p { mar
 .pwform { display: grid; gap: 8px; margin-top: 8px; }
 .pw-warn { color: #E8402C; font-weight: 700; margin: 6px 0; }
 .temppw { font: 700 32px/1.2 ui-monospace, monospace; letter-spacing: 3px; text-align: center; padding: 12px; margin: 8px 0; background: #fff; border: var(--line); border-radius: 12px; user-select: all; }
+
+/* 골목몬 이름 바꾸기 */
+.nick-field{margin:0 0 12px}
+.nick-row{display:flex;gap:8px;align-items:center;margin-top:4px}
+.nick-row input{flex:1;min-width:0;width:auto;margin-top:0}
+.nick-row .btn{flex:none}

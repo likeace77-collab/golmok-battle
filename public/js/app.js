@@ -524,7 +524,7 @@ function showTeam(index, draft) {
         return `<div class="slot">
           <div class="pic">${monsterSVG(m.species)}</div>
           <button class="inf" data-edit="${i}" style="background:none;border:0;text-align:left;padding:0">
-            <div class="nm">${i + 1}. ${sp.n} ${typesOf(m.species)}</div>
+            <div class="nm">${i + 1}. ${m.nick ? `${esc(m.nick)} <small class="muted">${sp.n}</small>` : sp.n} ${typesOf(m.species)}</div>
             <div class="mvs">${m.moves.map((id) => G.data.MOVES[id].n).join(', ')}</div>
             <div class="mvs item-line">${m.item && G.data.ITEMS?.[m.item] ? `${G.data.ITEMS[m.item].i} ${G.data.ITEMS[m.item].n}` : '도구 없음'}</div>
           </button>
@@ -596,10 +596,14 @@ function moveLine(id) {
   return `${[kind, pow, acc, `PP ${m.pp}`].filter(Boolean).join(', ')}. ${m.d}`;
 }
 
+const NICK_MAX = 8;
+const NICK_BAD = /[\u0000-\u001f<>&"'`\\]/;
 function editMon(team, i, done) {
   const slot = team[i], sp = G.data.MONSTERS[slot.species];
   const render = () => {
-    const bg = openSheet(`<div class="row" style="margin-bottom:10px"><h2>${sp.n}</h2><button class="btn small" data-x>완료</button></div>
+    const bg = openSheet(`<div class="row" style="margin-bottom:10px"><h2>${slot.nick ? `${esc(slot.nick)} <small class="muted">${sp.n}</small>` : sp.n}</h2><button class="btn small" data-x>완료</button></div>
+      <label class="field nick-field">이름 바꾸기 <small class="muted">${NICK_MAX}자까지, 비우면 원래 이름</small>
+        <span class="nick-row"><input id="nick" maxlength="${NICK_MAX}" placeholder="${sp.n}" value="${esc(slot.nick || '')}" autocomplete="off" enterkeyhint="done"><button type="button" class="btn small paper" data-nick-reset ${slot.nick ? '' : 'disabled'}>원래대로</button></span></label>
       <div class="row" style="align-items:flex-start;margin-bottom:12px">
         <div class="detail-pic" style="--tc:${G.data.TYPES[sp.types[0]].c}">${monsterSVG(slot.species)}</div>
         <div style="flex:1;min-width:0">
@@ -615,10 +619,28 @@ function editMon(team, i, done) {
       <h3 style="font-family:var(--ui);font-weight:400;margin-bottom:6px">기술 ${slot.moves.length}/4</h3>
       ${sp.moves.map((id) => `<button class="mv" data-mv="${id}" aria-pressed="${slot.moves.includes(id)}">
         ${typeChip(G.data.MOVES[id].type)}<b>${G.data.MOVES[id].n}</b>${sigTag(id)}<small>${moveLine(id)}</small></button>`).join('')}`);
-    bg.querySelector('[data-x]').onclick = () => { closeSheet(); done(); };
+    const nickIn = bg.querySelector('#nick');
+    // 입력칸 값을 별명으로 반영. 틀리면 false
+    const takeNick = () => {
+      const v = nickIn.value.trim();
+      if ([...v].length > NICK_MAX) { toast(`이름은 ${NICK_MAX}자까지입니다.`); return false; }
+      if (NICK_BAD.test(v)) { toast('이름에 < > & " \' ` \\ 는 쓸 수 없습니다.'); return false; }
+      if (v && v !== sp.n) slot.nick = v; else delete slot.nick;
+      return true;
+    };
+    // 다시 그리지 않고 제목만 바꿈 (완료 버튼 누르는 순간 화면이 바뀌어 눌림이 씹히지 않도록)
+    nickIn.onchange = () => {
+      if (!takeNick()) return;
+      bg.querySelector('h2').innerHTML = slot.nick ? `${esc(slot.nick)} <small class="muted">${sp.n}</small>` : sp.n;
+      bg.querySelector('[data-nick-reset]').disabled = !slot.nick;
+    };
+    nickIn.onkeydown = (e) => { if (e.key === 'Enter' && !e.isComposing) nickIn.blur(); };
+    bg.querySelector('[data-nick-reset]').onclick = () => { delete slot.nick; render(); };
+    bg.querySelector('[data-x]').onclick = () => { if (!takeNick()) return; closeSheet(); done(); };
     bg.querySelectorAll('[data-item]').forEach((b) => {
       b.onclick = () => {
         const id = b.dataset.item;
+        takeNick();
         if (slot.item === id) delete slot.item; else slot.item = id;
         const top = sheetRoot.querySelector('.sheet').scrollTop;
         render();
@@ -627,6 +649,7 @@ function editMon(team, i, done) {
     });
     bg.querySelectorAll('[data-mv]').forEach((b) => {
       b.onclick = () => {
+        takeNick();
         const id = b.dataset.mv, at = slot.moves.indexOf(id);
         if (at >= 0) { if (slot.moves.length > 1) slot.moves.splice(at, 1); else return toast('기술은 1개 이상 있어야 합니다.'); }
         else if (slot.moves.length >= 4) return toast('기술은 4개까지입니다. 하나를 먼저 빼세요.');
