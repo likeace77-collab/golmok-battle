@@ -8,6 +8,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/vendor', express.static(path.join(__dirname, 'node_modules', 'three', 'build')));
 const PORT = process.env.PORT || 3000;
 
 const TICK = 30;
@@ -129,7 +130,7 @@ function canAct(p) { return !p.dead && p.stunT <= 0; }
 function doAttack(room, p, now) {
   if (!canAct(p) || p.ammo < 1 || p.atkCd > 0) return;
   p.ammo -= 1; p.atkCd = C.atkCd; p.lastHit = Math.max(p.lastHit, now - C.regenDelay + 1);
-  room.fx.push({ type: 'pulse', x: p.x, y: p.y, r: C.atkRange, c: p.color });
+  room.fx.push({ type: 'pulse', id: p.id, x: p.x, y: p.y, r: C.atkRange, c: p.color });
   if (Math.random() < 0.45) say(p, pick(LINES.atk), 1.2);
   for (const q of room.players.values()) {
     if (q.id === p.id || q.dead) continue;
@@ -147,10 +148,12 @@ function doGadget(room, p, n, now) {
     if (p.g1Uses <= 0) return;
     p.g1Uses--; p.gCd = C.gadgetCd;
     say(p, pick(LINES.g1), 2);
-    room.fx.push({ type: 'stun', x: p.x, y: p.y, r: C.g1Range });
+    const hits = [];
+    room.fx.push({ type: 'stun', id: p.id, x: p.x, y: p.y, r: C.g1Range, hits });
     for (const q of room.players.values()) {
       if (q.id === p.id || q.dead) continue;
       if (Math.hypot(q.x - p.x, q.y - p.y) <= C.g1Range + C.radius) {
+        hits.push(q.id);
         q.stunT = Math.max(q.stunT, C.g1Stun);
         damage(room, p, q, C.g1Dmg, now);
       }
@@ -169,7 +172,7 @@ function doGadget(room, p, n, now) {
       resolveWalls(m, C.mouseRadius);
       room.mice.push(m);
     }
-    room.fx.push({ type: 'summon', x: p.x, y: p.y });
+    room.fx.push({ type: 'summon', id: p.id, x: p.x, y: p.y });
   }
 }
 
