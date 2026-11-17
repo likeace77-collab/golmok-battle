@@ -304,7 +304,7 @@ function validDecks(u, list) {
     const name = String(d?.name ?? '').trim();
     if (Array.isArray(d?.team) && !d.team.some((x) => monOf(u, String(x?.uid ?? '')))) { out.push(null); continue; } // 골목몬이 다 없어진 덱은 건너뜀
     const team = validTeam(u, d?.team);
-    if (!team || !name || [...name].length > 12 || /[\u0000-\u001f]/.test(name)) return null;
+    if (!team || !name || [...name].length > 20 || /[\u0000-\u001f]/.test(name)) return null;
     out.push({ name, team });
   }
   return out;
@@ -313,7 +313,7 @@ const deckOf = (u) => u.decks[u.active] || { name: '', team: [] };
 const monOf = (u, uid) => u.mons.find((m) => m.uid === uid);
 // 대전에 나갈 팀: 덱의 칸(uid, 도구)을 내 골목몬(종류, 기술)으로 바꿉니다.
 const deckLive = (u) => { const away = P.awayUids(u), all = deckOf(u).team, left = all.filter((t) => !away.has(t.uid)); return left.length ? left : all; }; // 원정 간 골목몬은 빼고 (전부 원정이면 그대로)
-const battleTeam = (u) => deckLive(u).map((t) => { const m = monOf(u, t.uid); P.ensureNature(m); return m && { species: m.species, moves: m.moves, ...(m.nature ? { nature: m.nature } : {}), ...(m.shiny ? { shiny: true } : {}), ...(m.costume ? { costume: m.costume } : {}), ...(m.plus ? { plus: m.plus } : {}), ...(m.aff ? { aff: m.aff } : {}), uid: m.uid, ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean);
+const battleTeam = (u) => deckLive(u).map((t) => { const m = monOf(u, t.uid); P.ensureNature(m); return m && { species: m.species, moves: m.moves, ...(m.nature ? { nature: m.nature } : {}), ...(m.shiny ? { shiny: true } : {}), ...(m.costume ? { costume: m.costume } : {}), ...(m.nick ? { nick: m.nick } : {}), ...(m.plus ? { plus: m.plus } : {}), ...(m.aff ? { aff: m.aff } : {}), uid: m.uid, ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean);
 const deckView = (u) => u.decks.map((d) => ({ name: d.name, team: d.team.map((t) => { const m = monOf(u, t.uid); return m && { uid: m.uid, species: m.species, moves: m.moves, ...(m.shiny ? { shiny: true } : {}), ...(m.plus ? { plus: m.plus } : {}), ...(t.item ? { item: t.item } : {}) }; }).filter(Boolean) }));
 
 // 예전의 팀 하나짜리 계정을 덱 구조로 옮깁니다.
@@ -639,7 +639,7 @@ async function api(req, res, url) {
     const decks = raw && raw.filter(Boolean);
     if (decks && !decks.length) return json(res, 400, { error: '덱에 골목몬을 한 마리 이상 넣어 주세요.' });
     if (raw) body.active = raw.slice(0, Number.isInteger(body.active) ? body.active + 1 : 1).filter(Boolean).length - (raw[body.active] ? 1 : 0); // 빈 덱이 빠진 만큼 번호 당기기
-    if (!decks) return json(res, 400, { error: '덱은 1~20개, 이름은 12자 이내, 덱마다 내 골목몬 1~6마리여야 합니다.' });
+    if (!decks) return json(res, 400, { error: '덱은 1~20개, 이름은 20자 이내, 덱마다 내 골목몬 1~6마리여야 합니다.' });
     const sp = (d) => d.team.map((t) => monOf(user, t.uid)).filter(Boolean);
     const banned = bannedIn(user, decks.flatMap(sp)).filter((n, i, a) => a.indexOf(n) === i);
     if (banned.length) {
@@ -723,6 +723,7 @@ async function progressApi(req, res, route, auth, user) {
     if (r.fusion) for (const ws of online.values()) send(ws, { t: 'fusion', fusion: r.fusion });
     return done(r);
   }
+  if (route === 'POST /api/mon/nick') return done(P.setNick(user, String(body.uid || ''), body.nick));
   if (route === 'POST /api/mon/nature') return done(P.rerollNature(user, String(body.uid || ''), body.pay === 'gp' ? 'gp' : 'ticket'));
   if (route === 'POST /api/mon/move') return done(P.changeMove(user, String(body.uid ?? ''), Number(body.slot), String(body.move ?? '')));
   if (route === 'POST /api/stone/buy') return done(P.buyStone(user, String(body.species ?? '')));

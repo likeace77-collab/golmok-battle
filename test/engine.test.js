@@ -942,3 +942,14 @@ test('훈련장: 내가 입힌 스킨이 그대로 나옴', () => {
   assert.strictEqual(m.costume, 'wakppu');
   assert.ok(b.sides[0].mons.filter((x) => x.species !== 'yeontan').every((x) => !x.costume));
 });
+
+test('골목몬 이름: 20자까지, 대전에서도 그 이름', () => {
+  const P = require('../server/progress');
+  const u = { mons: [{ uid: 'a', species: 'yeontan', moves: [] }] };
+  assert.ok(P.setNick(u, 'a', '가'.repeat(21)).error);
+  assert.strictEqual(P.setNick(u, 'a', '  우리   연탄이 최고  ').nick, '우리 연탄이 최고');
+  assert.ok(P.setNick(u, 'a', '😀'.repeat(20)).ok, '이모지도 한 글자');
+  const b = E.createBattle([{ name: 'x', team: [{ species: 'yeontan', nick: '불꽃 슛돌이', moves: ['tackle'] }] }, { name: 'y', team: [{ species: 'yeontan', moves: ['tackle'] }] }], 1);
+  assert.strictEqual(b.sides[0].mons[0].name, '불꽃 슛돌이'); assert.strictEqual(b.sides[1].mons[0].name, '연탄이');
+  assert.strictEqual(P.setNick(u, 'a', '').nick, null);
+});

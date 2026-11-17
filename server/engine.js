@@ -47,7 +47,7 @@ function makeMon(spec) {
   natStats(stats, spec.nature);
   return {
     ...(spec.aff ? { aff: Math.max(0, Math.min(100, spec.aff | 0)) } : {}), ...(spec.uid ? { uid: String(spec.uid) } : {}),
-    species: spec.species, name: sp.n, types: sp.types, stats, mega: false, ...(NATURES[spec.nature] ? { nature: spec.nature } : {}), shiny: !!spec.shiny, plus, ...(spec.costume ? { costume: String(spec.costume).slice(0, 20) } : {}),
+    species: spec.species, name: spec.nick ? [...String(spec.nick)].slice(0, 20).join('') : sp.n, ...(spec.nick ? { nick: true } : {}), types: sp.types, stats, mega: false, ...(NATURES[spec.nature] ? { nature: spec.nature } : {}), shiny: !!spec.shiny, plus, ...(spec.costume ? { costume: String(spec.costume).slice(0, 20) } : {}),
     hp: spec.hpPct ? Math.max(1, Math.round(stats.hp * Math.min(100, spec.hpPct) / 100)) : stats.hp, maxHp: stats.hp, // hpPct: 퍼즐 배틀용 시작 체력
     status: spec.status || null, statusTurns: 0, item: ITEMS[spec.item] ? spec.item : null, itemUsed: false,
     moves: spec.moves.map((id) => ({ id, pp: MOVES[id].pp })),

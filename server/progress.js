@@ -171,6 +171,16 @@ function enhance(u, uid, food, busy) {
   return { ok: true, plus: m.plus, shinyMoved };
 }
 
+// ✏️ 골목몬 이름 짓기 (20자까지, 비우면 원래 이름)
+const NICK_MAX = 20;
+function setNick(u, uid, nick) {
+  const m = u.mons.find((x) => x.uid === uid); if (!m) return { error: '그 골목몬이 없어요.' };
+  const t = [...String(nick ?? '').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim()];
+  if (t.length > NICK_MAX) return { error: `이름은 ${NICK_MAX}자까지 지을 수 있어요.` };
+  const v = t.join('');
+  if (v && v !== Data.MONSTERS[m.species]?.n) m.nick = v; else delete m.nick;
+  return { ok: true, nick: m.nick || null };
+}
 function changeMove(u, uid, slot, move) {
   const m = u.mons.find((x) => x.uid === uid);
   if (!m) return { error: '없는 골목몬이에요.' };
@@ -501,7 +511,7 @@ function rerollNature(u, uid, pay) {
   m.nature = n;
   return { ok: true, old, nature: n };
 }
-module.exports = { ensureNature, rerollNature, NATURE_TK, NATURE_GP,
+module.exports = { setNick, NICK_MAX, ensureNature, rerollNature, NATURE_TK, NATURE_GP,
   SHOP_ITEMS, buyItem, shopView, claimFree, buyDeal, SCOUT_HOURS, SKIP_GP, SCOUT_GP, STONE_GP, STONE_DUPE_GP, MOVE_GP, STARTERS, TUTORIAL_REWARD, ATTEND, DAILY, WEEKLY,
   newProgress, addMon, grant, finishTutorial, scoutState, scoutSkip, scoutReroll, scoutAuto, enhance, PLUS_MAX, PLUS_PCT, plusCost, expeState, expeSend, expeClaim, expeRecall, awayUids, scoutPick, changeMove, buyStone,
   bump, attendState, attend, questState, claimQuest, achState, claimAch, passState, claimPass, takePassGp, claimable, afterBattle, seasonOf, passBook, dayKey, released,

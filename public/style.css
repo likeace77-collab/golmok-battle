@@ -2349,3 +2349,14 @@ body:has(.rp-bar) #toast { bottom: 150px; z-index: 90; }
 
 .pop.rush { animation: pop-rush .5s ease-out forwards; font-size: clamp(16px, 4.6vw, 22px); color: #FFE45C; }
 @keyframes pop-rush { 0% { transform: translate(var(--dx), var(--dy)) scale(1.5); opacity: 1; } 100% { transform: translate(var(--dx), calc(var(--dy) - 34px)) scale(.9); opacity: 0; } }
+
+/* ✏️ 골목몬 이름 */
+.nick-h { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; min-width: 0; word-break: break-all; }
+.nick-h small { font-size: 13px; opacity: .6; font-family: var(--ui); }
+.nick-btn { border: 2px solid var(--ink, #1a1433); border-radius: 8px; background: #fff; font-size: 14px; padding: 1px 6px; cursor: pointer; align-self: center; }
+.nick-sheet { display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center; }
+.nick-pic { width: 120px; height: 120px; } .nick-pic svg { width: 100%; height: 100%; }
+.nick-in { position: relative; width: 100%; }
+.nick-in input { width: 100%; box-sizing: border-box; border: 3px solid #1a1433; border-radius: 12px; padding: 10px 56px 10px 12px; font: inherit; font-size: 18px; font-weight: 800; }
+.nick-in small { position: absolute; right: 12px; top: 50%; translate: 0 -50%; opacity: .6; } .nick-in small.over { color: #d62839; opacity: 1; font-weight: 800; }
+.box-card b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; display: block; }

@@ -672,7 +672,7 @@ function showTeam(index, draft) {
   const render = () => {
     app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">취소</button><h1>덱 편집</h1></div>
       <section class="panel" style="margin-bottom:14px">
-        <label class="field" style="margin:0">덱 이름<input id="deck-name" value="${esc(deck.name)}" autocomplete="off"></label>
+        <label class="field" style="margin:0">덱 이름<input id="deck-name" maxlength="20" placeholder="20자까지" value="${esc(deck.name)}" autocomplete="off"></label>
       </section>
       ${team.map((m, i) => {
         const sp = G.data.MONSTERS[m.species];
@@ -694,7 +694,7 @@ function showTeam(index, draft) {
     app.querySelector('#back').onclick = showDecks;
     app.querySelector('#save').onclick = async () => {
       deck.name = app.querySelector('#deck-name').value; // 한글 조합 중이어도 입력칸의 값을 그대로 씀
-      if ([...deck.name.trim()].length > 12) return toast('덱 이름은 12자까지입니다.');
+      if ([...deck.name.trim()].length > 20) return toast('덱 이름은 20자까지입니다.');
       const decks = cloneDecks();
       decks[index] = deck;
       try { await saveDecks(decks, G.user.active); toast('덱을 저장했습니다.'); showDecks(); }
@@ -757,7 +757,7 @@ function editMon(team, i, done) {
     const mine = G.user.mons.find((x) => x.uid === slot.uid);
     if (mine) slot.moves = [...mine.moves]; // 기술은 내 골목몬에 붙어 있음
     const stone = G.user.stones.includes(slot.species);
-    const bg = openSheet(`<div class="row" style="margin-bottom:10px"><h2>${sp.n}</h2><button class="btn small" data-x>완료</button></div>
+    const bg = openSheet(`<div class="row" style="margin-bottom:10px"><h2>${esc(mine?.nick || sp.n)}</h2><button class="btn small" data-x>완료</button></div>
       <div class="row" style="align-items:flex-start;margin-bottom:12px">
         <div class="detail-pic" style="--tc:${G.data.TYPES[sp.types[0]].c}">${monArt(slot.species, slot.shiny)}</div>
         <div style="flex:1;min-width:0">

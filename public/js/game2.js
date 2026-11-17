@@ -281,7 +281,7 @@ function showBox() {
   const mons = [...G.user.mons].sort((a, b) => order.indexOf(a.species) - order.indexOf(b.species) || a.at - b.at);
   const uniq = new Set(mons.map((m) => m.species)).size;
   app.innerHTML = `${topbar('내 골목몬')}<button class="btn small paper box-skins" id="go-skins">🎨 스킨 둘러보기</button><p class="box-sum">${mons.length}마리 · ${uniq}종 / ${order.filter((id) => !(G.data.BANNED || []).includes(id)).length}종</p>
-    <div class="box-grid">${mons.map((m) => { const sp = G.data.MONSTERS[m.species]; return `<button class="box-card${m.shiny ? ' is-shiny' : ''}" data-uid="${m.uid}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? '<em class="shiny-dot" title="이로치">✨</em>' : ''}${m.plus ? `<em class="plus-dot">+${m.plus}</em>` : ''}${skinArt(monArt(m.species, m.shiny), m.costume)}<b>${esc(sp.n)}</b>${G.user.stones.includes(m.species) ? `<span class="box-stone">${stoneSVG(m.species, 26)}</span>` : ''}</button>`; }).join('') || '<p class="wait">아직 골목몬이 없어요. 스카우트로 모아 보세요!</p>'}</div>`;
+    <div class="box-grid">${mons.map((m) => { const sp = G.data.MONSTERS[m.species]; return `<button class="box-card${m.shiny ? ' is-shiny' : ''}" data-uid="${m.uid}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? '<em class="shiny-dot" title="이로치">✨</em>' : ''}${m.plus ? `<em class="plus-dot">+${m.plus}</em>` : ''}${skinArt(monArt(m.species, m.shiny), m.costume)}<b>${esc(m.nick || sp.n)}</b>${G.user.stones.includes(m.species) ? `<span class="box-stone">${stoneSVG(m.species, 26)}</span>` : ''}</button>`; }).join('') || '<p class="wait">아직 골목몬이 없어요. 스카우트로 모아 보세요!</p>'}</div>`;
   app.querySelector('#back').onclick = showLobby;
   app.querySelectorAll('[data-uid]').forEach((b) => { b.onclick = () => openMon(b.dataset.uid, showBox); });
   app.querySelector('#go-skins')?.addEventListener('click', () => showSkins(showBox));
@@ -313,7 +313,7 @@ function openMon(uid, after) {
   const m = G.user.mons.find((x) => x.uid === uid);
   if (!m) return;
   const sp = G.data.MONSTERS[m.species], stone = G.user.stones.includes(m.species);
-  const bg = openSheet(`<div class="row" style="margin-bottom:8px"><h2>${esc(sp.n)}</h2><button class="btn small paper" data-x>닫기</button></div>
+  const bg = openSheet(`<div class="row" style="margin-bottom:8px"><h2 class="nick-h">${esc(m.nick || sp.n)}${m.nick ? `<small>${esc(sp.n)}</small>` : ''}<button class="nick-btn" id="nick-open" title="이름 바꾸기">✏️</button></h2><button class="btn small paper" data-x>닫기</button></div>
     <div class="row" style="align-items:flex-start;margin-bottom:10px"><div class="detail-pic${m.shiny ? ' is-shiny' : ''}" style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? SHINY_TAG : ''}${skinArt(monArt(m.species, m.shiny), m.costume)}</div>
       <div style="flex:1;min-width:0"><p style="margin-bottom:4px">${typesOf(m.species)}</p>${Object.entries(sp.base).map(([k, v]) => `<div class="stat"><span>${STAT_LABEL[k]}</span><span>${v}</span><i style="width:${Math.min(100, v / 1.3)}%"></i></div>`).join('')}</div></div>
     <button class="btn small cos-open" id="cos-open">🎨 스킨${m.costume ? ' 바꾸기' : ''}</button>
@@ -328,6 +328,7 @@ ${sp.fz ? `<section class="mon-stone have"><div class="fz-megapic">${monArt(m.sp
     ${[0, 1, 2, 3].map((i) => { const id = m.moves[i]; return id ? `<div class="mv mvrow">${typeChip(G.data.MOVES[id].type)}<b>${G.data.MOVES[id].n}</b>${sigTag(id)}<small>${moveLine(id)}</small><button class="btn small paper" data-slot="${i}">바꾸기</button></div>` : `<div class="mv mvrow"><b class="muted">빈 칸</b><button class="btn small paper" data-slot="${i}">기술 넣기</button></div>`; }).join('')}`);
   bg.querySelector('[data-x]').onclick = () => { closeSheet(); after?.(); };
   bg.querySelector('#cos-open')?.addEventListener('click', () => { closeSheet(); costumeSheet(m, () => openMon(uid, after)); });
+  bg.querySelector('#nick-open').onclick = () => nickSheet(m, () => openMon(uid, after));
   if (typeof bindModeMon === 'function') bindModeMon(bg, m, () => openMon(uid, after));
   bg.querySelectorAll('[data-food]').forEach((b) => { b.onclick = async () => {
     const f = G.user.mons.find((x) => x.uid === b.dataset.food);
@@ -893,4 +894,22 @@ function rqDraw() {
   app.querySelectorAll('[data-like]').forEach((b) => { b.onclick = () => { b.classList.add('pop'); run('/api/requests/like', { id: b.dataset.like }); }; });
   app.querySelectorAll('[data-del]').forEach((b) => { b.onclick = () => { if (confirm('이 요청을 지울까요?')) run('/api/requests/delete', { id: b.dataset.del }, '지웠어요.'); }; });
   app.querySelectorAll('[data-save]').forEach((b) => { b.onclick = () => run('/api/requests/status', { id: b.dataset.save, status: app.querySelector(`[data-st="${b.dataset.save}"]`).value, reply: app.querySelector(`[data-rp="${b.dataset.save}"]`).value }, '저장했어요. 요청한 사람에게 알림이 가요.'); });
+}
+
+/* ✏️ 골목몬 이름 짓기 (20자까지) */
+function nickSheet(m, back) {
+  const sp = G.data.MONSTERS[m.species], MAX = 20;
+  const bg = openSheet(`<div class="nick-sheet"><h2>✏️ 이름 짓기</h2>
+    <div class="nick-pic${m.shiny ? ' is-shiny' : ''}">${skinArt(monArt(m.species, m.shiny), m.costume)}</div>
+    <p class="muted">이 ${esc(sp.n)}에게만 붙는 이름이에요. 대전에서도 이 이름으로 나와요. 비우면 원래 이름(${esc(sp.n)})으로 돌아가요.</p>
+    <div class="nick-in"><input id="nick-v" maxlength="40" placeholder="${esc(sp.n)}" value="${esc(m.nick || '')}" autocomplete="off"><small id="nick-n"></small></div>
+    <div class="row" style="gap:6px"><button class="btn paper" data-x>취소</button>${m.nick ? '<button class="btn paper" data-reset>원래 이름으로</button>' : ''}<button class="btn" data-ok>저장</button></div></div>`);
+  const inp = bg.querySelector('#nick-v'), cnt = bg.querySelector('#nick-n'), ok = bg.querySelector('[data-ok]');
+  const sync = () => { const n = [...inp.value.trim()].length; cnt.textContent = `${n}/${MAX}`; cnt.classList.toggle('over', n > MAX); ok.disabled = n > MAX; };
+  inp.oninput = sync; sync(); setTimeout(() => inp.focus(), 50);
+  const save = async (nick) => { try { const r = await api('POST', '/api/mon/nick', { uid: m.uid, nick }); setUser(r); toast(r.nick ? `✏️ 이제 「${r.nick}」(이)예요!` : `원래 이름 ${sp.n}(으)로 돌아갔어요.`); back(); } catch (e) { toast(e.message); } };
+  bg.querySelector('[data-x]').onclick = () => back();
+  bg.querySelector('[data-reset]')?.addEventListener('click', () => save(''));
+  ok.onclick = () => save(inp.value);
+  inp.onkeydown = (e) => { if (e.key === 'Enter' && !ok.disabled) save(inp.value); };
 }
