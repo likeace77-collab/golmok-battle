@@ -67,7 +67,7 @@ function grant(u, r) {
 }
 
 /* ---------- 튜토리얼 ---------- */
-const TUTORIAL_REWARD = { gp: 10000, tickets: 4, skips: 100, stones: 15 };
+const TUTORIAL_REWARD = { gp: 50000, tickets: 15, skips: 300, stones: 20, rerolls: 20, coins: 100 }; // 뉴비 시작 선물 (11/17 대폭 상향)
 function finishTutorial(u, starter) {
   if (u.tutorial) return { error: '튜토리얼은 이미 끝났습니다.' };
   const st = STARTERS[starter];

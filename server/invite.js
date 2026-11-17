@@ -6,18 +6,18 @@
 const KST = 9 * 3600e3, DAY = 86400e3;
 const dayKey = (t = Date.now()) => new Date(t + KST).toISOString().slice(0, 10);
 
-const REF_NEWBIE = { gp: 10000, tickets: 3, rerolls: 5 }; // + 일반 상자 2
+const REF_NEWBIE = { gp: 30000, tickets: 8, rerolls: 15 }; // + 일반 상자 2
 const REF_FRIEND = { gp: 15000, tickets: 2 }; // + 희귀 상자 1
 const REF_GAMES = 1, REF_MAX = 20, REF_TITLE_AT = 3, REF_LATE_DAYS = 3;
 const ROOKIE_DAYS = 30;
 const ROOKIE = [
-  { gp: 3000 },
-  { rerolls: 5, skips: 20 },
-  { gp: 5000, box: 'c' },
-  { tickets: 2 },
-  { gp: 8000, box: 'r' },
-  { tickets: 3, rerolls: 10 },
-  { gp: 100000, tickets: 10, rerolls: 20, box: 'l', boxN: 2, mon: 'random', shiny: true, title: 'sprout' }, // 7일째: 막대한 선물
+  { gp: 20000, tickets: 3 },
+  { rerolls: 15, skips: 100, tickets: 2 },
+  { gp: 30000, box: 'r' },
+  { tickets: 5, coins: 100 },
+  { gp: 40000, box: 'r', boxN: 2 },
+  { tickets: 6, rerolls: 30 },
+  { gp: 300000, tickets: 25, rerolls: 50, box: 'l', boxN: 3, mon: 'random', shiny: true, title: 'sprout' }, // 7일째: 막대한 선물
 ];
 
 let db = null, H = {};

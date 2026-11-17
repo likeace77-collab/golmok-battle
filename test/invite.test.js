@@ -13,7 +13,7 @@ test('추천: 뉴비는 바로, 친구는 뉴비가 1판 하면', () => {
   assert.ok(IV.onSignup(db.users.newbie, 'newbie', 'nobody').error);
   assert.ok(IV.onSignup(db.users.newbie, 'newbie', 'Newbie').error, '자기 자신 X');
   const r = IV.onSignup(db.users.newbie, 'newbie', 'Friend'); assert.ok(r.ok);
-  assert.equal(db.users.newbie.gp, 10000); assert.equal(db.users.newbie.tickets, 3);
+  assert.equal(db.users.newbie.gp, IV.REF_NEWBIE.gp); assert.equal(db.users.newbie.tickets, IV.REF_NEWBIE.tickets);
   assert.deepEqual(boxes.at(-1), ['Newbie', 'c', 2]);
   assert.ok(IV.onSignup(db.users.newbie, 'newbie', 'Friend').error, '두 번 X');
   IV.onBattle(db.users.newbie, 'newbie'); assert.equal(db.users.friend.gp, 0, '아직 대전 전');
@@ -31,14 +31,14 @@ test('추천: 늦게 넣기는 가입 3일 안만, 3명이면 칭호', () => {
 test('뉴비 7일 연속 출석: 날마다 선물, 7일째 막대한 선물, 끊기면 처음부터', () => {
   const u = mk('Rookie'); u.mons = [];
   const day = (n) => IV.dayKey(Date.now() - n * 86400e3);
-  assert.equal(IV.rookieClaim(u).day, 1); assert.equal(u.gp, 3000);
+  assert.equal(IV.rookieClaim(u).day, 1); assert.equal(u.gp, IV.ROOKIE[0].gp);
   assert.ok(IV.rookieClaim(u).error, '하루 한 번');
   for (let d = 2; d <= 6; d++) { u.rookie.last = day(1); const r = IV.rookieClaim(u); assert.equal(r.day, d); }
   u.rookie.last = day(2); // 하루 빠짐 → 1일째부터
   const again = IV.rookieClaim(u); assert.equal(again.day, 1); assert.ok(again.again, '이미 받은 날은 선물 없음');
   for (let d = 2; d <= 6; d++) { u.rookie.last = day(1); IV.rookieClaim(u); }
   u.rookie.last = day(1); const gp = u.gp; const r7 = IV.rookieClaim(u);
-  assert.equal(r7.day, 7); assert.equal(u.gp, gp + 100000); assert.ok(u.owned.includes('titles:sprout')); assert.ok(r7.got.some((g) => g.k === 'mon' && g.shiny));
+  assert.equal(r7.day, 7); assert.equal(u.gp, gp + IV.ROOKIE[6].gp); assert.ok(u.owned.includes('titles:sprout')); assert.ok(r7.got.some((g) => g.k === 'mon' && g.shiny));
   assert.ok(IV.rookieClaim(u).error, '끝');
   assert.equal(IV.rookieState(mk('Vet', 40 * 86400e3)).active, false, '가입 30일 넘으면 없음');
 });

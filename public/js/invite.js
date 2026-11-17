@@ -1,6 +1,6 @@
 'use strict';
 /* 🎉 친구 초대 · 🌱 뉴비 7일 연속 출석 */
-const giftLine = (r) => [r.gp && `${fmt(r.gp)}GP`, r.tickets && `입수권 ${r.tickets}`, r.rerolls && `리롤권 ${r.rerolls}`, r.skips && `스킵권 ${r.skips}`, r.box && `${{ c: '일반', r: '희귀', l: '전설' }[r.box]} 상자${r.boxN > 1 ? ` ×${r.boxN}` : ''}`, r.mon && '✨이로치 골목몬', r.title && '칭호 「골목 새싹 졸업」'].filter(Boolean).join(' · ');
+const giftLine = (r) => [r.gp && `${fmt(r.gp)}GP`, r.tickets && `입수권 ${r.tickets}`, r.rerolls && `리롤권 ${r.rerolls}`, r.skips && `스킵권 ${r.skips}`, r.coins && `도박코인 ${r.coins}`, r.box && `${{ c: '일반', r: '희귀', l: '전설' }[r.box]} 상자${r.boxN > 1 ? ` ×${r.boxN}` : ''}`, r.mon && '✨이로치 골목몬', r.title && '칭호 「골목 새싹 졸업」'].filter(Boolean).join(' · ');
 
 // 로비 위쪽 띠: 뉴비 출석 (+ 가입 때 추천 선물 안내)
 function rookieBanner() {

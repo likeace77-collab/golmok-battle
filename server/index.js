@@ -198,6 +198,8 @@ const GIFTS = [
   EMERGENCY,
   { id: 'startup-20261112', before: Date.parse('2026-11-13T00:00:00+09:00'), title: '🏰 길드 창업 지원금 도착!', r: { gp: 3000, tickets: 1 } },
   { id: 'reroll-20261114', until: Date.parse('2026-11-22T00:00:00+09:00'), title: '🎲 리롤권 출시 기념! 리롤권 50장', r: { rerolls: 50 } },
+  // 뉴비 보상 상향 전에 들어온 새내기(가입 30일 안, 튜토리얼 끝냄)에게 차액 지급
+  { id: 'newbie-up-20261117', after: Date.parse('2026-10-18T00:00:00+09:00'), before: Date.parse('2026-11-17T18:00:00+09:00'), needTutorial: true, title: '🌱 뉴비 보상 대폭 상향! 먼저 온 새내기에게도 차액 선물', r: { gp: 40000, tickets: 11, skips: 200, stones: 5, rerolls: 20, coins: 100 } },
   { id: 'night-20261113', until: Date.parse('2026-11-14T00:00:00+09:00'), title: '🌙 오늘 밤 접속 보상!', r: { gp: 15000 } },
 ];
 // 새 게임으로 바뀌기 전부터 있던 계정에 '차원을 넘어온 자' 칭호
@@ -216,7 +218,7 @@ function pendingGifts(u) {
   u.flags ||= {};
   const out = [];
   for (const g of GIFTS) {
-    if (u.flags[g.id] || (g.until && Date.now() >= g.until) || (g.before && (u.createdAt || 0) >= g.before)) continue;
+    if (u.flags[g.id] || (g.until && Date.now() >= g.until) || (g.before && (u.createdAt || 0) >= g.before) || (g.after && (u.createdAt || 0) < g.after) || (g.needTutorial && !u.tutorial)) continue;
     u.flags[g.id] = true;
     out.push({ title: g.title, got: P.grant(u, g.r) });
   }
