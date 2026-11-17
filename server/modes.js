@@ -186,7 +186,7 @@ const MISSIONS = [
   { id: 'shiny', n: '반짝이는 결정타', d: '이로치 골목몬으로 상대를 쓰러뜨리기', test: (c) => c.mons.some((m) => m.shiny && (m.kills || 0) > 0) },
   { id: 'zwin', n: 'Z로 끝내기', d: 'Z기술을 쓰고 이기기', test: (c) => c.won && c.z },
   { id: 'gwin', n: '거대한 승리', d: '거다이맥스하고 이기기', test: (c) => c.won && c.gmax },
-  { id: 'underdog', n: '약자의 반란', d: '능력치 합 470 이하 골목몬만으로 3대3 이상 이기기', test: (c) => c.won && c.size >= 3 && c.mons.every((m) => total(m.species) <= 470) },
+  { id: 'underdog', n: '약자의 반란', d: '능력치 합 490 이하 골목몬만으로 3대3 이상 이기기', test: (c) => c.won && c.size >= 3 && c.mons.every((m) => total(m.species) <= 490) },
   { id: 'solo', n: '진검승부', d: '1대1에서 이기기', test: (c) => c.won && c.size === 1 },
 ];
 const MISSION_R = { gp: 1500, rerolls: 1 }, MISSION_ALL_R = { tickets: 1, gp: 2000 }, PUZZLE_R = { gp: 3000, rerolls: 2 };
