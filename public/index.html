@@ -52,6 +52,9 @@
   @keyframes glow { from { box-shadow: 0 5px 0 #000, 0 0 10px 3px #ffb31f; } to { box-shadow: 0 5px 0 #000, 0 0 26px 10px #ff5a1f; } }
   #bG2 { right: 10px; bottom: 94px; width: 52px; height: 52px; background: radial-gradient(circle at 40% 35%, #d8ffd0, #63e65a); font-size: 10px; }
   #supJoy { position: fixed; width: 130px; height: 130px; margin: -65px 0 0 -65px; border: 3px solid rgba(255,140,40,.8); background: rgba(255,120,30,.12); border-radius: 50%; display: none; z-index: 9; pointer-events: none; }
+  #supJoy.cancel { border-color: rgba(255,80,80,.9); background: rgba(255,40,40,.18); }
+  #supJoy b { position: absolute; left: 0; right: 0; top: -26px; text-align: center; font-size: 14px; color: #ff6b6b; display: none; }
+  #supJoy.cancel b { display: block; }
   #supJoy i { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px; border-radius: 50%; background: rgba(255,170,60,.9); border: 3px solid #000; }
 </style>
 <script type="importmap">{ "imports": { "three": "/vendor/three.module.js" } }</script>
@@ -81,7 +84,7 @@
 <div id="board" class="stroke"></div>
 <div id="feed" class="stroke"></div>
 <div id="dead" class="stroke"></div>
-<div id="supJoy"><i></i></div>
+<div id="supJoy"><b class="stroke">취소</b><i></i></div>
 <div id="ctrl">
   <div class="cb" id="bAtk">공격<small>Space</small></div>
   <div class="cb" id="bSup">궁극기<small>드래그 조준</small></div>
@@ -518,7 +521,7 @@ addEventListener('keydown', (e) => {
 const mouse = { x: 0, y: 0, on: false };
 addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.on = true; });
 const ray = new THREE.Raycaster(), ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitP = new THREE.Vector3();
-const supAim = { id: null, sx: 0, sy: 0, ang: null, drag: 0 };
+const supAim = { id: null, sx: 0, sy: 0, ang: null, drag: 0, maxDrag: 0, cancel: false };
 function autoAim() {    // 사거리 안 가장 가까운 적
   const me = state.players.find((p) => p.id === myId); if (!me) return null;
   let best = ST.superRange + 120, a = me.f;
@@ -555,21 +558,23 @@ const supEl = $('bSup'), supJoy = $('supJoy'), supKnob = supJoy.querySelector('i
 supEl.addEventListener('pointerdown', (e) => {
   e.preventDefault(); e.stopPropagation(); if (!socket) return;
   const r = supEl.getBoundingClientRect();
-  supAim.id = e.pointerId; supAim.sx = r.left + r.width / 2; supAim.sy = r.top + r.height / 2; supAim.drag = 0; supAim.ang = null;
+  supAim.id = e.pointerId; supAim.sx = r.left + r.width / 2; supAim.sy = r.top + r.height / 2; supAim.drag = 0; supAim.maxDrag = 0; supAim.cancel = false; supAim.ang = null; supJoy.classList.remove('cancel');
   try { supEl.setPointerCapture(e.pointerId); } catch (_) {}
   supJoy.style.left = supAim.sx + 'px'; supJoy.style.top = supAim.sy + 'px'; supJoy.style.display = 'block'; supKnob.style.transform = '';
 });
 supEl.addEventListener('pointermove', (e) => {
   if (e.pointerId !== supAim.id) return;
   const dx = e.clientX - supAim.sx, dy = e.clientY - supAim.sy, d = Math.hypot(dx, dy);
-  supAim.drag = d;
+  supAim.drag = d; supAim.maxDrag = Math.max(supAim.maxDrag, d);
   if (d > 14) supAim.ang = Math.atan2(dy, dx);
+  supAim.cancel = d <= 14 && supAim.maxDrag > 30;   // 끌었다가 제자리로 돌아오면 취소
+  supJoy.classList.toggle('cancel', supAim.cancel);
   const k = Math.min(d, 48); supKnob.style.transform = d ? `translate(${dx / d * k}px,${dy / d * k}px)` : '';
 });
 const endSup = (e) => {
   if (e.pointerId !== supAim.id) return;
   supAim.id = null; supJoy.style.display = 'none';
-  if (e.type === 'pointercancel' || !socket) return;
+  if (e.type === 'pointercancel' || !socket || supAim.cancel) return;
   const a = supAim.drag > 14 ? supAim.ang : autoAim();
   socket.emit('super', a == null ? undefined : a);
 };
@@ -814,7 +819,7 @@ function frame(nowMs) {
       sb.style.background = me.sup >= 1 ? 'radial-gradient(circle at 40% 35%, #ffe98a, #ff5a1f)' : `conic-gradient(#ff8a1f ${pct}%, #3a2a6a 0)`;
       // 조준 표시
       const v = views[myId];
-      aimInd.visible = me.sup >= 1 && !me.dead && !!v && (supAim.id !== null || !isTouch);
+      aimInd.visible = me.sup >= 1 && !me.dead && !!v && (supAim.id !== null ? !supAim.cancel : !isTouch);
       if (aimInd.visible) {
         if (!aimMesh) { aimMesh = new THREE.Mesh(sectorGeo(ST.superRange * S, ST.superHalf), addMat('#ff8a1f', 0.22)); aimMesh.rotation.x = -Math.PI / 2; aimInd.add(aimMesh); }
         aimInd.position.set(v.model.root.position.x, 0.08, v.model.root.position.z);
