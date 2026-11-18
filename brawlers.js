@@ -35,7 +35,7 @@ const BRAWLERS = {
   hyeonsil: {
     id: 'hyeonsil',
     name: '현실쌤',
-    rarity: null,          // 등급 미정
+    rarity: 'legendary',
     title: '펜 내려놓고 여기 보자',
     desc: '핑크색 옷에 털가죽 잠바, 큰 나무주걱을 든 수학 선생님. 교실 전체를 얼려버리고 학생을 마음대로 조종한다.',
     radius: 28, speed: 240, maxHp: 5400,
@@ -51,7 +51,7 @@ const BRAWLERS = {
     gadgetCd: 6,
     super: {
       name: '너 등신이냐?', aim: 'line',
-      desc: '조준한 방향의 첫 번째 상대를 5초 동안 조종한다. 조종하는 동안 내 이동·공격 버튼으로 그 상대를 움직이고 공격시킨다.',
+      desc: '조준한 방향의 첫 번째 상대를 5초 동안 조종한다. 조종하는 동안 그 상대의 공격·가젯·궁극기를 대신 쓸 수 있다.',
       need: 4800, range: 460, width: 45, dur: 5,
     },
     lines: {

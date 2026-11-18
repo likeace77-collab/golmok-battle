@@ -130,7 +130,7 @@ const SKILLS = {
       room.fx.push({ type: 'pulse', id: p.id, x: p.x, y: p.y, r: A.range, c: p.color });
       if (Math.random() < 0.45) say(p, 'atk', 1.2);
       for (const q of room.players.values()) {
-        if (q.id === p.id || q.dead) continue;
+        if (q.id === p.id || q.id === p.ctrlBy || q.dead) continue;
         if (Math.hypot(q.x - p.x, q.y - p.y) <= A.range + q.B.radius) {
           damage(room, p, q, A.dmg, now);
           chargeSuper(p, A.dmg);
@@ -145,7 +145,7 @@ const SKILLS = {
         const hits = [];
         room.fx.push({ type: 'stun', id: p.id, x: p.x, y: p.y, r: g.range, hits });
         for (const q of room.players.values()) {
-          if (q.id === p.id || q.dead) continue;
+          if (q.id === p.id || q.id === p.ctrlBy || q.dead) continue;
           if (Math.hypot(q.x - p.x, q.y - p.y) <= g.range + q.B.radius) {
             hits.push(q.id);
             q.stunT = Math.max(q.stunT, g.stun);
@@ -180,7 +180,7 @@ const SKILLS = {
         return Math.abs(angDiff(Math.atan2(dy, dx), a)) <= S.half;
       };
       for (const q of room.players.values()) {
-        if (q.id === p.id || q.dead || !inCone(q.x, q.y, q.B.radius)) continue;
+        if (q.id === p.id || q.id === p.ctrlBy || q.dead || !inCone(q.x, q.y, q.B.radius)) continue;
         const d = Math.hypot(q.x - p.x, q.y - p.y) || 1;
         q.x += ((q.x - p.x) / d) * S.knock; q.y += ((q.y - p.y) / d) * S.knock;
         resolveWalls(q, q.B.radius);
@@ -211,7 +211,7 @@ SKILLS.hyeonsil = {
     room.pending.push({ t: A.windup, fn: () => {
       if (p.dead || !room.players.has(p.id)) return;
       for (const q of room.players.values()) {
-        if (q.id === p.id || q.dead || !inCone(p, a, A.range, A.half, q.x, q.y, q.B.radius)) continue;
+        if (q.id === p.id || q.id === p.ctrlBy || q.dead || !inCone(p, a, A.range, A.half, q.x, q.y, q.B.radius)) continue;
         const d = Math.hypot(q.x - p.x, q.y - p.y) || 1;
         q.x += ((q.x - p.x) / d) * A.knock; q.y += ((q.y - p.y) / d) * A.knock; resolveWalls(q, q.B.radius);
         damage(room, p, q, A.dmg, Date.now() / 1000);
@@ -232,7 +232,7 @@ SKILLS.hyeonsil = {
       say(p, 'g2', 2);
       const hits = [];
       for (const q of room.players.values()) {
-        if (q.id === p.id || q.dead) continue;
+        if (q.id === p.id || q.id === p.ctrlBy || q.dead) continue;
         q.stunT = Math.max(q.stunT, g.stun); hits.push(q.id);
       }
       room.fx.push({ type: 'look', id: p.id, x: p.x, y: p.y, hits });
@@ -245,7 +245,7 @@ SKILLS.hyeonsil = {
     const ca = Math.cos(a), sa = Math.sin(a);
     let target = null, best = Infinity;
     for (const q of room.players.values()) {
-      if (q.id === p.id || q.dead || q.ctrlBy || q.ctrlId) continue;
+      if (q.id === p.id || q.id === p.ctrlBy || q.dead || q.ctrlBy || q.ctrlId) continue;
       const dx = q.x - p.x, dy = q.y - p.y;
       const along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca);
       if (along < -q.B.radius || along > S.range + q.B.radius || perp > S.width + q.B.radius) continue;
@@ -272,6 +272,7 @@ function doGadget(room, p, n, now) {
 }
 function doSuper(room, p, ang, now) {
   if (!p.B.super || !canAct(p) || p.sup < 1) return;
+  if (p.ctrlBy && p.B.id === 'hyeonsil') return;   // 꼭두각시 현실쌤은 조종 궁극기 못 씀 (조종 연쇄 방지)
   p.sup = 0;
   const a = Number.isFinite(ang) ? ang : p.facing;
   p.facing = a;
@@ -289,11 +290,13 @@ function botThink(room, p, now) {
     const dx = tg.x - t.x, dy = tg.y - t.y;
     p.input = { mx: dx / (bd || 1), my: dy / (bd || 1) };
     if (bd < t.B.attack.range + 10 && Math.random() < 0.2) doAttack(room, t, Math.atan2(dy, dx), now);
+    if (bd < 260 && Math.random() < 0.03) doGadget(room, t, Math.random() < 0.5 ? 1 : 2, now);
+    if (t.sup >= 1 && bd < 300 && Math.random() < 0.1) doSuper(room, t, Math.atan2(dy, dx), now);
     return;
   }
   let target = null, best = Infinity;
   for (const q of room.players.values()) {
-    if (q.id === p.id || q.dead) continue;
+    if (q.id === p.id || q.id === p.ctrlBy || q.dead) continue;
     const d = Math.hypot(q.x - p.x, q.y - p.y);
     if (d < best) { best = d; target = q; }
   }
@@ -338,7 +341,7 @@ function step(room) {
     p.acT = Math.max(0, p.acT - DT); p.acTick -= DT;
     if (p.acTick <= 0) {
       const g = p.B.gadgets[0]; p.acTick = g.tick;
-      for (const q of room.players.values()) if (q.id !== p.id && !q.dead) damage(room, p, q, g.dmg, now, 'cold');
+      for (const q of room.players.values()) if (q.id !== p.id && q.id !== p.ctrlBy && !q.dead) damage(room, p, q, g.dmg, now, 'cold');
     }
     if (p.dead) p.acT = 0;
   }
@@ -449,8 +452,17 @@ io.on('connection', (socket) => {
     const t = p.ctrlId && room.players.get(p.ctrlId);
     doAttack(room, t || p, num(ang), Date.now() / 1000);
   });
-  socket.on('gadget', (n) => { const p = me(); if (p && !p.ctrlBy) doGadget(room, p, n === 2 ? 2 : 1, Date.now() / 1000); });
-  socket.on('super', (ang) => { const p = me(); if (p && !p.ctrlBy) doSuper(room, p, num(ang), Date.now() / 1000); });
+  // 조종 중이면 가젯·궁극기도 꼭두각시의 스킬로 나감
+  socket.on('gadget', (n) => {
+    const p = me(); if (!p || p.ctrlBy) return;
+    const t = p.ctrlId && room.players.get(p.ctrlId);
+    doGadget(room, t || p, n === 2 ? 2 : 1, Date.now() / 1000);
+  });
+  socket.on('super', (ang) => {
+    const p = me(); if (!p || p.ctrlBy) return;
+    const t = p.ctrlId && room.players.get(p.ctrlId);
+    doSuper(room, t || p, num(ang), Date.now() / 1000);
+  });
   socket.on('addBot', () => {
     if (!room) return;
     const bots = [...room.players.values()].filter((p) => p.isBot).length;

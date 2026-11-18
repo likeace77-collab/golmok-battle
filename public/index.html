@@ -111,6 +111,7 @@
   .cb { position: absolute; border-radius: 50%; border: 3px solid #000; touch-action: none; font-weight: 900; color: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; line-height: 1.1; box-shadow: 0 5px 0 #000; cursor: pointer; pointer-events: auto; }
   .cb small { font-size: 8px; opacity: .7; }
   .cb .gi { font-size: 22px; line-height: 1; }
+  .cb.puppet { outline: 3px solid #ff8af0; outline-offset: 2px; }
   .cb .n { position: absolute; top: -6px; right: -6px; background: #000; color: #fff; border-radius: 10px; font-size: 12px; padding: 1px 6px; }
   .cb .cd { position: absolute; inset: 0; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; display: none; align-items: center; justify-content: center; font-size: 13px; }
   #bAtk { right: 0; bottom: 0; width: 80px; height: 80px; background: radial-gradient(circle at 40% 35%, #ffe98a, #ffb31f); font-size: 13px; }
@@ -904,6 +905,7 @@ $('openHelp').onclick = () => modal(`<h3 class="stroke">조작법</h3><div id="h
   <b>기본공격</b> 공격 버튼 탭 또는 드래그 후 놓기 · PC는 Space/좌클릭<br>
   <b>가젯</b> 파랑·초록 버튼 · PC는 Q / E (무제한, 쿨타임 6초)<br>
   <b>궁극기</b> 버튼 드래그로 조준 → 놓으면 발사, 탭하면 자동조준 · PC는 R/우클릭<br>
+  <b>현실쌤 조종 중</b>에는 모든 버튼이 조종당하는 상대의 스킬로 나가요 (분홍 테두리)<br>
   드래그했다가 버튼 가운데로 되돌리면 <b>취소</b></div>`);
 
 fetch('/api/brawlers').then((r) => r.json()).then((d) => {
@@ -990,7 +992,7 @@ const aims = {
   atk: { id: null, sx: 0, sy: 0, ang: null, drag: 0, maxDrag: 0, cancel: false },
   sup: { id: null, sx: 0, sy: 0, ang: null, drag: 0, maxDrag: 0, cancel: false },
 };
-// 기본공격 조준의 기준: 평소엔 나, 조종 중이면 꼭두각시
+// 조준·버튼의 기준: 평소엔 나, 조종 중이면 꼭두각시 (그 스킬을 대신 씀)
 function atkSrc() {
   const me = state.players.find((p) => p.id === myId); if (!me) return null;
   return (me.ctrl && state.players.find((q) => q.id === me.ctrl)) || me;
@@ -1006,7 +1008,7 @@ function autoAim(range, src) {    // 사거리 안 가장 가까운 적
   return a;
 }
 function aimAngle(kind = 'sup') {   // 서버 좌표 기준 각도
-  const me = kind === 'atk' ? atkSrc() : state.players.find((p) => p.id === myId), v = me && views[me.id];
+  const me = atkSrc(), v = me && views[me.id];     // 조종 중이면 꼭두각시 기준
   if (!me || !v) return null;
   const B = BR[me.b], A = aims[kind], range = kind === 'atk' ? B.attack.range : (B.super ? B.super.range : 300);
   if (A.id !== null) return A.ang ?? autoAim(range, me);
@@ -1053,7 +1055,7 @@ function aimButton(el, kind, fire) {
     const ang = A.drag > 14 ? A.ang : null;
     A.id = null; aimJoy.style.display = 'none';
     if (e.type === 'pointercancel' || !socket || A.cancel) return;
-    const me = kind === 'atk' ? atkSrc() : state.players.find((p) => p.id === myId); if (!me) return;
+    const me = atkSrc(); if (!me) return;
     const B = BR[me.b]; if (kind === 'sup' && !B.super) return;
     const range = kind === 'atk' ? B.attack.range : B.super.range;
     const a = ang ?? autoAim(range, me);
@@ -1330,20 +1332,26 @@ function frame(nowMs) {
     for (let i = feed.length - 1; i >= 0; i--) { feed[i].t -= dt; if (feed[i].t <= 0) feed.splice(i, 1); }
     $('feed').innerHTML = feed.map((f) => `<div>${f.text}</div>`).join('');
     if (me) {
-      for (const id of ['bG1', 'bG2']) {
+      const src = atkSrc() || me;            // 조종 중이면 꼭두각시의 스킬 상태를 보여줌
+      for (const [i, id] of [[0, 'bG1'], [1, 'bG2']]) {
         const cd = $(id).querySelector('.cd');
-        cd.style.display = me.gCd > 0 ? 'flex' : 'none';
-        cd.textContent = me.gCd.toFixed(1);
+        cd.style.display = src.gCd > 0 ? 'flex' : 'none';
+        cd.textContent = src.gCd.toFixed(1);
+        $(id).querySelector('.gi').textContent = BR[src.b].gadgets[i].icon;
+        $(id).classList.toggle('puppet', src !== me);
       }
-      const B = BR[me.b];
-      const sb = $('bSup'), pct = Math.round(me.sup * 100);
+      $('bAtk').classList.toggle('puppet', src !== me);
+      const B = BR[src.b];
+      const sb = $('bSup'), pct = Math.round(src.sup * 100);
       sb.classList.toggle('off', !B.super);
       if (!B.super) { sb.classList.remove('ready'); } else
-      { sb.classList.toggle('ready', me.sup >= 1);
-      sb.style.background = me.sup >= 1 ? 'radial-gradient(circle at 40% 35%, #ffe98a, #ff5a1f)' : `conic-gradient(#ff8a1f ${pct}%, #3a2a6a 0)`; }
+      { sb.classList.toggle('ready', src.sup >= 1);
+      sb.style.background = src.sup >= 1 ? 'radial-gradient(circle at 40% 35%, #ffe98a, #ff5a1f)' : `conic-gradient(#ff8a1f ${pct}%, #3a2a6a 0)`; }
       // 조준 표시
-      const v = views[myId];
-      aimInd.visible = !!B.super && me.sup >= 1 && !me.dead && !!v && (aims.sup.id !== null ? !aims.sup.cancel : !isTouch);
+      const v = views[src.id];
+      if (aimInd.userData.b !== src.b) { if (aimMesh) aimInd.remove(aimMesh); aimMesh = null; aimInd.userData.b = src.b; }
+      if (atkInd.userData.b !== src.b) { if (atkMesh) atkInd.remove(atkMesh); atkMesh = null; atkInd.userData.b = src.b; }
+      aimInd.visible = !!B.super && src.sup >= 1 && !src.dead && !!v && (aims.sup.id !== null ? !aims.sup.cancel : !isTouch);
       if (aimInd.visible) {
         if (!aimMesh) {
           let g;
@@ -1356,7 +1364,7 @@ function frame(nowMs) {
       }
       // 기본공격 조준: 범위 고정(정보쌤) → 주변 원 / 방향 공격(현실쌤) → 부채꼴
       const dirAtk = B.attack.aim === 'dir';
-      atkInd.visible = !me.dead && !me.ctrl && !!v && (aims.atk.id !== null ? !aims.atk.cancel : (dirAtk && !isTouch));
+      atkInd.visible = !src.dead && !!v && (aims.atk.id !== null ? !aims.atk.cancel : (dirAtk && !isTouch));
       if (atkInd.visible) {
         if (!atkMesh) {
           const r = B.attack.range * S;
@@ -1371,7 +1379,7 @@ function frame(nowMs) {
       }
       const cm = $('ctrlMsg');
       if (me.ctl) { cm.style.display = 'block'; cm.textContent = '🎮 조종당하는 중!'; }
-      else if (me.ctrl) { const t = state.players.find((q) => q.id === me.ctrl); cm.style.display = 'block'; cm.textContent = `🎮 ${t ? t.name : ''} 조종 중 ${me.ctrlT.toFixed(1)}초 — 이동·공격으로 조종`; }
+      else if (me.ctrl) { const t = state.players.find((q) => q.id === me.ctrl); cm.style.display = 'block'; cm.textContent = `🎮 ${t ? t.name : ''} 조종 중 ${me.ctrlT.toFixed(1)}초 — 이동·공격·가젯·궁극기 전부 상대 걸로!`; }
       else cm.style.display = 'none';
       $('ctrlFlash').style.opacity = me.ctl ? 1 : 0;
       $('dead').style.display = me.dead ? 'flex' : 'none';
