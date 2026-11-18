@@ -321,7 +321,7 @@ io.on('connection', (socket) => {
   socket.on('join', ({ name, brawler } = {}) => {
     if (room) return;
     room = getRoom('lobby');   // 모두 공통 로비
-    const bid = BRAWLERS[brawler] ? brawler : 'jungbo';
+    const bid = BRAWLERS[brawler] && !BRAWLERS[brawler].wip ? brawler : 'jungbo';
     room.players.set(socket.id, newPlayer(room, socket.id, String(name || '').trim() || BRAWLERS[bid].name, false, bid));
     socket.join(room.id);
     socket.emit('joined', { id: socket.id, map: MAP });
@@ -340,7 +340,7 @@ io.on('connection', (socket) => {
     const bots = [...room.players.values()].filter((p) => p.isBot).length;
     if (room.players.size >= G.maxPlayers || bots >= G.maxBots) return;
     const id = 'bot' + ++room.botSeq;
-    const bid = pick(Object.keys(BRAWLERS));
+    const bid = pick(Object.keys(BRAWLERS).filter((k) => !BRAWLERS[k].wip));
     room.players.set(id, newPlayer(room, id, '봇' + room.botSeq, true, bid));
   });
   socket.on('clearBots', () => {

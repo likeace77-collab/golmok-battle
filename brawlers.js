@@ -32,6 +32,15 @@ const BRAWLERS = {
       kill: ['수행평가 0점', '교무실로 와', '벌점!'],
     },
   },
+  hyeonsil: {
+    id: 'hyeonsil',
+    name: '현실쌤',
+    rarity: null,          // 등급 미정
+    wip: true,             // 스킬 준비 중 → 아직 선택 불가
+    title: '수학쌤',
+    desc: '핑크색 옷에 털가죽 잠바를 걸친 수학 선생님. 스킬은 준비 중.',
+    radius: 28, speed: 250, maxHp: 3800,
+  },
 };
 
 // 클라이언트에 보낼 공개 정보 (대사 제외)
