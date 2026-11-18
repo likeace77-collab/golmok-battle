@@ -109,6 +109,7 @@ function newPlayer(room, id, name, isBot, brawlerId, loadout) {
     x: 0, y: 0, hp: B.maxHp, ammo: B.attack.ammo, reloadT: 0, atkCd: 0,
     stunT: 0, frozenT: 0, gCd: 0, facing: Math.PI / 2, sup: 0,
     acT: 0, acTick: 0, ctrlId: null, ctrlT: 0, ctrlBy: null,
+    aw: false, fear: 0, scaredT: 0, dash: null,
     shield: 0, fullT: 0, rf: 0, ajT: 30, gems: 0,
     lastHit: 0, dead: false, respawnT: 0, out: false, rank: 0,
     kills: 0, deaths: 0, input: { mx: 0, my: 0 }, speech: null,
@@ -119,12 +120,13 @@ function newPlayer(room, id, name, isBot, brawlerId, loadout) {
 const has = (p, gear) => p.lo.gears.includes(gear);
 const hasSP = (p, sp) => p.lo.sp === sp;
 const SP = (p, id) => p.B.starPowers.find((s) => s.id === id);
-const speedOf = (p) => p.B.speed * (has(p, 'speed') ? 1.1 : 1);
+const jjang = (p) => hasSP(p, 'jjang') && p.hp >= p.B.maxHp;     // 김준후 스파2: 풀피 버프
+const speedOf = (p) => p.B.speed * (has(p, 'speed') ? 1.1 : 1) * (jjang(p) ? SP(p, 'jjang').speedMul : 1);
 function resetBody(room, p, slot) {
   const s = spawnPoint(room, p, slot);
   Object.assign(p, {
     x: s.x, y: s.y, hp: p.B.maxHp, dead: false, ammo: p.B.attack.ammo, stunT: 0, frozenT: 0, acT: 0,
-    rf: 0, gems: 0, shield: 0, fullT: 0, respawnT: 0, input: { mx: 0, my: 0 },
+    rf: 0, gems: 0, shield: 0, fullT: 0, respawnT: 0, input: { mx: 0, my: 0 }, aw: false, dash: null,   // 쫄 게이지는 부활해도 유지
   });
   releaseCtrl(room, p, false);
 }
@@ -154,6 +156,16 @@ function damage(room, attacker, target, dmg, now, kind) {
   if (!target || target.dead || target.out) return;
   if (attacker && attacker !== target && !isEnemy(room, attacker, target)) return;
   if (attacker && has(attacker, 'dmg') && attacker.hp <= attacker.B.maxHp * 0.5) dmg = Math.round(dmg * 1.15);
+  if (attacker && attacker !== target && jjang(attacker)) dmg = Math.round(dmg * SP(attacker, 'jjang').dmgMul);
+  // 김준후 특성 '쫄': 맞을 때마다 쫄 게이지 ↑ → 다 차면 10초 공격 불능
+  if (target.B.trait && target.scaredT <= 0 && kind !== 'gas') {
+    target.fear = Math.min(1, target.fear + target.B.trait.perHit);
+    if (target.fear >= 1) {
+      target.scaredT = target.B.trait.dur;
+      say(target, 'scared', 2.5);
+      room.fx.push({ type: 'scared', id: target.id, x: target.x, y: target.y });
+    }
+  }
   let left = dmg;
   if (target.shield > 0) { const s = Math.min(target.shield, left); target.shield -= s; left -= s; }
   target.hp -= left;
@@ -298,7 +310,8 @@ const SKILLS = {
         if (board) {
           const b = SP(p, 'board');
           const sx = p.x + Math.cos(a) * A.range * 0.6, sy = p.y + Math.sin(a) * A.range * 0.6;
-          room.shards.push({ id: ++room.shardSeq, owner: p.id, x: sx, y: sy, r: b.radius, t: b.dur, tick: 0, dps: b.dps });
+          room.shards.push({ id: ++room.shardSeq, owner: p.id, x: sx, y: sy, r: b.radius, t: 1e9, tick: 0, dps: b.dps });   // 판 끝날 때까지 계속 남음
+          if (room.shards.length > b.max) room.shards.shift();                                                            // 너무 많으면 가장 오래된 것부터
           room.fx.push({ type: 'board', id: p.id, x: sx, y: sy, a: +a.toFixed(3) });
         }
       } });
@@ -339,8 +352,74 @@ const SKILLS = {
   },
 };
 
+SKILLS.junhoo = {
+  // 백초크: 앞쪽 범위에서 가장 가까운 상대를 끌어와 1초 기절 + 1300 (각성하면 범위 2배·2000)
+  attack(room, p, a, now) {
+    const A = p.B.attack;
+    p.ammo -= 1; p.atkCd = A.cd; p.facing = a;
+    let range = A.range * (jjang(p) ? SP(p, 'jjang').rangeMul : 1), dmg = A.dmg;
+    const aw = p.aw;
+    if (aw) { const g = p.B.gadgets[1]; range *= g.rangeMul; dmg = g.dmg; p.aw = false; }
+    let target = null, best = Infinity;
+    for (const q of enemies(room, p)) {
+      if (!inCone(p, a, range, A.half, q.x, q.y, q.B.radius)) continue;
+      const d = Math.hypot(q.x - p.x, q.y - p.y);
+      if (d < best) { best = d; target = q; }
+    }
+    room.fx.push({ type: 'choke', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: range, h: A.half, aw, tid: target ? target.id : null, tx: target ? target.x : null, ty: target ? target.y : null });
+    if (!target) return;
+    if (Math.random() < 0.5) say(p, 'atk', 1.2);
+    const dx = target.x - p.x, dy = target.y - p.y, d = Math.hypot(dx, dy) || 1;   // 내 앞으로 끌어오기
+    const keep = p.B.radius + target.B.radius + 6;
+    target.x = p.x + (dx / d) * keep; target.y = p.y + (dy / d) * keep;
+    resolveWalls(room.map, target, target.B.radius);
+    target.stunT = Math.max(target.stunT, A.stun);
+    damage(room, p, target, dmg, now, aw ? 'awaken' : 'choke');
+    chargeSuper(p, dmg);
+  },
+  gadget(room, p, idx, now) {
+    if (idx === 0) {                 // 간식 털어먹기
+      const g = p.B.gadgets[0];
+      say(p, 'g1', 1.8);
+      const heal = Math.min(g.heal, p.B.maxHp - p.hp);
+      p.hp += heal;
+      room.fx.push({ type: 'snack', id: p.id, x: p.x, y: p.y, v: Math.round(heal) });
+    } else {                         // 나 김준후야!!! — 다음 공격 강화
+      say(p, 'g2', 2);
+      p.aw = true;
+      room.fx.push({ type: 'awaken', id: p.id, x: p.x, y: p.y });
+    }
+  },
+  // 태클: 조준 방향으로 돌진, 처음 부딪힌 상대 1000 + 4초 기절
+  super(room, p, a, now) {
+    const S = p.B.super;
+    say(p, 'sup', 1.6);
+    p.dash = { a, left: S.range, speed: S.range / S.dashTime };
+    room.fx.push({ type: 'tackle', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: S.range });
+  },
+};
+function dashStep(room, p, now) {      // 태클 돌진 이동 (틱마다)
+  const D = p.dash, S = p.B.super;
+  if (p.stunT > 0 || p.frozenT > 0) { p.dash = null; return; }   // 돌진 중 기절하면 멈춤
+  const stepLen = Math.min(D.left, D.speed * DT);
+  const ox = p.x, oy = p.y;
+  p.x += Math.cos(D.a) * stepLen; p.y += Math.sin(D.a) * stepLen;
+  resolveWalls(room.map, p, p.B.radius);
+  D.left -= stepLen;
+  const moved = Math.hypot(p.x - ox, p.y - oy);
+  for (const q of enemies(room, p)) {
+    if (Math.hypot(q.x - p.x, q.y - p.y) > p.B.radius + q.B.radius + 8) continue;
+    q.x += Math.cos(D.a) * 60; q.y += Math.sin(D.a) * 60; resolveWalls(room.map, q, q.B.radius);   // 부딪혀서 밀려남
+    q.stunT = Math.max(q.stunT, S.stun);
+    damage(room, p, q, S.dmg, now, 'tackle');
+    room.fx.push({ type: 'tackleHit', id: p.id, tid: q.id, x: q.x, y: q.y, a: +D.a.toFixed(3) });
+    p.dash = null; return;
+  }
+  if (D.left <= 0 || moved < stepLen * 0.3) { p.dash = null; room.fx.push({ type: 'tackleEnd', id: p.id, x: p.x, y: p.y }); }
+}
+
 function doAttack(room, p, ang, now) {
-  if (room.phase !== 'play' || !canAct(p) || p.ammo < 1 || p.atkCd > 0) return;
+  if (room.phase !== 'play' || !canAct(p) || p.ammo < 1 || p.atkCd > 0 || p.scaredT > 0 || p.dash) return;
   p.lastHit = Math.max(p.lastHit, now - G.regenDelay + 1);
   SKILLS[p.B.id].attack(room, p, Number.isFinite(ang) ? ang : p.facing, now);
 }
@@ -351,7 +430,7 @@ function doGadget(room, p, slot, now) {           // slot: 1 또는 2 (더블 �
   SKILLS[p.B.id].gadget(room, p, idx, now);
 }
 function doSuper(room, p, ang, now) {
-  if (room.phase !== 'play' || !p.B.super || !canAct(p) || p.sup < 1) return;
+  if (room.phase !== 'play' || !p.B.super || !canAct(p) || p.sup < 1 || p.scaredT > 0 || p.dash) return;
   if (p.ctrlBy && p.B.id === 'hyeonsil') return;   // 꼭두각시 현실쌤은 조종 궁극기 못 씀
   p.sup = 0;
   const a = Number.isFinite(ang) ? ang : p.facing;
@@ -458,7 +537,7 @@ function startRound(room) {
   fillBots(room);
   let slot = Math.floor(Math.random() * 8);
   for (const p of room.players.values()) {
-    p.out = false; p.rank = 0; p.sup = 0; p.gCd = 0; p.kills = 0; p.deaths = 0; p.ajT = 30;
+    p.out = false; p.rank = 0; p.sup = 0; p.gCd = 0; p.kills = 0; p.deaths = 0; p.ajT = 30; p.fear = 0; p.scaredT = 0;
     resetBody(room, p, slot++);
   }
   room.phase = 'wait'; room.phaseT = 4;
@@ -586,8 +665,15 @@ function step(room) {
     p.gCd = Math.max(0, p.gCd - DT);
     p.stunT = Math.max(0, p.stunT - DT);
     p.frozenT = Math.max(0, p.frozenT - DT);
+    if (p.dash) { dashStep(room, p, now); if (p.dead) continue; }
+    if (p.scaredT > 0) { p.scaredT -= DT; if (p.scaredT <= 0) { p.scaredT = 0; p.fear = 0; } }
+    // 김준후 스파1: 근처에 상대가 있으면 궁 자동 충전
+    if (hasSP(p, 'sibi') && B.super && p.sup < 1) {
+      const sp = SP(p, 'sibi');
+      if (enemies(room, p).some((q) => Math.hypot(q.x - p.x, q.y - p.y) < sp.range)) p.sup = Math.min(1, p.sup + DT / sp.fullIn);
+    }
     if (p.ammo < B.attack.ammo) {
-      p.reloadT += DT;
+      p.reloadT += DT * (jjang(p) ? SP(p, 'jjang').reloadMul : 1);
       if (p.reloadT >= B.attack.reload) { p.ammo++; p.reloadT = 0; }
     } else p.reloadT = 0;
     const regen = G.regenRate * (has(p, 'heal') ? 1.5 : 1);
@@ -620,7 +706,7 @@ function step(room) {
       }
     }
     // 이동 (조종하는 동안 본인은 제자리)
-    if (p.stunT <= 0 && p.frozenT <= 0 && !p.ctrlId) {
+    if (p.stunT <= 0 && p.frozenT <= 0 && !p.ctrlId && !p.dash) {
       let { mx, my } = p.input;
       const len = Math.hypot(mx, my);
       if (len > 0.1) { mx /= len; my /= len; p.facing = Math.atan2(my, mx); } else { mx = 0; my = 0; }
@@ -671,7 +757,7 @@ function step(room) {
     gems: room.gems.map((g) => [g.id, r1(g.x), r1(g.y)]),
     score: room.mode.id === 'gem' ? [teamGems(room, 0), teamGems(room, 1)] : null,
     hold: room.holdTeam >= 0 ? { team: room.holdTeam, t: +room.holdT.toFixed(1) } : null,
-    shards: room.shards.map((s) => [s.id, r1(s.x), r1(s.y), s.r, +s.t.toFixed(1)]),
+    shards: room.shards.map((s) => [s.id, r1(s.x), r1(s.y), s.r, 99]),
     players: [...room.players.values()].map((p) => ({
       id: p.id, name: p.name, b: p.B.id, color: p.color, bot: p.isBot, team: p.team,
       x: r1(p.x), y: r1(p.y), hp: r1(p.hp), dead: p.dead, out: p.out, rank: p.rank, respawn: Math.ceil(p.respawnT),
@@ -680,6 +766,7 @@ function step(room) {
       k: p.kills, d: p.deaths, say: p.speech ? p.speech.text : null,
       ctl: p.ctrlBy, ctrl: p.ctrlId, ctrlT: +(p.ctrlT || 0).toFixed(1), ac: +p.acT.toFixed(1),
       g: p.lo.g, sp: p.lo.sp, gear: p.lo.gears, sh: r1(p.shield), rf: +p.rf.toFixed(3), aj: Math.ceil(p.ajT), gems: p.gems,
+      aw: p.aw, fear: +p.fear.toFixed(2), scared: +p.scaredT.toFixed(1), dash: !!p.dash, jj: jjang(p),
     })),
     mice: room.mice.map((m) => ({ id: m.id, x: r1(m.x), y: r1(m.y), a: +m.ang.toFixed(2), c: m.color, hp: m.hp / m.maxHp })),
     fx: room.fx,
