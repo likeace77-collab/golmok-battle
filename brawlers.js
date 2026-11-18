@@ -78,7 +78,7 @@ const BRAWLERS = {
   junhoo: {
     id: 'junhoo',
     name: '김준후',
-    rarity: null,          // 등급 미정
+    rarity: 'epic',        // 영웅
     title: '나 김준후야!!!',
     desc: '안경 쓴 작은 학생. 몸은 작은데 엄청 나댄다. 상대를 끌어와 백초크를 걸고 태클로 날려버린다. 근데 많이 맞으면 쫄아버림.',
     radius: 24, speed: 265, maxHp: 4800,
