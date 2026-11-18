@@ -39,7 +39,9 @@ const C = {
   g1Range: 260, g1Stun: 1.6, g1Dmg: 300,
   // 가젯2: 마우스 소환
   mouseHp: 1200, mouseSpeed: 320, mouseDmg: 260, mouseBiteCd: 0.6, mouseLife: 8, mouseRadius: 16, mouseCount: 2,
-  gadgetCd: 6, gadgetUses: 3,
+  gadgetCd: 6,
+  // 궁극기: 이놈의 아이들 (부채꼴 강공격)
+  superNeed: 3500, superRange: 340, superHalf: 0.66, superDmg: 2200, superKnock: 150,
   respawn: 3, regenDelay: 3, regenRate: 0.13,
 };
 
@@ -47,6 +49,7 @@ const LINES = {
   atk: ['아~ 이놈의 아이들!', '아~ 이놈의 아이들', '조용히 해라~', '자리에 앉아!'],
   g1: ['AI야? 시키지도 않은 걸 하네', 'AI야?? 시키지도 않은 걸 하네!'],
   g2: ['마우스 소환!', '가라, 무선마우스!'],
+  sup: ['이놈의 아이들!!!', '이노오옴의 아이드을!!'],
   kill: ['수행평가 0점', '교무실로 와', '벌점!'],
 };
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -101,7 +104,7 @@ function newPlayer(room, id, name, isBot) {
     color: COLORS[room.colorIdx++ % COLORS.length],
     x: s.x, y: s.y, hp: C.maxHp,
     ammo: C.maxAmmo, reloadT: 0, atkCd: 0,
-    stunT: 0, g1Uses: C.gadgetUses, g2Uses: C.gadgetUses, gCd: 0,
+    stunT: 0, gCd: 0, facing: Math.PI / 2, sup: 0,
     lastHit: 0, dead: false, respawnT: 0,
     kills: 0, deaths: 0,
     input: { mx: 0, my: 0 }, speech: null,
@@ -134,7 +137,10 @@ function doAttack(room, p, now) {
   if (Math.random() < 0.45) say(p, pick(LINES.atk), 1.2);
   for (const q of room.players.values()) {
     if (q.id === p.id || q.dead) continue;
-    if (Math.hypot(q.x - p.x, q.y - p.y) <= C.atkRange + C.radius) damage(room, p, q, C.atkDmg, now);
+    if (Math.hypot(q.x - p.x, q.y - p.y) <= C.atkRange + C.radius) {
+      damage(room, p, q, C.atkDmg, now);
+      p.sup = Math.min(1, p.sup + C.atkDmg / C.superNeed);
+    }
   }
   for (const m of room.mice) {
     if (m.owner === p.id) continue;
@@ -145,8 +151,7 @@ function doAttack(room, p, now) {
 function doGadget(room, p, n, now) {
   if (!canAct(p) || p.gCd > 0) return;
   if (n === 1) {
-    if (p.g1Uses <= 0) return;
-    p.g1Uses--; p.gCd = C.gadgetCd;
+    p.gCd = C.gadgetCd;
     say(p, pick(LINES.g1), 2);
     const hits = [];
     room.fx.push({ type: 'stun', id: p.id, x: p.x, y: p.y, r: C.g1Range, hits });
@@ -159,8 +164,7 @@ function doGadget(room, p, n, now) {
       }
     }
   } else if (n === 2) {
-    if (p.g2Uses <= 0) return;
-    p.g2Uses--; p.gCd = C.gadgetCd;
+    p.gCd = C.gadgetCd;
     say(p, pick(LINES.g2), 1.6);
     for (let i = 0; i < C.mouseCount; i++) {
       const a = Math.random() * Math.PI * 2;
@@ -174,6 +178,32 @@ function doGadget(room, p, n, now) {
     }
     room.fx.push({ type: 'summon', id: p.id, x: p.x, y: p.y });
   }
+}
+
+function doSuper(room, p, ang, now) {
+  if (!canAct(p) || p.sup < 1) return;
+  p.sup = 0;
+  const a = Number.isFinite(ang) ? ang : p.facing;
+  p.facing = a;
+  say(p, pick(LINES.sup), 1.8);
+  room.fx.push({ type: 'super', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: C.superRange, h: C.superHalf });
+  const inCone = (x, y, rad) => {
+    const dx = x - p.x, dy = y - p.y, d = Math.hypot(dx, dy);
+    if (d > C.superRange + rad) return false;
+    if (d < rad + C.radius) return true;
+    let diff = Math.atan2(dy, dx) - a;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    return Math.abs(diff) <= C.superHalf;
+  };
+  for (const q of room.players.values()) {
+    if (q.id === p.id || q.dead || !inCone(q.x, q.y, C.radius)) continue;
+    const d = Math.hypot(q.x - p.x, q.y - p.y) || 1;
+    q.x += ((q.x - p.x) / d) * C.superKnock; q.y += ((q.y - p.y) / d) * C.superKnock;
+    resolveWalls(q, C.radius);
+    q.stunT = Math.max(q.stunT, 0.4);
+    damage(room, p, q, C.superDmg, now);
+  }
+  for (const m of room.mice) if (m.owner !== p.id && inCone(m.x, m.y, C.mouseRadius)) m.hp = 0;
 }
 
 function botThink(room, p, now) {
@@ -193,6 +223,7 @@ function botThink(room, p, now) {
     if (best < C.atkRange + 10 && Math.random() < 0.18) doAttack(room, p, now);
     if (best < C.g1Range - 40 && Math.random() < 0.01) doGadget(room, p, 1, now);
     if (best < 500 && Math.random() < 0.006) doGadget(room, p, 2, now);
+    if (best < C.superRange - 30 && p.sup >= 1 && Math.random() < 0.05) doSuper(room, p, Math.atan2(dy, dx), now);
     if (p.hp < C.maxHp * 0.3 && Math.random() < 0.5) { p.input.mx *= -1; p.input.my *= -1; }
   } else {
     if (b.wanderT <= 0) {
@@ -228,7 +259,7 @@ function step(room) {
     if (p.stunT <= 0) {
       let { mx, my } = p.input;
       const len = Math.hypot(mx, my);
-      if (len > 1) { mx /= len; my /= len; }
+      if (len > 0.1) { mx /= len; my /= len; p.facing = Math.atan2(my, mx); } else { mx = 0; my = 0; }
       p.x += mx * C.speed * DT;
       p.y += my * C.speed * DT;
       resolveWalls(p, C.radius);
@@ -275,7 +306,7 @@ function step(room) {
       id: p.id, name: p.name, color: p.color, bot: p.isBot,
       x: r1(p.x), y: r1(p.y), hp: r1(p.hp), dead: p.dead, respawn: Math.ceil(p.respawnT),
       ammo: p.ammo + p.reloadT / C.reload, stun: p.stunT > 0,
-      g1: p.g1Uses, g2: p.g2Uses, gCd: +p.gCd.toFixed(2),
+      gCd: +p.gCd.toFixed(2), sup: +p.sup.toFixed(3), f: +p.facing.toFixed(2),
       k: p.kills, d: p.deaths, say: p.speech ? p.speech.text : null,
     })),
     mice: room.mice.map((m) => ({ id: m.id, x: r1(m.x), y: r1(m.y), a: +m.ang.toFixed(2), c: m.color, hp: m.hp / C.mouseHp })),
@@ -304,6 +335,7 @@ io.on('connection', (socket) => {
   });
   socket.on('attack', () => { const p = room && room.players.get(socket.id); if (p) doAttack(room, p, Date.now() / 1000); });
   socket.on('gadget', (n) => { const p = room && room.players.get(socket.id); if (p) doGadget(room, p, n === 2 ? 2 : 1, Date.now() / 1000); });
+  socket.on('super', (ang) => { const p = room && room.players.get(socket.id); if (p) doSuper(room, p, typeof ang === 'number' ? ang : NaN, Date.now() / 1000); });
   socket.on('addBot', () => {
     if (!room) return;
     const bots = [...room.players.values()].filter((p) => p.isBot).length;

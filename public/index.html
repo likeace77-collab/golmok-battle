@@ -47,6 +47,9 @@
   .cb .cd { position: absolute; inset: 0; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; display: none; align-items: center; justify-content: center; font-size: 16px; }
   #bAtk { right: 0; bottom: 0; width: 104px; height: 104px; background: radial-gradient(circle at 40% 35%, #ffe98a, #ffb31f); font-size: 15px; }
   #bG1 { right: 124px; bottom: 6px; width: 74px; height: 74px; background: radial-gradient(circle at 40% 35%, #c9f6ff, #4fd2ff); font-size: 12px; }
+  #bSup { right: 112px; bottom: 100px; width: 86px; height: 86px; font-size: 13px; color: #fff; background: #3a2a6a; }
+  #bSup.ready { animation: glow .7s infinite alternate; color: #111; }
+  @keyframes glow { from { box-shadow: 0 5px 0 #000, 0 0 10px 3px #ffb31f; } to { box-shadow: 0 5px 0 #000, 0 0 26px 10px #ff5a1f; } }
   #bG2 { right: 18px; bottom: 124px; width: 74px; height: 74px; background: radial-gradient(circle at 40% 35%, #d8ffd0, #63e65a); font-size: 12px; }
 </style>
 <script type="importmap">{ "imports": { "three": "/vendor/three.module.js" } }</script>
@@ -63,10 +66,11 @@
     <button class="btn" id="startBtn">입장</button>
     <div class="help">
       <b>이동</b> WASD / 방향키 · 폰은 왼쪽 화면 드래그<br>
-      <b>기본공격</b> Space / 클릭 — 아~ 이놈의 아이들 (점프 내려찍기 광역)<br>
+      <b>기본공격</b> Space / 좌클릭 — 아~ 이놈의 아이들 (점프 내려찍기 광역)<br>
       <b>가젯1</b> Q — AI야? 시키지도 않은 걸 하네 (전기 스턴)<br>
       <b>가젯2</b> E — 마우스 소환 (적 쫓아가서 딸깍)<br>
-      가젯은 판당 각 3회, 공용 쿨타임 6초
+      <b>궁극기</b> R / 우클릭 — 이놈의 아이들 (부채꼴 강공격, PC는 마우스 방향)<br>
+      가젯은 무제한, 공용 쿨타임 6초 · 궁극기는 기본공격 맞히면 충전
     </div>
   </div>
 </div>
@@ -77,8 +81,9 @@
 <div id="dead" class="stroke"></div>
 <div id="ctrl">
   <div class="cb" id="bAtk">공격<small>Space</small></div>
-  <div class="cb" id="bG1">AI야?<small>Q</small><span class="n">3</span><span class="cd"></span></div>
-  <div class="cb" id="bG2">마우스<small>E</small><span class="n">3</span><span class="cd"></span></div>
+  <div class="cb" id="bSup">궁극기<small>R / 우클릭</small></div>
+  <div class="cb" id="bG1">AI야?<small>Q</small><span class="cd"></span></div>
+  <div class="cb" id="bG2">마우스<small>E</small><span class="cd"></span></div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -392,6 +397,37 @@ function fxSummon(x, z) {
   burst(x, 0.5, z, 26, ['#7dff8a', '#d8ffd0', '#ffffff'], { speed: 4, size: 0.14, up: 14, life: 0.9, grav: 8 });
 }
 
+function sectorGeo(r, half, inner = 0) {
+  return inner > 0 ? new THREE.RingGeometry(inner, r, 40, 1, -half, half * 2) : new THREE.CircleGeometry(r, 40, -half, half * 2);
+}
+function fxSuper(x, z, a, r, half, near) {
+  const g = new THREE.Group(); g.position.set(x, 0.15, z); g.rotation.y = -a;
+  const wedge = new THREE.Mesh(sectorGeo(1, half), addMat('#ff5a1f', 0.55)); wedge.rotation.x = -Math.PI / 2; g.add(wedge);
+  const core = new THREE.Mesh(sectorGeo(1, half * 0.55), addMat('#ffe36b', 0.7)); core.rotation.x = -Math.PI / 2; core.position.y = 0.02; g.add(core);
+  addFx(0.55, g, (k) => { const q = ease(Math.min(1, k * 2.2)); wedge.scale.setScalar(r * q); core.scale.setScalar(r * q * 0.95); wedge.material.opacity = 0.55 * (1 - k); core.material.opacity = 0.7 * (1 - k); });
+  for (let i = 0; i < 4; i++) {
+    const arc = new THREE.Mesh(sectorGeo(1, half * 0.95, 0.9), addMat(i % 2 ? '#ffffff' : '#ffb31f', 1));
+    arc.rotation.x = -Math.PI / 2;
+    const w = new THREE.Group(); w.position.set(x, 0.6 + i * 0.25, z); w.rotation.y = -a; w.add(arc);
+    addFx(0.5, w, (k) => { arc.scale.setScalar(r * (0.15 + 0.9 * k)); arc.material.opacity = 1 - k; }, i * 0.07);
+  }
+  const dx = Math.cos(a), dz = Math.sin(a);
+  for (let i = 0; i < 40; i++) {
+    const t = (Math.random() * 2 - 1) * half, sp = 10 + Math.random() * 18;
+    const mesh = new THREE.Mesh(pGeo, basic(['#ff5a1f', '#ffe36b', '#ffffff', '#c9a27a'][i % 4]));
+    const s0 = 0.15 + Math.random() * 0.25; mesh.scale.setScalar(s0); mesh.position.set(x, 1 + Math.random() * 1.5, z);
+    const ca = Math.cos(t), sa = Math.sin(t);
+    parts.push({ mesh, vx: (dx * ca - dz * sa) * sp, vz: (dx * sa + dz * ca) * sp, vy: 2 + Math.random() * 4, t: 0, life: 0.5 + Math.random() * 0.3, s0, grav: 10 });
+    scene.add(mesh);
+  }
+  popup('이놈의 아이들!!', { x: x + dx * 3, z: z + dz * 3 }, 5.5, '#ff5a1f', 40, 1.1);
+  if (near) shake = Math.max(shake, 1.1);
+}
+
+// 궁극기 조준 표시
+const aimInd = new THREE.Group(); aimInd.visible = false; scene.add(aimInd);
+let aimMesh = null;
+
 function fxSpawn(x, z) {
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 14, 24, 1, true), addMat('#ffd84a', 0.35));
   beam.position.set(x, 7, z);
@@ -457,6 +493,9 @@ function handleFx(list) {
     } else if (f.type === 'summon') {
       const v = views[f.id]; if (v) v.g2T = 0;
       fxSummon(x, z);
+    } else if (f.type === 'super') {
+      const v = views[f.id]; if (v) { v.superT = 0; v.facing = Math.atan2(Math.cos(f.a), Math.sin(f.a)); }
+      later(0.16, () => fxSuper(x, z, f.a, f.r * S, f.h, isNear(x, z, 22)));
     } else if (f.type === 'dmg') popup(String(f.v), { x, z }, 4.8, '#ffffff', f.v >= 1000 ? 26 : 20);
     else if (f.type === 'click') { popup('딸깍!', { x, z }, 3.2, '#9cff9c', 17, 0.6); burst(x, 1.5, z, 6, ['#ffffff', '#9cff9c'], { speed: 4, size: 0.1, up: 3, life: 0.35 }); }
   }
@@ -471,13 +510,32 @@ addEventListener('keydown', (e) => {
   if (k === ' ') { socket.emit('attack'); e.preventDefault(); }
   if (k === 'q' || k === 'ㅂ') socket.emit('gadget', 1);
   if (k === 'e' || k === 'ㄷ') socket.emit('gadget', 2);
+  if (k === 'r' || k === 'ㄱ') doSuper();
 });
+const mouse = { x: 0, y: 0, on: false };
+addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.on = true; });
+const ray = new THREE.Raycaster(), ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitP = new THREE.Vector3();
+function aimAngle() {   // 서버 좌표 기준 각도
+  const me = state.players.find((p) => p.id === myId), v = views[myId];
+  if (!me || !v) return null;
+  if (!isTouch && mouse.on) {
+    ray.setFromCamera({ x: mouse.x / W * 2 - 1, y: -(mouse.y / H) * 2 + 1 }, camera);
+    if (ray.ray.intersectPlane(ground, hitP)) {
+      const p = v.model.root.position;
+      if (Math.hypot(hitP.x - p.x, hitP.z - p.z) > 0.5) return Math.atan2(hitP.z - p.z, hitP.x - p.x);
+    }
+  }
+  return me.f;
+}
+function doSuper() { if (!socket) return; const a = aimAngle(); socket.emit('super', a == null ? undefined : a); }
+renderer.domElement.addEventListener('contextmenu', (e) => { e.preventDefault(); doSuper(); });
 addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
-renderer.domElement.addEventListener('mousedown', () => { if (socket && !isTouch) socket.emit('attack'); });
+renderer.domElement.addEventListener('mousedown', (e) => { if (socket && !isTouch && e.button === 0) socket.emit('attack'); });
 const press = (id, fn) => $(id).addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); socket && fn(); });
 press('bAtk', () => socket.emit('attack'));
 press('bG1', () => socket.emit('gadget', 1));
 press('bG2', () => socket.emit('gadget', 2));
+press('bSup', () => doSuper());
 
 const joy = { id: null, sx: 0, sy: 0, x: 0, y: 0 };
 const joyEl = document.createElement('div');
@@ -507,9 +565,10 @@ setInterval(() => {
   if (keys['s'] || keys['arrowdown'] || keys['ㄴ']) my += 1;
   if (joy.id !== null) {
     const dx = joy.x - joy.sx, dy = joy.y - joy.sy, d = Math.hypot(dx, dy);
-    if (d > 8) { const m = Math.min(1, d / 55); mx = dx / d * m; my = dy / d * m; }
+    if (d > 8) { mx = dx / d; my = dy / d; }
     const kd = Math.min(d, 50); knob.style.transform = d ? `translate(${dx / d * kd}px,${dy / d * kd}px)` : '';
   }
+  const ml = Math.hypot(mx, my); if (ml > 0) { mx /= ml; my /= ml; }
   const key = mx.toFixed(2) + ',' + my.toFixed(2);
   if (key !== lastSent) { socket.emit('input', { mx, my }); lastSent = key; }
 }, 1000 / 30);
@@ -527,7 +586,7 @@ function getView(p) {
     const model = makeTeacher(p.color);
     model.root.position.set(p.x * S, 0, p.y * S);
     scene.add(model.root);
-    v = views[p.id] = { model, label: makeLabel(p.id === myId), facing: 0, phase: 0, speed: 0, atkT: 9, g1T: 9, g2T: 9, hitT: 9, deadT: 0, lastHp: p.hp, dead: p.dead };
+    v = views[p.id] = { model, label: makeLabel(p.id === myId), facing: 0, phase: 0, speed: 0, atkT: 9, g1T: 9, g2T: 9, superT: 9, hitT: 9, deadT: 0, lastHp: p.hp, dead: p.dead };
   }
   return v;
 }
@@ -555,7 +614,7 @@ function animateTeacher(v, p, dt, now) {
   if (!p.dead && v.dead) fxSpawn(root.position.x, root.position.z);
   v.dead = p.dead;
 
-  v.atkT += dt; v.g1T += dt; v.g2T += dt; v.hitT += dt; v.deadT += dt;
+  v.atkT += dt; v.g1T += dt; v.g2T += dt; v.superT += dt; v.hitT += dt; v.deadT += dt;
   const walk = Math.min(1, v.speed / 8);
   v.phase += dt * (6 + v.speed * 0.9);
   const s = Math.sin(v.phase);
@@ -588,6 +647,15 @@ function animateTeacher(v, p, dt, now) {
     const t = v.g2T, q = t < 0.1 ? t / 0.1 : 1 - Math.max(0, t - 0.5) / 0.2;
     armZ = [-2.3 * q, 2.3 * q]; armX = [0, 0];
     spin = ease(Math.min(1, t / 0.45)) * Math.PI * 2; bodyY += Math.sin(Math.min(1, t / 0.45) * Math.PI) * 0.8;
+  }
+  // 궁극기: 숨 크게 들이쉬고 → 앞으로 몸 날리며 고함
+  if (v.superT < 0.8) {
+    const t = v.superT;
+    if (t < 0.16) { const q = ease(t / 0.16); lean = -0.45 * q; sx = 1 + 0.18 * q; sy = 1 + 0.12 * q; armX = [-2.4 * q, -2.4 * q]; armZ = [-0.9 * q, 0.9 * q]; bodyY += 0.3 * q; }
+    else { const q = ease(Math.min(1, (t - 0.16) / 0.12)), r = Math.max(0, (t - 0.5) / 0.3);
+      lean = 0.55 * q * (1 - r); armX = [-1.5 * (1 - r), -1.5 * (1 - r)]; armZ = [-0.7 * (1 - r), 0.7 * (1 - r)];
+      sx = 1 + Math.sin(t * 50) * 0.05 * (1 - r); sy = 1 - 0.08 * (1 - r);
+      M.head.rotation.y = Math.sin(now * 50) * 0.1 * (1 - r); }
   }
   M.arms[0].rotation.x = armX[0]; M.arms[1].rotation.x = armX[1];
   M.arms[0].rotation.z = armZ[0]; M.arms[1].rotation.z = armZ[1];
@@ -698,11 +766,21 @@ function frame(nowMs) {
     for (let i = feed.length - 1; i >= 0; i--) { feed[i].t -= dt; if (feed[i].t <= 0) feed.splice(i, 1); }
     $('feed').innerHTML = feed.map((f) => `<div>${f.text}</div>`).join('');
     if (me) {
-      for (const [id, uses] of [['bG1', me.g1], ['bG2', me.g2]]) {
-        const b = $(id); b.querySelector('.n').textContent = uses;
-        const cd = b.querySelector('.cd');
-        cd.style.display = me.gCd > 0 || uses <= 0 ? 'flex' : 'none';
-        cd.textContent = uses <= 0 ? '✕' : me.gCd.toFixed(1);
+      for (const id of ['bG1', 'bG2']) {
+        const cd = $(id).querySelector('.cd');
+        cd.style.display = me.gCd > 0 ? 'flex' : 'none';
+        cd.textContent = me.gCd.toFixed(1);
+      }
+      const sb = $('bSup'), pct = Math.round(me.sup * 100);
+      sb.classList.toggle('ready', me.sup >= 1);
+      sb.style.background = me.sup >= 1 ? 'radial-gradient(circle at 40% 35%, #ffe98a, #ff5a1f)' : `conic-gradient(#ff8a1f ${pct}%, #3a2a6a 0)`;
+      // 조준 표시
+      const v = views[myId];
+      aimInd.visible = me.sup >= 1 && !me.dead && !!v;
+      if (aimInd.visible) {
+        if (!aimMesh) { aimMesh = new THREE.Mesh(sectorGeo(ST.superRange * S, ST.superHalf), addMat('#ff8a1f', 0.22)); aimMesh.rotation.x = -Math.PI / 2; aimInd.add(aimMesh); }
+        aimInd.position.set(v.model.root.position.x, 0.08, v.model.root.position.z);
+        const a = aimAngle(); if (a != null) aimInd.rotation.y = -a;
       }
       $('dead').style.display = me.dead ? 'flex' : 'none';
       if (me.dead) $('dead').textContent = `${me.respawn}초 후 부활`;
