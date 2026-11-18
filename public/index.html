@@ -156,9 +156,19 @@
   @keyframes pop { from { transform: scale(.3); } to { transform: scale(1); } }
   .pp { position: absolute; transform: translate(-50%, -50%); font-weight: 900; white-space: nowrap; }
 
-  #top { position: fixed; top: 8px; left: 8px; z-index: 6; display: none; gap: 6px; pointer-events: auto; }
+  #top { position: fixed; top: 8px; left: 8px; z-index: 8; display: none; gap: 6px; pointer-events: auto; }   /* 버튼이 항상 맨 위 */
   #top button { padding: 7px 10px; font-size: 13px; font-weight: 800; border: 3px solid #000; border-radius: 9px; background: #fff; cursor: pointer; }
-  #board { position: fixed; top: 8px; right: 12px; z-index: 6; text-align: right; font-weight: 800; font-size: 14px; line-height: 1.5; }
+  #board { position: fixed; top: 8px; right: 12px; z-index: 6; text-align: right; font-weight: 800; font-size: 14px; line-height: 1.5; pointer-events: none; }
+  #feed { pointer-events: none; }
+  /* 세로 폰 화면: 버튼 줄 → 그 아래 모드 정보 → 그 아래 점수판·킬피드 */
+  @media (max-width: 720px) {
+    #top button { padding: 6px 9px; font-size: 12px; }
+    #modeHud { top: 50px; font-size: 13px; }
+    #modeHud .gs { font-size: 15px; padding: 2px 10px; }
+    #modeHud .gs[style] { font-size: 12px !important; }
+    #board { top: 86px; right: 8px; font-size: 11px; line-height: 1.35; }
+    #feed { top: 150px; font-size: 13px; }
+  }
   #feed { position: fixed; top: 100px; left: 0; right: 0; z-index: 6; text-align: center; font-weight: 900; font-size: 15px; color: #ff9a9a; line-height: 1.6; }
   #dead { position: fixed; inset: 0; z-index: 7; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.45); font-size: 36px; font-weight: 900; }
 
@@ -2003,7 +2013,7 @@ function frame(nowMs) {
   if (MAP) {
     const me = state.players.find((p) => p.id === myId);
     const board = [...state.players].sort((a, b) => b.k - a.k || a.d - b.d);
-    $('board').innerHTML = board.map((p) => `<div style="color:${p.id === myId ? '#ffd84a' : '#fff'}">${p.name} ${p.k}킬 ${p.d}데스</div>`).join('');
+    $('board').innerHTML = board.slice(0, W <= 720 ? 5 : 10).map((p) => `<div style="color:${p.id === myId ? '#ffd84a' : '#fff'}">${p.name} ${p.k}킬 ${p.d}데스</div>`).join('');
     for (let i = feed.length - 1; i >= 0; i--) { feed[i].t -= dt; if (feed[i].t <= 0) feed.splice(i, 1); }
     $('feed').innerHTML = feed.map((f) => `<div>${f.text}</div>`).join('');
     if (me) {
