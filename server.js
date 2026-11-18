@@ -1,9 +1,12 @@
 // 정보쌤 브롤 - 실시간 온라인 대전 서버 (Node + socket.io, 서버 권한 방식)
+// 모드: 난투 · 쇼다운 · 젬 그랩 · 더블 가젯  (modes.js)
+// 브롤러: 정보쌤 · 현실쌤  (brawlers.js)
 const express = require('express');
 const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
-const { BRAWLERS, publicBrawlers } = require('./brawlers');
+const { BRAWLERS, GEARS, AJAE, publicBrawlers } = require('./brawlers');
+const { MAPS, MODES } = require('./modes');
 
 const app = express();
 const server = http.createServer(app);
@@ -11,50 +14,48 @@ const io = new Server(server);
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/vendor', express.static(path.join(__dirname, 'node_modules', 'three', 'build')));
 app.get('/api/brawlers', (req, res) => res.json(publicBrawlers()));
+app.get('/api/meta', (req, res) => res.json({ modes: MODES, maps: MAPS, gears: GEARS }));
 const PORT = process.env.PORT || 3000;
 
 const TICK = 30;
 const DT = 1 / TICK;
 const G = { respawn: 3, regenDelay: 3, regenRate: 0.13, maxPlayers: 10, maxBots: 6 };
-
-// ── 맵 ─────────────────────────────────────────────
-const MAP = {
-  w: 1600, h: 1200,
-  walls: [
-    { x: 300, y: 250, w: 220, h: 60 },
-    { x: 1080, y: 250, w: 220, h: 60 },
-    { x: 300, y: 890, w: 220, h: 60 },
-    { x: 1080, y: 890, w: 220, h: 60 },
-    { x: 740, y: 520, w: 120, h: 160 },
-    { x: 140, y: 560, w: 60, h: 80 },
-    { x: 1400, y: 560, w: 60, h: 80 },
-    { x: 700, y: 120, w: 200, h: 50 },
-    { x: 700, y: 1030, w: 200, h: 50 },
-  ],
-};
-
+const TEAM_COLORS = ['#4f8cff', '#ff4d4d'];
+const COLORS = ['#4f8cff', '#ff5d5d', '#3ccf7a', '#ffb02e', '#b56cff', '#22c3c3', '#ff7ac6', '#a0a0a0', '#ffe14a', '#8a5cff'];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
-const COLORS = ['#4f8cff', '#ff5d5d', '#3ccf7a', '#ffb02e', '#b56cff', '#22c3c3', '#ff7ac6', '#a0a0a0'];
 const rooms = new Map();
 
-function getRoom(id) {
-  if (!rooms.has(id)) rooms.set(id, { id, players: new Map(), mice: [], fx: [], pending: [], mouseSeq: 0, botSeq: 0, colorIdx: 0 });
-  return rooms.get(id);
+// ── 방 / 라운드 ────────────────────────────────────
+function getRoom(modeId) {
+  if (!rooms.has(modeId)) {
+    const mode = MODES[modeId];
+    const room = {
+      id: modeId, mode, map: MAPS[pick(mode.maps)],
+      players: new Map(), mice: [], shards: [], gems: [], fx: [], pending: [],
+      mouseSeq: 0, botSeq: 0, colorIdx: 0, shardSeq: 0, gemSeq: 0,
+      phase: mode.rounds ? 'wait' : 'play', phaseT: mode.rounds ? 4 : 0,
+      mapT: mode.rotate || 0, gemT: 0, holdT: 0, holdTeam: -1, safe: null, playT: 0, result: null,
+    };
+    rooms.set(modeId, room);
+  }
+  return rooms.get(modeId);
 }
+const humans = (room) => [...room.players.values()].filter((p) => !p.isBot);
+const teamCount = (room, t) => [...room.players.values()].filter((p) => p.team === t).length;
 
-function hitsWall(x, y, r) {
-  if (x < r || y < r || x > MAP.w - r || y > MAP.h - r) return true;
-  return MAP.walls.some((w) => {
+// ── 맵 충돌 ────────────────────────────────────────
+function hitsWall(map, x, y, r) {
+  if (x < r || y < r || x > map.w - r || y > map.h - r) return true;
+  return map.walls.some((w) => {
     const cx = Math.max(w.x, Math.min(x, w.x + w.w));
     const cy = Math.max(w.y, Math.min(y, w.y + w.h));
     return (x - cx) ** 2 + (y - cy) ** 2 < r * r;
   });
 }
-
-function resolveWalls(o, r) {
-  o.x = Math.max(r, Math.min(MAP.w - r, o.x));
-  o.y = Math.max(r, Math.min(MAP.h - r, o.y));
-  for (const w of MAP.walls) {
+function resolveWalls(map, o, r) {
+  o.x = Math.max(r, Math.min(map.w - r, o.x));
+  o.y = Math.max(r, Math.min(map.h - r, o.y));
+  for (const w of map.walls) {
     const cx = Math.max(w.x, Math.min(o.x, w.x + w.w));
     const cy = Math.max(w.y, Math.min(o.y, w.y + w.h));
     const dx = o.x - cx, dy = o.y - cy;
@@ -67,132 +68,75 @@ function resolveWalls(o, r) {
     }
   }
 }
-
-function randomSpawn(r) {
-  for (let i = 0; i < 200; i++) {
-    const x = 60 + Math.random() * (MAP.w - 120);
-    const y = 60 + Math.random() * (MAP.h - 120);
-    if (!hitsWall(x, y, r + 10)) return { x, y };
+function freeSpot(map, x, y, r, spread) {
+  for (let i = 0; i < 80; i++) {
+    const nx = x + (Math.random() - 0.5) * spread * (1 + i / 20), ny = y + (Math.random() - 0.5) * spread * (1 + i / 20);
+    if (!hitsWall(map, nx, ny, r + 6)) return { x: nx, y: ny };
   }
-  return { x: 80, y: 80 };
+  return { x, y };
+}
+function spawnPoint(room, p, slot) {
+  const map = room.map, r = p.B.radius;
+  if (room.mode.team && map.spawns) { const s = map.spawns[p.team]; return freeSpot(map, s.x, s.y, r, 160); }
+  if (room.mode.id === 'showdown' && slot != null) {   // 맵 가장자리를 따라 고르게
+    const a = (slot / 8) * Math.PI * 2;
+    return freeSpot(map, map.w / 2 + Math.cos(a) * map.w * 0.4, map.h / 2 + Math.sin(a) * map.h * 0.4, r, 120);
+  }
+  return freeSpot(map, map.w / 2, map.h / 2, r, Math.min(map.w, map.h) * 0.9);
 }
 
-function newPlayer(room, id, name, isBot, brawlerId) {
+// ── 플레이어 ───────────────────────────────────────
+function cleanLoadout(B, lo = {}, mode) {
+  const g = [0, 1].includes(lo.g) ? lo.g : 0;
+  const sp = B.starPowers.some((s) => s.id === lo.sp) ? lo.sp : B.starPowers[0].id;
+  const gears = [...new Set((Array.isArray(lo.gears) ? lo.gears : []).filter((id) => GEARS.some((x) => x.id === id)))].slice(0, 2);
+  return { g: mode.doubleGadget ? [0, 1] : [g], sp, gears };
+}
+function randomLoadout(B) {
+  const gs = GEARS.map((x) => x.id).sort(() => Math.random() - 0.5);
+  return { g: Math.random() < 0.5 ? 0 : 1, sp: pick(B.starPowers).id, gears: gs.slice(0, 2) };
+}
+function newPlayer(room, id, name, isBot, brawlerId, loadout) {
   const B = BRAWLERS[brawlerId] || BRAWLERS.jungbo;
-  const s = randomSpawn(B.radius);
-  return {
-    id, name: (name || B.name).slice(0, 10), isBot, B,
+  const p = {
+    id, name: (name || B.name).slice(0, 10), isBot, B, team: null,
     color: COLORS[room.colorIdx++ % COLORS.length],
-    x: s.x, y: s.y, hp: B.maxHp,
-    ammo: B.attack.ammo, reloadT: 0, atkCd: 0,
-    stunT: 0, gCd: 0, facing: Math.PI / 2, sup: 0, acT: 0, acTick: 0,
-    lastHit: 0, dead: false, respawnT: 0,
-    kills: 0, deaths: 0,
-    input: { mx: 0, my: 0 }, speech: null,
+    lo: cleanLoadout(B, loadout || randomLoadout(B), room.mode),
+    x: 0, y: 0, hp: B.maxHp, ammo: B.attack.ammo, reloadT: 0, atkCd: 0,
+    stunT: 0, frozenT: 0, gCd: 0, facing: Math.PI / 2, sup: 0,
+    acT: 0, acTick: 0, ctrlId: null, ctrlT: 0, ctrlBy: null,
+    shield: 0, fullT: 0, rf: 0, ajT: 30, gems: 0,
+    lastHit: 0, dead: false, respawnT: 0, out: false, rank: 0,
+    kills: 0, deaths: 0, input: { mx: 0, my: 0 }, speech: null,
     bot: isBot ? { wanderX: 0, wanderY: 0, wanderT: 0 } : null,
   };
+  return p;
 }
-
+const has = (p, gear) => p.lo.gears.includes(gear);
+const hasSP = (p, sp) => p.lo.sp === sp;
+const SP = (p, id) => p.B.starPowers.find((s) => s.id === id);
+const speedOf = (p) => p.B.speed * (has(p, 'speed') ? 1.1 : 1);
+function resetBody(room, p, slot) {
+  const s = spawnPoint(room, p, slot);
+  Object.assign(p, {
+    x: s.x, y: s.y, hp: p.B.maxHp, dead: false, ammo: p.B.attack.ammo, stunT: 0, frozenT: 0, acT: 0,
+    rf: 0, gems: 0, shield: 0, fullT: 0, respawnT: 0, input: { mx: 0, my: 0 },
+  });
+  releaseCtrl(room, p, false);
+}
 function say(p, key, t = 1.6) { const l = p.B.lines && p.B.lines[key]; if (l) p.speech = { text: pick(l), t }; }
 
-function damage(room, attacker, target, dmg, now, kind) {
-  if (target.dead) return;
-  if (attacker && attacker.ctrlBy === target.id) return;   // 꼭두각시는 조종하는 사람을 못 때림
-  target.hp -= dmg;
-  target.lastHit = now;
-  room.fx.push({ type: 'dmg', x: target.x, y: target.y - 40, v: dmg, k: kind });
-  if (target.hp <= 0) {
-    target.hp = 0; target.dead = true; target.respawnT = G.respawn; target.deaths++;
-    target.speech = null;
-    if (attacker && attacker.id !== target.id) { attacker.kills++; if (Math.random() < 0.5) say(attacker, 'kill'); }
-    room.fx.push({ type: 'kill', a: attacker ? attacker.name : '?', b: target.name, aid: attacker ? attacker.id : null });
-    room.mice = room.mice.filter((m) => m.owner !== target.id);
-    releaseCtrl(room, target);
-  }
+// ── 적/아군 판정 ───────────────────────────────────
+// 조종당하는 중엔 조종하는 사람 편으로 취급
+const teamOf = (room, p) => (p.ctrlBy && room.players.get(p.ctrlBy) ? room.players.get(p.ctrlBy).team : p.team);
+function isEnemy(room, p, q) {
+  if (!q || q.id === p.id || q.dead || q.out || q.id === p.ctrlBy) return false;
+  if (room.mode.team && teamOf(room, p) === teamOf(room, q)) return false;
+  return true;
 }
-
-// 조종 해제 (조종하는 쪽이든 당하는 쪽이든)
-function releaseCtrl(room, p) {
-  if (p.ctrlId) { const t = room.players.get(p.ctrlId); if (t) { t.ctrlBy = null; t.input = { mx: 0, my: 0 }; } p.ctrlId = null; p.ctrlT = 0; }
-  if (p.ctrlBy) { const c = room.players.get(p.ctrlBy); if (c) { c.ctrlId = null; c.ctrlT = 0; } p.ctrlBy = null; p.input = { mx: 0, my: 0 }; }
-}
-
-const canAct = (p) => !p.dead && p.stunT <= 0;
+const enemies = (room, p) => [...room.players.values()].filter((q) => isEnemy(room, p, q));
+const canAct = (p) => !p.dead && !p.out && p.stunT <= 0 && p.frozenT <= 0;
 const angDiff = (a, b) => { const d = a - b; return Math.atan2(Math.sin(d), Math.cos(d)); };
-
-// ── 브롤러별 스킬 ──────────────────────────────────
-const SKILLS = {
-  jungbo: {
-    // 기본공격: 주변 원형 범위 (조준 없음)
-    attack(room, p, ang, now) {
-      const A = p.B.attack;
-      p.ammo -= 1; p.atkCd = A.cd;
-      room.fx.push({ type: 'pulse', id: p.id, x: p.x, y: p.y, r: A.range, c: p.color });
-      if (Math.random() < 0.45) say(p, 'atk', 1.2);
-      for (const q of room.players.values()) {
-        if (q.id === p.id || q.id === p.ctrlBy || q.dead) continue;
-        if (Math.hypot(q.x - p.x, q.y - p.y) <= A.range + q.B.radius) {
-          damage(room, p, q, A.dmg, now);
-          chargeSuper(p, A.dmg);
-        }
-      }
-      for (const m of room.mice) if (m.owner !== p.id && Math.hypot(m.x - p.x, m.y - p.y) <= A.range + m.radius) m.hp -= A.dmg;
-    },
-    gadget(room, p, n, now) {
-      if (n === 1) {
-        const g = p.B.gadgets[0];
-        say(p, 'g1', 2);
-        const hits = [];
-        room.fx.push({ type: 'stun', id: p.id, x: p.x, y: p.y, r: g.range, hits });
-        for (const q of room.players.values()) {
-          if (q.id === p.id || q.id === p.ctrlBy || q.dead) continue;
-          if (Math.hypot(q.x - p.x, q.y - p.y) <= g.range + q.B.radius) {
-            hits.push(q.id);
-            q.stunT = Math.max(q.stunT, g.stun);
-            damage(room, p, q, g.dmg, now);
-          }
-        }
-      } else {
-        const g = p.B.gadgets[1];
-        say(p, 'g2', 1.6);
-        for (let i = 0; i < g.count; i++) {
-          const a = Math.random() * Math.PI * 2;
-          const m = {
-            id: ++room.mouseSeq, owner: p.id, color: p.color,
-            x: p.x + Math.cos(a) * 40, y: p.y + Math.sin(a) * 40,
-            hp: g.hp, maxHp: g.hp, life: g.life, biteCd: 0, ang: a,
-            speed: g.speed, dmg: g.dmg, biteRate: g.biteCd, radius: g.radius,
-          };
-          resolveWalls(m, m.radius);
-          room.mice.push(m);
-        }
-        room.fx.push({ type: 'summon', id: p.id, x: p.x, y: p.y });
-      }
-    },
-    super(room, p, a, now) {
-      const S = p.B.super;
-      say(p, 'sup', 1.8);
-      room.fx.push({ type: 'super', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: S.range, h: S.half });
-      const inCone = (x, y, rad) => {
-        const dx = x - p.x, dy = y - p.y, d = Math.hypot(dx, dy);
-        if (d > S.range + rad) return false;
-        if (d < rad + p.B.radius) return true;
-        return Math.abs(angDiff(Math.atan2(dy, dx), a)) <= S.half;
-      };
-      for (const q of room.players.values()) {
-        if (q.id === p.id || q.id === p.ctrlBy || q.dead || !inCone(q.x, q.y, q.B.radius)) continue;
-        const d = Math.hypot(q.x - p.x, q.y - p.y) || 1;
-        q.x += ((q.x - p.x) / d) * S.knock; q.y += ((q.y - p.y) / d) * S.knock;
-        resolveWalls(q, q.B.radius);
-        q.stunT = Math.max(q.stunT, 0.4);
-        damage(room, p, q, S.dmg, now);
-      }
-      for (const m of room.mice) if (m.owner !== p.id && inCone(m.x, m.y, m.radius)) m.hp = 0;
-    },
-  },
-};
-
-// 공통: 부채꼴 판정
 function inCone(p, a, range, half, x, y, rad) {
   const dx = x - p.x, dy = y - p.y, d = Math.hypot(dx, dy);
   if (d > range + rad) return false;
@@ -201,224 +145,523 @@ function inCone(p, a, range, half, x, y, rad) {
 }
 const chargeSuper = (p, dmg) => { if (p.B.super) p.sup = Math.min(1, p.sup + dmg / p.B.super.need); };
 
-SKILLS.hyeonsil = {
-  // 주걱 스매쉬: 살짝 뒤로 젖혔다가(windup) 앞쪽 부채꼴로 강하게 휘두름
-  attack(room, p, a, now) {
-    const A = p.B.attack;
-    p.ammo -= 1; p.atkCd = A.cd; p.facing = a;
-    room.fx.push({ type: 'swing', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: A.range, h: A.half, d: A.windup });
-    if (Math.random() < 0.4) say(p, 'atk', 1.2);
-    room.pending.push({ t: A.windup, fn: () => {
-      if (p.dead || !room.players.has(p.id)) return;
-      for (const q of room.players.values()) {
-        if (q.id === p.id || q.id === p.ctrlBy || q.dead || !inCone(p, a, A.range, A.half, q.x, q.y, q.B.radius)) continue;
+// ── 피해 / 사망 ────────────────────────────────────
+function damage(room, attacker, target, dmg, now, kind) {
+  if (!target || target.dead || target.out) return;
+  if (attacker && attacker !== target && !isEnemy(room, attacker, target)) return;
+  if (attacker && has(attacker, 'dmg') && attacker.hp <= attacker.B.maxHp * 0.5) dmg = Math.round(dmg * 1.15);
+  let left = dmg;
+  if (target.shield > 0) { const s = Math.min(target.shield, left); target.shield -= s; left -= s; }
+  target.hp -= left;
+  target.lastHit = now; target.fullT = 0;
+  room.fx.push({ type: 'dmg', x: target.x, y: target.y - 40, v: dmg, k: kind });
+  if (target.hp <= 0) kill(room, attacker, target, kind);
+}
+function kill(room, attacker, target, kind) {
+  target.hp = 0; target.dead = true; target.deaths++; target.speech = null;
+  target.respawnT = G.respawn;
+  if (attacker && attacker.id !== target.id) { attacker.kills++; if (Math.random() < 0.5) say(attacker, 'kill'); }
+  room.fx.push({ type: 'kill', a: attacker ? attacker.name : '독가스', b: target.name, aid: attacker ? attacker.id : null, bid: target.id, k: kind });
+  room.mice = room.mice.filter((m) => m.owner !== target.id);
+  releaseCtrl(room, target, false);
+  target.acT = 0; target.rf = 0;
+  if (room.mode.id === 'gem' && target.gems > 0) dropGems(room, target);
+  if (room.mode.id === 'showdown') {
+    target.out = true;
+    target.rank = [...room.players.values()].filter((q) => !q.out).length + 1;
+  }
+}
+
+// 정보쌤 스타파워1: 성찰 게이지 → 다 차면 불찰(즉사)
+function reflectHit(room, p, q, now) {
+  if (!hasSP(p, 'reflect') || q.dead || q.out) return;
+  q.rf = Math.min(1, q.rf + 1 / SP(p, 'reflect').hits);
+  if (q.rf >= 1) {
+    room.fx.push({ type: 'bulchal', id: q.id, by: p.id, x: q.x, y: q.y });
+    q.shield = 0; q.hp = 1;
+    damage(room, p, q, 99999, now, 'bulchal');
+  }
+}
+
+// 조종 해제 (조종하는 쪽이든 당하는 쪽이든)
+function releaseCtrl(room, p, sasinga = true) {
+  if (p.ctrlId) {
+    const t = room.players.get(p.ctrlId);
+    if (t) {
+      t.ctrlBy = null; t.input = { mx: 0, my: 0 };
+      // 현실쌤 스타파워1: 조종이 끝나면 2초 기절
+      if (sasinga && hasSP(p, 'sasinga') && !t.dead && !t.out) {
+        t.stunT = Math.max(t.stunT, SP(p, 'sasinga').stun);
+        p.speech = { text: '너 사회성 머리는 하나도 없지? 너 진짜 싸가지 없다.', t: 2.6 };
+        room.fx.push({ type: 'sasinga', id: p.id, tid: t.id, x: t.x, y: t.y });
+      }
+    }
+    p.ctrlId = null; p.ctrlT = 0;
+  }
+  if (p.ctrlBy) {
+    const c = room.players.get(p.ctrlBy);
+    if (c) { c.ctrlId = null; c.ctrlT = 0; }
+    p.ctrlBy = null; p.input = { mx: 0, my: 0 };
+  }
+}
+
+// ── 젬 그랩 ────────────────────────────────────────
+function dropGems(room, p) {
+  for (let i = 0; i < p.gems; i++) {
+    const a = Math.random() * Math.PI * 2, d = 20 + Math.random() * 60;
+    const s = { x: p.x + Math.cos(a) * d, y: p.y + Math.sin(a) * d };
+    resolveWalls(room.map, s, 12);
+    room.gems.push({ id: ++room.gemSeq, x: s.x, y: s.y });
+  }
+  p.gems = 0;
+}
+const teamGems = (room, t) => [...room.players.values()].filter((p) => p.team === t).reduce((a, p) => a + p.gems, 0);
+
+// ── 브롤러별 스킬 ──────────────────────────────────
+const SKILLS = {
+  jungbo: {
+    attack(room, p, a, now) {          // 아~ 이놈의 아이들: 주변 원형
+      const A = p.B.attack;
+      p.ammo -= 1; p.atkCd = A.cd;
+      room.fx.push({ type: 'pulse', id: p.id, x: p.x, y: p.y, r: A.range, c: p.color });
+      if (Math.random() < 0.45) say(p, 'atk', 1.2);
+      for (const q of enemies(room, p)) {
+        if (Math.hypot(q.x - p.x, q.y - p.y) > A.range + q.B.radius) continue;
+        damage(room, p, q, A.dmg, now); chargeSuper(p, A.dmg); reflectHit(room, p, q, now);
+      }
+      for (const m of room.mice) if (m.owner !== p.id && Math.hypot(m.x - p.x, m.y - p.y) <= A.range + m.radius) m.hp -= A.dmg;
+    },
+    gadget(room, p, idx, now) {
+      if (idx === 0) {                 // AI야? 시키지도 않은 걸 하네
+        const g = p.B.gadgets[0];
+        say(p, 'g1', 2);
+        const hits = [];
+        for (const q of enemies(room, p)) {
+          if (Math.hypot(q.x - p.x, q.y - p.y) > g.range + q.B.radius) continue;
+          hits.push(q.id); q.stunT = Math.max(q.stunT, g.stun); damage(room, p, q, g.dmg, now);
+        }
+        room.fx.push({ type: 'stun', id: p.id, x: p.x, y: p.y, r: g.range, hits });
+      } else {                         // 마우스 소환
+        const g = p.B.gadgets[1];
+        say(p, 'g2', 1.6);
+        for (let i = 0; i < g.count; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const m = { id: ++room.mouseSeq, owner: p.id, color: p.color, x: p.x + Math.cos(a) * 40, y: p.y + Math.sin(a) * 40,
+            hp: g.hp, maxHp: g.hp, life: g.life, biteCd: 0, ang: a, speed: g.speed, dmg: g.dmg, biteRate: g.biteCd, radius: g.radius };
+          resolveWalls(room.map, m, m.radius);
+          room.mice.push(m);
+        }
+        room.fx.push({ type: 'summon', id: p.id, x: p.x, y: p.y });
+      }
+    },
+    super(room, p, a, now) {           // 이놈의 아이들: 부채꼴 + 넉백
+      const S = p.B.super;
+      say(p, 'sup', 1.8);
+      room.fx.push({ type: 'super', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: S.range, h: S.half });
+      for (const q of enemies(room, p)) {
+        if (!inCone(p, a, S.range, S.half, q.x, q.y, q.B.radius)) continue;
         const d = Math.hypot(q.x - p.x, q.y - p.y) || 1;
-        q.x += ((q.x - p.x) / d) * A.knock; q.y += ((q.y - p.y) / d) * A.knock; resolveWalls(q, q.B.radius);
-        damage(room, p, q, A.dmg, Date.now() / 1000);
-        chargeSuper(p, A.dmg);
-        room.fx.push({ type: 'smack', x: q.x, y: q.y });
+        q.x += ((q.x - p.x) / d) * S.knock; q.y += ((q.y - p.y) / d) * S.knock;
+        resolveWalls(room.map, q, q.B.radius);
+        q.stunT = Math.max(q.stunT, 0.4);
+        damage(room, p, q, S.dmg, now); reflectHit(room, p, q, now);
       }
-      for (const m of room.mice) if (m.owner !== p.id && inCone(p, a, A.range, A.half, m.x, m.y, m.radius)) m.hp -= A.dmg;
-    } });
+      for (const m of room.mice) if (m.owner !== p.id && inCone(p, a, S.range, S.half, m.x, m.y, m.radius)) m.hp = 0;
+    },
   },
-  gadget(room, p, n, now) {
-    if (n === 1) {   // 에어컨 18도: 7초 동안 모든 적에게 지속 피해
-      const g = p.B.gadgets[0];
-      say(p, 'g1', 2);
-      p.acT = g.dur; p.acTick = 0;
-      room.fx.push({ type: 'ac', id: p.id, x: p.x, y: p.y });
-    } else {         // 펜 내려놓고 여기 보자: 모든 적 기절
-      const g = p.B.gadgets[1];
-      say(p, 'g2', 2);
-      const hits = [];
-      for (const q of room.players.values()) {
-        if (q.id === p.id || q.id === p.ctrlBy || q.dead) continue;
-        q.stunT = Math.max(q.stunT, g.stun); hits.push(q.id);
+  hyeonsil: {
+    attack(room, p, a, now) {          // 주걱 스매쉬: 살짝 늦게 들어가는 부채꼴 강타
+      const A = p.B.attack;
+      p.ammo -= 1; p.atkCd = A.cd; p.facing = a;
+      const board = hasSP(p, 'board') && Math.random() < SP(p, 'board').chance;   // 스타파워2: 칠판 부수기
+      room.fx.push({ type: 'swing', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: A.range, h: A.half, d: A.windup, board });
+      if (Math.random() < 0.4) say(p, 'atk', 1.2);
+      room.pending.push({ t: A.windup, fn: () => {
+        if (p.dead || p.out || !room.players.has(p.id)) return;
+        const t = Date.now() / 1000;
+        for (const q of enemies(room, p)) {
+          if (!inCone(p, a, A.range, A.half, q.x, q.y, q.B.radius)) continue;
+          const d = Math.hypot(q.x - p.x, q.y - p.y) || 1;
+          q.x += ((q.x - p.x) / d) * A.knock; q.y += ((q.y - p.y) / d) * A.knock; resolveWalls(room.map, q, q.B.radius);
+          damage(room, p, q, A.dmg, t); chargeSuper(p, A.dmg);
+          if (board) damage(room, p, q, SP(p, 'board').dmg, t, 'board');
+          room.fx.push({ type: 'smack', x: q.x, y: q.y });
+        }
+        for (const m of room.mice) if (m.owner !== p.id && inCone(p, a, A.range, A.half, m.x, m.y, m.radius)) m.hp -= A.dmg;
+        if (board) {
+          const b = SP(p, 'board');
+          const sx = p.x + Math.cos(a) * A.range * 0.6, sy = p.y + Math.sin(a) * A.range * 0.6;
+          room.shards.push({ id: ++room.shardSeq, owner: p.id, x: sx, y: sy, r: b.radius, t: b.dur, tick: 0, dps: b.dps });
+          room.fx.push({ type: 'board', id: p.id, x: sx, y: sy, a: +a.toFixed(3) });
+        }
+      } });
+    },
+    gadget(room, p, idx, now) {
+      if (idx === 0) {                 // 얘들아 덥지 않니? — 에어컨 18도
+        const g = p.B.gadgets[0];
+        say(p, 'g1', 2);
+        p.acT = g.dur; p.acTick = 0;
+        room.fx.push({ type: 'ac', id: p.id, x: p.x, y: p.y });
+      } else {                         // 펜 내려놓고 여기 보자 — 전체 기절
+        const g = p.B.gadgets[1];
+        say(p, 'g2', 2);
+        const hits = [];
+        for (const q of enemies(room, p)) { q.stunT = Math.max(q.stunT, g.stun); hits.push(q.id); }
+        room.fx.push({ type: 'look', id: p.id, x: p.x, y: p.y, hits });
       }
-      room.fx.push({ type: 'look', id: p.id, x: p.x, y: p.y, hits });
-    }
-  },
-  // 너 등신이냐? — 조준한 직선의 첫 번째 상대를 5초 동안 조종
-  super(room, p, a, now) {
-    const S = p.B.super;
-    say(p, 'sup', 2);
-    const ca = Math.cos(a), sa = Math.sin(a);
-    let target = null, best = Infinity;
-    for (const q of room.players.values()) {
-      if (q.id === p.id || q.id === p.ctrlBy || q.dead || q.ctrlBy || q.ctrlId) continue;
-      const dx = q.x - p.x, dy = q.y - p.y;
-      const along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca);
-      if (along < -q.B.radius || along > S.range + q.B.radius || perp > S.width + q.B.radius) continue;
-      if (along < best) { best = along; target = q; }
-    }
-    room.fx.push({ type: 'ctrl', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: S.range, hit: target ? target.id : null });
-    if (target) {
-      p.ctrlId = target.id; p.ctrlT = S.dur; target.ctrlBy = p.id;
-      target.input = { mx: 0, my: 0 }; p.input = { mx: 0, my: 0 };
-      target.speech = { text: '...네?', t: 1.5 };
-    }
+    },
+    super(room, p, a, now) {           // 너 등신이냐? — 직선 첫 번째 상대 5초 조종
+      const S = p.B.super;
+      say(p, 'sup', 2);
+      const ca = Math.cos(a), sa = Math.sin(a);
+      let target = null, best = Infinity;
+      for (const q of enemies(room, p)) {
+        if (q.ctrlBy || q.ctrlId) continue;
+        const dx = q.x - p.x, dy = q.y - p.y;
+        const along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca);
+        if (along < -q.B.radius || along > S.range + q.B.radius || perp > S.width + q.B.radius) continue;
+        if (along < best) { best = along; target = q; }
+      }
+      room.fx.push({ type: 'ctrl', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: S.range, hit: target ? target.id : null });
+      if (target) {
+        p.ctrlId = target.id; p.ctrlT = S.dur; target.ctrlBy = p.id;
+        target.input = { mx: 0, my: 0 }; p.input = { mx: 0, my: 0 };
+        target.speech = { text: '...네?', t: 1.5 };
+      }
+    },
   },
 };
 
 function doAttack(room, p, ang, now) {
-  if (!canAct(p) || p.ammo < 1 || p.atkCd > 0) return;
+  if (room.phase !== 'play' || !canAct(p) || p.ammo < 1 || p.atkCd > 0) return;
   p.lastHit = Math.max(p.lastHit, now - G.regenDelay + 1);
   SKILLS[p.B.id].attack(room, p, Number.isFinite(ang) ? ang : p.facing, now);
 }
-function doGadget(room, p, n, now) {
-  if (!canAct(p) || p.gCd > 0) return;
-  p.gCd = p.B.gadgetCd;
-  SKILLS[p.B.id].gadget(room, p, n === 2 ? 2 : 1, now);
+function doGadget(room, p, slot, now) {           // slot: 1 또는 2 (더블 가젯 모드에서만 2)
+  if (room.phase !== 'play' || !canAct(p) || p.gCd > 0) return;
+  const idx = p.lo.g[slot - 1]; if (idx == null) return;
+  p.gCd = p.B.gadgetCd * (has(p, 'gadget') ? 0.8 : 1);
+  SKILLS[p.B.id].gadget(room, p, idx, now);
 }
 function doSuper(room, p, ang, now) {
-  if (!p.B.super || !canAct(p) || p.sup < 1) return;
-  if (p.ctrlBy && p.B.id === 'hyeonsil') return;   // 꼭두각시 현실쌤은 조종 궁극기 못 씀 (조종 연쇄 방지)
+  if (room.phase !== 'play' || !p.B.super || !canAct(p) || p.sup < 1) return;
+  if (p.ctrlBy && p.B.id === 'hyeonsil') return;   // 꼭두각시 현실쌤은 조종 궁극기 못 씀
   p.sup = 0;
   const a = Number.isFinite(ang) ? ang : p.facing;
   p.facing = a;
   SKILLS[p.B.id].super(room, p, a, now);
 }
 
+// ── 봇 AI ──────────────────────────────────────────
+function moveToward(p, x, y, jitter = 0.3, now = 0) {
+  const dx = x - p.x, dy = y - p.y, d = Math.hypot(dx, dy) || 1;
+  const j = Math.sin(now * 3 + p.x * 0.01) * jitter;
+  p.input = { mx: dx / d - (dy / d) * j, my: dy / d + (dx / d) * j };
+  return d;
+}
 function botThink(room, p, now) {
-  const b = p.bot, B = p.B;
-  if (p.ctrlBy) return;                       // 조종당하는 중
-  if (p.ctrlId) {                             // 조종하는 중: 꼭두각시를 가까운 적에게 보내서 공격
+  const b = p.bot, B = p.B, mode = room.mode;
+  if (p.ctrlBy) return;
+  if (p.ctrlId) {                               // 조종 중: 꼭두각시를 적에게 보내서 공격
     const t = room.players.get(p.ctrlId); if (!t) return;
     let tg = null, bd = Infinity;
-    for (const q of room.players.values()) { if (q.id === p.id || q.id === t.id || q.dead) continue; const d = Math.hypot(q.x - t.x, q.y - t.y); if (d < bd) { bd = d; tg = q; } }
+    for (const q of enemies(room, t)) { if (q.id === p.id) continue; const d = Math.hypot(q.x - t.x, q.y - t.y); if (d < bd) { bd = d; tg = q; } }
     if (!tg) { p.input = { mx: 0, my: 0 }; return; }
     const dx = tg.x - t.x, dy = tg.y - t.y;
     p.input = { mx: dx / (bd || 1), my: dy / (bd || 1) };
     if (bd < t.B.attack.range + 10 && Math.random() < 0.2) doAttack(room, t, Math.atan2(dy, dx), now);
-    if (bd < 260 && Math.random() < 0.03) doGadget(room, t, Math.random() < 0.5 ? 1 : 2, now);
+    if (bd < 260 && Math.random() < 0.03) doGadget(room, t, 1, now);
     if (t.sup >= 1 && bd < 300 && Math.random() < 0.1) doSuper(room, t, Math.atan2(dy, dx), now);
     return;
   }
   let target = null, best = Infinity;
-  for (const q of room.players.values()) {
-    if (q.id === p.id || q.id === p.ctrlBy || q.dead) continue;
-    const d = Math.hypot(q.x - p.x, q.y - p.y);
-    if (d < best) { best = d; target = q; }
-  }
+  for (const q of enemies(room, p)) { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < best) { best = d; target = q; } }
   b.wanderT -= DT;
-  if (target && best < 650) {
-    const dx = target.x - p.x, dy = target.y - p.y, d = best || 1;
-    const jitter = Math.sin(now * 3 + p.x) * 0.4;
-    p.input.mx = dx / d - (dy / d) * jitter;
-    p.input.my = dy / d + (dx / d) * jitter;
+  const fight = () => {
+    const dx = target.x - p.x, dy = target.y - p.y;
+    moveToward(p, target.x, target.y, 0.4, now);
     if (best < B.attack.range + 10 && Math.random() < (B.attack.aim === 'dir' ? 0.1 : 0.18)) doAttack(room, p, Math.atan2(dy, dx), now);
-    if (best < 220 && Math.random() < (B.id === 'hyeonsil' ? 0.004 : 0.01)) doGadget(room, p, 1, now);
-    if (best < 500 && Math.random() < 0.006) doGadget(room, p, 2, now);
+    if (best < 220 && Math.random() < 0.006) doGadget(room, p, 1, now);
+    if (mode.doubleGadget && best < 400 && Math.random() < 0.005) doGadget(room, p, 2, now);
     if (B.super && best < B.super.range - 30 && p.sup >= 1 && Math.random() < 0.05) doSuper(room, p, Math.atan2(dy, dx), now);
     if (p.hp < B.maxHp * 0.3 && Math.random() < 0.5) { p.input.mx *= -1; p.input.my *= -1; }
-  } else {
-    if (b.wanderT <= 0) {
-      const a = Math.random() * Math.PI * 2;
-      b.wanderX = Math.cos(a); b.wanderY = Math.sin(a); b.wanderT = 1 + Math.random() * 2;
+  };
+  // 쇼다운: 독가스 밖이면 안으로
+  if (room.safe) {
+    const s = room.safe;
+    if (p.x < s.x1 + 40 || p.x > s.x2 - 40 || p.y < s.y1 + 40 || p.y > s.y2 - 40) { moveToward(p, room.map.w / 2, room.map.h / 2, 0, now); return; }
+  }
+  // 젬 그랩: 보석 줍기 / 이기고 있으면 진지로 후퇴
+  if (mode.id === 'gem') {
+    const my = teamGems(room, p.team), their = teamGems(room, 1 - p.team);
+    if (p.gems > 0 && my >= mode.gemWin && my > their) {
+      if (target && best < 220) return fight();
+      const s = room.map.spawns[p.team]; moveToward(p, s.x, s.y, 0.2, now); return;
     }
-    p.input.mx = b.wanderX; p.input.my = b.wanderY;
+    if (target && best < 260) return fight();
+    let gem = null, gd = Infinity;
+    for (const g of room.gems) { const d = Math.hypot(g.x - p.x, g.y - p.y); if (d < gd) { gd = d; gem = g; } }
+    if (gem) { moveToward(p, gem.x, gem.y, 0.1, now); return; }
+    if (target && best < 650) return fight();
+    moveToward(p, room.map.mine.x, room.map.mine.y, 0.3, now); return;
+  }
+  if (target && best < 650) return fight();
+  if (b.wanderT <= 0) {
+    const a = Math.random() * Math.PI * 2;
+    b.wanderX = Math.cos(a); b.wanderY = Math.sin(a); b.wanderT = 1 + Math.random() * 2;
+  }
+  if (mode.id === 'showdown') { moveToward(p, room.map.w / 2 + b.wanderX * 200, room.map.h / 2 + b.wanderY * 200, 0.3, now); return; }
+  p.input = { mx: b.wanderX, my: b.wanderY };
+}
+
+// ── 봇 채우기 ──────────────────────────────────────
+function addBot(room, team) {
+  const id = 'bot' + ++room.botSeq;
+  const bid = pick(Object.keys(BRAWLERS));
+  const p = newPlayer(room, id, '봇' + room.botSeq, true, bid, null);
+  if (team != null) { p.team = team; p.color = TEAM_COLORS[team]; }
+  room.players.set(id, p);
+  return p;
+}
+function removeBot(room, p) { releaseCtrl(room, p, false); if (p.gems) dropGems(room, p); room.players.delete(p.id); }
+function fillBots(room) {
+  const mode = room.mode;
+  if (mode.id === 'showdown') {
+    for (const p of [...room.players.values()]) if (p.isBot) removeBot(room, p);
+    while (room.players.size < mode.size) addBot(room);
+  } else if (mode.id === 'gem') {
+    for (const t of [0, 1]) {
+      while (teamCount(room, t) > mode.teamSize) { const bot = [...room.players.values()].find((p) => p.isBot && p.team === t); if (!bot) break; removeBot(room, bot); }
+      while (teamCount(room, t) < mode.teamSize) addBot(room, t);
+    }
   }
 }
 
+// ── 라운드 진행 ────────────────────────────────────
+function startRound(room) {
+  const mode = room.mode;
+  room.map = MAPS[pick(mode.maps)];
+  room.mice = []; room.shards = []; room.gems = []; room.pending = [];
+  room.gemT = 0; room.holdT = 0; room.holdTeam = -1; room.result = null; room.playT = 0;
+  room.safe = mode.gas ? { x1: 0, y1: 0, x2: room.map.w, y2: room.map.h } : null;
+  if (mode.team) {   // 사람은 팀 균형 맞춰 재배치
+    let i = 0;
+    for (const p of humans(room)) { p.team = i++ % 2; p.color = TEAM_COLORS[p.team]; }
+  }
+  fillBots(room);
+  let slot = Math.floor(Math.random() * 8);
+  for (const p of room.players.values()) {
+    p.out = false; p.rank = 0; p.sup = 0; p.gCd = 0; p.kills = 0; p.deaths = 0; p.ajT = 30;
+    resetBody(room, p, slot++);
+  }
+  room.phase = 'wait'; room.phaseT = 4;
+  room.fx.push({ type: 'round', map: room.map.id });
+}
+function endRound(room, result) {
+  room.phase = 'end'; room.phaseT = 6; room.result = result;
+  room.fx.push({ type: 'end', result });
+}
+function changeMap(room) {   // 난투/더블가젯: 맵 로테이션
+  const others = room.mode.maps.filter((m) => m !== room.map.id);
+  room.map = MAPS[pick(others.length ? others : room.mode.maps)];
+  room.mice = []; room.shards = []; room.pending = [];
+  for (const p of room.players.values()) resetBody(room, p);
+  room.mapT = room.mode.rotate;
+  room.fx.push({ type: 'round', map: room.map.id });
+}
+
+function roundLogic(room, now) {
+  const mode = room.mode;
+  if (!mode.rounds) {
+    room.mapT -= DT;
+    if (room.mapT <= 0) changeMap(room);
+    return;
+  }
+  if (room.phase === 'wait') { room.phaseT -= DT; if (room.phaseT <= 0) room.phase = 'play'; return; }
+  if (room.phase === 'end') { room.phaseT -= DT; if (room.phaseT <= 0) startRound(room); return; }
+  room.playT += DT;
+  if (mode.id === 'showdown') {
+    // 독가스: 시작 후 일정 시간 뒤부터 가운데로 좁혀옴
+    const g = mode.gas, m = room.map;
+    const k = Math.max(0, Math.min(1, (room.playT - g.start) / g.dur));
+    const half = (Math.max(m.w, m.h) / 2) * (1 - k) + (g.final / 2) * k;
+    room.safe = { x1: m.w / 2 - half, y1: m.h / 2 - half, x2: m.w / 2 + half, y2: m.h / 2 + half };
+    const alive = [...room.players.values()].filter((p) => !p.out);
+    if (alive.length <= 1) {
+      const w = alive[0];
+      if (w) w.rank = 1;
+      endRound(room, { type: 'showdown', winner: w ? w.id : null, winnerName: w ? w.name : null, ranks: [...room.players.values()].map((p) => ({ id: p.id, name: p.name, rank: p.rank })) });
+    }
+  } else if (mode.id === 'gem') {
+    room.gemT -= DT;
+    if (room.gemT <= 0 && room.gems.length < 30) {
+      room.gemT = mode.gemEvery;
+      const s = freeSpot(room.map, room.map.mine.x, room.map.mine.y, 12, 120);
+      room.gems.push({ id: ++room.gemSeq, x: s.x, y: s.y });
+      room.fx.push({ type: 'gemspawn', x: room.map.mine.x, y: room.map.mine.y });
+    }
+    const a = teamGems(room, 0), b = teamGems(room, 1);
+    const lead = a >= mode.gemWin && a > b ? 0 : b >= mode.gemWin && b > a ? 1 : -1;
+    if (lead !== room.holdTeam) { room.holdTeam = lead; room.holdT = mode.holdTime; }
+    if (lead >= 0) { room.holdT -= DT; if (room.holdT <= 0) return endRound(room, { type: 'gem', winTeam: lead, score: [a, b] }); }
+    if (room.playT >= mode.timeLimit) endRound(room, { type: 'gem', winTeam: a > b ? 0 : b > a ? 1 : -1, score: [a, b] });
+  }
+}
+
+// ── 한 틱 ──────────────────────────────────────────
 function step(room) {
   const now = Date.now() / 1000;
-  // 지연 실행 (휘두르기 판정 등)
+  roundLogic(room, now);
+  const playing = room.phase === 'play';
+
   for (const a of room.pending) a.t -= DT;
   const due = room.pending.filter((a) => a.t <= 0);
   room.pending = room.pending.filter((a) => a.t > 0);
   for (const a of due) a.fn();
+
   // 조종: 조종하는 사람의 이동 입력 → 꼭두각시에게
   for (const p of room.players.values()) {
     if (!p.ctrlId) continue;
     const t = room.players.get(p.ctrlId);
     p.ctrlT -= DT;
-    if (!t || t.dead || p.dead || p.stunT > 0 || p.ctrlT <= 0) { releaseCtrl(room, p); continue; }
+    if (!t || t.dead || t.out) { releaseCtrl(room, p, false); continue; }
+    if (p.dead || p.out || p.stunT > 0 || p.frozenT > 0 || p.ctrlT <= 0) { releaseCtrl(room, p, true); continue; }
     t.input = { ...p.input };
   }
-  // 에어컨: 켜놓은 사람 말고 모두에게 지속 피해
+  // 에어컨: 켠 사람 말고 모든 적에게 지속 피해
   for (const p of room.players.values()) {
     if (p.acT <= 0) continue;
     p.acT = Math.max(0, p.acT - DT); p.acTick -= DT;
     if (p.acTick <= 0) {
       const g = p.B.gadgets[0]; p.acTick = g.tick;
-      for (const q of room.players.values()) if (q.id !== p.id && q.id !== p.ctrlBy && !q.dead) damage(room, p, q, g.dmg, now, 'cold');
+      for (const q of enemies(room, p)) damage(room, p, q, g.dmg, now, 'cold');
     }
     if (p.dead) p.acT = 0;
   }
+  // 칠판 파편: 밟고 있으면 지속 피해
+  for (const s of room.shards) {
+    s.t -= DT; s.tick -= DT;
+    if (s.tick > 0) continue;
+    s.tick = 0.25;
+    const owner = room.players.get(s.owner);
+    for (const q of room.players.values()) {
+      if (q.dead || q.out || Math.hypot(q.x - s.x, q.y - s.y) > s.r + q.B.radius * 0.5) continue;
+      if (owner ? !isEnemy(room, owner, q) : q.id === s.owner) continue;
+      damage(room, owner, q, Math.round(s.dps / 4), now, 'shard');
+    }
+  }
+  room.shards = room.shards.filter((s) => s.t > 0);
+
   for (const p of room.players.values()) {
     const B = p.B;
     if (p.speech) { p.speech.t -= DT; if (p.speech.t <= 0) p.speech = null; }
+    if (p.out) continue;
     if (p.dead) {
+      if (!room.mode.respawn) continue;
       p.respawnT -= DT;
-      if (p.respawnT <= 0) {
-        const s = randomSpawn(B.radius);
-        Object.assign(p, { x: s.x, y: s.y, hp: B.maxHp, dead: false, ammo: B.attack.ammo, stunT: 0 });
-      }
+      if (p.respawnT <= 0) resetBody(room, p);
       continue;
     }
+    if (!playing) { p.input = p.isBot ? { mx: 0, my: 0 } : p.input; continue; }   // 대기/결과 중엔 정지
     if (p.isBot) botThink(room, p, now);
     p.atkCd = Math.max(0, p.atkCd - DT);
     p.gCd = Math.max(0, p.gCd - DT);
     p.stunT = Math.max(0, p.stunT - DT);
+    p.frozenT = Math.max(0, p.frozenT - DT);
     if (p.ammo < B.attack.ammo) {
       p.reloadT += DT;
       if (p.reloadT >= B.attack.reload) { p.ammo++; p.reloadT = 0; }
     } else p.reloadT = 0;
-    if (now - p.lastHit > G.regenDelay && p.hp < B.maxHp) p.hp = Math.min(B.maxHp, p.hp + B.maxHp * G.regenRate * DT);
-
-    if (p.stunT <= 0 && !p.ctrlId) {          // 조종하는 동안 본인은 제자리
+    const regen = G.regenRate * (has(p, 'heal') ? 1.5 : 1);
+    if (now - p.lastHit > G.regenDelay && p.hp < B.maxHp) p.hp = Math.min(B.maxHp, p.hp + B.maxHp * regen * DT);
+    // 기어: 보호막 / 궁극기 자동 충전
+    if (has(p, 'shield')) { if (p.hp >= B.maxHp) { p.fullT += DT; if (p.fullT >= 3) p.shield = 900; } else p.fullT = 0; }
+    if (has(p, 'super') && B.super) p.sup = Math.min(1, p.sup + DT / 60);
+    // 정보쌤 스타파워2: 아재개그 (30초마다 주변 적 얼림)
+    if (hasSP(p, 'ajae')) {
+      p.ajT -= DT;
+      if (p.ajT <= 0) {
+        const sp = SP(p, 'ajae'); p.ajT = sp.every;
+        const joke = pick(AJAE);
+        p.speech = { text: joke, t: 3 };
+        const hits = [];
+        for (const q of enemies(room, p)) {
+          if (Math.hypot(q.x - p.x, q.y - p.y) > sp.range + q.B.radius) continue;
+          q.frozenT = Math.max(q.frozenT, sp.freeze); hits.push(q.id);
+        }
+        room.fx.push({ type: 'ajae', id: p.id, x: p.x, y: p.y, r: sp.range, joke, hits });
+      }
+    }
+    // 쇼다운 독가스
+    if (room.safe) {
+      const s = room.safe;
+      if (p.x < s.x1 || p.x > s.x2 || p.y < s.y1 || p.y > s.y2) {
+        p.gasT = (p.gasT || 0) - DT;
+        if (p.gasT <= 0) { p.gasT = 0.5; damage(room, null, p, room.mode.gas.dps / 2, now, 'gas'); }
+        if (p.dead) continue;
+      }
+    }
+    // 이동 (조종하는 동안 본인은 제자리)
+    if (p.stunT <= 0 && p.frozenT <= 0 && !p.ctrlId) {
       let { mx, my } = p.input;
       const len = Math.hypot(mx, my);
       if (len > 0.1) { mx /= len; my /= len; p.facing = Math.atan2(my, mx); } else { mx = 0; my = 0; }
-      p.x += mx * B.speed * DT;
-      p.y += my * B.speed * DT;
-      resolveWalls(p, B.radius);
+      p.x += mx * speedOf(p) * DT;
+      p.y += my * speedOf(p) * DT;
+      resolveWalls(room.map, p, B.radius);
+    }
+    // 젬 줍기
+    if (room.mode.id === 'gem') {
+      room.gems = room.gems.filter((g) => {
+        if (Math.hypot(g.x - p.x, g.y - p.y) > B.radius + 18) return true;
+        p.gems++; room.fx.push({ type: 'gem', id: p.id, x: g.x, y: g.y }); return false;
+      });
     }
   }
 
   // 소환수 (마우스)
   for (const m of room.mice) {
     m.life -= DT; m.biteCd = Math.max(0, m.biteCd - DT);
+    const owner = room.players.get(m.owner);
     let target = null, best = 700;
-    for (const q of room.players.values()) {
-      if (q.id === m.owner || q.dead) continue;
-      const d = Math.hypot(q.x - m.x, q.y - m.y);
-      if (d < best) { best = d; target = q; }
-    }
+    if (owner) for (const q of enemies(room, owner)) { const d = Math.hypot(q.x - m.x, q.y - m.y); if (d < best) { best = d; target = q; } }
     if (target) {
       const dx = target.x - m.x, dy = target.y - m.y, d = best || 1;
       m.ang = Math.atan2(dy, dx);
       if (d > target.B.radius + m.radius) {
-        m.x += (dx / d) * m.speed * DT;
-        m.y += (dy / d) * m.speed * DT;
-        resolveWalls(m, m.radius);
+        m.x += (dx / d) * m.speed * DT; m.y += (dy / d) * m.speed * DT;
+        resolveWalls(room.map, m, m.radius);
       } else if (m.biteCd <= 0) {
         m.biteCd = m.biteRate;
-        damage(room, room.players.get(m.owner), target, m.dmg, now);
+        damage(room, owner, target, m.dmg, now);
         room.fx.push({ type: 'click', x: target.x, y: target.y });
       }
-    } else {
-      const owner = room.players.get(m.owner);
-      if (owner && Math.hypot(owner.x - m.x, owner.y - m.y) > 70) {
-        const dx = owner.x - m.x, dy = owner.y - m.y, d = Math.hypot(dx, dy);
-        m.ang = Math.atan2(dy, dx);
-        m.x += (dx / d) * m.speed * 0.7 * DT;
-        m.y += (dy / d) * m.speed * 0.7 * DT;
-        resolveWalls(m, m.radius);
-      }
+    } else if (owner && Math.hypot(owner.x - m.x, owner.y - m.y) > 70) {
+      const dx = owner.x - m.x, dy = owner.y - m.y, d = Math.hypot(dx, dy);
+      m.ang = Math.atan2(dy, dx);
+      m.x += (dx / d) * m.speed * 0.7 * DT; m.y += (dy / d) * m.speed * 0.7 * DT;
+      resolveWalls(room.map, m, m.radius);
     }
   }
   room.mice = room.mice.filter((m) => m.life > 0 && m.hp > 0 && room.players.has(m.owner));
 
   const r1 = (v) => Math.round(v);
   io.to(room.id).emit('state', {
+    mode: room.mode.id, map: room.map.id, phase: room.phase, phaseT: +room.phaseT.toFixed(1),
+    mapT: Math.ceil(room.mapT), playT: Math.floor(room.playT), result: room.result,
+    safe: room.safe ? { x1: r1(room.safe.x1), y1: r1(room.safe.y1), x2: r1(room.safe.x2), y2: r1(room.safe.y2) } : null,
+    gems: room.gems.map((g) => [g.id, r1(g.x), r1(g.y)]),
+    score: room.mode.id === 'gem' ? [teamGems(room, 0), teamGems(room, 1)] : null,
+    hold: room.holdTeam >= 0 ? { team: room.holdTeam, t: +room.holdT.toFixed(1) } : null,
+    shards: room.shards.map((s) => [s.id, r1(s.x), r1(s.y), s.r, +s.t.toFixed(1)]),
     players: [...room.players.values()].map((p) => ({
-      id: p.id, name: p.name, b: p.B.id, color: p.color, bot: p.isBot,
-      x: r1(p.x), y: r1(p.y), hp: r1(p.hp), dead: p.dead, respawn: Math.ceil(p.respawnT),
-      ammo: p.ammo + p.reloadT / p.B.attack.reload, stun: p.stunT > 0,
+      id: p.id, name: p.name, b: p.B.id, color: p.color, bot: p.isBot, team: p.team,
+      x: r1(p.x), y: r1(p.y), hp: r1(p.hp), dead: p.dead, out: p.out, rank: p.rank, respawn: Math.ceil(p.respawnT),
+      ammo: p.ammo + p.reloadT / p.B.attack.reload, stun: p.stunT > 0, fz: p.frozenT > 0,
       gCd: +p.gCd.toFixed(2), sup: +p.sup.toFixed(3), f: +p.facing.toFixed(2),
       k: p.kills, d: p.deaths, say: p.speech ? p.speech.text : null,
       ctl: p.ctrlBy, ctrl: p.ctrlId, ctrlT: +(p.ctrlT || 0).toFixed(1), ac: +p.acT.toFixed(1),
+      g: p.lo.g, sp: p.lo.sp, gear: p.lo.gears, sh: r1(p.shield), rf: +p.rf.toFixed(3), aj: Math.ceil(p.ajT), gems: p.gems,
     })),
     mice: room.mice.map((m) => ({ id: m.id, x: r1(m.x), y: r1(m.y), a: +m.ang.toFixed(2), c: m.color, hp: m.hp / m.maxHp })),
     fx: room.fx,
@@ -428,58 +671,58 @@ function step(room) {
 
 setInterval(() => { for (const room of rooms.values()) step(room); }, 1000 / TICK);
 
+// ── 소켓 ───────────────────────────────────────────
 io.on('connection', (socket) => {
   let room = null;
   const me = () => room && room.players.get(socket.id);
   const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : NaN);
-  socket.on('join', ({ name, brawler } = {}) => {
+  const puppetOr = (p) => (p.ctrlId && room.players.get(p.ctrlId)) || p;   // 조종 중이면 꼭두각시가 행동
+  socket.on('join', ({ name, brawler, mode, loadout } = {}) => {
     if (room) return;
-    room = getRoom('lobby');   // 모두 공통 로비
-    const bid = BRAWLERS[brawler] && !BRAWLERS[brawler].wip ? brawler : 'jungbo';
-    room.players.set(socket.id, newPlayer(room, socket.id, String(name || '').trim() || BRAWLERS[bid].name, false, bid));
+    const modeId = MODES[mode] ? mode : 'ffa';
+    const fresh = !rooms.has(modeId);
+    room = getRoom(modeId);
+    const bid = BRAWLERS[brawler] ? brawler : 'jungbo';
+    const p = newPlayer(room, socket.id, String(name || '').trim() || BRAWLERS[bid].name, false, bid, loadout);
+    if (room.mode.team) {
+      p.team = teamCount(room, 0) <= teamCount(room, 1) ? 0 : 1;
+      p.color = TEAM_COLORS[p.team];
+      const bot = [...room.players.values()].find((q) => q.isBot && q.team === p.team);   // 봇 자리를 대신 차지
+      if (bot) removeBot(room, bot);
+    }
+    room.players.set(socket.id, p);
+    if (fresh && room.mode.rounds) startRound(room);
+    else if (room.mode.id === 'showdown' && room.phase !== 'wait') { p.out = true; p.dead = true; p.rank = 0; }   // 진행 중이면 관전
+    else resetBody(room, p, Math.floor(Math.random() * 8));
     socket.join(room.id);
-    socket.emit('joined', { id: socket.id, map: MAP });
+    socket.emit('joined', { id: socket.id, mode: room.mode.id });
   });
   socket.on('input', (inp) => {
     const p = me();
-    if (!p || !inp || p.ctrlBy) return;      // 조종당하는 중엔 입력 무시
+    if (!p || !inp || p.ctrlBy) return;
     p.input.mx = Math.max(-1, Math.min(1, +inp.mx || 0));
     p.input.my = Math.max(-1, Math.min(1, +inp.my || 0));
   });
-  // 조종 중이면 공격 버튼 → 꼭두각시가 공격
-  socket.on('attack', (ang) => {
-    const p = me(); if (!p || p.ctrlBy) return;
-    const t = p.ctrlId && room.players.get(p.ctrlId);
-    doAttack(room, t || p, num(ang), Date.now() / 1000);
-  });
-  // 조종 중이면 가젯·궁극기도 꼭두각시의 스킬로 나감
-  socket.on('gadget', (n) => {
-    const p = me(); if (!p || p.ctrlBy) return;
-    const t = p.ctrlId && room.players.get(p.ctrlId);
-    doGadget(room, t || p, n === 2 ? 2 : 1, Date.now() / 1000);
-  });
-  socket.on('super', (ang) => {
-    const p = me(); if (!p || p.ctrlBy) return;
-    const t = p.ctrlId && room.players.get(p.ctrlId);
-    doSuper(room, t || p, num(ang), Date.now() / 1000);
-  });
+  // 조종 중이면 공격·가젯·궁극기 모두 꼭두각시의 스킬로
+  socket.on('attack', (ang) => { const p = me(); if (p && !p.ctrlBy) doAttack(room, puppetOr(p), num(ang), Date.now() / 1000); });
+  socket.on('gadget', (n) => { const p = me(); if (p && !p.ctrlBy) doGadget(room, puppetOr(p), n === 2 ? 2 : 1, Date.now() / 1000); });
+  socket.on('super', (ang) => { const p = me(); if (p && !p.ctrlBy) doSuper(room, puppetOr(p), num(ang), Date.now() / 1000); });
   socket.on('addBot', () => {
-    if (!room) return;
+    if (!room || room.mode.rounds) return;         // 라운드 모드는 자동으로 채움
     const bots = [...room.players.values()].filter((p) => p.isBot).length;
     if (room.players.size >= G.maxPlayers || bots >= G.maxBots) return;
-    const id = 'bot' + ++room.botSeq;
-    const bid = pick(Object.keys(BRAWLERS).filter((k) => !BRAWLERS[k].wip));
-    room.players.set(id, newPlayer(room, id, '봇' + room.botSeq, true, bid));
+    resetBody(room, addBot(room));
   });
   socket.on('clearBots', () => {
-    if (!room) return;
-    for (const [id, p] of room.players) if (p.isBot) { releaseCtrl(room, p); room.players.delete(id); }
+    if (!room || room.mode.rounds) return;
+    for (const p of [...room.players.values()]) if (p.isBot) removeBot(room, p);
   });
   socket.on('disconnect', () => {
     if (!room) return;
-    const p = me(); if (p) releaseCtrl(room, p);
+    const p = me(); if (p) { releaseCtrl(room, p, false); if (p.gems) dropGems(room, p); }
     room.players.delete(socket.id);
-    if (![...room.players.values()].some((p) => !p.isBot)) rooms.delete(room.id);
+    if (!humans(room).length) rooms.delete(room.id);
+    else if (room.mode.id === 'gem' && room.phase === 'play' && p) addBot(room, p.team) && resetBody(room, [...room.players.values()].pop());
   });
 });
 

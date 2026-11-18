@@ -24,6 +24,12 @@ const BRAWLERS = {
       desc: '부채꼴로 고함을 질러 큰 피해를 주고 적을 밀쳐낸다.',
       need: 3500, range: 340, half: 0.66, dmg: 2200, knock: 150,
     },
+    starPowers: [
+      { id: 'reflect', name: '너의 성찰을 불찰로 바꿔줄게', icon: '📕',
+        desc: '상대를 때릴 때마다 그 상대의 성찰 게이지가 조금씩 오른다(8번). 다 차면 불찰로 바뀌며 상대는 즉사한다.', hits: 8 },
+      { id: 'ajae', name: '아재개그', icon: '🥶',
+        desc: '30초에 한 번 랜덤한 아재개그를 해서 주위의 적을 1.5초 동안 얼린다.', every: 30, range: 300, freeze: 1.5 },
+    ],
     lines: {
       atk: ['아~ 이놈의 아이들!', '아~ 이놈의 아이들', '조용히 해라~', '자리에 앉아!'],
       g1: ['AI야? 시키지도 않은 걸 하네', 'AI야?? 시키지도 않은 걸 하네!'],
@@ -42,7 +48,7 @@ const BRAWLERS = {
     attack: {
       name: '주걱 스매쉬', aim: 'dir',
       desc: '큰 나무주걱을 조금 느리게 휘둘러 앞쪽 부채꼴 범위에 강한 피해를 준다.',
-      range: 190, half: 1.0, dmg: 1500, ammo: 3, reload: 1.8, cd: 0.6, windup: 0.18, knock: 40,
+      range: 190, half: 1.0, dmg: 1800, ammo: 3, reload: 1.8, cd: 0.6, windup: 0.18, knock: 40,
     },
     gadgets: [
       { name: '얘들아 덥지 않니?', icon: '❄️', desc: '에어컨을 18도로 틀어 7초 동안 모든 적 브롤러에게 계속 피해를 준다.', dur: 7, tick: 0.5, dmg: 100 },
@@ -54,6 +60,13 @@ const BRAWLERS = {
       desc: '조준한 방향의 첫 번째 상대를 5초 동안 조종한다. 조종하는 동안 그 상대의 공격·가젯·궁극기를 대신 쓸 수 있다.',
       need: 4800, range: 460, width: 45, dur: 5,
     },
+    starPowers: [
+      { id: 'sasinga', name: '너 사회성 머리는 하나도 없지? 너 진짜 싸가지 없다.', icon: '😤',
+        desc: '궁극기 조종이 끝나면 그 상대가 2초 동안 기절한다.', stun: 2 },
+      { id: 'board', name: '칠판 부수기', icon: '🧱',
+        desc: '공격 시 25% 확률로 칠판이 부서지며 맞은 상대에게 670 추가 피해. 바닥에 파편이 흩뿌려져 밟고 있는 동안 1초에 300 피해.',
+        chance: 0.25, dmg: 670, radius: 95, dur: 5, dps: 300 },
+    ],
     lines: {
       atk: ['주걱 맛 좀 볼래?', '조용히 해!', '집중 안 하지?'],
       g1: ['얘들아 덥지 않니?', '에어컨 18도~'],
@@ -64,6 +77,25 @@ const BRAWLERS = {
   },
 };
 
+// 기어 (6개 중 2개 장착)
+const GEARS = [
+  { id: 'speed', name: '속도 기어', icon: '👟', desc: '이동 속도 10% 증가' },
+  { id: 'heal', name: '회복 기어', icon: '💚', desc: '체력 회복 속도 50% 증가' },
+  { id: 'dmg', name: '데미지 기어', icon: '🔥', desc: '체력이 절반 이하일 때 주는 피해 15% 증가' },
+  { id: 'shield', name: '보호막 기어', icon: '🛡️', desc: '체력이 가득 찬 상태로 3초가 지나면 900 보호막 생성' },
+  { id: 'gadget', name: '가젯 기어', icon: '⏱️', desc: '가젯 쿨타임 20% 감소' },
+  { id: 'super', name: '궁극기 기어', icon: '⚡', desc: '궁극기가 시간이 지나면 저절로 충전된다 (60초에 가득)' },
+];
+
+// 아재개그 (정보쌤 스타파워)
+const AJAE = [
+  '왕이 넘어지면? 킹콩!', '소금의 유통기한은? 천일염!', '바나나가 웃으면? 바나나킥!',
+  '자동차를 톡 치면? 카톡!', '오리가 얼면? 언덕!', '미소의 반대말은? 당기소!',
+  '전화로 세운 건물은? 콜로세움!', '왕이 궁에 들어가기 싫을 때? 궁시렁궁시렁!',
+  '세상에서 제일 쉬운 숫자는? 190000 (십구만)!', '고양이가 좋아하는 차는? 냥이차!',
+  '물고기 중 가장 학벌 좋은 건? 고등어!', '세상에서 가장 뜨거운 과일은? 천도복숭아!',
+];
+
 // 클라이언트에 보낼 공개 정보 (대사 제외)
 function publicBrawlers() {
   const out = {};
@@ -71,4 +103,4 @@ function publicBrawlers() {
   return out;
 }
 
-module.exports = { BRAWLERS, publicBrawlers };
+module.exports = { BRAWLERS, GEARS, AJAE, publicBrawlers };

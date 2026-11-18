@@ -80,6 +80,39 @@
   .sk .sd { font-size: 12px; opacity: .85; line-height: 1.4; }
   #bdetail .acts { display: flex; gap: 10px; margin-top: 12px; }
   @media (orientation: portrait) { #bdetail .box { flex-direction: column; } #bdetail .pic { flex: 0 0 auto; height: 180px; } #bdetail .pic img { width: 170px; } }
+  /* 모드 선택 */
+  #modeBox { cursor: pointer; }
+  #modeBox small { font-size: 11px; color: #ffd84a; margin-top: 3px; }
+  #mscreen { position: fixed; inset: 0; z-index: 30; display: none; flex-direction: column; background: radial-gradient(circle at 50% 0%, #3a5aa8, #121a38 70%); }
+  #mscreen header { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
+  #mscreen h2 { margin: 0; font-size: 26px; font-weight: 900; }
+  #mgrid { flex: 1; overflow-y: auto; padding: 8px 14px 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; align-content: start; touch-action: pan-y; }
+  .mcard { position: relative; border: 3px solid #000; border-radius: 14px; box-shadow: 0 5px 0 #000; padding: 12px 14px; cursor: pointer; min-height: 120px; }
+  .mcard .mi { font-size: 38px; }
+  .mcard .mn { font-size: 22px; font-weight: 900; }
+  .mcard .md { font-size: 12.5px; line-height: 1.45; margin-top: 4px; background: rgba(0,0,0,.35); border-radius: 8px; padding: 5px 8px; }
+  .mcard .mm { font-size: 11px; margin-top: 6px; opacity: .9; font-weight: 800; }
+  .mcard.sel { outline: 4px solid #fff; outline-offset: -9px; }
+  /* 로드아웃 */
+  #sLoad { margin-top: 6px; display: flex; gap: 5px; justify-content: center; }
+  #sLoad span { width: 30px; height: 30px; border-radius: 8px; border: 2px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; background: rgba(0,0,0,.4); }
+  .sec { font-size: 13px; font-weight: 900; color: #ffd84a; margin: 10px 0 2px; }
+  .sk.pickable { cursor: pointer; border: 3px solid transparent; }
+  .sk.pickable.on { border-color: #3ce07f; background: rgba(60,224,127,.18); }
+  .sk.pickable .ok { margin-left: auto; font-weight: 900; color: #3ce07f; display: none; }
+  .sk.pickable.on .ok { display: block; }
+  .gears { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 4px; }
+  .gear { border: 3px solid transparent; background: rgba(0,0,0,.3); border-radius: 10px; padding: 6px; text-align: center; cursor: pointer; }
+  .gear b { display: block; font-size: 12px; } .gear i { font-style: normal; font-size: 22px; } .gear small { display: block; font-size: 10px; opacity: .8; line-height: 1.3; }
+  .gear.on { border-color: #3ce07f; background: rgba(60,224,127,.18); }
+  /* 게임 HUD */
+  #modeHud { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 6; font-weight: 900; font-size: 16px; text-align: center; white-space: nowrap; pointer-events: none; }
+  #modeHud .gs { display: inline-flex; gap: 10px; align-items: center; background: rgba(0,0,0,.45); padding: 3px 12px; border-radius: 10px; font-size: 20px; }
+  #phaseMsg { position: fixed; left: 50%; top: 38%; transform: translate(-50%, -50%); z-index: 9; font-size: 54px; font-weight: 900; text-align: center; display: none; pointer-events: none; }
+  #phaseMsg small { display: block; font-size: 18px; margin-top: 6px; }
+  .lbl .rfb { width: 74px; height: 7px; margin: 2px auto 0; background: #000; border-radius: 4px; padding: 1px; display: none; }
+  .lbl .rfb i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #b56cff, #ff3a8a); }
+  .lbl.ally .hpb i { background: #4f8cff; }
   #modal { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; background: rgba(10,6,30,.7); }
   #modal .box { width: min(90vw, 340px); padding: 18px; text-align: center; }
   #modal h3 { margin: 0 0 12px; font-size: 20px; }
@@ -104,7 +137,7 @@
   #top { position: fixed; top: 8px; left: 8px; z-index: 6; display: none; gap: 6px; pointer-events: auto; }
   #top button { padding: 7px 10px; font-size: 13px; font-weight: 800; border: 3px solid #000; border-radius: 9px; background: #fff; cursor: pointer; }
   #board { position: fixed; top: 8px; right: 12px; z-index: 6; text-align: right; font-weight: 800; font-size: 14px; line-height: 1.5; }
-  #feed { position: fixed; top: 52px; left: 0; right: 0; z-index: 6; text-align: center; font-weight: 900; font-size: 15px; color: #ff9a9a; line-height: 1.6; }
+  #feed { position: fixed; top: 100px; left: 0; right: 0; z-index: 6; text-align: center; font-weight: 900; font-size: 15px; color: #ff9a9a; line-height: 1.6; }
   #dead { position: fixed; inset: 0; z-index: 7; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.45); font-size: 36px; font-weight: 900; }
 
   #ctrl { position: fixed; right: 14px; bottom: 16px; z-index: 8; display: none; width: 160px; height: 160px; }
@@ -143,10 +176,10 @@
     <div class="lb panel stroke" id="openB"><span class="ic">🧑‍🏫</span>브롤러</div>
     <div class="lb panel stroke" id="openHelp"><span class="ic">❔</span>조작법</div>
   </div>
-  <div id="showName" class="stroke"><span class="rbadge" id="sRar">전설</span><div class="nm2" id="sName">정보쌤</div><div class="tt" id="sTitle"></div></div>
+  <div id="showName" class="stroke"><span class="rbadge" id="sRar">전설</span><div class="nm2" id="sName">정보쌤</div><div class="tt" id="sTitle"></div><div id="sLoad"></div></div>
   <div id="status" class="stroke"></div>
   <div id="playWrap">
-    <div id="modeBox" class="panel stroke"><b>⚔️ 로비 대전</b><span>모두 같은 방에서 난투 · 리스폰</span></div>
+    <div id="modeBox" class="panel stroke"><b id="mName">⚔️ 난투</b><span id="mDesc"></span><small>▶ 눌러서 모드 변경</small></div>
     <button class="pbtn stroke" id="playBtn" style="color:#fff">플레이</button>
   </div>
 </div>
@@ -154,11 +187,17 @@
   <header><button class="back" id="bBack">◀</button><h2 class="stroke">브롤러</h2><div class="cnt stroke" id="bCnt"></div></header>
   <div id="bgrid"></div>
 </div>
+<div id="mscreen">
+  <header><button class="back" id="mBack">◀</button><h2 class="stroke">모드 선택</h2></header>
+  <div id="mgrid"></div>
+</div>
 <div id="bdetail"><div class="box panel" id="bdBox"></div></div>
 <div id="modal"><div class="box panel" id="mBox"></div></div>
 <div id="ui"></div>
 <div id="top"><button id="exitBtn">◀ 로비</button><button id="botBtn">+ 봇 추가</button><button id="clearBtn">봇 삭제</button></div>
 <div id="board" class="stroke"></div>
+<div id="modeHud" class="stroke"></div>
+<div id="phaseMsg" class="stroke"></div>
 <div id="feed" class="stroke"></div>
 <div id="dead" class="stroke"></div>
 <div id="frost"></div><div id="lookFlash"></div><div id="ctrlFlash"></div><div id="ctrlMsg" class="stroke"></div>
@@ -237,28 +276,88 @@ const screenTex = canvasTex(128, 96, (g) => {
   for (let y = 10; y < 90; y += 9) { let x = 8 + Math.floor(Math.random() * 3) * 8; while (x < 110 && Math.random() < 0.8) { const w = 8 + Math.random() * 26; g.fillStyle = cs[Math.floor(Math.random() * cs.length)]; g.fillRect(x, y, w, 4); x += w + 5; } }
 });
 
+// 맵 테마: 바닥 색, 외곽 벽, 장애물 모양
+const THEMES = {
+  computer:   { floor: ['#d9dbe8', '#c9cde0'], border: ['#7b5cff', '#5a3fd6'], bg: '#2a1f4f' },
+  math:       { floor: ['#eadfc8', '#dccfb3'], border: ['#3d7a5a', '#2c5a42'], bg: '#1d3529' },
+  cafeteria:  { floor: ['#fff4d6', '#f3dfa8'], border: ['#5fbf8a', '#3f9a6a'], bg: '#283d2c' },
+  playground: { floor: ['#6cc24a', '#5fb540'], border: ['#a0703f', '#7a5230'], bg: '#2d4724', grass: true },
+  gym:        { floor: ['#e2b06f', '#d6a25f'], border: ['#3a6fd8', '#2a54ad'], bg: '#1b2848', planks: true },
+};
+const floorCache = {};
+function floorTexFor(theme) {
+  if (floorCache[theme]) return floorCache[theme];
+  const T = THEMES[theme] || THEMES.computer;
+  const t = canvasTex(256, 256, (g, w, h) => {
+    if (T.planks) {
+      for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? T.floor[0] : T.floor[1]; g.fillRect(0, i * 32, w, 32); }
+      g.strokeStyle = 'rgba(90,50,10,.35)'; g.lineWidth = 2;
+      for (let i = 0; i <= 8; i++) { g.beginPath(); g.moveTo(0, i * 32); g.lineTo(w, i * 32); g.stroke(); const x = (i * 97) % w; g.beginPath(); g.moveTo(x, i * 32); g.lineTo(x, i * 32 + 32); g.stroke(); }
+    } else if (T.grass) {
+      g.fillStyle = T.floor[0]; g.fillRect(0, 0, w, h);
+      for (let k = 0; k < 900; k++) { g.fillStyle = Math.random() < 0.5 ? T.floor[1] : '#7fd65a'; g.fillRect(Math.random() * w, Math.random() * h, 2, 5); }
+    } else {
+      for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) { g.fillStyle = T.floor[(i + j) % 2]; g.fillRect(i * 128, j * 128, 128, 128); }
+      g.strokeStyle = 'rgba(60,60,90,.3)'; g.lineWidth = 4;
+      for (let i = 0; i <= 2; i++) { g.beginPath(); g.moveTo(i * 128, 0); g.lineTo(i * 128, h); g.stroke(); g.beginPath(); g.moveTo(0, i * 128); g.lineTo(w, i * 128); g.stroke(); }
+    }
+    for (let k = 0; k < 140; k++) { g.fillStyle = `rgba(60,60,60,${Math.random() * 0.1})`; g.fillRect(Math.random() * w, Math.random() * h, 3, 3); }
+  });
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return (floorCache[theme] = t);
+}
+const chalkTex = canvasTex(256, 128, (g) => {
+  g.fillStyle = '#2f5d46'; g.fillRect(0, 0, 256, 128);
+  g.fillStyle = 'rgba(255,255,255,.85)'; g.font = 'bold 22px sans-serif';
+  const f = ['x²+y²=r²', 'π≈3.14', '∫ f(x)dx', 'a+b=c', 'sin²θ+cos²θ=1', '√2', 'y=ax+b', '2x-3=7'];
+  for (let i = 0; i < 4; i++) g.fillText(f[Math.floor(Math.random() * f.length)], 10 + (i % 2) * 120, 32 + Math.floor(i / 2) * 50);
+});
+chalkTex.wrapS = THREE.RepeatWrapping;
+let mapGroup = null, curMapId = null;
 function buildMap(MAP) {
+  if (mapGroup) scene.remove(mapGroup);
+  mapGroup = new THREE.Group(); scene.add(mapGroup);
+  const add = (...o) => mapGroup.add(...o);
+  const T = THEMES[MAP.theme] || THEMES.computer;
+  scene.background = new THREE.Color(T.bg); scene.fog.color.set(T.bg);
   const fw = MAP.w * S, fh = MAP.h * S;
-  floorTex.repeat.set(fw / 6, fh / 6);
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(fw, fh), std('#ffffff', { map: floorTex, roughness: 0.55 }));
-  floor.rotation.x = -Math.PI / 2; floor.position.set(fw / 2, 0, fh / 2); floor.receiveShadow = true;
-  scene.add(floor);
-  const outer = new THREE.Mesh(new THREE.PlaneGeometry(fw + 200, fh + 200), std('#3a2b6e'));
-  outer.rotation.x = -Math.PI / 2; outer.position.set(fw / 2, -0.02, fh / 2); outer.receiveShadow = true; scene.add(outer);
+  const ft = floorTexFor(MAP.theme); ft.repeat.set(fw / 6, fh / 6);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(fw, fh), std('#ffffff', { map: ft, roughness: 0.6 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.set(fw / 2, 0, fh / 2); floor.receiveShadow = true; add(floor);
+  const outer = new THREE.Mesh(new THREE.PlaneGeometry(fw + 200, fh + 200), std(T.bg));
+  outer.rotation.x = -Math.PI / 2; outer.position.set(fw / 2, -0.02, fh / 2); outer.receiveShadow = true; add(outer);
+  if (MAP.theme === 'gym') {   // 코트 라인
+    const lm = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.7 });
+    const c = new THREE.Mesh(new THREE.RingGeometry(5.6, 5.9, 48), lm); c.rotation.x = -Math.PI / 2; c.position.set(fw / 2, 0.02, fh / 2); add(c);
+    const l = new THREE.Mesh(new THREE.PlaneGeometry(fw, 0.3), lm); l.rotation.x = -Math.PI / 2; l.position.set(fw / 2, 0.02, fh / 2); add(l);
+  }
   // 외곽 벽
-  const bm = std('#7b5cff', { roughness: 0.5 }), bm2 = std('#5a3fd6');
-  const T = 1.2, HH = 1.3;
-  for (const [x, z, w, d] of [[fw / 2, -T / 2, fw + 2 * T, T], [fw / 2, fh + T / 2, fw + 2 * T, T], [-T / 2, fh / 2, T, fh], [fw + T / 2, fh / 2, T, fh]]) {
+  const bm = std(T.border[0], { roughness: 0.5 }), bm2 = std(T.border[1]);
+  const TH = 1.2, HH = 1.3;
+  for (const [x, z, w, d] of [[fw / 2, -TH / 2, fw + 2 * TH, TH], [fw / 2, fh + TH / 2, fw + 2 * TH, TH], [-TH / 2, fh / 2, TH, fh], [fw + TH / 2, fh / 2, TH, fh]]) {
     const b = new THREE.Mesh(new THREE.BoxGeometry(w, HH, d), bm); b.position.set(x, HH / 2, z);
     const cap = new THREE.Mesh(new THREE.BoxGeometry(w + 0.1, 0.2, d + 0.1), bm2); cap.position.set(x, HH + 0.1, z);
-    scene.add(b, cap); shadowAll(b); shadowAll(cap);
+    shadowAll(b); shadowAll(cap); add(b, cap);
   }
-  // 책상 + 모니터
-  const wood = std('#b07a46', { roughness: 0.55 }), woodD = std('#7a4e2b'), dark = std('#222630', { roughness: 0.4 }), key = std('#e9e9ef');
-  const scr = new THREE.MeshBasicMaterial({ map: screenTex });
   for (const w of MAP.walls) {
-    const cx = (w.x + w.w / 2) * S, cz = (w.y + w.h / 2) * S, sw = w.w * S, sd = w.h * S;
-    const g = new THREE.Group(); g.position.set(cx, 0, cz);
+    const g = new THREE.Group(); g.position.set((w.x + w.w / 2) * S, 0, (w.y + w.h / 2) * S);
+    OBST[MAP.theme] ? OBST[MAP.theme](g, w.w * S, w.h * S) : OBST.computer(g, w.w * S, w.h * S);
+    shadowAll(g); add(g);
+  }
+  // 젬 광산
+  if (MAP.mine) {
+    const m = new THREE.Group(); m.position.set(MAP.mine.x * S, 0, MAP.mine.y * S);
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.4, 0), std('#5a4a6a', { roughness: 0.9 })); rock.scale.y = 0.45; rock.position.y = 0.3; m.add(rock);
+    for (let i = 0; i < 6; i++) { const c = new THREE.Mesh(new THREE.OctahedronGeometry(0.35), std('#c070ff', { emissive: '#7a20c0', emissiveIntensity: 0.6, roughness: 0.2 })); const a = i * 1.05; c.position.set(Math.cos(a) * 0.8, 0.7, Math.sin(a) * 0.8); c.rotation.z = Math.cos(a) * 0.5; c.scale.y = 1.6; m.add(c); }
+    shadowAll(m); add(m);
+  }
+  curMapId = MAP.id;
+}
+// 테마별 장애물
+const OBST = {
+  computer(g, sw, sd) {
+    const wood = std('#b07a46', { roughness: 0.55 }), woodD = std('#7a4e2b'), dark = std('#222630', { roughness: 0.4 }), key = std('#e9e9ef');
+    const scr = new THREE.MeshBasicMaterial({ map: screenTex });
     const body = new THREE.Mesh(new THREE.BoxGeometry(sw - 0.3, 1.25, sd - 0.3), woodD); body.position.y = 0.63;
     const top = new THREE.Mesh(new THREE.BoxGeometry(sw, 0.22, sd), wood); top.position.y = 1.36;
     g.add(body, top);
@@ -274,7 +373,86 @@ function buildMap(MAP) {
       if (along) mon.position.x = off; else { mon.position.z = off; mon.rotation.y = Math.PI / 2; }
       g.add(mon);
     }
-    shadowAll(g); scene.add(g);
+  },
+  math(g, sw, sd) {        // 초록 칠판
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(sw, 2.3, sd), std('#8a5a2c', { roughness: 0.6 })); frame.position.y = 1.15;
+    const board = new THREE.Mesh(new THREE.BoxGeometry(sw + 0.02, 1.8, sd + 0.02), std('#ffffff', { map: chalkTex, roughness: 0.9 })); board.position.y = 1.3;
+    const tray = new THREE.Mesh(new THREE.BoxGeometry(sw + 0.2, 0.1, sd + 0.2), std('#6e4520')); tray.position.y = 0.35;
+    g.add(frame, board, tray);
+  },
+  cafeteria(g, sw, sd) {   // 급식 테이블 + 식판
+    const body = new THREE.Mesh(new THREE.BoxGeometry(sw - 0.2, 0.95, sd - 0.2), std('#bfc9d4', { metalness: 0.3, roughness: 0.4 })); body.position.y = 0.48;
+    const top = new THREE.Mesh(new THREE.BoxGeometry(sw, 0.16, sd), std('#f4f4f8', { roughness: 0.3 })); top.position.y = 1.03;
+    g.add(body, top);
+    const along = sw >= sd, len = along ? sw : sd, n = Math.max(1, Math.floor(len / 1.6));
+    const foods = ['#ff7a3a', '#ffe36b', '#7dd65a', '#c9a27a'];
+    for (let i = 0; i < n; i++) {
+      const off = -len / 2 + len / n * (i + 0.5);
+      const tray = new THREE.Group();
+      const t = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.06, 0.7), std('#d8dde3', { metalness: 0.6, roughness: 0.3 })); t.position.y = 1.14; tray.add(t);
+      for (let k = 0; k < 3; k++) { const f = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), std(foods[(i + k) % 4])); f.position.set(-0.3 + k * 0.3, 1.2, 0); f.scale.y = 0.6; tray.add(f); }
+      if (along) tray.position.x = off; else { tray.position.z = off; tray.rotation.y = Math.PI / 2; }
+      g.add(tray);
+    }
+  },
+  playground(g, sw, sd) {  // 덤불 + 벤치 느낌
+    const hedge = new THREE.Mesh(new THREE.BoxGeometry(sw, 1.3, sd), std('#3f9a3a', { roughness: 1 })); hedge.position.y = 0.65; g.add(hedge);
+    const n = Math.max(2, Math.round((sw * sd) / 1.2));
+    for (let i = 0; i < Math.min(n, 30); i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.45 + Math.random() * 0.25, 10, 8), std(Math.random() < 0.5 ? '#4cb046' : '#3a8f35', { roughness: 1 })); b.position.set((Math.random() - 0.5) * sw * 0.9, 1.3 + Math.random() * 0.2, (Math.random() - 0.5) * sd * 0.9); g.add(b); }
+  },
+  gym(g, sw, sd) {         // 파란 매트 + 뜀틀
+    const a = new THREE.Mesh(new THREE.BoxGeometry(sw, 0.7, sd), std('#2f6fe0', { roughness: 0.7 })); a.position.y = 0.35;
+    const b = new THREE.Mesh(new THREE.BoxGeometry(sw * 0.92, 0.7, sd * 0.92), std('#4a8af5', { roughness: 0.7 })); b.position.y = 1.05;
+    const top = new THREE.Mesh(new THREE.BoxGeometry(sw * 0.85, 0.12, sd * 0.85), std('#f2f2f2')); top.position.y = 1.46;
+    g.add(a, b, top);
+  },
+};
+
+// ── 젬 / 독가스 / 칠판 파편 렌더 ──────────────────
+const gemMeshes = {}, shardMeshes = {};
+const gemGeo = new THREE.OctahedronGeometry(0.42);
+const gemMat = std('#c070ff', { emissive: '#8a2be2', emissiveIntensity: 0.7, roughness: 0.15, metalness: 0.2 });
+const gasGroup = new THREE.Group(); scene.add(gasGroup);
+const gasMat = new THREE.MeshBasicMaterial({ color: '#a03cff', transparent: true, opacity: 0.45, depthWrite: false });   // 보라색 독가스 (잔디 위에서도 잘 보이게)
+for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(1, 3, 1), gasMat); m.position.y = 1.5; gasGroup.add(m); }
+function updateWorld(now) {
+  const seen = new Set();
+  for (const [id, x, y] of state.gems || []) {
+    seen.add(String(id));
+    let m = gemMeshes[id];
+    if (!m) { m = gemMeshes[id] = new THREE.Mesh(gemGeo, gemMat); m.castShadow = true; m.position.set(x * S, 0.8, y * S); scene.add(m); }
+    m.position.x += (x * S - m.position.x) * 0.3; m.position.z += (y * S - m.position.z) * 0.3;
+    m.position.y = 0.8 + Math.sin(now * 3 + id) * 0.15; m.rotation.y = now * 2 + id; m.scale.y = 1.4;
+  }
+  for (const id in gemMeshes) if (!seen.has(id)) { scene.remove(gemMeshes[id]); delete gemMeshes[id]; }
+  const sseen = new Set();
+  for (const [id, x, y, r, t] of state.shards || []) {
+    sseen.add(String(id));
+    let g = shardMeshes[id];
+    if (!g) {
+      g = shardMeshes[id] = new THREE.Group(); g.position.set(x * S, 0, y * S);
+      const red = new THREE.Mesh(new THREE.CircleGeometry(r * S, 32), new THREE.MeshBasicMaterial({ color: '#ff3a3a', transparent: true, opacity: 0.18, depthWrite: false }));
+      red.rotation.x = -Math.PI / 2; red.position.y = 0.03; g.add(red); g.userData.red = red;
+      for (let i = 0; i < 16; i++) {
+        const a = Math.random() * Math.PI * 2, d = Math.random() * r * S * 0.9;
+        const sh = new THREE.Mesh(new THREE.BoxGeometry(0.25 + Math.random() * 0.4, 0.06, 0.2 + Math.random() * 0.3), std(i % 4 ? '#2f5d46' : '#8a5a2c'));
+        sh.position.set(Math.cos(a) * d, 0.05, Math.sin(a) * d); sh.rotation.set((Math.random() - 0.5) * 0.4, Math.random() * 3, 0); g.add(sh);
+      }
+      scene.add(g);
+    }
+    g.userData.red.material.opacity = 0.12 + Math.abs(Math.sin(now * 5)) * 0.15;
+    g.visible = t > 0.3 || Math.sin(now * 30) > 0;
+  }
+  for (const id in shardMeshes) if (!sseen.has(id)) { scene.remove(shardMeshes[id]); delete shardMeshes[id]; }
+  // 독가스: 안전지대 바깥 네 면
+  const sf = state.safe;
+  gasGroup.visible = !!sf && !!MAP;
+  if (gasGroup.visible) {
+    const W2 = MAP.w * S, H2 = MAP.h * S, x1 = sf.x1 * S, x2 = sf.x2 * S, y1 = sf.y1 * S, y2 = sf.y2 * S, P = 30;
+    const set = (m, ax, az, bx, bz) => { const w = Math.max(0.01, bx - ax), d = Math.max(0.01, bz - az); m.scale.set(w, 1, d); m.position.x = (ax + bx) / 2; m.position.z = (az + bz) / 2; m.visible = w > 0.05 && d > 0.05; };
+    const [a, b, c, d] = gasGroup.children;
+    set(a, -P, -P, W2 + P, y1); set(b, -P, y2, W2 + P, H2 + P); set(c, -P, y1, x1, y2); set(d, x2, y1, W2 + P, y2);
+    gasMat.opacity = 0.42 + Math.sin(now * 2) * 0.06;
   }
 }
 
@@ -440,12 +618,25 @@ function makeHyeonsil(teamColor) {
     shd.rotation.z = s * 0.28; shd.userData.baseZ = s * 0.28;
     arms.push(shd);
     if (s === 1) {   // 큰 나무주걱
-      const wood = std('#c8935a', { roughness: 0.6 }), woodD = std('#a8733f', { roughness: 0.6 });
+      // 사진처럼: 진한 적갈색 원목, 넓적한 날 + 비스듬한 윗면 + 손잡이 끝 구멍
       const sp = new THREE.Group(); sp.position.set(0.05, -1.2, 0.28); sp.rotation.set(0.42, 0, -0.32); shd.add(sp);
-      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 1.7, 10), wood); handle.position.y = 0.55; sp.add(handle);
-      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.07, 0.25, 10), wood); neck.position.y = 1.45; sp.add(neck);
-      const paddle = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), wood); paddle.scale.set(0.55, 0.82, 0.09); paddle.position.y = 2.25; sp.add(paddle);
-      const groove = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12), woodD); groove.scale.set(0.42, 0.62, 0.05); groove.position.set(0, 2.27, 0.05); sp.add(groove);
+      const sh = new THREE.Shape();
+      sh.moveTo(-0.1, 0); sh.quadraticCurveTo(0, -0.1, 0.1, 0);
+      sh.lineTo(0.12, 0.95); sh.quadraticCurveTo(0.16, 1.12, 0.33, 1.3);
+      sh.lineTo(0.4, 2.3); sh.quadraticCurveTo(0.4, 2.46, 0.26, 2.47);
+      sh.lineTo(-0.3, 2.36); sh.quadraticCurveTo(-0.42, 2.34, -0.41, 2.22);
+      sh.lineTo(-0.34, 1.32); sh.quadraticCurveTo(-0.17, 1.12, -0.12, 0.95);
+      sh.lineTo(-0.1, 0);
+      const hole = new THREE.Path(); hole.absarc(0, 0.13, 0.04, 0, Math.PI * 2, true); sh.holes.push(hole);
+      const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.07, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 3, curveSegments: 12 });
+      geo.translate(0, -0.45, -0.035);
+      const grain = canvasTex(64, 256, (g, w, h) => {
+        g.fillStyle = '#5a1c13'; g.fillRect(0, 0, w, h);
+        for (let i = 0; i < 40; i++) { g.strokeStyle = `rgba(${Math.random() < 0.5 ? '30,5,2' : '140,60,40'},${0.15 + Math.random() * 0.25})`; g.lineWidth = 1 + Math.random() * 2; const x = Math.random() * w; g.beginPath(); g.moveTo(x, 0); g.bezierCurveTo(x + 6, h * 0.3, x - 6, h * 0.6, x + 3, h); g.stroke(); }
+      });
+      const wood = new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: grain, roughness: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.3 });
+      const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 1.2 + 0.5, uv.getY(i) / 2.5);
+      const spatula = new THREE.Mesh(geo, wood); spatula.scale.setScalar(1.15); sp.add(spatula);
     }
   }
   // 머리
@@ -803,7 +994,10 @@ function popup(text, pos, y, color, size = 22, dur = 0.9) {
 }
 
 // ── 네트워크 / 게임 상태 ──────────────────────────
-let socket, myId, MAP;
+let socket, myId, MAP = null;
+let META = { modes: {}, maps: {}, gears: [] };
+let selMode = LS0('jb_mode', 'ffa');
+function LS0(k, d) { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } }
 let mode = 'lobby';
 let BR = {};                                   // 브롤러 정보 (서버에서 받아옴)
 const RAR = {
@@ -819,6 +1013,17 @@ let myName = LS.get('jb_name', '') || '플레이어';
 let selected = LS.get('jb_brawler', 'jungbo');
 let trophies = +LS.get('jb_trophy', 0) || 0;
 const myB = () => BR[selected];
+// 로드아웃: 가젯 1개 · 스타파워 1개 · 기어 2개 (브롤러마다 저장)
+function getLO(id) {
+  const b = BR[id]; let lo = {};
+  try { lo = JSON.parse(LS.get('jb_lo_' + id, '{}')) || {}; } catch (e) {}
+  if (![0, 1].includes(lo.g)) lo.g = 0;
+  if (!b.starPowers || !b.starPowers.some((x) => x.id === lo.sp)) lo.sp = b.starPowers ? b.starPowers[0].id : null;
+  if (!Array.isArray(lo.gears)) lo.gears = ['shield', 'dmg'];
+  lo.gears = lo.gears.filter((g) => META.gears.some((x) => x.id === g)).slice(0, 2);
+  return lo;
+}
+const setLO = (id, lo) => LS.set('jb_lo_' + id, JSON.stringify(lo));
 let state = { players: [], mice: [] };
 const views = {}, mviews = {};
 
@@ -830,6 +1035,14 @@ function refreshLobby() {
   $('sRar').textContent = r.label; $('sRar').style.background = `linear-gradient(${r.c1}, ${r.c2})`;
   $('sName').textContent = b.name; $('sTitle').textContent = '"' + b.title + '"';
   $('sName').style.color = r.c1;
+  if (b.starPowers && META.gears.length) {
+    const lo = getLO(b.id);
+    const sp = b.starPowers.find((x) => x.id === lo.sp);
+    $('sLoad').innerHTML = `<span title="가젯" style="background:#4fd2ff">${b.gadgets[lo.g].icon}</span><span title="스타파워" style="background:#ffd84a">${sp.icon}</span>` +
+      lo.gears.map((g) => `<span title="기어">${META.gears.find((x) => x.id === g).icon}</span>`).join('');
+  }
+  const M = META.modes[selMode];
+  if (M) { $('mName').textContent = `${M.icon} ${M.name}`; $('mDesc').textContent = M.desc.split('.')[0]; $('modeBox').style.background = `linear-gradient(${M.color}, #2b2c58)`; }
   setShowcase(b.id);
 }
 function buildGrid() {
@@ -867,7 +1080,8 @@ function openDetail(id) {
     $('dClose').onclick = () => { $('bdetail').style.display = 'none'; };
     return;
   }
-  const sk = (ic, col, type, name, desc) => `<div class="sk"><div class="si" style="background:${col}">${ic}</div><div><div class="st">${type}</div><div class="sn">${name}</div><div class="sd">${desc}</div></div></div>`;
+  const sk = (ic, col, type, name, desc, pick) => `<div class="sk${pick ? ' pickable' + (pick.on ? ' on' : '') : ''}" ${pick ? `data-k="${pick.k}" data-v="${pick.v}"` : ''}><div class="si" style="background:${col}">${ic}</div><div><div class="st">${type}</div><div class="sn">${name}</div><div class="sd">${desc}</div></div><span class="ok">✓</span></div>`;
+  const lo = getLO(id);
   $('bdBox').innerHTML = `
     <div class="pic" style="background:linear-gradient(${r.c1}, ${r.c2})"><img src="${portrait(id)}"></div>
     <div class="info">
@@ -876,12 +1090,29 @@ function openDetail(id) {
       <div class="dd">${b.desc}</div>
       <div class="stats"><div>❤️ 체력 ${b.maxHp}</div><div>👟 속도 ${b.speed}</div><div>🔋 탄 ${b.attack.ammo}</div></div>
       ${sk('💢', '#ffd84a', '기본공격', b.attack.name, `${b.attack.desc} · 피해 ${b.attack.dmg}`)}
-      ${sk(b.gadgets[0].icon, '#4fd2ff', '가젯 1', b.gadgets[0].name, b.gadgets[0].desc)}
-      ${sk(b.gadgets[1].icon, '#63e65a', '가젯 2', b.gadgets[1].name, b.gadgets[1].desc)}
-      ${b.super ? sk('🔥', '#ff7a2f', '궁극기', b.super.name, `${b.super.desc} · 피해 ${b.super.dmg}`) : sk('🔒', '#888', '궁극기', '준비 중', '궁극기는 아직 정해지지 않았어요.')}
+      ${b.super ? sk('🔥', '#ff7a2f', '궁극기', b.super.name, b.super.desc + (b.super.dmg ? ` · 피해 ${b.super.dmg}` : '')) : ''}
+      <div class="sec">🔧 가젯 — 1개 선택 (더블 가젯 모드에선 둘 다)</div>
+      ${b.gadgets.map((g, i) => sk(g.icon, '#4fd2ff', '가젯', g.name, g.desc, { k: 'g', v: i, on: lo.g === i })).join('')}
+      <div class="sec">⭐ 스타파워 — 1개 선택</div>
+      ${(b.starPowers || []).map((x) => sk(x.icon, '#ffd84a', '스타파워', x.name, x.desc, { k: 'sp', v: x.id, on: lo.sp === x.id })).join('')}
+      <div class="sec">⚙️ 기어 — 6개 중 2개 선택 (<span id="gCnt">${lo.gears.length}</span>/2)</div>
+      <div class="gears">${META.gears.map((g) => `<div class="gear${lo.gears.includes(g.id) ? ' on' : ''}" data-gear="${g.id}"><i>${g.icon}</i><b>${g.name}</b><small>${g.desc}</small></div>`).join('')}</div>
       <div class="acts"><button class="btn" id="dSel">${id === selected ? '✓ 선택됨' : '선택'}</button><button class="btn gray" id="dClose">닫기</button></div>
     </div>`;
   $('bdetail').style.display = 'flex';
+  $('bdBox').querySelectorAll('.sk.pickable').forEach((el) => el.onclick = () => {
+    const L = getLO(id), k = el.dataset.k; L[k] = k === 'g' ? +el.dataset.v : el.dataset.v; setLO(id, L);
+    $('bdBox').querySelectorAll(`.sk.pickable[data-k="${k}"]`).forEach((o) => o.classList.toggle('on', o === el));
+    refreshLobby();
+  });
+  $('bdBox').querySelectorAll('.gear').forEach((el) => el.onclick = () => {
+    const L = getLO(id), g = el.dataset.gear;
+    if (L.gears.includes(g)) L.gears = L.gears.filter((x) => x !== g);
+    else { L.gears.push(g); if (L.gears.length > 2) L.gears.shift(); }
+    setLO(id, L);
+    $('bdBox').querySelectorAll('.gear').forEach((o) => o.classList.toggle('on', L.gears.includes(o.dataset.gear)));
+    $('gCnt').textContent = L.gears.length; refreshLobby();
+  });
   $('dSel').onclick = () => { selected = id; LS.set('jb_brawler', id); $('bdetail').style.display = 'none'; $('bscreen').style.display = 'none'; buildGrid(); refreshLobby(); };
   $('dClose').onclick = () => { $('bdetail').style.display = 'none'; };
 }
@@ -898,18 +1129,34 @@ $('profile').onclick = () => {
   });
   setTimeout(() => $('nmIn') && $('nmIn').focus(), 50);
 };
+function buildModes() {
+  const g = $('mgrid'); g.innerHTML = '';
+  for (const M of Object.values(META.modes)) {
+    const c = document.createElement('div');
+    c.className = 'mcard stroke' + (M.id === selMode ? ' sel' : '');
+    c.style.background = `linear-gradient(135deg, ${M.color}, #2b2c58)`;
+    c.innerHTML = `<div class="mi">${M.icon}</div><div class="mn">${M.name}</div><div class="md">${M.desc}</div><div class="mm">🗺️ ${M.maps.map((m) => META.maps[m].name).join(' · ')}</div>`;
+    c.onclick = () => { selMode = M.id; LS.set('jb_mode', M.id); $('mscreen').style.display = 'none'; refreshLobby(); };
+    g.appendChild(c);
+  }
+}
+$('modeBox').onclick = () => { buildModes(); $('mscreen').style.display = 'flex'; };
+$('mBack').onclick = () => { $('mscreen').style.display = 'none'; };
 $('openB').onclick = () => { buildGrid(); $('bscreen').style.display = 'flex'; };
 $('bBack').onclick = () => { $('bscreen').style.display = 'none'; };
 $('openHelp').onclick = () => modal(`<h3 class="stroke">조작법</h3><div id="help">
   <b>이동</b> 왼쪽 화면 드래그 · PC는 WASD<br>
   <b>기본공격</b> 공격 버튼 탭 또는 드래그 후 놓기 · PC는 Space/좌클릭<br>
-  <b>가젯</b> 파랑·초록 버튼 · PC는 Q / E (무제한, 쿨타임 6초)<br>
+  <b>가젯</b> 고른 가젯 1개 · PC는 Q (더블 가젯 모드에선 E로 두 번째 가젯)<br>
+  <b>모드</b> 오른쪽 아래 모드 박스를 눌러서 난투 · 쇼다운 · 젬 그랩 · 더블 가젯 중 선택<br>
+  <b>로드아웃</b> 브롤러 화면에서 가젯 1 · 스타파워 1 · 기어 2개를 골라요<br>
   <b>궁극기</b> 버튼 드래그로 조준 → 놓으면 발사, 탭하면 자동조준 · PC는 R/우클릭<br>
   <b>현실쌤 조종 중</b>에는 모든 버튼이 조종당하는 상대의 스킬로 나가요 (분홍 테두리)<br>
   드래그했다가 버튼 가운데로 되돌리면 <b>취소</b></div>`);
 
-fetch('/api/brawlers').then((r) => r.json()).then((d) => {
-  BR = d;
+Promise.all([fetch('/api/brawlers').then((r) => r.json()), fetch('/api/meta').then((r) => r.json())]).then(([d, meta]) => {
+  BR = d; META = meta;
+  if (!META.modes[selMode]) selMode = 'ffa';
   if (!BR[selected] || BR[selected].wip) selected = Object.keys(BR).find((k) => !BR[k].wip);
   refreshLobby();
 });
@@ -919,18 +1166,20 @@ $('playBtn').onclick = () => {
   $('status').textContent = '입장 중...';
   socket = io();
   socket.on('joined', (d) => {
-    myId = d.id; MAP = d.map; mode = 'game';
-    buildMap(MAP);
+    myId = d.id; mode = 'game';
     $('lobby').style.display = 'none'; $('lobbyBg').style.display = 'none';
     $('top').style.display = 'flex';
     $('ctrl').style.display = 'block';
-    const b = myB();
-    $('bG1').querySelector('.gi').textContent = b.gadgets[0].icon;
-    $('bG2').querySelector('.gi').textContent = b.gadgets[1].icon;
+    const rounds = META.modes[d.mode] && META.modes[d.mode].rounds;   // 라운드 모드는 봇 자동
+    $('botBtn').style.display = $('clearBtn').style.display = rounds ? 'none' : '';
   });
-  socket.on('state', (s) => { state = s; handleFx(s.fx); });
+  socket.on('state', (s) => {
+    state = s;
+    if (s.map !== curMapId && META.maps[s.map]) { MAP = META.maps[s.map]; buildMap(MAP); }
+    handleFx(s.fx);
+  });
   socket.on('disconnect', () => addFeed('서버 연결 끊김 — 새로고침 해주세요', 999));
-  socket.emit('join', { name: myName, brawler: selected });
+  socket.emit('join', { name: myName, brawler: selected, mode: selMode, loadout: getLO(selected) });
 };
 $('exitBtn').onclick = () => location.reload();
 $('botBtn').onclick = (e) => { e.target.blur(); socket && socket.emit('addBot'); };
@@ -970,6 +1219,33 @@ function handleFx(list) {
     }
     else if (f.type === 'look') { const v = views[f.id]; if (v) v.g2T = 0; fxLook(x, z, f.hits); }
     else if (f.type === 'dmg') { if (f.k === 'cold') popup(String(f.v), { x, z }, 4.4, '#9fe8ff', 15, 0.6); else popup(String(f.v), { x, z }, 4.8, '#ffffff', f.v >= 1000 ? 26 : 20); }
+    else if (f.type === 'bulchal') {   // 성찰 → 불찰 즉사
+      const v = views[f.id], pos = v ? v.model.root.position : { x, z };
+      popup('불찰!', pos, 6.5, '#ff3a8a', 54, 1.6); popup('📕', pos, 4.5, '#fff', 44, 1.2);
+      burst(pos.x, 2.5, pos.z, 50, ['#b56cff', '#ff3a8a', '#ffffff', '#111'], { speed: 12, size: 0.3, up: 12, life: 1.2 });
+      if (isNear(pos.x, pos.z, 20)) shake = Math.max(shake, 1);
+    }
+    else if (f.type === 'ajae') {      // 아재개그 → 주변 얼림
+      popup(f.joke, { x, z }, 7.2, '#bff6ff', 24, 3);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 64), addMat('#bff6ff', 1)); ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.12, z);
+      addFx(0.7, ring, (k) => { ring.scale.setScalar(f.r * S * Math.min(1, k * 1.8)); ring.material.opacity = 1 - k; });
+      burst(x, 2, z, 40, ['#bff6ff', '#ffffff', '#7ee0ff'], { speed: 10, size: 0.2, up: 4, life: 1, grav: 4 });
+      for (const id of f.hits || []) { const v = views[id]; if (v) popup('🥶', v.model.root.position, 5.4, '#fff', 34, 1.2); }
+    }
+    else if (f.type === 'board') {     // 칠판 부수기
+      popup('칠판 와장창!', { x, z }, 5.5, '#7dffb0', 30, 1.1);
+      const b = new THREE.Mesh(new THREE.BoxGeometry(3, 1.8, 0.15), std('#2f5d46', { map: chalkTex }));
+      b.position.set(x, 3.5, z); b.rotation.y = Math.random() * 3;
+      addFx(0.35, b, (k) => { b.position.y = 3.5 - k * 3; b.rotation.x = k * 1.4; });
+      later(0.33, () => burst(x, 0.6, z, 36, ['#2f5d46', '#8a5a2c', '#ffffff'], { speed: 9, size: 0.3, up: 7, life: 0.9 }));
+      if (isNear(x, z)) shake = Math.max(shake, 0.5);
+    }
+    else if (f.type === 'sasinga') {   // 조종 끝 → 2초 기절
+      const v = views[f.tid]; if (v) popup('😵 싸가지!', v.model.root.position, 5.6, '#ff8af0', 30, 1.4);
+    }
+    else if (f.type === 'gem') { const v = views[f.id]; popup('💎+1', { x, z }, 3.5, '#d69bff', 20, 0.7); }
+    else if (f.type === 'gemspawn') burst(x, 1.2, z, 8, ['#c070ff', '#ffffff'], { speed: 3, size: 0.12, up: 6, life: 0.6 });
+    else if (f.type === 'round') { for (const id in views) { scene.remove(views[id].model.root); views[id].label.d.remove(); delete views[id]; } }   // 새 판: 다시 만들기
     else if (f.type === 'click') { popup('딸깍!', { x, z }, 3.2, '#9cff9c', 17, 0.6); burst(x, 1.5, z, 6, ['#ffffff', '#9cff9c'], { speed: 4, size: 0.1, up: 3, life: 0.35 }); }
   }
 }
@@ -1105,9 +1381,9 @@ setInterval(() => {
 // ── 플레이어 뷰 ──────────────────────────────────
 function makeLabel(mine) {
   const d = document.createElement('div'); d.className = 'lbl' + (mine ? ' me' : '');
-  d.innerHTML = '<div class="bub"></div><div class="nm stroke"></div><div class="hpb"><i></i></div>' + (mine ? '<div class="am"><i><b></b></i><i><b></b></i><i><b></b></i></div>' : '');
+  d.innerHTML = '<div class="bub"></div><div class="nm stroke"></div><div class="hpb"><i></i></div><div class="rfb"><i></i></div>' + (mine ? '<div class="am"><i><b></b></i><i><b></b></i><i><b></b></i></div>' : '');
   ui.appendChild(d);
-  return { d, bub: d.querySelector('.bub'), nm: d.querySelector('.nm'), hp: d.querySelector('.hpb i'), am: [...d.querySelectorAll('.am b')], lastSay: null };
+  return { d, bub: d.querySelector('.bub'), nm: d.querySelector('.nm'), hp: d.querySelector('.hpb i'), rfb: d.querySelector('.rfb'), rf: d.querySelector('.rfb i'), am: [...d.querySelectorAll('.am b')], lastSay: null };
 }
 function getView(p) {
   let v = views[p.id];
@@ -1139,6 +1415,7 @@ function animateTeacher(v, p, dt, now) {
   // 피격 / 사망 / 부활
   if (p.hp < v.lastHp - 1 && !p.dead) v.hitT = 0;
   v.lastHp = p.hp;
+  root.visible = !(p.out && p.dead && v.deadT > 1.2);
   if (p.dead && !v.dead) { v.deadT = 0; burst(root.position.x, 2, root.position.z, 40, ['#111', '#8fd3ff', '#ffcf3a', '#f1c39c', '#777'], { speed: 9, size: 0.3, up: 10, life: 1.1 }); if (p.id === myId) shake = 0.6; }
   if (!p.dead && v.dead) fxSpawn(root.position.x, root.position.z);
   v.dead = p.dead;
@@ -1233,8 +1510,11 @@ function animateTeacher(v, p, dt, now) {
     M.head.rotation.z = Math.sin(now * 6) * 0.15;
   } else M.head.rotation.z = 0;
 
+  // 아재개그로 얼어붙음
+  if (!v.ice) { v.ice = new THREE.Mesh(new THREE.BoxGeometry(2.6, 4.6, 2.6), new THREE.MeshPhysicalMaterial({ color: '#bfefff', transparent: true, opacity: 0.45, roughness: 0.05, clearcoat: 1 })); v.ice.position.y = 2.3; root.add(v.ice); }
+  v.ice.visible = !!p.fz && !p.dead;
   // 스턴
-  M.stars.visible = p.stun && !p.dead;
+  M.stars.visible = (p.stun || p.fz) && !p.dead;
   if (M.stars.visible) { M.stars.rotation.y = now * 5; M.body.rotation.z = Math.sin(now * 8) * 0.12; } else M.body.rotation.z = 0;
 
   // 사망 연출
@@ -1248,9 +1528,12 @@ function animateTeacher(v, p, dt, now) {
 function updateLabel(v, p) {
   const L = v.label, pos = v.model.root.position;
   const [x, y, vis] = toScreen(pos.x, 5.0 + v.model.body.position.y * 0.5, pos.z);
-  L.d.style.display = p.dead || !vis ? 'none' : 'block';
+  L.d.style.display = p.dead || p.out || !vis ? 'none' : 'block';
   L.d.style.left = x + 'px'; L.d.style.top = y + 'px';
-  L.nm.textContent = `${p.ctl ? '🎮 ' : ''}${p.name}  ${p.hp}`;
+  L.nm.textContent = `${p.ctl ? '🎮 ' : ''}${p.gems ? '💎' + p.gems + ' ' : ''}${p.name}  ${p.hp}${p.sh > 0 ? ' 🛡' + p.sh : ''}`;
+  const meP = state.players.find((q) => q.id === myId);
+  L.d.classList.toggle('ally', p.id !== myId && p.team != null && meP && meP.team === p.team);
+  L.rfb.style.display = p.rf > 0 ? 'block' : 'none'; L.rf.style.width = p.rf * 100 + '%';
   L.hp.style.width = (100 * p.hp / (BR[p.b] ? BR[p.b].maxHp : p.hp || 1)) + '%';
   L.am.forEach((b, i) => { const f = Math.max(0, Math.min(1, p.ammo - i)); b.style.width = f * 100 + '%'; b.style.background = f >= 1 ? '#ffb02e' : '#8a6a32'; });
   if (p.say !== L.lastSay) { L.lastSay = p.say; if (p.say) { L.bub.textContent = p.say; L.bub.style.display = 'block'; L.bub.style.animation = 'none'; L.bub.offsetWidth; L.bub.style.animation = ''; } else L.bub.style.display = 'none'; }
@@ -1265,6 +1548,37 @@ function animateMouse(mv, m, dt, now) {
   mv.obj.inner.rotation.z = Math.sin(now * 18 + mv.seed) * 0.15;
   mv.obj.wheel.rotation.x = now * 20;
   mv.obj.cable.forEach((c, i) => { const t = i + 1; c.position.set(Math.sin(now * 14 - t * 0.9 + mv.seed) * 0.12 * t * 0.5, 0.18, -0.55 - t * 0.17); });
+}
+
+// ── 모드 HUD / 라운드 결과 ────────────────────────
+let lastResultKey = null;
+const fmtT = (t) => `${Math.floor(t / 60)}:${String(Math.max(0, t) % 60).padStart(2, '0')}`;
+function modeHud(me) {
+  const M = META.modes[state.mode]; if (!M) return;
+  const h = $('modeHud'), pm = $('phaseMsg');
+  if (M.id === 'gem') {
+    const [a, b] = state.score || [0, 0], my = me ? me.team : 0;
+    const L = my === 0 ? a : b, Rr = my === 0 ? b : a;
+    let hold = '';
+    if (state.hold) hold = `<div style="font-size:26px;color:${state.hold.team === my ? '#7cc8ff' : '#ff7a7a'}">${state.hold.team === my ? '우리 팀' : '상대 팀'} 승리까지 ${Math.ceil(state.hold.t)}초!</div>`;
+    h.innerHTML = `<div class="gs"><span style="color:#7cc8ff">💎 ${L}</span><span style="font-size:14px">${fmtT(Math.max(0, M.timeLimit - state.playT))}</span><span style="color:#ff7a7a">${Rr} 💎</span></div>${hold}`;
+  } else if (M.id === 'showdown') {
+    const alive = state.players.filter((p) => !p.out).length;
+    h.innerHTML = `<div class="gs">💀 남은 인원 ${alive}</div>` + (me && me.out && state.phase === 'play' ? `<div style="color:#ff9a9a">${me.rank ? me.rank + '등으로 탈락! ' : ''}관전 중...</div>` : '');
+  } else {
+    h.innerHTML = `<div class="gs" style="font-size:15px">${M.icon} ${M.name} · ${MAP ? MAP.name : ''} · 맵 변경 ${fmtT(state.mapT || 0)}</div>`;
+  }
+  // 대기 카운트다운 / 결과
+  if (state.phase === 'wait') { pm.style.display = 'block'; pm.innerHTML = `${Math.ceil(state.phaseT)}<small>${MAP ? MAP.name : ''} · ${M.name}</small>`; pm.style.color = '#ffd84a'; }
+  else if (state.phase === 'end' && state.result && me) {
+    const r = state.result; let txt = '', col = '#fff', win = false;
+    if (r.type === 'gem') { win = r.winTeam === me.team; txt = r.winTeam < 0 ? '무승부' : win ? '승리!' : '패배...'; col = r.winTeam < 0 ? '#fff' : win ? '#ffd84a' : '#ff7a7a'; }
+    else { const mine = r.ranks.find((x) => x.id === myId); const rk = mine ? mine.rank : 0; win = rk === 1; txt = rk ? `${rk}등!` : '관전'; col = rk === 1 ? '#ffd84a' : rk && rk <= 3 ? '#7cffb0' : '#fff'; }
+    pm.style.display = 'block'; pm.style.color = col;
+    pm.innerHTML = `${txt}<small>${r.type === 'showdown' && r.winnerName ? '🏆 ' + r.winnerName + ' 우승 · ' : ''}${win ? '트로피 +8 · ' : ''}${Math.ceil(state.phaseT)}초 뒤 다음 판</small>`;
+    const key = JSON.stringify(r) + state.map;
+    if (key !== lastResultKey) { lastResultKey = key; if (win) { trophies += 8; LS.set('jb_trophy', trophies); } }
+  } else pm.style.display = 'none';
 }
 
 // ── 메인 루프 ────────────────────────────────────
@@ -1288,7 +1602,9 @@ function frame(nowMs) {
     updateStrings(now);
     // 카메라 (브롤스타즈처럼 비스듬히 위에서) — 조종 중이면 꼭두각시를 따라감
     const meS = state.players.find((p) => p.id === myId);
-    const mp = meS && meS.ctrl && views[meS.ctrl] ? views[meS.ctrl].model.root.position : myPos();
+    let mp = meS && meS.ctrl && views[meS.ctrl] ? views[meS.ctrl].model.root.position : myPos();
+    if (meS && meS.out) { const al = state.players.find((p) => !p.out && !p.dead && views[p.id]); if (al) mp = views[al.id].model.root.position; }
+    updateWorld(now);
     if (mp) camTarget.lerp(mp, Math.min(1, dt * 6));
     const far = camera.aspect < 1 ? 1.75 : 1;
     camera.position.set(camTarget.x, 20 * far, camTarget.z + 20 * far);
@@ -1334,10 +1650,13 @@ function frame(nowMs) {
     if (me) {
       const src = atkSrc() || me;            // 조종 중이면 꼭두각시의 스킬 상태를 보여줌
       for (const [i, id] of [[0, 'bG1'], [1, 'bG2']]) {
+        const idx = (src.g || [0])[i];
+        $(id).style.display = idx == null ? 'none' : 'flex';
+        if (idx == null) continue;
         const cd = $(id).querySelector('.cd');
         cd.style.display = src.gCd > 0 ? 'flex' : 'none';
         cd.textContent = src.gCd.toFixed(1);
-        $(id).querySelector('.gi').textContent = BR[src.b].gadgets[i].icon;
+        $(id).querySelector('.gi').textContent = BR[src.b].gadgets[idx].icon;
         $(id).classList.toggle('puppet', src !== me);
       }
       $('bAtk').classList.toggle('puppet', src !== me);
@@ -1382,9 +1701,11 @@ function frame(nowMs) {
       else if (me.ctrl) { const t = state.players.find((q) => q.id === me.ctrl); cm.style.display = 'block'; cm.textContent = `🎮 ${t ? t.name : ''} 조종 중 ${me.ctrlT.toFixed(1)}초 — 이동·공격·가젯·궁극기 전부 상대 걸로!`; }
       else cm.style.display = 'none';
       $('ctrlFlash').style.opacity = me.ctl ? 1 : 0;
-      $('dead').style.display = me.dead ? 'flex' : 'none';
-      if (me.dead) $('dead').textContent = `${me.respawn}초 후 부활`;
+      const showDead = me.dead && !me.out && state.phase === 'play';
+      $('dead').style.display = showDead ? 'flex' : 'none';
+      if (showDead) $('dead').textContent = `${me.respawn}초 후 부활`;
     }
+    modeHud(me);
   }
   if (mode === 'lobby') { updateLobby(dt, now); renderer.render(lobbyScene, lobbyCam); }
   else renderer.render(scene, camera);
