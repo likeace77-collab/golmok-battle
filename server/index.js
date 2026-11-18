@@ -336,7 +336,7 @@ function migrate() {
       if (!sp) continue;
       const ok = m.moves.filter((id) => sp.moves.includes(id));
       if (ok.length === m.moves.length && ok.length) continue;
-      for (const id of sp.moves) if (ok.length < 4 && !ok.includes(id)) ok.push(id);
+      for (const id of sp.moves) if (ok.length < (m.slot5 ? 5 : 4) && !ok.includes(id)) ok.push(id);
       m.moves = ok; changed = true;
     }
     if (specialGrants(u)) changed = true;
@@ -723,6 +723,7 @@ async function progressApi(req, res, route, auth, user) {
     if (r.fusion) for (const ws of online.values()) send(ws, { t: 'fusion', fusion: r.fusion });
     return done(r);
   }
+  if (route === 'POST /api/mon/slot') return done(P.buySlot(user, String(body.uid || ''), String(body.move || '')));
   if (route === 'POST /api/mon/nick') return done(P.setNick(user, String(body.uid || ''), body.nick));
   if (route === 'POST /api/mon/nature') return done(P.rerollNature(user, String(body.uid || ''), body.pay === 'gp' ? 'gp' : 'ticket'));
   if (route === 'POST /api/mon/move') return done(P.changeMove(user, String(body.uid ?? ''), Number(body.slot), String(body.move ?? '')));

@@ -187,11 +187,25 @@ function changeMove(u, uid, slot, move) {
   const sp = Data.MONSTERS[m.species];
   if (!sp.moves.includes(move)) return { error: '이 골목몬이 배울 수 없는 기술이에요.' };
   if (m.moves.includes(move)) return { error: '이미 쓰고 있는 기술이에요.' };
-  if (!Number.isInteger(slot) || slot < 0 || slot > 3) return { error: '바꿀 칸을 골라 주세요.' };
+  if (!Number.isInteger(slot) || slot < 0 || slot > (m.slot5 ? 4 : 3) || slot > m.moves.length) return { error: '바꿀 칸을 골라 주세요.' };
   if (u.gp < MOVE_GP) return { error: `GP가 모자라요. (${MOVE_GP}GP 필요)` };
   u.gp -= MOVE_GP;
   if (slot >= m.moves.length) m.moves.push(move); else m.moves[slot] = move;
   return { mon: m };
+}
+// ➕ 기술 추가 칸: 골목몬 한 마리에 딱 한 칸 더 (기술 5개), 20,000GP. 살 때 넣을 기술을 같이 골라요.
+const SLOT_GP = 20000;
+function buySlot(u, uid, move) {
+  const m = u.mons.find((x) => x.uid === uid);
+  if (!m) return { error: '없는 골목몬이에요.' };
+  if (m.slot5) return { error: '이 골목몬은 이미 기술 칸을 늘렸어요. (한 마리에 한 칸까지)' };
+  if (m.moves.length < 4) return { error: '먼저 빈 기술 칸을 채워 주세요.' };
+  const sp = Data.MONSTERS[m.species];
+  if (!sp.moves.includes(move)) return { error: '이 골목몬이 배울 수 없는 기술이에요.' };
+  if (m.moves.includes(move)) return { error: '이미 쓰고 있는 기술이에요.' };
+  if (u.gp < SLOT_GP) return { error: `GP가 모자라요. (${SLOT_GP.toLocaleString('ko-KR')}GP 필요)` };
+  u.gp -= SLOT_GP; m.slot5 = true; m.moves = [...m.moves.slice(0, 4), move];
+  return { ok: true, mon: m };
 }
 // 상점 아이템 (GP)
 const SHOP_ITEMS = [
@@ -511,7 +525,7 @@ function rerollNature(u, uid, pay) {
   m.nature = n;
   return { ok: true, old, nature: n };
 }
-module.exports = { setNick, NICK_MAX, ensureNature, rerollNature, NATURE_TK, NATURE_GP,
+module.exports = { buySlot, SLOT_GP, setNick, NICK_MAX, ensureNature, rerollNature, NATURE_TK, NATURE_GP,
   SHOP_ITEMS, buyItem, shopView, claimFree, buyDeal, SCOUT_HOURS, SKIP_GP, SCOUT_GP, STONE_GP, STONE_DUPE_GP, MOVE_GP, STARTERS, TUTORIAL_REWARD, ATTEND, DAILY, WEEKLY,
   newProgress, addMon, grant, finishTutorial, scoutState, scoutSkip, scoutReroll, scoutAuto, enhance, PLUS_MAX, PLUS_PCT, plusCost, expeState, expeSend, expeClaim, expeRecall, awayUids, scoutPick, changeMove, buyStone,
   bump, attendState, attend, questState, claimQuest, achState, claimAch, passState, claimPass, takePassGp, claimable, afterBattle, seasonOf, passBook, dayKey, released,

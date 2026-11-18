@@ -325,7 +325,20 @@ function openMon(uid, after) {
 ${sp.fz ? `<section class="mon-stone have"><div class="fz-megapic">${monArt(m.species, m.shiny, '', true)}</div><div><b>메가진화: ${esc(sp.mega?.n || '')}</b><p>합체몬은 메가스톤 없이도 대전에서 메가진화할 수 있어요!</p></div></section>` : sp.mega ? `    <section class="mon-stone ${stone ? 'have' : ''}">${stoneSVG(m.species, 64, { lock: !stone })}<div><b>${esc(sp.n)} 메가스톤</b><p>${stone ? `있어요! 대전에서 <b>${esc(sp.mega.n)}</b>(으)로 메가진화할 수 있어요.` : '없으면 이 골목몬은 메가진화를 못 해요.'}</p>
       ${stone ? '' : `<button class="btn small" data-stone>${ICON.gp(16)} ${fmt(STONE_PRICE)}GP로 사기</button>`}</div></section>` : ''}
     <h3 class="dex-h">기술 <small class="muted">하나 바꿀 때마다 500GP</small></h3>
-    ${[0, 1, 2, 3].map((i) => { const id = m.moves[i]; return id ? `<div class="mv mvrow">${typeChip(G.data.MOVES[id].type)}<b>${G.data.MOVES[id].n}</b>${sigTag(id)}<small>${moveLine(id)}</small><button class="btn small paper" data-slot="${i}">바꾸기</button></div>` : `<div class="mv mvrow"><b class="muted">빈 칸</b><button class="btn small paper" data-slot="${i}">기술 넣기</button></div>`; }).join('')}`);
+    ${(m.slot5 ? [0, 1, 2, 3, 4] : [0, 1, 2, 3]).map((i) => { const id = m.moves[i]; return id ? `<div class="mv mvrow${i === 4 ? ' mv-plus' : ''}">${i === 4 ? '<em class="mv5">➕5</em>' : ''}${typeChip(G.data.MOVES[id].type)}<b>${G.data.MOVES[id].n}</b>${sigTag(id)}<small>${moveLine(id)}</small><button class="btn small paper" data-slot="${i}">바꾸기</button></div>` : `<div class="mv mvrow"><b class="muted">빈 칸</b><button class="btn small paper" data-slot="${i}">기술 넣기</button></div>`; }).join('')}
+    ${m.slot5 ? '' : `<button class="slot5-buy" id="slot5-buy" ${m.moves.length < 4 ? 'disabled' : ''}><b>➕ 기술 칸 하나 더!</b><small>이 골목몬만 기술을 5개 써요 · 한 마리에 한 번</small><span>${ICON.gp(16)} 20,000GP</span></button>`}`);
+  bg.querySelector('#slot5-buy')?.addEventListener('click', () => {
+    const opts = sp.moves.filter((id) => !m.moves.includes(id));
+    if (!opts.length) return toast('더 배울 기술이 없어요.');
+    const bg2 = openSheet(`<div class="row" style="margin-bottom:8px"><h2>➕ 다섯 번째 기술</h2><button class="btn small paper" data-x>취소</button></div>
+      <p class="muted" style="margin-bottom:8px">새 칸에 넣을 기술을 고르면 바로 열려요. ${ICON.gp(14)} 20,000GP (보유 ${fmt(G.user.gp)})${G.user.gp < 20000 ? ' · <b style="color:#d62839">GP가 모자라요</b>' : ''}</p>
+      ${opts.map((id) => `<button class="mv" data-mv="${id}">${typeChip(G.data.MOVES[id].type)}<b>${G.data.MOVES[id].n}</b>${sigTag(id)}<small>${moveLine(id)}</small></button>`).join('')}`);
+    bg2.querySelector('[data-x]').onclick = () => openMon(uid, after);
+    bg2.querySelectorAll('[data-mv]').forEach((x) => { x.onclick = async () => {
+      if (!confirm(`20,000GP로 기술 칸을 늘리고 「${G.data.MOVES[x.dataset.mv].n}」을(를) 넣을까요?`)) return;
+      try { const r = await api('POST', '/api/mon/slot', { uid, move: x.dataset.mv }); setUser(r); try { CasSfx.big(); } catch { /* */ } toast(`➕ 기술 칸이 늘었어요! 「${G.data.MOVES[x.dataset.mv].n}」 -20,000GP`); openMon(uid, after); } catch (e) { toast(e.message); }
+    }; });
+  });
   bg.querySelector('[data-x]').onclick = () => { closeSheet(); after?.(); };
   bg.querySelector('#cos-open')?.addEventListener('click', () => { closeSheet(); costumeSheet(m, () => openMon(uid, after)); });
   bg.querySelector('#nick-open').onclick = () => nickSheet(m, () => openMon(uid, after));

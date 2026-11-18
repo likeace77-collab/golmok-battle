@@ -953,3 +953,15 @@ test('골목몬 이름: 20자까지, 대전에서도 그 이름', () => {
   assert.strictEqual(b.sides[0].mons[0].name, '불꽃 슛돌이'); assert.strictEqual(b.sides[1].mons[0].name, '연탄이');
   assert.strictEqual(P.setNick(u, 'a', '').nick, null);
 });
+
+test('기술 추가 칸: 한 마리에 한 칸, 20000GP, 대전에서 기술 5개', () => {
+  const P = require('../server/progress');
+  const u = { gp: 25000, mons: [{ uid: 'a', species: 'yeontan', moves: E.smartMoves('yeontan', []) }] };
+  const extra = require('../server/data').MONSTERS.yeontan.moves.find((x) => !u.mons[0].moves.includes(x));
+  assert.ok(P.buySlot(u, 'a', u.mons[0].moves[0]).error, '이미 쓰는 기술');
+  assert.ok(P.buySlot(u, 'a', extra).ok); assert.strictEqual(u.gp, 5000); assert.strictEqual(u.mons[0].moves.length, 5);
+  u.gp = 1e6; assert.ok(P.buySlot(u, 'a', extra).error, '한 마리에 한 번');
+  const b = E.createBattle([{ name: 'x', team: [{ species: 'yeontan', moves: u.mons[0].moves }] }, { name: 'y', team: [{ species: 'yeontan', moves: ['tackle'] }] }], 1);
+  assert.ok(E.legalActions(b, 0).some((x) => x.type === 'move' && x.index === 4));
+  assert.ok(E.choose(b, 0, { type: 'move', index: 4 }).ok);
+});
