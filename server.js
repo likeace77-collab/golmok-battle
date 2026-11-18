@@ -321,7 +321,7 @@ io.on('connection', (socket) => {
   let room = null;
   socket.on('join', ({ name, room: roomId }) => {
     if (room) return;
-    roomId = String(roomId || 'lobby').trim().slice(0, 16) || 'lobby';
+    roomId = 'lobby';   // 모두 공통 로비
     room = getRoom(roomId);
     room.players.set(socket.id, newPlayer(room, socket.id, String(name || '정보쌤').trim() || '정보쌤', false));
     socket.join(roomId);

@@ -12,7 +12,7 @@ npm start      # http://localhost:3000
 1. 이 폴더를 GitHub 저장소로 push
 2. Render → New → Web Service → 저장소 선택
 3. Build: `npm install` / Start: `npm start`
-4. 나온 주소를 친구한테 공유 → 둘이 같은 방 코드 입력 (또는 `주소/?room=코드`)
+4. 나온 주소를 친구한테 공유 → 접속하면 모두 같은 로비에서 대전
 
 > GitHub Pages는 서버를 못 돌려서 안 됨. 서버가 필요함 (Render / EC2 등).
 

@@ -66,8 +66,6 @@
     <p class="sub">아~ 이놈의 아이들</p>
     <label>닉네임</label>
     <input id="nameIn" maxlength="10" placeholder="정보쌤">
-    <label>방 코드 (친구랑 같은 코드 입력)</label>
-    <input id="roomIn" maxlength="16" placeholder="lobby">
     <button class="btn" id="startBtn">입장</button>
     <div class="help">
       <b>이동</b> WASD / 방향키 · 폰은 왼쪽 화면 드래그<br>
@@ -458,12 +456,11 @@ let state = { players: [], mice: [] };
 const views = {}, mviews = {};
 
 $('nameIn').value = localStorage.getItem('jb_name') || '';
-$('roomIn').value = new URLSearchParams(location.search).get('room') || localStorage.getItem('jb_room') || '';
 
 $('startBtn').onclick = () => {
   const name = $('nameIn').value.trim() || '정보쌤';
-  const room = $('roomIn').value.trim() || 'lobby';
-  try { localStorage.setItem('jb_name', name); localStorage.setItem('jb_room', room); } catch (e) {}
+  const room = 'lobby';
+  try { localStorage.setItem('jb_name', name); } catch (e) {}
   socket = io();
   socket.on('joined', (d) => {
     myId = d.id; MAP = d.map; ST = d.stats;
