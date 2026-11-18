@@ -7,18 +7,84 @@
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; overflow: hidden; background: #2a1f4f; font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; color: #fff; user-select: none; -webkit-user-select: none; touch-action: none; }
-  canvas { display: block; }
+  canvas { display: block; position: fixed; inset: 0; z-index: 1; }
   .stroke { text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 3px 0 #000; }
-  #lobby { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 30%, #4a33a0, #140d2c); z-index: 20; }
-  .card { width: min(92vw, 390px); background: linear-gradient(#2e2163, #1f1648); border: 4px solid #000; border-radius: 20px; padding: 26px 22px; box-shadow: 0 8px 0 #000; text-align: center; }
-  h1 { margin: 0 0 4px; font-size: 40px; letter-spacing: -1px; color: #ffd84a; font-weight: 900; }
-  .sub { margin: 0 0 18px; opacity: .85; font-size: 15px; }
-  label { display: block; text-align: left; font-size: 13px; margin: 10px 0 4px; opacity: .85; }
   input { width: 100%; padding: 12px; font-size: 17px; border-radius: 10px; border: 3px solid #000; background: #fff; color: #111; outline: none; }
-  .btn { margin-top: 18px; width: 100%; padding: 14px; font-size: 22px; font-weight: 900; border: 4px solid #000; border-radius: 14px; background: linear-gradient(#ffe36b, #ffbf1f); color: #111; box-shadow: 0 6px 0 #000; cursor: pointer; }
-  .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #000; }
-  .help { margin-top: 16px; font-size: 12.5px; line-height: 1.65; opacity: .85; text-align: left; }
-  .help b { color: #ffd84a; }
+  .btn { padding: 12px 18px; font-size: 20px; font-weight: 900; border: 4px solid #000; border-radius: 14px; background: linear-gradient(#ffe36b, #ffbf1f); color: #111; box-shadow: 0 6px 0 #000; cursor: pointer; font-family: inherit; }
+  .btn:active, .pbtn:active, .lb:active, .bcard:active { transform: translateY(3px); }
+  .btn.gray { background: linear-gradient(#e6e6ef, #b9b9cc); }
+
+  /* ── 로비 ── */
+  #lobbyBg { position: fixed; inset: 0; z-index: 0; background: radial-gradient(ellipse at 50% 30%, #ffd9f2 0%, #e48bff 30%, #7a3bc7 62%, #2c1458 100%); overflow: hidden; }
+  #lobbyBg .sun { position: absolute; left: 50%; top: 46%; width: 54vmin; height: 54vmin; margin: -27vmin; border-radius: 50%; background: radial-gradient(circle, #fff8c4, #ffd45a 55%, rgba(255,190,70,0) 71%); }
+  #lobbyBg .floor { position: absolute; left: -10%; right: -10%; bottom: -12%; height: 42%; border-radius: 50% 50% 0 0; background: linear-gradient(#5a3fb0, #24154f 70%); box-shadow: 0 -6px 0 rgba(255,255,255,.12) inset; }
+  #lobbyBg .rays { position: absolute; inset: -50%; background: repeating-conic-gradient(from 0deg at 50% 46%, rgba(255,255,255,.07) 0 8deg, rgba(255,255,255,0) 8deg 20deg); animation: spin 60s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #lobby { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
+  #lobby > * { pointer-events: auto; }
+  .panel { background: linear-gradient(#45478a, #2b2c58); border: 3px solid #000; border-radius: 12px; box-shadow: 0 4px 0 #000; }
+  #profile { position: absolute; top: 10px; left: 10px; display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px; cursor: pointer; }
+  #profile .av { width: 46px; height: 46px; border-radius: 9px; border: 3px solid #000; background: linear-gradient(#ffe36b, #ffb31f); display: flex; align-items: center; justify-content: center; font-size: 28px; }
+  #profile .pn { font-weight: 900; font-size: 16px; }
+  #profile .tr { font-weight: 900; font-size: 15px; color: #ffd84a; }
+  #lbtns { position: absolute; left: 10px; top: 80px; display: flex; flex-direction: column; gap: 10px; }
+  .lb { width: 74px; padding: 6px 0 5px; text-align: center; font-weight: 900; font-size: 13px; cursor: pointer; }
+  .lb .ic { font-size: 30px; line-height: 1.1; display: block; }
+  #showName { position: absolute; left: 50%; top: 4%; transform: translateX(-50%); text-align: center; white-space: nowrap; pointer-events: none; }
+  .rbadge { text-shadow: none; display: inline-block; padding: 3px 12px; border-radius: 8px; border: 3px solid #000; font-weight: 900; font-size: 13px; color: #111; box-shadow: 0 3px 0 #000; }
+  #showName .nm2 { font-size: 34px; font-weight: 900; margin-top: 6px; }
+  #showName .tt { font-size: 14px; font-weight: 800; opacity: .9; margin-top: 2px; }
+  #playWrap { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 10px; align-items: stretch; }
+  #modeBox { padding: 8px 14px; display: flex; flex-direction: column; justify-content: center; min-width: 150px; }
+  #modeBox b { font-size: 17px; color: #ffd84a; }
+  #modeBox span { font-size: 12px; opacity: .85; margin-top: 2px; }
+  .pbtn { min-width: 170px; font-size: 32px; font-weight: 900; border: 4px solid #000; border-radius: 14px; background: linear-gradient(#fff07a, #ffc21f 60%, #f0a400); color: #111; box-shadow: 0 6px 0 #000; cursor: pointer; font-family: inherit; padding: 10px 26px; }
+  @media (orientation: portrait) {
+    #playWrap { left: 12px; flex-direction: column; }
+    .pbtn { font-size: 30px; padding: 14px; }
+    #showName { top: 13%; }
+  }
+  #status { position: absolute; left: 50%; bottom: 110px; transform: translateX(-50%); font-weight: 900; font-size: 18px; pointer-events: none; }
+
+  /* ── 브롤러 선택 ── */
+  #bscreen { position: fixed; inset: 0; z-index: 30; display: none; flex-direction: column; background: radial-gradient(circle at 50% 0%, #4a3aa8, #1a1238 70%); }
+  #bscreen header { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
+  .back { width: 48px; height: 42px; font-size: 22px; font-weight: 900; border: 3px solid #000; border-radius: 10px; background: linear-gradient(#ffe36b, #ffb31f); box-shadow: 0 4px 0 #000; cursor: pointer; }
+  #bscreen h2 { margin: 0; font-size: 26px; font-weight: 900; }
+  #bscreen .cnt { margin-left: auto; font-weight: 900; opacity: .85; }
+  #bgrid { flex: 1; overflow-y: auto; padding: 8px 14px 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 14px; align-content: start; touch-action: pan-y; }
+  .bcard { position: relative; height: 158px; border: 3px solid #000; border-radius: 12px; box-shadow: 0 5px 0 #000; overflow: hidden; cursor: pointer; }
+  .bcard img { position: absolute; left: 0; right: 0; top: 4px; margin: auto; height: 118px; }
+  .bcard .bn { position: absolute; left: 0; right: 0; bottom: 0; padding: 4px 0 5px; background: rgba(0,0,0,.55); text-align: center; font-weight: 900; font-size: 15px; }
+  .bcard .rr { position: absolute; left: 6px; top: 5px; font-size: 11px; font-weight: 900; color: #111; background: rgba(255,255,255,.7); padding: 1px 6px; border-radius: 6px; }
+  .bcard.sel { outline: 4px solid #fff; outline-offset: -8px; }
+  .bcard .ck { position: absolute; right: 6px; top: 4px; width: 26px; height: 26px; border-radius: 50%; background: #3ce07f; border: 3px solid #000; color: #000; font-weight: 900; display: none; align-items: center; justify-content: center; font-size: 15px; }
+  .bcard.sel .ck { display: flex; }
+  .bcard.locked { background: repeating-linear-gradient(45deg, #3a3a52, #3a3a52 10px, #34344a 10px, #34344a 20px); cursor: default; }
+  .bcard.locked .q { position: absolute; inset: 0 0 30px; display: flex; align-items: center; justify-content: center; font-size: 54px; font-weight: 900; opacity: .35; }
+  #bdetail { position: fixed; inset: 0; z-index: 40; display: none; align-items: center; justify-content: center; background: rgba(10,6,30,.75); }
+  #bdetail .box { width: min(94vw, 760px); max-height: 92vh; overflow-y: auto; display: flex; gap: 14px; padding: 14px; }
+  #bdetail .pic { flex: 0 0 210px; border: 3px solid #000; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+  #bdetail .pic img { width: 200px; }
+  #bdetail .info { flex: 1; min-width: 0; }
+  #bdetail .dn { font-size: 30px; font-weight: 900; margin: 6px 0 0; }
+  #bdetail .dq { color: #ffd84a; font-weight: 800; margin: 2px 0 6px; }
+  #bdetail .dd { font-size: 13px; opacity: .9; line-height: 1.5; }
+  #bdetail .stats { display: flex; gap: 8px; margin: 8px 0; }
+  #bdetail .stats div { background: rgba(0,0,0,.35); border-radius: 8px; padding: 4px 10px; font-weight: 900; font-size: 13px; }
+  .sk { display: flex; gap: 10px; align-items: flex-start; background: rgba(0,0,0,.3); border-radius: 10px; padding: 7px 9px; margin-top: 6px; }
+  .sk .si { flex: 0 0 38px; height: 38px; border-radius: 50%; border: 3px solid #000; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .sk .st { font-size: 11px; font-weight: 900; opacity: .7; }
+  .sk .sn { font-weight: 900; font-size: 15px; }
+  .sk .sd { font-size: 12px; opacity: .85; line-height: 1.4; }
+  #bdetail .acts { display: flex; gap: 10px; margin-top: 12px; }
+  @media (orientation: portrait) { #bdetail .box { flex-direction: column; } #bdetail .pic { flex: 0 0 auto; height: 180px; } #bdetail .pic img { width: 170px; } }
+  #modal { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; background: rgba(10,6,30,.7); }
+  #modal .box { width: min(90vw, 340px); padding: 18px; text-align: center; }
+  #modal h3 { margin: 0 0 12px; font-size: 20px; }
+  #modal .acts { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
+  #help { font-size: 13px; line-height: 1.7; text-align: left; }
+  #help b { color: #ffd84a; }
 
   #ui { position: fixed; inset: 0; pointer-events: none; z-index: 5; overflow: hidden; }
   .lbl { position: absolute; transform: translate(-50%, -100%); text-align: center; white-space: nowrap; }
@@ -43,6 +109,7 @@
   #ctrl { position: fixed; right: 14px; bottom: 16px; z-index: 8; display: none; width: 160px; height: 160px; }
   .cb { position: absolute; border-radius: 50%; border: 3px solid #000; touch-action: none; font-weight: 900; color: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; line-height: 1.1; box-shadow: 0 5px 0 #000; cursor: pointer; pointer-events: auto; }
   .cb small { font-size: 8px; opacity: .7; }
+  .cb .gi { font-size: 22px; line-height: 1; }
   .cb .n { position: absolute; top: -6px; right: -6px; background: #000; color: #fff; border-radius: 10px; font-size: 12px; padding: 1px 6px; }
   .cb .cd { position: absolute; inset: 0; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; display: none; align-items: center; justify-content: center; font-size: 13px; }
   #bAtk { right: 0; bottom: 0; width: 80px; height: 80px; background: radial-gradient(circle at 40% 35%, #ffe98a, #ffb31f); font-size: 13px; }
@@ -51,43 +118,48 @@
   #bSup.ready { animation: glow .7s infinite alternate; color: #111; }
   @keyframes glow { from { box-shadow: 0 5px 0 #000, 0 0 10px 3px #ffb31f; } to { box-shadow: 0 5px 0 #000, 0 0 26px 10px #ff5a1f; } }
   #bG2 { right: 10px; bottom: 94px; width: 52px; height: 52px; background: radial-gradient(circle at 40% 35%, #d8ffd0, #63e65a); font-size: 10px; }
-  #supJoy { position: fixed; width: 130px; height: 130px; margin: -65px 0 0 -65px; border: 3px solid rgba(255,140,40,.8); background: rgba(255,120,30,.12); border-radius: 50%; display: none; z-index: 9; pointer-events: none; }
-  #supJoy.cancel { border-color: rgba(255,80,80,.9); background: rgba(255,40,40,.18); }
-  #supJoy b { position: absolute; left: 0; right: 0; top: -26px; text-align: center; font-size: 14px; color: #ff6b6b; display: none; }
-  #supJoy.cancel b { display: block; }
-  #supJoy i { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px; border-radius: 50%; background: rgba(255,170,60,.9); border: 3px solid #000; }
+  #aimJoy { position: fixed; width: 130px; height: 130px; margin: -65px 0 0 -65px; border: 3px solid rgba(255,140,40,.8); background: rgba(255,120,30,.12); border-radius: 50%; display: none; z-index: 9; pointer-events: none; }
+  #aimJoy.atk { border-color: rgba(255,220,80,.85); background: rgba(255,220,80,.12); }
+  #aimJoy.atk i { background: rgba(255,225,100,.95); }
+  #aimJoy.cancel { border-color: rgba(255,80,80,.9); background: rgba(255,40,40,.18); }
+  #aimJoy b { position: absolute; left: 0; right: 0; top: -26px; text-align: center; font-size: 14px; color: #ff6b6b; display: none; }
+  #aimJoy.cancel b { display: block; }
+  #aimJoy i { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px; border-radius: 50%; background: rgba(255,170,60,.9); border: 3px solid #000; }
 </style>
 <script type="importmap">{ "imports": { "three": "/vendor/three.module.js" } }</script>
 </head>
 <body>
+<div id="lobbyBg"><div class="rays"></div><div class="sun"></div><div class="floor"></div></div>
 <div id="lobby">
-  <div class="card">
-    <h1 class="stroke">정보쌤 브롤</h1>
-    <p class="sub">아~ 이놈의 아이들</p>
-    <label>닉네임</label>
-    <input id="nameIn" maxlength="10" placeholder="정보쌤">
-    <button class="btn" id="startBtn">입장</button>
-    <div class="help">
-      <b>이동</b> WASD / 방향키 · 폰은 왼쪽 화면 드래그<br>
-      <b>기본공격</b> Space / 좌클릭 — 아~ 이놈의 아이들 (점프 내려찍기 광역)<br>
-      <b>가젯1</b> Q — AI야? 시키지도 않은 걸 하네 (전기 스턴)<br>
-      <b>가젯2</b> E — 마우스 소환 (적 쫓아가서 딸깍)<br>
-      <b>궁극기</b> 버튼 드래그로 조준 후 놓기 (탭하면 자동조준) · PC는 R/우클릭도 가능<br>
-      가젯은 무제한, 공용 쿨타임 6초 · 궁극기는 기본공격 맞히면 충전
-    </div>
+  <div id="profile" class="panel"><div class="av">😎</div><div><div class="pn stroke" id="pName">플레이어</div><div class="tr stroke">🏆 <span id="pTro">0</span></div></div></div>
+  <div id="lbtns">
+    <div class="lb panel stroke" id="openB"><span class="ic">🧑‍🏫</span>브롤러</div>
+    <div class="lb panel stroke" id="openHelp"><span class="ic">❔</span>조작법</div>
+  </div>
+  <div id="showName" class="stroke"><span class="rbadge" id="sRar">전설</span><div class="nm2" id="sName">정보쌤</div><div class="tt" id="sTitle"></div></div>
+  <div id="status" class="stroke"></div>
+  <div id="playWrap">
+    <div id="modeBox" class="panel stroke"><b>⚔️ 로비 대전</b><span>모두 같은 방에서 난투 · 리스폰</span></div>
+    <button class="pbtn stroke" id="playBtn" style="color:#fff">플레이</button>
   </div>
 </div>
+<div id="bscreen">
+  <header><button class="back" id="bBack">◀</button><h2 class="stroke">브롤러</h2><div class="cnt stroke" id="bCnt"></div></header>
+  <div id="bgrid"></div>
+</div>
+<div id="bdetail"><div class="box panel" id="bdBox"></div></div>
+<div id="modal"><div class="box panel" id="mBox"></div></div>
 <div id="ui"></div>
-<div id="top"><button id="botBtn">+ 봇 추가</button><button id="clearBtn">봇 삭제</button></div>
+<div id="top"><button id="exitBtn">◀ 로비</button><button id="botBtn">+ 봇 추가</button><button id="clearBtn">봇 삭제</button></div>
 <div id="board" class="stroke"></div>
 <div id="feed" class="stroke"></div>
 <div id="dead" class="stroke"></div>
-<div id="supJoy"><b class="stroke">취소</b><i></i></div>
+<div id="aimJoy"><b class="stroke">취소</b><i></i></div>
 <div id="ctrl">
-  <div class="cb" id="bAtk">공격<small>Space</small></div>
-  <div class="cb" id="bSup">궁극기<small>드래그 조준</small></div>
-  <div class="cb" id="bG1">AI야?<small>Q</small><span class="cd"></span></div>
-  <div class="cb" id="bG2">마우스<small>E</small><span class="cd"></span></div>
+  <div class="cb" id="bAtk">공격<small>드래그</small></div>
+  <div class="cb" id="bSup">궁극기<small>드래그</small></div>
+  <div class="cb" id="bG1"><span class="gi">⚡</span><small>Q</small><span class="cd"></span></div>
+  <div class="cb" id="bG2"><span class="gi">🖱️</span><small>E</small><span class="cd"></span></div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -99,7 +171,7 @@ const isTouch = 'ontouchstart' in window;
 const $ = (id) => document.getElementById(id);
 
 // ── 렌더러 / 씬 ───────────────────────────────────
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -126,6 +198,7 @@ function resize() {
   W = innerWidth; H = innerHeight;
   renderer.setSize(W, H);
   camera.aspect = W / H; camera.updateProjectionMatrix();
+  if (typeof lobbyCam !== 'undefined') { lobbyCam.aspect = W / H; lobbyCam.updateProjectionMatrix(); }
 }
 addEventListener('resize', resize); resize();
 
@@ -309,6 +382,64 @@ function makeMouse(color) {
   return { g, inner, cable, wheel };
 }
 
+// 브롤러 id → 3D 모델 함수 (새 브롤러 추가 시 여기에 등록)
+const MODELS = { jungbo: makeTeacher };
+const makeModel = (id, color) => (MODELS[id] || makeTeacher)(color);
+
+// ── 로비 3D 쇼케이스 ──────────────────────────────
+const lobbyScene = new THREE.Scene();
+var lobbyCam = new THREE.PerspectiveCamera(32, W / H, 0.1, 100);
+lobbyScene.add(new THREE.HemisphereLight('#ffffff', '#b06ad8', 1.4));
+const lSun = new THREE.DirectionalLight('#fff0dc', 2.4); lSun.position.set(4, 9, 7); lSun.castShadow = true;
+lSun.shadow.mapSize.set(1024, 1024); Object.assign(lSun.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5 });
+lobbyScene.add(lSun);
+const rim = new THREE.DirectionalLight('#ff9cf0', 1.6); rim.position.set(-6, 4, -5); lobbyScene.add(rim);
+const pedestal = new THREE.Group(); lobbyScene.add(pedestal);
+{
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.5, 0.35, 48), std('#6b55d8', { roughness: 0.4 })); top.position.y = -0.18; top.receiveShadow = true;
+  const edge = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.08, 8, 64), new THREE.MeshBasicMaterial({ color: '#ffe36b' })); edge.rotation.x = Math.PI / 2; edge.position.y = 0;
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.8, 0.4, 48), std('#3b2a8a')); base.position.y = -0.55;
+  pedestal.add(top, edge, base);
+}
+let lobbyView = null;
+function setShowcase(id) {
+  if (lobbyView) lobbyScene.remove(lobbyView.model.root);
+  const model = makeModel(id, '#ffd84a');
+  model.root.children.forEach((c) => { if (c.geometry && (c.geometry.type === 'RingGeometry' || c.geometry.type === 'CircleGeometry')) c.visible = false; });
+  lobbyScene.add(model.root);
+  lobbyView = { model, facing: 0, phase: 0, speed: 0, atkT: 9, g1T: 9, g2T: 9, superT: 9, hitT: 9, deadT: 0, lastHp: 1, dead: false, next: 2.5, step: 0 };
+}
+function updateLobby(dt, now) {
+  if (!lobbyView) return;
+  const v = lobbyView;
+  v.next -= dt;
+  if (v.next <= 0) { const k = ['atkT', 'g2T', 'superT', 'g1T'][v.step++ % 4]; v[k] = 0; v.next = 3.2; }
+  animateTeacher(v, { x: 0, y: 0, hp: 1, dead: false, stun: false }, dt, now);
+  v.model.root.rotation.y = Math.sin(now * 0.6) * 0.35;
+  const portrait = lobbyCam.aspect < 1;
+  lobbyCam.position.set(0, portrait ? 3.6 : 3.2, portrait ? 21 : 14.5);
+  lobbyCam.lookAt(0, portrait ? 3.4 : 2.9, 0);
+}
+
+// 브롤러 카드용 초상화 (한 번만 렌더)
+const portraitCache = {};
+function portrait(id) {
+  if (portraitCache[id]) return portraitCache[id];
+  const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  r.setSize(256, 256); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping;
+  const sc = new THREE.Scene();
+  sc.add(new THREE.HemisphereLight('#ffffff', '#806090', 1.6));
+  const dl = new THREE.DirectionalLight('#ffffff', 2.2); dl.position.set(3, 6, 8); sc.add(dl);
+  const m = makeModel(id, '#ffd84a');
+  m.root.children.forEach((c) => { if (c.geometry && (c.geometry.type === 'RingGeometry' || c.geometry.type === 'CircleGeometry')) c.visible = false; });
+  m.root.rotation.y = -0.35; sc.add(m.root);
+  const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 50); cam.position.set(0, 2.6, 9.5); cam.lookAt(0, 2.1, 0);
+  r.render(sc, cam);
+  const url = r.domElement.toDataURL('image/png');
+  r.dispose(); r.forceContextLoss && r.forceContextLoss();
+  return (portraitCache[id] = url);
+}
+
 // ── 파티클 / 이펙트 ───────────────────────────────
 const pGeo = new THREE.BoxGeometry(1, 1, 1);
 const parts = [];
@@ -428,9 +559,11 @@ function fxSuper(x, z, a, r, half, near) {
   if (near) shake = Math.max(shake, 1.1);
 }
 
-// 궁극기 조준 표시
+// 조준 표시: 궁극기(부채꼴) / 기본공격(범위 고정 원)
 const aimInd = new THREE.Group(); aimInd.visible = false; scene.add(aimInd);
 let aimMesh = null;
+const atkInd = new THREE.Group(); atkInd.visible = false; scene.add(atkInd);
+let atkMesh = null;
 
 function fxSpawn(x, z) {
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 14, 24, 1, true), addMat('#ffd84a', 0.35));
@@ -451,28 +584,121 @@ function popup(text, pos, y, color, size = 22, dur = 0.9) {
 }
 
 // ── 네트워크 / 게임 상태 ──────────────────────────
-let socket, myId, MAP, ST;
+let socket, myId, MAP;
+let mode = 'lobby';
+let BR = {};                                   // 브롤러 정보 (서버에서 받아옴)
+const RAR = {
+  rare: { label: '희귀', c1: '#7dff8a', c2: '#2fb84a' },
+  super: { label: '초희귀', c1: '#7cc8ff', c2: '#2f7fe0' },
+  epic: { label: '영웅', c1: '#d69bff', c2: '#9a3be0' },
+  mythic: { label: '신화', c1: '#ff8a8a', c2: '#e02f3f' },
+  legendary: { label: '전설', c1: '#fff07a', c2: '#f0a400' },
+};
+const rar = (b) => RAR[b.rarity] || RAR.rare;
+const LS = { get: (k, d) => { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
+let myName = LS.get('jb_name', '') || '플레이어';
+let selected = LS.get('jb_brawler', 'jungbo');
+let trophies = +LS.get('jb_trophy', 0) || 0;
+const myB = () => BR[selected];
 let state = { players: [], mice: [] };
 const views = {}, mviews = {};
 
-$('nameIn').value = localStorage.getItem('jb_name') || '';
+// ── 로비 UI ──────────────────────────────────────
+function refreshLobby() {
+  $('pName').textContent = myName; $('pTro').textContent = trophies;
+  const b = myB(); if (!b) return;
+  const r = rar(b);
+  $('sRar').textContent = r.label; $('sRar').style.background = `linear-gradient(${r.c1}, ${r.c2})`;
+  $('sName').textContent = b.name; $('sTitle').textContent = '"' + b.title + '"';
+  $('sName').style.color = r.c1;
+  setShowcase(b.id);
+}
+function buildGrid() {
+  const ids = Object.keys(BR);
+  $('bCnt').textContent = `${ids.length} / ${ids.length}`;
+  const g = $('bgrid'); g.innerHTML = '';
+  for (const id of ids) {
+    const b = BR[id], r = rar(b);
+    const c = document.createElement('div');
+    c.className = 'bcard' + (id === selected ? ' sel' : '');
+    c.style.background = `linear-gradient(${r.c1}, ${r.c2})`;
+    c.innerHTML = `<img src="${portrait(id)}"><span class="rr">${r.label}</span><span class="ck">✓</span><div class="bn stroke">${b.name}</div>`;
+    c.onclick = () => openDetail(id);
+    g.appendChild(c);
+  }
+  for (let i = 0; i < 5; i++) {   // 앞으로 추가될 브롤러 자리
+    const c = document.createElement('div'); c.className = 'bcard locked';
+    c.innerHTML = '<div class="q">?</div><div class="bn stroke" style="opacity:.6">개발 중</div>';
+    g.appendChild(c);
+  }
+}
+function openDetail(id) {
+  const b = BR[id], r = rar(b);
+  const sk = (ic, col, type, name, desc) => `<div class="sk"><div class="si" style="background:${col}">${ic}</div><div><div class="st">${type}</div><div class="sn">${name}</div><div class="sd">${desc}</div></div></div>`;
+  $('bdBox').innerHTML = `
+    <div class="pic" style="background:linear-gradient(${r.c1}, ${r.c2})"><img src="${portrait(id)}"></div>
+    <div class="info">
+      <span class="rbadge" style="background:linear-gradient(${r.c1}, ${r.c2})">${r.label}</span>
+      <div class="dn stroke">${b.name}</div><div class="dq">"${b.title}"</div>
+      <div class="dd">${b.desc}</div>
+      <div class="stats"><div>❤️ 체력 ${b.maxHp}</div><div>👟 속도 ${b.speed}</div><div>🔋 탄 ${b.attack.ammo}</div></div>
+      ${sk('💢', '#ffd84a', '기본공격', b.attack.name, `${b.attack.desc} · 피해 ${b.attack.dmg}`)}
+      ${sk(b.gadgets[0].icon, '#4fd2ff', '가젯 1', b.gadgets[0].name, b.gadgets[0].desc)}
+      ${sk(b.gadgets[1].icon, '#63e65a', '가젯 2', b.gadgets[1].name, b.gadgets[1].desc)}
+      ${sk('🔥', '#ff7a2f', '궁극기', b.super.name, `${b.super.desc} · 피해 ${b.super.dmg}`)}
+      <div class="acts"><button class="btn" id="dSel">${id === selected ? '✓ 선택됨' : '선택'}</button><button class="btn gray" id="dClose">닫기</button></div>
+    </div>`;
+  $('bdetail').style.display = 'flex';
+  $('dSel').onclick = () => { selected = id; LS.set('jb_brawler', id); $('bdetail').style.display = 'none'; $('bscreen').style.display = 'none'; buildGrid(); refreshLobby(); };
+  $('dClose').onclick = () => { $('bdetail').style.display = 'none'; };
+}
+function modal(html, onOk) {
+  $('mBox').innerHTML = html + `<div class="acts"><button class="btn" id="mOk">확인</button>${onOk ? '<button class="btn gray" id="mNo">취소</button>' : ''}</div>`;
+  $('modal').style.display = 'flex';
+  $('mOk').onclick = () => { if (onOk && onOk() === false) return; $('modal').style.display = 'none'; };
+  if (onOk) $('mNo').onclick = () => { $('modal').style.display = 'none'; };
+}
+$('profile').onclick = () => {
+  modal(`<h3 class="stroke">닉네임 변경</h3><input id="nmIn" maxlength="10" value="${myName.replace(/"/g, '')}">`, () => {
+    const v = $('nmIn').value.trim(); if (!v) return false;
+    myName = v; LS.set('jb_name', v); refreshLobby();
+  });
+  setTimeout(() => $('nmIn') && $('nmIn').focus(), 50);
+};
+$('openB').onclick = () => { buildGrid(); $('bscreen').style.display = 'flex'; };
+$('bBack').onclick = () => { $('bscreen').style.display = 'none'; };
+$('openHelp').onclick = () => modal(`<h3 class="stroke">조작법</h3><div id="help">
+  <b>이동</b> 왼쪽 화면 드래그 · PC는 WASD<br>
+  <b>기본공격</b> 공격 버튼 탭 또는 드래그 후 놓기 · PC는 Space/좌클릭<br>
+  <b>가젯</b> 파랑·초록 버튼 · PC는 Q / E (무제한, 쿨타임 6초)<br>
+  <b>궁극기</b> 버튼 드래그로 조준 → 놓으면 발사, 탭하면 자동조준 · PC는 R/우클릭<br>
+  드래그했다가 버튼 가운데로 되돌리면 <b>취소</b></div>`);
 
-$('startBtn').onclick = () => {
-  const name = $('nameIn').value.trim() || '정보쌤';
-  const room = 'lobby';
-  try { localStorage.setItem('jb_name', name); } catch (e) {}
+fetch('/api/brawlers').then((r) => r.json()).then((d) => {
+  BR = d;
+  if (!BR[selected]) selected = Object.keys(BR)[0];
+  refreshLobby();
+});
+
+$('playBtn').onclick = () => {
+  if (socket || !myB()) return;
+  $('status').textContent = '입장 중...';
   socket = io();
   socket.on('joined', (d) => {
-    myId = d.id; MAP = d.map; ST = d.stats;
+    myId = d.id; MAP = d.map; mode = 'game';
     buildMap(MAP);
-    $('lobby').style.display = 'none';
+    $('lobby').style.display = 'none'; $('lobbyBg').style.display = 'none';
     $('top').style.display = 'flex';
     $('ctrl').style.display = 'block';
+    const b = myB();
+    $('bG1').querySelector('.gi').textContent = b.gadgets[0].icon;
+    $('bG2').querySelector('.gi').textContent = b.gadgets[1].icon;
   });
   socket.on('state', (s) => { state = s; handleFx(s.fx); });
   socket.on('disconnect', () => addFeed('서버 연결 끊김 — 새로고침 해주세요', 999));
-  socket.emit('join', { name, room });
+  socket.emit('join', { name: myName, brawler: selected });
 };
+$('exitBtn').onclick = () => location.reload();
 $('botBtn').onclick = (e) => { e.target.blur(); socket && socket.emit('addBot'); };
 $('clearBtn').onclick = (e) => { e.target.blur(); socket && socket.emit('clearBots'); };
 
@@ -485,7 +711,7 @@ function isNear(x, z, d = 14) { const p = myPos(); return p && Math.hypot(p.x - 
 function handleFx(list) {
   for (const f of list) {
     const x = f.x * S, z = f.y * S;
-    if (f.type === 'kill') addFeed(`${f.a} ➜ ${f.b}`);
+    if (f.type === 'kill') { addFeed(`${f.a} ➜ ${f.b}`); if (f.aid === myId) { trophies++; LS.set('jb_trophy', trophies); } }
     else if (f.type === 'pulse') {
       const v = views[f.id]; if (v) { v.atkT = 0; popup('💢', { x, z }, 5.2, '#ff5050', 26, 0.6); }
       later(0.11, () => fxSlam(x, z, f.r * S, f.c, isNear(x, z)));
@@ -507,10 +733,10 @@ function handleFx(list) {
 // ── 입력 ─────────────────────────────────────────
 const keys = {};
 addEventListener('keydown', (e) => {
-  if (!socket || e.target.tagName === 'INPUT') return;
+  if (!socket || mode !== 'game' || e.target.tagName === 'INPUT') return;
   const k = e.key.toLowerCase();
   if (keys[k]) return; keys[k] = true;
-  if (k === ' ') { socket.emit('attack'); e.preventDefault(); }
+  if (k === ' ') { doAttack(); e.preventDefault(); }
   if (k === 'q' || k === 'ㅂ') socket.emit('gadget', 1);
   if (k === 'e' || k === 'ㄷ') socket.emit('gadget', 2);
   if (k === 'r' || k === 'ㄱ') doSuper();
@@ -518,10 +744,13 @@ addEventListener('keydown', (e) => {
 const mouse = { x: 0, y: 0, on: false };
 addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.on = true; });
 const ray = new THREE.Raycaster(), ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitP = new THREE.Vector3();
-const supAim = { id: null, sx: 0, sy: 0, ang: null, drag: 0, maxDrag: 0, cancel: false };
-function autoAim() {    // 사거리 안 가장 가까운 적
+const aims = {
+  atk: { id: null, sx: 0, sy: 0, ang: null, drag: 0, maxDrag: 0, cancel: false },
+  sup: { id: null, sx: 0, sy: 0, ang: null, drag: 0, maxDrag: 0, cancel: false },
+};
+function autoAim(range) {    // 사거리 안 가장 가까운 적
   const me = state.players.find((p) => p.id === myId); if (!me) return null;
-  let best = ST.superRange + 120, a = me.f;
+  let best = (range || BR[me.b].super.range) + 120, a = me.f;
   for (const q of state.players) {
     if (q.id === myId || q.dead) continue;
     const d = Math.hypot(q.x - me.x, q.y - me.y);
@@ -529,10 +758,11 @@ function autoAim() {    // 사거리 안 가장 가까운 적
   }
   return a;
 }
-function aimAngle() {   // 서버 좌표 기준 각도
+function aimAngle(kind = 'sup') {   // 서버 좌표 기준 각도
   const me = state.players.find((p) => p.id === myId), v = views[myId];
   if (!me || !v) return null;
-  if (supAim.id !== null) return supAim.ang ?? autoAim();
+  const A = aims[kind], range = kind === 'atk' ? BR[me.b].attack.range : BR[me.b].super.range;
+  if (A.id !== null) return A.ang ?? autoAim(range);
   if (!isTouch && mouse.on) {
     ray.setFromCamera({ x: mouse.x / W * 2 - 1, y: -(mouse.y / H) * 2 + 1 }, camera);
     if (ray.ray.intersectPlane(ground, hitP)) {
@@ -540,42 +770,51 @@ function aimAngle() {   // 서버 좌표 기준 각도
       if (Math.hypot(hitP.x - p.x, hitP.z - p.z) > 0.5) return Math.atan2(hitP.z - p.z, hitP.x - p.x);
     }
   }
-  return isTouch ? autoAim() : me.f;
+  return isTouch ? autoAim(range) : me.f;
 }
-function doSuper() { if (!socket) return; const a = aimAngle(); socket.emit('super', a == null ? undefined : a); }
-renderer.domElement.addEventListener('contextmenu', (e) => { e.preventDefault(); doSuper(); });
+function doSuper() { if (!socket) return; const a = aimAngle('sup'); socket.emit('super', a == null ? undefined : a); }
+function doAttack() { if (!socket) return; const a = aimAngle('atk'); socket.emit('attack', a == null ? undefined : a); }
+renderer.domElement.addEventListener('contextmenu', (e) => { e.preventDefault(); if (mode === 'game') doSuper(); });
 addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
-renderer.domElement.addEventListener('mousedown', (e) => { if (socket && !isTouch && e.button === 0) socket.emit('attack'); });
+renderer.domElement.addEventListener('mousedown', (e) => { if (socket && mode === 'game' && !isTouch && e.button === 0) doAttack(); });
 const press = (id, fn) => $(id).addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); socket && fn(); });
-press('bAtk', () => socket.emit('attack'));
 press('bG1', () => socket.emit('gadget', 1));
 press('bG2', () => socket.emit('gadget', 2));
-// 궁극기 조준 조이스틱: 버튼 누른 채 드래그 → 놓으면 발사, 그냥 탭하면 자동조준
-const supEl = $('bSup'), supJoy = $('supJoy'), supKnob = supJoy.querySelector('i');
-supEl.addEventListener('pointerdown', (e) => {
-  e.preventDefault(); e.stopPropagation(); if (!socket) return;
-  const r = supEl.getBoundingClientRect();
-  supAim.id = e.pointerId; supAim.sx = r.left + r.width / 2; supAim.sy = r.top + r.height / 2; supAim.drag = 0; supAim.maxDrag = 0; supAim.cancel = false; supAim.ang = null; supJoy.classList.remove('cancel');
-  try { supEl.setPointerCapture(e.pointerId); } catch (_) {}
-  supJoy.style.left = supAim.sx + 'px'; supJoy.style.top = supAim.sy + 'px'; supJoy.style.display = 'block'; supKnob.style.transform = '';
-});
-supEl.addEventListener('pointermove', (e) => {
-  if (e.pointerId !== supAim.id) return;
-  const dx = e.clientX - supAim.sx, dy = e.clientY - supAim.sy, d = Math.hypot(dx, dy);
-  supAim.drag = d; supAim.maxDrag = Math.max(supAim.maxDrag, d);
-  if (d > 14) supAim.ang = Math.atan2(dy, dx);
-  supAim.cancel = d <= 14 && supAim.maxDrag > 30;   // 끌었다가 제자리로 돌아오면 취소
-  supJoy.classList.toggle('cancel', supAim.cancel);
-  const k = Math.min(d, 48); supKnob.style.transform = d ? `translate(${dx / d * k}px,${dy / d * k}px)` : '';
-});
-const endSup = (e) => {
-  if (e.pointerId !== supAim.id) return;
-  supAim.id = null; supJoy.style.display = 'none';
-  if (e.type === 'pointercancel' || !socket || supAim.cancel) return;
-  const a = supAim.drag > 14 ? supAim.ang : autoAim();
-  socket.emit('super', a == null ? undefined : a);
-};
-supEl.addEventListener('pointerup', endSup); supEl.addEventListener('pointercancel', endSup);
+// 조준 조이스틱 (기본공격 · 궁극기 공통)
+// 버튼 누른 채 드래그 → 놓으면 발사 · 그냥 탭하면 자동조준 · 끌었다가 가운데로 되돌리면 취소
+const aimJoy = $('aimJoy'), aimKnob = aimJoy.querySelector('i');
+function aimButton(el, kind, fire) {
+  const A = aims[kind];
+  el.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); e.stopPropagation(); if (!socket) return;
+    const r = el.getBoundingClientRect();
+    Object.assign(A, { id: e.pointerId, sx: r.left + r.width / 2, sy: r.top + r.height / 2, drag: 0, maxDrag: 0, cancel: false, ang: null });
+    try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    aimJoy.className = kind; aimJoy.style.left = A.sx + 'px'; aimJoy.style.top = A.sy + 'px'; aimJoy.style.display = 'block'; aimKnob.style.transform = '';
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== A.id) return;
+    const dx = e.clientX - A.sx, dy = e.clientY - A.sy, d = Math.hypot(dx, dy);
+    A.drag = d; A.maxDrag = Math.max(A.maxDrag, d);
+    if (d > 14) A.ang = Math.atan2(dy, dx);
+    A.cancel = d <= 14 && A.maxDrag > 30;
+    aimJoy.classList.toggle('cancel', A.cancel);
+    const k = Math.min(d, 48); aimKnob.style.transform = d ? `translate(${dx / d * k}px,${dy / d * k}px)` : '';
+  });
+  const end = (e) => {
+    if (e.pointerId !== A.id) return;
+    const ang = A.drag > 14 ? A.ang : null;
+    A.id = null; aimJoy.style.display = 'none';
+    if (e.type === 'pointercancel' || !socket || A.cancel) return;
+    const me = state.players.find((p) => p.id === myId); if (!me) return;
+    const range = kind === 'atk' ? BR[me.b].attack.range : BR[me.b].super.range;
+    const a = ang ?? autoAim(range);
+    socket.emit(fire, a == null ? undefined : a);
+  };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+}
+aimButton($('bAtk'), 'atk', 'attack');
+aimButton($('bSup'), 'sup', 'super');
 
 const joy = { id: null, sx: 0, sy: 0, x: 0, y: 0 };
 const joyEl = document.createElement('div');
@@ -623,7 +862,7 @@ function makeLabel(mine) {
 function getView(p) {
   let v = views[p.id];
   if (!v) {
-    const model = makeTeacher(p.color);
+    const model = makeModel(p.b, p.color);
     model.root.position.set(p.x * S, 0, p.y * S);
     scene.add(model.root);
     v = views[p.id] = { model, label: makeLabel(p.id === myId), facing: 0, phase: 0, speed: 0, atkT: 9, g1T: 9, g2T: 9, superT: 9, hitT: 9, deadT: 0, lastHp: p.hp, dead: p.dead };
@@ -727,7 +966,7 @@ function updateLabel(v, p) {
   L.d.style.display = p.dead || !vis ? 'none' : 'block';
   L.d.style.left = x + 'px'; L.d.style.top = y + 'px';
   L.nm.textContent = `${p.name}  ${p.hp}`;
-  L.hp.style.width = (100 * p.hp / ST.maxHp) + '%';
+  L.hp.style.width = (100 * p.hp / (BR[p.b] ? BR[p.b].maxHp : p.hp || 1)) + '%';
   L.am.forEach((b, i) => { const f = Math.max(0, Math.min(1, p.ammo - i)); b.style.width = f * 100 + '%'; b.style.background = f >= 1 ? '#ffb02e' : '#8a6a32'; });
   if (p.say !== L.lastSay) { L.lastSay = p.say; if (p.say) { L.bub.textContent = p.say; L.bub.style.display = 'block'; L.bub.style.animation = 'none'; L.bub.offsetWidth; L.bub.style.animation = ''; } else L.bub.style.display = 'none'; }
 }
@@ -816,17 +1055,31 @@ function frame(nowMs) {
       sb.style.background = me.sup >= 1 ? 'radial-gradient(circle at 40% 35%, #ffe98a, #ff5a1f)' : `conic-gradient(#ff8a1f ${pct}%, #3a2a6a 0)`;
       // 조준 표시
       const v = views[myId];
-      aimInd.visible = me.sup >= 1 && !me.dead && !!v && (supAim.id !== null ? !supAim.cancel : !isTouch);
+      const B = BR[me.b];
+      aimInd.visible = me.sup >= 1 && !me.dead && !!v && (aims.sup.id !== null ? !aims.sup.cancel : !isTouch);
       if (aimInd.visible) {
-        if (!aimMesh) { aimMesh = new THREE.Mesh(sectorGeo(ST.superRange * S, ST.superHalf), addMat('#ff8a1f', 0.22)); aimMesh.rotation.x = -Math.PI / 2; aimInd.add(aimMesh); }
+        if (!aimMesh) { aimMesh = new THREE.Mesh(sectorGeo(B.super.range * S, B.super.half), addMat('#ff8a1f', 0.22)); aimMesh.rotation.x = -Math.PI / 2; aimInd.add(aimMesh); }
         aimInd.position.set(v.model.root.position.x, 0.08, v.model.root.position.z);
-        const a = aimAngle(); if (a != null) aimInd.rotation.y = -a;
+        const a = aimAngle('sup'); if (a != null) aimInd.rotation.y = -a;
+      }
+      // 기본공격 조준: 정보쌤은 공격 위치가 정해져 있어서 주변 원만 표시
+      atkInd.visible = !me.dead && !!v && aims.atk.id !== null && !aims.atk.cancel;
+      if (atkInd.visible) {
+        if (!atkMesh) {
+          const r = B.attack.range * S;
+          atkMesh = new THREE.Group();
+          const fill = new THREE.Mesh(new THREE.CircleGeometry(r, 48), addMat('#ffe36b', 0.18)); fill.rotation.x = -Math.PI / 2;
+          const edge = new THREE.Mesh(new THREE.RingGeometry(r * 0.94, r, 48), addMat('#fff3b0', 0.8)); edge.rotation.x = -Math.PI / 2; edge.position.y = 0.01;
+          atkMesh.add(fill, edge); atkInd.add(atkMesh);
+        }
+        atkInd.position.set(v.model.root.position.x, 0.09, v.model.root.position.z);
       }
       $('dead').style.display = me.dead ? 'flex' : 'none';
       if (me.dead) $('dead').textContent = `${me.respawn}초 후 부활`;
     }
   }
-  renderer.render(scene, camera);
+  if (mode === 'lobby') { updateLobby(dt, now); renderer.render(lobbyScene, lobbyCam); }
+  else renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

@@ -31,3 +31,9 @@ npm start      # http://localhost:3000
 
 ## 조작
 PC: WASD 이동, Space/클릭 공격, Q·E 가젯 · 폰: 왼쪽 조이스틱 + 오른쪽 버튼
+
+## 브롤러 추가하는 법
+1. `brawlers.js`에 새 브롤러 데이터 추가 (이름, 등급, 체력, 공격/가젯/궁극기 수치)
+2. `server.js`의 `SKILLS`에 같은 id로 attack / gadget / super 함수 추가
+3. `public/index.html`에서 3D 모델 함수 만들고 `MODELS`에 등록
+→ 로비의 브롤러 화면에 자동으로 카드가 생김

@@ -3,16 +3,19 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
+const { BRAWLERS, publicBrawlers } = require('./brawlers');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/vendor', express.static(path.join(__dirname, 'node_modules', 'three', 'build')));
+app.get('/api/brawlers', (req, res) => res.json(publicBrawlers()));
 const PORT = process.env.PORT || 3000;
 
 const TICK = 30;
 const DT = 1 / TICK;
+const G = { respawn: 3, regenDelay: 3, regenRate: 0.13, maxPlayers: 10, maxBots: 6 };
 
 // ── 맵 ─────────────────────────────────────────────
 const MAP = {
@@ -30,31 +33,8 @@ const MAP = {
   ],
 };
 
-// ── 정보쌤 스탯 ────────────────────────────────────
-const C = {
-  radius: 28, speed: 250, maxHp: 4200,
-  // 기본공격: 아~ 이놈의 아이들 (재키처럼 주변 광역)
-  atkRange: 150, atkDmg: 1000, maxAmmo: 3, reload: 1.5, atkCd: 0.45,
-  // 가젯1: AI야? 시키지도 않은걸 하네 (주변 스턴)
-  g1Range: 260, g1Stun: 1.6, g1Dmg: 300,
-  // 가젯2: 마우스 소환
-  mouseHp: 1200, mouseSpeed: 320, mouseDmg: 260, mouseBiteCd: 0.6, mouseLife: 8, mouseRadius: 16, mouseCount: 2,
-  gadgetCd: 6,
-  // 궁극기: 이놈의 아이들 (부채꼴 강공격)
-  superNeed: 3500, superRange: 340, superHalf: 0.66, superDmg: 2200, superKnock: 150,
-  respawn: 3, regenDelay: 3, regenRate: 0.13,
-};
-
-const LINES = {
-  atk: ['아~ 이놈의 아이들!', '아~ 이놈의 아이들', '조용히 해라~', '자리에 앉아!'],
-  g1: ['AI야? 시키지도 않은 걸 하네', 'AI야?? 시키지도 않은 걸 하네!'],
-  g2: ['마우스 소환!', '가라, 무선마우스!'],
-  sup: ['이놈의 아이들!!!', '이노오옴의 아이드을!!'],
-  kill: ['수행평가 0점', '교무실로 와', '벌점!'],
-};
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const COLORS = ['#4f8cff', '#ff5d5d', '#3ccf7a', '#ffb02e', '#b56cff', '#22c3c3', '#ff7ac6', '#a0a0a0'];
-
 const rooms = new Map();
 
 function getRoom(id) {
@@ -88,31 +68,32 @@ function resolveWalls(o, r) {
   }
 }
 
-function randomSpawn() {
+function randomSpawn(r) {
   for (let i = 0; i < 200; i++) {
     const x = 60 + Math.random() * (MAP.w - 120);
     const y = 60 + Math.random() * (MAP.h - 120);
-    if (!hitsWall(x, y, C.radius + 10)) return { x, y };
+    if (!hitsWall(x, y, r + 10)) return { x, y };
   }
   return { x: 80, y: 80 };
 }
 
-function newPlayer(room, id, name, isBot) {
-  const s = randomSpawn();
+function newPlayer(room, id, name, isBot, brawlerId) {
+  const B = BRAWLERS[brawlerId] || BRAWLERS.jungbo;
+  const s = randomSpawn(B.radius);
   return {
-    id, name: (name || '정보쌤').slice(0, 10), isBot,
+    id, name: (name || B.name).slice(0, 10), isBot, B,
     color: COLORS[room.colorIdx++ % COLORS.length],
-    x: s.x, y: s.y, hp: C.maxHp,
-    ammo: C.maxAmmo, reloadT: 0, atkCd: 0,
+    x: s.x, y: s.y, hp: B.maxHp,
+    ammo: B.attack.ammo, reloadT: 0, atkCd: 0,
     stunT: 0, gCd: 0, facing: Math.PI / 2, sup: 0,
     lastHit: 0, dead: false, respawnT: 0,
     kills: 0, deaths: 0,
     input: { mx: 0, my: 0 }, speech: null,
-    bot: isBot ? { wanderX: 0, wanderY: 0, wanderT: 0, think: 0 } : null,
+    bot: isBot ? { wanderX: 0, wanderY: 0, wanderT: 0 } : null,
   };
 }
 
-function say(p, text, t = 1.6) { p.speech = { text, t }; }
+function say(p, key, t = 1.6) { const l = p.B.lines && p.B.lines[key]; if (l) p.speech = { text: pick(l), t }; }
 
 function damage(room, attacker, target, dmg, now) {
   if (target.dead) return;
@@ -120,94 +101,109 @@ function damage(room, attacker, target, dmg, now) {
   target.lastHit = now;
   room.fx.push({ type: 'dmg', x: target.x, y: target.y - 40, v: dmg });
   if (target.hp <= 0) {
-    target.hp = 0; target.dead = true; target.respawnT = C.respawn; target.deaths++;
+    target.hp = 0; target.dead = true; target.respawnT = G.respawn; target.deaths++;
     target.speech = null;
-    if (attacker && attacker.id !== target.id) { attacker.kills++; if (Math.random() < 0.5) say(attacker, pick(LINES.kill)); }
-    room.fx.push({ type: 'kill', a: attacker ? attacker.name : '?', b: target.name });
+    if (attacker && attacker.id !== target.id) { attacker.kills++; if (Math.random() < 0.5) say(attacker, 'kill'); }
+    room.fx.push({ type: 'kill', a: attacker ? attacker.name : '?', b: target.name, aid: attacker ? attacker.id : null });
     room.mice = room.mice.filter((m) => m.owner !== target.id);
   }
 }
 
-function canAct(p) { return !p.dead && p.stunT <= 0; }
+const canAct = (p) => !p.dead && p.stunT <= 0;
+const angDiff = (a, b) => { const d = a - b; return Math.atan2(Math.sin(d), Math.cos(d)); };
 
-function doAttack(room, p, now) {
+// ── 브롤러별 스킬 ──────────────────────────────────
+const SKILLS = {
+  jungbo: {
+    // 기본공격: 주변 원형 범위 (조준 없음)
+    attack(room, p, ang, now) {
+      const A = p.B.attack;
+      p.ammo -= 1; p.atkCd = A.cd;
+      room.fx.push({ type: 'pulse', id: p.id, x: p.x, y: p.y, r: A.range, c: p.color });
+      if (Math.random() < 0.45) say(p, 'atk', 1.2);
+      for (const q of room.players.values()) {
+        if (q.id === p.id || q.dead) continue;
+        if (Math.hypot(q.x - p.x, q.y - p.y) <= A.range + q.B.radius) {
+          damage(room, p, q, A.dmg, now);
+          p.sup = Math.min(1, p.sup + A.dmg / p.B.super.need);
+        }
+      }
+      for (const m of room.mice) if (m.owner !== p.id && Math.hypot(m.x - p.x, m.y - p.y) <= A.range + m.radius) m.hp -= A.dmg;
+    },
+    gadget(room, p, n, now) {
+      if (n === 1) {
+        const g = p.B.gadgets[0];
+        say(p, 'g1', 2);
+        const hits = [];
+        room.fx.push({ type: 'stun', id: p.id, x: p.x, y: p.y, r: g.range, hits });
+        for (const q of room.players.values()) {
+          if (q.id === p.id || q.dead) continue;
+          if (Math.hypot(q.x - p.x, q.y - p.y) <= g.range + q.B.radius) {
+            hits.push(q.id);
+            q.stunT = Math.max(q.stunT, g.stun);
+            damage(room, p, q, g.dmg, now);
+          }
+        }
+      } else {
+        const g = p.B.gadgets[1];
+        say(p, 'g2', 1.6);
+        for (let i = 0; i < g.count; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const m = {
+            id: ++room.mouseSeq, owner: p.id, color: p.color,
+            x: p.x + Math.cos(a) * 40, y: p.y + Math.sin(a) * 40,
+            hp: g.hp, maxHp: g.hp, life: g.life, biteCd: 0, ang: a,
+            speed: g.speed, dmg: g.dmg, biteRate: g.biteCd, radius: g.radius,
+          };
+          resolveWalls(m, m.radius);
+          room.mice.push(m);
+        }
+        room.fx.push({ type: 'summon', id: p.id, x: p.x, y: p.y });
+      }
+    },
+    super(room, p, a, now) {
+      const S = p.B.super;
+      say(p, 'sup', 1.8);
+      room.fx.push({ type: 'super', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: S.range, h: S.half });
+      const inCone = (x, y, rad) => {
+        const dx = x - p.x, dy = y - p.y, d = Math.hypot(dx, dy);
+        if (d > S.range + rad) return false;
+        if (d < rad + p.B.radius) return true;
+        return Math.abs(angDiff(Math.atan2(dy, dx), a)) <= S.half;
+      };
+      for (const q of room.players.values()) {
+        if (q.id === p.id || q.dead || !inCone(q.x, q.y, q.B.radius)) continue;
+        const d = Math.hypot(q.x - p.x, q.y - p.y) || 1;
+        q.x += ((q.x - p.x) / d) * S.knock; q.y += ((q.y - p.y) / d) * S.knock;
+        resolveWalls(q, q.B.radius);
+        q.stunT = Math.max(q.stunT, 0.4);
+        damage(room, p, q, S.dmg, now);
+      }
+      for (const m of room.mice) if (m.owner !== p.id && inCone(m.x, m.y, m.radius)) m.hp = 0;
+    },
+  },
+};
+
+function doAttack(room, p, ang, now) {
   if (!canAct(p) || p.ammo < 1 || p.atkCd > 0) return;
-  p.ammo -= 1; p.atkCd = C.atkCd; p.lastHit = Math.max(p.lastHit, now - C.regenDelay + 1);
-  room.fx.push({ type: 'pulse', id: p.id, x: p.x, y: p.y, r: C.atkRange, c: p.color });
-  if (Math.random() < 0.45) say(p, pick(LINES.atk), 1.2);
-  for (const q of room.players.values()) {
-    if (q.id === p.id || q.dead) continue;
-    if (Math.hypot(q.x - p.x, q.y - p.y) <= C.atkRange + C.radius) {
-      damage(room, p, q, C.atkDmg, now);
-      p.sup = Math.min(1, p.sup + C.atkDmg / C.superNeed);
-    }
-  }
-  for (const m of room.mice) {
-    if (m.owner === p.id) continue;
-    if (Math.hypot(m.x - p.x, m.y - p.y) <= C.atkRange + C.mouseRadius) m.hp -= C.atkDmg;
-  }
+  p.lastHit = Math.max(p.lastHit, now - G.regenDelay + 1);
+  SKILLS[p.B.id].attack(room, p, Number.isFinite(ang) ? ang : p.facing, now);
 }
-
 function doGadget(room, p, n, now) {
   if (!canAct(p) || p.gCd > 0) return;
-  if (n === 1) {
-    p.gCd = C.gadgetCd;
-    say(p, pick(LINES.g1), 2);
-    const hits = [];
-    room.fx.push({ type: 'stun', id: p.id, x: p.x, y: p.y, r: C.g1Range, hits });
-    for (const q of room.players.values()) {
-      if (q.id === p.id || q.dead) continue;
-      if (Math.hypot(q.x - p.x, q.y - p.y) <= C.g1Range + C.radius) {
-        hits.push(q.id);
-        q.stunT = Math.max(q.stunT, C.g1Stun);
-        damage(room, p, q, C.g1Dmg, now);
-      }
-    }
-  } else if (n === 2) {
-    p.gCd = C.gadgetCd;
-    say(p, pick(LINES.g2), 1.6);
-    for (let i = 0; i < C.mouseCount; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const m = {
-        id: ++room.mouseSeq, owner: p.id, color: p.color,
-        x: p.x + Math.cos(a) * 40, y: p.y + Math.sin(a) * 40,
-        hp: C.mouseHp, life: C.mouseLife, biteCd: 0, ang: a,
-      };
-      resolveWalls(m, C.mouseRadius);
-      room.mice.push(m);
-    }
-    room.fx.push({ type: 'summon', id: p.id, x: p.x, y: p.y });
-  }
+  p.gCd = p.B.gadgetCd;
+  SKILLS[p.B.id].gadget(room, p, n === 2 ? 2 : 1, now);
 }
-
 function doSuper(room, p, ang, now) {
   if (!canAct(p) || p.sup < 1) return;
   p.sup = 0;
   const a = Number.isFinite(ang) ? ang : p.facing;
   p.facing = a;
-  say(p, pick(LINES.sup), 1.8);
-  room.fx.push({ type: 'super', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: C.superRange, h: C.superHalf });
-  const inCone = (x, y, rad) => {
-    const dx = x - p.x, dy = y - p.y, d = Math.hypot(dx, dy);
-    if (d > C.superRange + rad) return false;
-    if (d < rad + C.radius) return true;
-    let diff = Math.atan2(dy, dx) - a;
-    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    return Math.abs(diff) <= C.superHalf;
-  };
-  for (const q of room.players.values()) {
-    if (q.id === p.id || q.dead || !inCone(q.x, q.y, C.radius)) continue;
-    const d = Math.hypot(q.x - p.x, q.y - p.y) || 1;
-    q.x += ((q.x - p.x) / d) * C.superKnock; q.y += ((q.y - p.y) / d) * C.superKnock;
-    resolveWalls(q, C.radius);
-    q.stunT = Math.max(q.stunT, 0.4);
-    damage(room, p, q, C.superDmg, now);
-  }
-  for (const m of room.mice) if (m.owner !== p.id && inCone(m.x, m.y, C.mouseRadius)) m.hp = 0;
+  SKILLS[p.B.id].super(room, p, a, now);
 }
 
 function botThink(room, p, now) {
-  const b = p.bot;
+  const b = p.bot, B = p.B;
   let target = null, best = Infinity;
   for (const q of room.players.values()) {
     if (q.id === p.id || q.dead) continue;
@@ -220,29 +216,30 @@ function botThink(room, p, now) {
     const jitter = Math.sin(now * 3 + p.x) * 0.4;
     p.input.mx = dx / d - (dy / d) * jitter;
     p.input.my = dy / d + (dx / d) * jitter;
-    if (best < C.atkRange + 10 && Math.random() < 0.18) doAttack(room, p, now);
-    if (best < C.g1Range - 40 && Math.random() < 0.01) doGadget(room, p, 1, now);
+    if (best < B.attack.range + 10 && Math.random() < 0.18) doAttack(room, p, Math.atan2(dy, dx), now);
+    if (best < 220 && Math.random() < 0.01) doGadget(room, p, 1, now);
     if (best < 500 && Math.random() < 0.006) doGadget(room, p, 2, now);
-    if (best < C.superRange - 30 && p.sup >= 1 && Math.random() < 0.05) doSuper(room, p, Math.atan2(dy, dx), now);
-    if (p.hp < C.maxHp * 0.3 && Math.random() < 0.5) { p.input.mx *= -1; p.input.my *= -1; }
+    if (best < B.super.range - 30 && p.sup >= 1 && Math.random() < 0.05) doSuper(room, p, Math.atan2(dy, dx), now);
+    if (p.hp < B.maxHp * 0.3 && Math.random() < 0.5) { p.input.mx *= -1; p.input.my *= -1; }
   } else {
     if (b.wanderT <= 0) {
       const a = Math.random() * Math.PI * 2;
       b.wanderX = Math.cos(a); b.wanderY = Math.sin(a); b.wanderT = 1 + Math.random() * 2;
     }
-    p.input.mx = b.wanderX * 0.6; p.input.my = b.wanderY * 0.6;
+    p.input.mx = b.wanderX; p.input.my = b.wanderY;
   }
 }
 
 function step(room) {
   const now = Date.now() / 1000;
   for (const p of room.players.values()) {
+    const B = p.B;
     if (p.speech) { p.speech.t -= DT; if (p.speech.t <= 0) p.speech = null; }
     if (p.dead) {
       p.respawnT -= DT;
       if (p.respawnT <= 0) {
-        const s = randomSpawn();
-        Object.assign(p, { x: s.x, y: s.y, hp: C.maxHp, dead: false, ammo: C.maxAmmo, stunT: 0 });
+        const s = randomSpawn(B.radius);
+        Object.assign(p, { x: s.x, y: s.y, hp: B.maxHp, dead: false, ammo: B.attack.ammo, stunT: 0 });
       }
       continue;
     }
@@ -250,23 +247,23 @@ function step(room) {
     p.atkCd = Math.max(0, p.atkCd - DT);
     p.gCd = Math.max(0, p.gCd - DT);
     p.stunT = Math.max(0, p.stunT - DT);
-    if (p.ammo < C.maxAmmo) {
+    if (p.ammo < B.attack.ammo) {
       p.reloadT += DT;
-      if (p.reloadT >= C.reload) { p.ammo++; p.reloadT = 0; }
+      if (p.reloadT >= B.attack.reload) { p.ammo++; p.reloadT = 0; }
     } else p.reloadT = 0;
-    if (now - p.lastHit > C.regenDelay && p.hp < C.maxHp) p.hp = Math.min(C.maxHp, p.hp + C.maxHp * C.regenRate * DT);
+    if (now - p.lastHit > G.regenDelay && p.hp < B.maxHp) p.hp = Math.min(B.maxHp, p.hp + B.maxHp * G.regenRate * DT);
 
     if (p.stunT <= 0) {
       let { mx, my } = p.input;
       const len = Math.hypot(mx, my);
       if (len > 0.1) { mx /= len; my /= len; p.facing = Math.atan2(my, mx); } else { mx = 0; my = 0; }
-      p.x += mx * C.speed * DT;
-      p.y += my * C.speed * DT;
-      resolveWalls(p, C.radius);
+      p.x += mx * B.speed * DT;
+      p.y += my * B.speed * DT;
+      resolveWalls(p, B.radius);
     }
   }
 
-  // 마우스(소환수)
+  // 소환수 (마우스)
   for (const m of room.mice) {
     m.life -= DT; m.biteCd = Math.max(0, m.biteCd - DT);
     let target = null, best = 700;
@@ -278,13 +275,13 @@ function step(room) {
     if (target) {
       const dx = target.x - m.x, dy = target.y - m.y, d = best || 1;
       m.ang = Math.atan2(dy, dx);
-      if (d > C.radius + C.mouseRadius) {
-        m.x += (dx / d) * C.mouseSpeed * DT;
-        m.y += (dy / d) * C.mouseSpeed * DT;
-        resolveWalls(m, C.mouseRadius);
+      if (d > target.B.radius + m.radius) {
+        m.x += (dx / d) * m.speed * DT;
+        m.y += (dy / d) * m.speed * DT;
+        resolveWalls(m, m.radius);
       } else if (m.biteCd <= 0) {
-        m.biteCd = C.mouseBiteCd;
-        damage(room, room.players.get(m.owner), target, C.mouseDmg, now);
+        m.biteCd = m.biteRate;
+        damage(room, room.players.get(m.owner), target, m.dmg, now);
         room.fx.push({ type: 'click', x: target.x, y: target.y });
       }
     } else {
@@ -292,9 +289,9 @@ function step(room) {
       if (owner && Math.hypot(owner.x - m.x, owner.y - m.y) > 70) {
         const dx = owner.x - m.x, dy = owner.y - m.y, d = Math.hypot(dx, dy);
         m.ang = Math.atan2(dy, dx);
-        m.x += (dx / d) * C.mouseSpeed * 0.7 * DT;
-        m.y += (dy / d) * C.mouseSpeed * 0.7 * DT;
-        resolveWalls(m, C.mouseRadius);
+        m.x += (dx / d) * m.speed * 0.7 * DT;
+        m.y += (dy / d) * m.speed * 0.7 * DT;
+        resolveWalls(m, m.radius);
       }
     }
   }
@@ -303,13 +300,13 @@ function step(room) {
   const r1 = (v) => Math.round(v);
   io.to(room.id).emit('state', {
     players: [...room.players.values()].map((p) => ({
-      id: p.id, name: p.name, color: p.color, bot: p.isBot,
+      id: p.id, name: p.name, b: p.B.id, color: p.color, bot: p.isBot,
       x: r1(p.x), y: r1(p.y), hp: r1(p.hp), dead: p.dead, respawn: Math.ceil(p.respawnT),
-      ammo: p.ammo + p.reloadT / C.reload, stun: p.stunT > 0,
+      ammo: p.ammo + p.reloadT / p.B.attack.reload, stun: p.stunT > 0,
       gCd: +p.gCd.toFixed(2), sup: +p.sup.toFixed(3), f: +p.facing.toFixed(2),
       k: p.kills, d: p.deaths, say: p.speech ? p.speech.text : null,
     })),
-    mice: room.mice.map((m) => ({ id: m.id, x: r1(m.x), y: r1(m.y), a: +m.ang.toFixed(2), c: m.color, hp: m.hp / C.mouseHp })),
+    mice: room.mice.map((m) => ({ id: m.id, x: r1(m.x), y: r1(m.y), a: +m.ang.toFixed(2), c: m.color, hp: m.hp / m.maxHp })),
     fx: room.fx,
   });
   room.fx = [];
@@ -319,29 +316,32 @@ setInterval(() => { for (const room of rooms.values()) step(room); }, 1000 / TIC
 
 io.on('connection', (socket) => {
   let room = null;
-  socket.on('join', ({ name, room: roomId }) => {
+  const me = () => room && room.players.get(socket.id);
+  const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : NaN);
+  socket.on('join', ({ name, brawler } = {}) => {
     if (room) return;
-    roomId = 'lobby';   // 모두 공통 로비
-    room = getRoom(roomId);
-    room.players.set(socket.id, newPlayer(room, socket.id, String(name || '정보쌤').trim() || '정보쌤', false));
-    socket.join(roomId);
-    socket.emit('joined', { id: socket.id, map: MAP, stats: C, room: roomId });
+    room = getRoom('lobby');   // 모두 공통 로비
+    const bid = BRAWLERS[brawler] ? brawler : 'jungbo';
+    room.players.set(socket.id, newPlayer(room, socket.id, String(name || '').trim() || BRAWLERS[bid].name, false, bid));
+    socket.join(room.id);
+    socket.emit('joined', { id: socket.id, map: MAP });
   });
   socket.on('input', (inp) => {
-    const p = room && room.players.get(socket.id);
+    const p = me();
     if (!p || !inp) return;
     p.input.mx = Math.max(-1, Math.min(1, +inp.mx || 0));
     p.input.my = Math.max(-1, Math.min(1, +inp.my || 0));
   });
-  socket.on('attack', () => { const p = room && room.players.get(socket.id); if (p) doAttack(room, p, Date.now() / 1000); });
-  socket.on('gadget', (n) => { const p = room && room.players.get(socket.id); if (p) doGadget(room, p, n === 2 ? 2 : 1, Date.now() / 1000); });
-  socket.on('super', (ang) => { const p = room && room.players.get(socket.id); if (p) doSuper(room, p, typeof ang === 'number' ? ang : NaN, Date.now() / 1000); });
+  socket.on('attack', (ang) => { const p = me(); if (p) doAttack(room, p, num(ang), Date.now() / 1000); });
+  socket.on('gadget', (n) => { const p = me(); if (p) doGadget(room, p, n === 2 ? 2 : 1, Date.now() / 1000); });
+  socket.on('super', (ang) => { const p = me(); if (p) doSuper(room, p, num(ang), Date.now() / 1000); });
   socket.on('addBot', () => {
     if (!room) return;
     const bots = [...room.players.values()].filter((p) => p.isBot).length;
-    if (room.players.size >= 10 || bots >= 6) return;
+    if (room.players.size >= G.maxPlayers || bots >= G.maxBots) return;
     const id = 'bot' + ++room.botSeq;
-    room.players.set(id, newPlayer(room, id, '봇쌤' + room.botSeq, true));
+    const bid = pick(Object.keys(BRAWLERS));
+    room.players.set(id, newPlayer(room, id, '봇' + room.botSeq, true, bid));
   });
   socket.on('clearBots', () => {
     if (!room) return;
