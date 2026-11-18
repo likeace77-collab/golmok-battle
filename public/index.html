@@ -124,6 +124,12 @@
   #auth .err { color: #ff8a8a; font-weight: 800; font-size: 13px; min-height: 18px; margin-top: 8px; }
   #auth .go { width: 100%; margin-top: 6px; }
   #auth .guest { margin-top: 12px; font-size: 13px; opacity: .85; text-decoration: underline; cursor: pointer; }
+  #onlineBtn { position: absolute; top: 10px; right: 12px; padding: 6px 12px; font-weight: 900; font-size: 15px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  #onlineBtn i { width: 11px; height: 11px; border-radius: 50%; background: #3ce07f; box-shadow: 0 0 8px #3ce07f; }
+  #olist { max-height: 55vh; overflow-y: auto; text-align: left; margin-top: 6px; touch-action: pan-y; }
+  #olist .or { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 9px; background: rgba(0,0,0,.28); margin-top: 5px; }
+  #olist .or b { font-size: 15px; } #olist .or .st { margin-left: auto; font-size: 12px; font-weight: 800; text-align: right; }
+  #olist .or .tr { font-size: 12px; color: #ffd84a; font-weight: 900; }
   #trPop { position: fixed; left: 50%; top: 30%; transform: translateX(-50%); z-index: 12; font-size: 30px; font-weight: 900; color: #ffd84a; pointer-events: none; opacity: 0; transition: opacity .3s, top .8s; }
   #modal { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; background: rgba(10,6,30,.7); }
   #modal .box { width: min(90vw, 340px); padding: 18px; text-align: center; }
@@ -184,6 +190,7 @@
 <div id="lobbyBg"><div class="rays"></div><div class="sun"></div><div class="floor"></div></div>
 <div id="lobby">
   <div id="profile" class="panel"><div class="av">😎</div><div><div class="pn stroke" id="pName">플레이어</div><div class="tr stroke">🏆 <span id="pTro">0</span></div></div></div>
+  <div id="onlineBtn" class="panel stroke"><i></i>온라인 <span id="oCnt">-</span>명</div>
   <div id="lbtns">
     <div class="lb panel stroke" id="openB"><span class="ic">🧑‍🏫</span>브롤러</div>
     <div class="lb panel stroke" id="openHelp"><span class="ic">❔</span>조작법</div>
@@ -1168,7 +1175,7 @@ $('profile').onclick = () => {
   const st = account.stats || {};
   modal(`<h3 class="stroke">${account.name}</h3><div id="help" style="text-align:center;font-size:16px">🏆 트로피 <b>${trophies}</b><br>⚔️ 처치 ${st.kills || 0} · 👑 승리 ${st.wins || 0} · 🎮 판 수 ${st.games || 0}</div>
     <div class="acts"><button class="btn gray" id="logout">로그아웃</button></div>`);
-  $('logout').onclick = async () => { try { await api('POST', '/api/logout'); } catch (e) {} token = ''; LS.set('jb_token', ''); account = null; $('modal').style.display = 'none'; refreshLobby(); showAuth(); };
+  $('logout').onclick = async () => { try { await api('POST', '/api/logout'); } catch (e) {} token = ''; LS.set('jb_token', ''); account = null; $('modal').style.display = 'none'; refreshLobby(); connect(); showAuth(); };
 };
 // ── 로그인 / 회원가입 ──
 let authMode = 'login';
@@ -1198,12 +1205,12 @@ $('aGo').onclick = async () => {
   try {
     const r = await api('POST', authMode === 'login' ? '/api/login' : '/api/signup', { name, password: pw });
     token = r.token; LS.set('jb_token', token);
-    applyAccount(r.user); $('auth').style.display = 'none'; $('aPw').value = $('aPw2').value = '';
+    applyAccount(r.user); $('auth').style.display = 'none'; $('aPw').value = $('aPw2').value = ''; connect();
   } catch (e) { $('aErr').textContent = e.message; }
   $('aGo').disabled = false;
 };
 for (const id of ['aName', 'aPw', 'aPw2']) $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') $('aGo').click(); });
-$('aGuest').onclick = () => { $('auth').style.display = 'none'; account = null; refreshLobby(); };
+$('aGuest').onclick = () => { $('auth').style.display = 'none'; account = null; refreshLobby(); connect(); };
 function buildModes() {
   const g = $('mgrid'); g.innerHTML = '';
   for (const M of Object.values(META.modes)) {
@@ -1234,14 +1241,17 @@ Promise.all([fetch('/api/brawlers').then((r) => r.json()), fetch('/api/meta').th
   if (!META.modes[selMode]) selMode = 'ffa';
   if (!BR[selected] || BR[selected].wip) selected = Object.keys(BR).find((k) => !BR[k].wip);
   refreshLobby();
-  if (!token) return showAuth();
-  api('GET', '/api/me').then((r) => applyAccount(r.user)).catch(() => { token = ''; LS.set('jb_token', ''); showAuth(); });
+  if (!token) { connect(); return showAuth(); }
+  api('GET', '/api/me').then((r) => applyAccount(r.user)).catch(() => { token = ''; LS.set('jb_token', ''); showAuth(); }).finally(connect);
 });
 
-$('playBtn').onclick = () => {
-  if (socket || !myB()) return;
-  $('status').textContent = '입장 중...';
+// 서버 연결은 로비에 들어오자마자 (접속자 목록에 보이게)
+let joined = false;
+function connect() {
+  if (socket) { socket.emit('hello', { token }); return; }
   socket = io();
+  socket.on('connect', () => socket.emit('hello', { token }));
+  socket.on('onlineCount', (n) => { $('oCnt').textContent = n; });
   socket.on('joined', (d) => {
     myId = d.id; mode = 'game';
     $('lobby').style.display = 'none'; $('lobbyBg').style.display = 'none';
@@ -1261,7 +1271,21 @@ $('playBtn').onclick = () => {
     const el = $('trPop'); el.textContent = `🏆 +${t.add}`; el.style.transition = 'none'; el.style.top = '34%'; el.style.opacity = 1;
     requestAnimationFrame(() => { el.style.transition = 'opacity .6s 0.6s, top 1.2s'; el.style.top = '26%'; el.style.opacity = 0; });
   });
+}
+$('playBtn').onclick = () => {
+  if (joined || !myB() || !socket) return;
+  joined = true;
+  $('status').textContent = '입장 중...';
   socket.emit('join', { token, brawler: selected, mode: selMode, loadout: getLO(selected) });
+};
+// 접속자 목록
+$('onlineBtn').onclick = () => {
+  if (!socket) return;
+  socket.emit('online', (list) => {
+    const rows = list.map((o) => `<div class="or"><b>${o.name.replace(/</g, '&lt;')}</b>${o.guest ? '<span style="font-size:11px;opacity:.7">게스트</span>' : `<span class="tr">🏆${o.trophies}</span>`}
+      <span class="st">${o.status === 'game' ? `<span style="color:#7cffb0">${o.modeName} 플레이 중</span><br>${o.brawler || ''}` : '<span style="opacity:.8">로비</span>'}</span></div>`).join('');
+    modal(`<h3 class="stroke">🟢 지금 온라인 ${list.length}명</h3><div id="olist">${rows || '아무도 없어요'}</div>`);
+  });
 };
 $('exitBtn').onclick = () => location.reload();
 $('botBtn').onclick = (e) => { e.target.blur(); socket && socket.emit('addBot'); };

@@ -689,9 +689,30 @@ function step(room) {
 
 setInterval(() => { for (const room of rooms.values()) step(room); }, 1000 / TICK);
 
+// ── 접속자 목록 (로비에 있는 사람 + 플레이 중인 사람) ──
+const online = new Map();   // socket.id → { name, key, status, mode, brawler }
+let onlineDirty = false;
+function onlineList() {
+  return [...online.values()].map((o) => ({
+    name: o.name, guest: !o.key, trophies: o.key ? auth.trophiesOf(o.key) : null,
+    status: o.status, mode: o.mode, modeName: o.mode && MODES[o.mode] ? MODES[o.mode].icon + ' ' + MODES[o.mode].name : null,
+    brawler: o.brawler && BRAWLERS[o.brawler] ? BRAWLERS[o.brawler].name : null,
+  })).sort((a, b) => (a.status === b.status ? 0 : a.status === 'game' ? -1 : 1) || (b.trophies || 0) - (a.trophies || 0));
+}
+setInterval(() => { if (onlineDirty) { onlineDirty = false; io.emit('onlineCount', online.size); } }, 1000);
+
 // ── 소켓 ───────────────────────────────────────────
 io.on('connection', (socket) => {
   let room = null;
+  // 로비에 들어오면 바로 접속자로 등록
+  socket.on('hello', ({ token } = {}) => {
+    const acc = auth.userFromToken(token);
+    const o = online.get(socket.id) || { status: 'lobby' };
+    Object.assign(o, { name: acc ? acc.u.name : '게스트', key: acc ? acc.key : null });
+    online.set(socket.id, o); onlineDirty = true;
+    socket.emit('onlineCount', online.size);
+  });
+  socket.on('online', (cb) => { if (typeof cb === 'function') cb(onlineList()); });
   const me = () => room && room.players.get(socket.id);
   const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : NaN);
   const puppetOr = (p) => (p.ctrlId && room.players.get(p.ctrlId)) || p;   // 조종 중이면 꼭두각시가 행동
@@ -716,6 +737,7 @@ io.on('connection', (socket) => {
     else resetBody(room, p, Math.floor(Math.random() * 8));
     socket.join(room.id);
     socket.emit('joined', { id: socket.id, mode: room.mode.id });
+    online.set(socket.id, { name: p.name, key: p.userKey || null, status: 'game', mode: room.mode.id, brawler: bid }); onlineDirty = true;
   });
   socket.on('input', (inp) => {
     const p = me();
@@ -738,6 +760,7 @@ io.on('connection', (socket) => {
     for (const p of [...room.players.values()]) if (p.isBot) removeBot(room, p);
   });
   socket.on('disconnect', () => {
+    if (online.delete(socket.id)) onlineDirty = true;
     if (!room) return;
     const p = me(); if (p) { releaseCtrl(room, p, false); if (p.gems) dropGems(room, p); }
     room.players.delete(socket.id);

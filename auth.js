@@ -134,4 +134,6 @@ function routes(app) {
   });
 }
 
-module.exports = { load, routes, userFromToken, addTrophies, addStat, flush };
+const trophiesOf = (key) => (db.users[key] ? db.users[key].trophies || 0 : 0);
+
+module.exports = { load, routes, userFromToken, addTrophies, addStat, trophiesOf, flush };
