@@ -48,7 +48,7 @@ const BRAWLERS = {
     attack: {
       name: '주걱 스매쉬', aim: 'dir',
       desc: '큰 나무주걱을 조금 느리게 휘둘러 앞쪽 부채꼴 범위에 강한 피해를 준다.',
-      range: 190, half: 1.0, dmg: 1800, ammo: 3, reload: 1.8, cd: 0.6, windup: 0.18, knock: 40,
+      range: 190, half: 1.0, dmg: 1700, ammo: 3, reload: 1.8, cd: 0.6, windup: 0.18, knock: 40,
     },
     gadgets: [
       { name: '얘들아 덥지 않니?', icon: '❄️', desc: '에어컨을 18도로 틀어 7초 동안 모든 적 브롤러에게 계속 피해를 준다.', dur: 7, tick: 0.5, dmg: 100 },

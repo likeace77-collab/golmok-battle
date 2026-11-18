@@ -7,10 +7,14 @@ const path = require('path');
 const { Server } = require('socket.io');
 const { BRAWLERS, GEARS, AJAE, publicBrawlers } = require('./brawlers');
 const { MAPS, MODES } = require('./modes');
+const auth = require('./auth');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+app.use(express.json({ limit: '10kb' }));
+app.set('trust proxy', 1);
+auth.routes(app);
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/vendor', express.static(path.join(__dirname, 'node_modules', 'three', 'build')));
 app.get('/api/brawlers', (req, res) => res.json(publicBrawlers()));
@@ -160,7 +164,10 @@ function damage(room, attacker, target, dmg, now, kind) {
 function kill(room, attacker, target, kind) {
   target.hp = 0; target.dead = true; target.deaths++; target.speech = null;
   target.respawnT = G.respawn;
-  if (attacker && attacker.id !== target.id) { attacker.kills++; if (Math.random() < 0.5) say(attacker, 'kill'); }
+  if (attacker && attacker.id !== target.id) {
+    attacker.kills++; if (Math.random() < 0.5) say(attacker, 'kill');
+    giveTrophies(attacker, 1, 'kills');      // 처치 +1 트로피
+  }
   room.fx.push({ type: 'kill', a: attacker ? attacker.name : '독가스', b: target.name, aid: attacker ? attacker.id : null, bid: target.id, k: kind });
   room.mice = room.mice.filter((m) => m.owner !== target.id);
   releaseCtrl(room, target, false);
@@ -457,8 +464,19 @@ function startRound(room) {
   room.phase = 'wait'; room.phaseT = 4;
   room.fx.push({ type: 'round', map: room.map.id });
 }
+// 트로피: 로그인한 사람만 계정에 저장
+function giveTrophies(p, n, field) {
+  if (!p || p.isBot || !p.userKey) return;
+  const t = auth.addTrophies(p.userKey, n, field);
+  if (t != null) io.to(p.id).emit('trophy', { total: t, add: n });
+}
 function endRound(room, result) {
   room.phase = 'end'; room.phaseT = 6; room.result = result;
+  for (const p of humans(room)) {
+    if (p.userKey) auth.addStat(p.userKey, 'games');
+    const win = result.type === 'gem' ? result.winTeam === p.team : result.winner === p.id;
+    if (win) giveTrophies(p, 8, 'wins');     // 승리 +8 트로피
+  }
   room.fx.push({ type: 'end', result });
 }
 function changeMap(room) {   // 난투/더블가젯: 맵 로테이션
@@ -677,13 +695,15 @@ io.on('connection', (socket) => {
   const me = () => room && room.players.get(socket.id);
   const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : NaN);
   const puppetOr = (p) => (p.ctrlId && room.players.get(p.ctrlId)) || p;   // 조종 중이면 꼭두각시가 행동
-  socket.on('join', ({ name, brawler, mode, loadout } = {}) => {
+  socket.on('join', ({ token, brawler, mode, loadout } = {}) => {
     if (room) return;
     const modeId = MODES[mode] ? mode : 'ffa';
     const fresh = !rooms.has(modeId);
     room = getRoom(modeId);
     const bid = BRAWLERS[brawler] ? brawler : 'jungbo';
-    const p = newPlayer(room, socket.id, String(name || '').trim() || BRAWLERS[bid].name, false, bid, loadout);
+    const acc = auth.userFromToken(token);                     // 로그인 안 했으면 게스트
+    const p = newPlayer(room, socket.id, acc ? acc.u.name : '게스트' + Math.floor(1000 + Math.random() * 9000), false, bid, loadout);
+    if (acc) p.userKey = acc.key;
     if (room.mode.team) {
       p.team = teamCount(room, 0) <= teamCount(room, 1) ? 0 : 1;
       p.color = TEAM_COLORS[p.team];
@@ -726,4 +746,4 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(PORT, () => console.log(`정보쌤 브롤 서버 실행: http://localhost:${PORT}`));
+auth.load().then(() => server.listen(PORT, () => console.log(`정보쌤 브롤 서버 실행: http://localhost:${PORT}`)));

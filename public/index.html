@@ -113,6 +113,18 @@
   .lbl .rfb { width: 74px; height: 7px; margin: 2px auto 0; background: #000; border-radius: 4px; padding: 1px; display: none; }
   .lbl .rfb i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #b56cff, #ff3a8a); }
   .lbl.ally .hpb i { background: #4f8cff; }
+  /* 로그인 */
+  #auth { position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 30%, #e48bff 0%, #7a3bc7 45%, #2c1458 100%); }
+  #auth .box { width: min(92vw, 380px); padding: 22px 20px; text-align: center; }
+  #auth h1 { margin: 0; font-size: 40px; font-weight: 900; color: #ffd84a; letter-spacing: -1px; }
+  #auth .tabs { display: flex; gap: 6px; margin: 16px 0 10px; }
+  #auth .tabs button { flex: 1; padding: 9px; font-size: 16px; font-weight: 900; border: 3px solid #000; border-radius: 10px; background: #3a3b6e; color: #fff; cursor: pointer; font-family: inherit; }
+  #auth .tabs button.on { background: linear-gradient(#ffe36b, #ffbf1f); color: #111; }
+  #auth input { margin-top: 8px; }
+  #auth .err { color: #ff8a8a; font-weight: 800; font-size: 13px; min-height: 18px; margin-top: 8px; }
+  #auth .go { width: 100%; margin-top: 6px; }
+  #auth .guest { margin-top: 12px; font-size: 13px; opacity: .85; text-decoration: underline; cursor: pointer; }
+  #trPop { position: fixed; left: 50%; top: 30%; transform: translateX(-50%); z-index: 12; font-size: 30px; font-weight: 900; color: #ffd84a; pointer-events: none; opacity: 0; transition: opacity .3s, top .8s; }
   #modal { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; background: rgba(10,6,30,.7); }
   #modal .box { width: min(90vw, 340px); padding: 18px; text-align: center; }
   #modal h3 { margin: 0 0 12px; font-size: 20px; }
@@ -192,6 +204,17 @@
   <div id="mgrid"></div>
 </div>
 <div id="bdetail"><div class="box panel" id="bdBox"></div></div>
+<div id="auth"><div class="box panel">
+  <h1 class="stroke">정보쌤 브롤</h1>
+  <div class="tabs"><button id="tLogin" class="on">로그인</button><button id="tSignup">회원가입</button></div>
+  <input id="aName" maxlength="10" placeholder="닉네임 (2~10자)" autocomplete="username">
+  <input id="aPw" type="password" maxlength="100" placeholder="비밀번호 (4자 이상)" autocomplete="current-password">
+  <input id="aPw2" type="password" maxlength="100" placeholder="비밀번호 확인" autocomplete="new-password" style="display:none">
+  <div class="err" id="aErr"></div>
+  <button class="btn go" id="aGo">로그인</button>
+  <div class="guest stroke" id="aGuest">로그인 없이 게스트로 하기 (트로피 저장 안 됨)</div>
+</div></div>
+<div id="trPop" class="stroke"></div>
 <div id="modal"><div class="box panel" id="mBox"></div></div>
 <div id="ui"></div>
 <div id="top"><button id="exitBtn">◀ 로비</button><button id="botBtn">+ 봇 추가</button><button id="clearBtn">봇 삭제</button></div>
@@ -1009,9 +1032,11 @@ const RAR = {
 };
 const rar = (b) => RAR[b.rarity] || { label: '등급 미정', c1: '#d6d6e4', c2: '#8a8aa6' };
 const LS = { get: (k, d) => { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
-let myName = LS.get('jb_name', '') || '플레이어';
+let token = LS.get('jb_token', '') || '';
+let account = null;                          // { name, trophies, stats, prefs } — 없으면 게스트
+let myName = '게스트';
 let selected = LS.get('jb_brawler', 'jungbo');
-let trophies = +LS.get('jb_trophy', 0) || 0;
+let trophies = 0;
 const myB = () => BR[selected];
 // 로드아웃: 가젯 1개 · 스타파워 1개 · 기어 2개 (브롤러마다 저장)
 function getLO(id) {
@@ -1023,13 +1048,29 @@ function getLO(id) {
   lo.gears = lo.gears.filter((g) => META.gears.some((x) => x.id === g)).slice(0, 2);
   return lo;
 }
-const setLO = (id, lo) => LS.set('jb_lo_' + id, JSON.stringify(lo));
+const setLO = (id, lo) => { LS.set('jb_lo_' + id, JSON.stringify(lo)); syncPrefs(); };
+// 로그인한 계정에 선택(브롤러·모드·로드아웃) 저장 → 다른 기기에서도 그대로
+let prefTimer = null;
+function syncPrefs() {
+  if (!account) return;
+  clearTimeout(prefTimer);
+  prefTimer = setTimeout(() => {
+    const loadouts = {}; for (const id of Object.keys(BR)) { try { const v = LS.get('jb_lo_' + id, ''); if (v) loadouts[id] = JSON.parse(v); } catch (e) {} }
+    api('PUT', '/api/prefs', { brawler: selected, mode: selMode, loadouts }).catch(() => {});
+  }, 600);
+}
+async function api(method, url, body) {
+  const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || '오류 ' + r.status);
+  return j;
+}
 let state = { players: [], mice: [] };
 const views = {}, mviews = {};
 
 // ── 로비 UI ──────────────────────────────────────
 function refreshLobby() {
-  $('pName').textContent = myName; $('pTro').textContent = trophies;
+  $('pName').textContent = account ? account.name : '게스트'; $('pTro').textContent = account ? trophies : '-';
   const b = myB(); if (!b) return;
   const r = rar(b);
   $('sRar').textContent = r.label; $('sRar').style.background = `linear-gradient(${r.c1}, ${r.c2})`;
@@ -1113,7 +1154,7 @@ function openDetail(id) {
     $('bdBox').querySelectorAll('.gear').forEach((o) => o.classList.toggle('on', L.gears.includes(o.dataset.gear)));
     $('gCnt').textContent = L.gears.length; refreshLobby();
   });
-  $('dSel').onclick = () => { selected = id; LS.set('jb_brawler', id); $('bdetail').style.display = 'none'; $('bscreen').style.display = 'none'; buildGrid(); refreshLobby(); };
+  $('dSel').onclick = () => { selected = id; LS.set('jb_brawler', id); syncPrefs(); $('bdetail').style.display = 'none'; $('bscreen').style.display = 'none'; buildGrid(); refreshLobby(); };
   $('dClose').onclick = () => { $('bdetail').style.display = 'none'; };
 }
 function modal(html, onOk) {
@@ -1123,12 +1164,46 @@ function modal(html, onOk) {
   if (onOk) $('mNo').onclick = () => { $('modal').style.display = 'none'; };
 }
 $('profile').onclick = () => {
-  modal(`<h3 class="stroke">닉네임 변경</h3><input id="nmIn" maxlength="10" value="${myName.replace(/"/g, '')}">`, () => {
-    const v = $('nmIn').value.trim(); if (!v) return false;
-    myName = v; LS.set('jb_name', v); refreshLobby();
-  });
-  setTimeout(() => $('nmIn') && $('nmIn').focus(), 50);
+  if (!account) { showAuth(); return; }
+  const st = account.stats || {};
+  modal(`<h3 class="stroke">${account.name}</h3><div id="help" style="text-align:center;font-size:16px">🏆 트로피 <b>${trophies}</b><br>⚔️ 처치 ${st.kills || 0} · 👑 승리 ${st.wins || 0} · 🎮 판 수 ${st.games || 0}</div>
+    <div class="acts"><button class="btn gray" id="logout">로그아웃</button></div>`);
+  $('logout').onclick = async () => { try { await api('POST', '/api/logout'); } catch (e) {} token = ''; LS.set('jb_token', ''); account = null; $('modal').style.display = 'none'; refreshLobby(); showAuth(); };
 };
+// ── 로그인 / 회원가입 ──
+let authMode = 'login';
+function showAuth() { $('auth').style.display = 'flex'; $('aErr').textContent = ''; }
+function setAuthMode(m) {
+  authMode = m;
+  $('tLogin').classList.toggle('on', m === 'login'); $('tSignup').classList.toggle('on', m === 'signup');
+  $('aPw2').style.display = m === 'signup' ? 'block' : 'none';
+  $('aGo').textContent = m === 'login' ? '로그인' : '가입하고 시작';
+  $('aPw').autocomplete = m === 'login' ? 'current-password' : 'new-password';
+  $('aErr').textContent = '';
+}
+$('tLogin').onclick = () => setAuthMode('login');
+$('tSignup').onclick = () => setAuthMode('signup');
+function applyAccount(user) {
+  account = user; trophies = user.trophies || 0; myName = user.name;
+  const p = user.prefs || {};
+  if (p.loadouts) for (const [id, lo] of Object.entries(p.loadouts)) LS.set('jb_lo_' + id, JSON.stringify(lo));
+  if (p.brawler && BR[p.brawler] && !BR[p.brawler].wip) { selected = p.brawler; LS.set('jb_brawler', selected); }
+  if (p.mode && META.modes[p.mode]) { selMode = p.mode; LS.set('jb_mode', selMode); }
+  refreshLobby();
+}
+$('aGo').onclick = async () => {
+  const name = $('aName').value.trim(), pw = $('aPw').value;
+  if (authMode === 'signup' && pw !== $('aPw2').value) { $('aErr').textContent = '비밀번호 확인이 달라요.'; return; }
+  $('aGo').disabled = true;
+  try {
+    const r = await api('POST', authMode === 'login' ? '/api/login' : '/api/signup', { name, password: pw });
+    token = r.token; LS.set('jb_token', token);
+    applyAccount(r.user); $('auth').style.display = 'none'; $('aPw').value = $('aPw2').value = '';
+  } catch (e) { $('aErr').textContent = e.message; }
+  $('aGo').disabled = false;
+};
+for (const id of ['aName', 'aPw', 'aPw2']) $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') $('aGo').click(); });
+$('aGuest').onclick = () => { $('auth').style.display = 'none'; account = null; refreshLobby(); };
 function buildModes() {
   const g = $('mgrid'); g.innerHTML = '';
   for (const M of Object.values(META.modes)) {
@@ -1136,7 +1211,7 @@ function buildModes() {
     c.className = 'mcard stroke' + (M.id === selMode ? ' sel' : '');
     c.style.background = `linear-gradient(135deg, ${M.color}, #2b2c58)`;
     c.innerHTML = `<div class="mi">${M.icon}</div><div class="mn">${M.name}</div><div class="md">${M.desc}</div><div class="mm">🗺️ ${M.maps.map((m) => META.maps[m].name).join(' · ')}</div>`;
-    c.onclick = () => { selMode = M.id; LS.set('jb_mode', M.id); $('mscreen').style.display = 'none'; refreshLobby(); };
+    c.onclick = () => { selMode = M.id; LS.set('jb_mode', M.id); syncPrefs(); $('mscreen').style.display = 'none'; refreshLobby(); };
     g.appendChild(c);
   }
 }
@@ -1159,6 +1234,8 @@ Promise.all([fetch('/api/brawlers').then((r) => r.json()), fetch('/api/meta').th
   if (!META.modes[selMode]) selMode = 'ffa';
   if (!BR[selected] || BR[selected].wip) selected = Object.keys(BR).find((k) => !BR[k].wip);
   refreshLobby();
+  if (!token) return showAuth();
+  api('GET', '/api/me').then((r) => applyAccount(r.user)).catch(() => { token = ''; LS.set('jb_token', ''); showAuth(); });
 });
 
 $('playBtn').onclick = () => {
@@ -1179,7 +1256,12 @@ $('playBtn').onclick = () => {
     handleFx(s.fx);
   });
   socket.on('disconnect', () => addFeed('서버 연결 끊김 — 새로고침 해주세요', 999));
-  socket.emit('join', { name: myName, brawler: selected, mode: selMode, loadout: getLO(selected) });
+  socket.on('trophy', (t) => {
+    trophies = t.total; if (account) account.trophies = t.total;
+    const el = $('trPop'); el.textContent = `🏆 +${t.add}`; el.style.transition = 'none'; el.style.top = '34%'; el.style.opacity = 1;
+    requestAnimationFrame(() => { el.style.transition = 'opacity .6s 0.6s, top 1.2s'; el.style.top = '26%'; el.style.opacity = 0; });
+  });
+  socket.emit('join', { token, brawler: selected, mode: selMode, loadout: getLO(selected) });
 };
 $('exitBtn').onclick = () => location.reload();
 $('botBtn').onclick = (e) => { e.target.blur(); socket && socket.emit('addBot'); };
@@ -1194,7 +1276,7 @@ function isNear(x, z, d = 14) { const p = myPos(); return p && Math.hypot(p.x - 
 function handleFx(list) {
   for (const f of list) {
     const x = f.x * S, z = f.y * S;
-    if (f.type === 'kill') { addFeed(`${f.a} ➜ ${f.b}`); if (f.aid === myId) { trophies++; LS.set('jb_trophy', trophies); } }
+    if (f.type === 'kill') addFeed(`${f.a} ➜ ${f.b}`);
     else if (f.type === 'pulse') {
       const v = views[f.id]; if (v) { v.atkT = 0; popup('💢', { x, z }, 5.2, '#ff5050', 26, 0.6); }
       later(0.11, () => fxSlam(x, z, f.r * S, f.c, isNear(x, z)));
@@ -1575,9 +1657,9 @@ function modeHud(me) {
     if (r.type === 'gem') { win = r.winTeam === me.team; txt = r.winTeam < 0 ? '무승부' : win ? '승리!' : '패배...'; col = r.winTeam < 0 ? '#fff' : win ? '#ffd84a' : '#ff7a7a'; }
     else { const mine = r.ranks.find((x) => x.id === myId); const rk = mine ? mine.rank : 0; win = rk === 1; txt = rk ? `${rk}등!` : '관전'; col = rk === 1 ? '#ffd84a' : rk && rk <= 3 ? '#7cffb0' : '#fff'; }
     pm.style.display = 'block'; pm.style.color = col;
-    pm.innerHTML = `${txt}<small>${r.type === 'showdown' && r.winnerName ? '🏆 ' + r.winnerName + ' 우승 · ' : ''}${win ? '트로피 +8 · ' : ''}${Math.ceil(state.phaseT)}초 뒤 다음 판</small>`;
+    pm.innerHTML = `${txt}<small>${r.type === 'showdown' && r.winnerName ? '🏆 ' + r.winnerName + ' 우승 · ' : ''}${win && account ? '트로피 +8 · ' : ''}${Math.ceil(state.phaseT)}초 뒤 다음 판</small>`;
     const key = JSON.stringify(r) + state.map;
-    if (key !== lastResultKey) { lastResultKey = key; if (win) { trophies += 8; LS.set('jb_trophy', trophies); } }
+    lastResultKey = key;
   } else pm.style.display = 'none';
 }
 
