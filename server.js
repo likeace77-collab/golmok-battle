@@ -38,7 +38,7 @@ const COLORS = ['#4f8cff', '#ff5d5d', '#3ccf7a', '#ffb02e', '#b56cff', '#22c3c3'
 const rooms = new Map();
 
 function getRoom(id) {
-  if (!rooms.has(id)) rooms.set(id, { id, players: new Map(), mice: [], fx: [], mouseSeq: 0, botSeq: 0, colorIdx: 0 });
+  if (!rooms.has(id)) rooms.set(id, { id, players: new Map(), mice: [], fx: [], pending: [], mouseSeq: 0, botSeq: 0, colorIdx: 0 });
   return rooms.get(id);
 }
 
@@ -85,7 +85,7 @@ function newPlayer(room, id, name, isBot, brawlerId) {
     color: COLORS[room.colorIdx++ % COLORS.length],
     x: s.x, y: s.y, hp: B.maxHp,
     ammo: B.attack.ammo, reloadT: 0, atkCd: 0,
-    stunT: 0, gCd: 0, facing: Math.PI / 2, sup: 0,
+    stunT: 0, gCd: 0, facing: Math.PI / 2, sup: 0, acT: 0, acTick: 0,
     lastHit: 0, dead: false, respawnT: 0,
     kills: 0, deaths: 0,
     input: { mx: 0, my: 0 }, speech: null,
@@ -95,18 +95,26 @@ function newPlayer(room, id, name, isBot, brawlerId) {
 
 function say(p, key, t = 1.6) { const l = p.B.lines && p.B.lines[key]; if (l) p.speech = { text: pick(l), t }; }
 
-function damage(room, attacker, target, dmg, now) {
+function damage(room, attacker, target, dmg, now, kind) {
   if (target.dead) return;
+  if (attacker && attacker.ctrlBy === target.id) return;   // 꼭두각시는 조종하는 사람을 못 때림
   target.hp -= dmg;
   target.lastHit = now;
-  room.fx.push({ type: 'dmg', x: target.x, y: target.y - 40, v: dmg });
+  room.fx.push({ type: 'dmg', x: target.x, y: target.y - 40, v: dmg, k: kind });
   if (target.hp <= 0) {
     target.hp = 0; target.dead = true; target.respawnT = G.respawn; target.deaths++;
     target.speech = null;
     if (attacker && attacker.id !== target.id) { attacker.kills++; if (Math.random() < 0.5) say(attacker, 'kill'); }
     room.fx.push({ type: 'kill', a: attacker ? attacker.name : '?', b: target.name, aid: attacker ? attacker.id : null });
     room.mice = room.mice.filter((m) => m.owner !== target.id);
+    releaseCtrl(room, target);
   }
+}
+
+// 조종 해제 (조종하는 쪽이든 당하는 쪽이든)
+function releaseCtrl(room, p) {
+  if (p.ctrlId) { const t = room.players.get(p.ctrlId); if (t) { t.ctrlBy = null; t.input = { mx: 0, my: 0 }; } p.ctrlId = null; p.ctrlT = 0; }
+  if (p.ctrlBy) { const c = room.players.get(p.ctrlBy); if (c) { c.ctrlId = null; c.ctrlT = 0; } p.ctrlBy = null; p.input = { mx: 0, my: 0 }; }
 }
 
 const canAct = (p) => !p.dead && p.stunT <= 0;
@@ -125,7 +133,7 @@ const SKILLS = {
         if (q.id === p.id || q.dead) continue;
         if (Math.hypot(q.x - p.x, q.y - p.y) <= A.range + q.B.radius) {
           damage(room, p, q, A.dmg, now);
-          p.sup = Math.min(1, p.sup + A.dmg / p.B.super.need);
+          chargeSuper(p, A.dmg);
         }
       }
       for (const m of room.mice) if (m.owner !== p.id && Math.hypot(m.x - p.x, m.y - p.y) <= A.range + m.radius) m.hp -= A.dmg;
@@ -184,6 +192,74 @@ const SKILLS = {
   },
 };
 
+// 공통: 부채꼴 판정
+function inCone(p, a, range, half, x, y, rad) {
+  const dx = x - p.x, dy = y - p.y, d = Math.hypot(dx, dy);
+  if (d > range + rad) return false;
+  if (d < rad + p.B.radius) return true;
+  return Math.abs(angDiff(Math.atan2(dy, dx), a)) <= half;
+}
+const chargeSuper = (p, dmg) => { if (p.B.super) p.sup = Math.min(1, p.sup + dmg / p.B.super.need); };
+
+SKILLS.hyeonsil = {
+  // 주걱 스매쉬: 살짝 뒤로 젖혔다가(windup) 앞쪽 부채꼴로 강하게 휘두름
+  attack(room, p, a, now) {
+    const A = p.B.attack;
+    p.ammo -= 1; p.atkCd = A.cd; p.facing = a;
+    room.fx.push({ type: 'swing', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: A.range, h: A.half, d: A.windup });
+    if (Math.random() < 0.4) say(p, 'atk', 1.2);
+    room.pending.push({ t: A.windup, fn: () => {
+      if (p.dead || !room.players.has(p.id)) return;
+      for (const q of room.players.values()) {
+        if (q.id === p.id || q.dead || !inCone(p, a, A.range, A.half, q.x, q.y, q.B.radius)) continue;
+        const d = Math.hypot(q.x - p.x, q.y - p.y) || 1;
+        q.x += ((q.x - p.x) / d) * A.knock; q.y += ((q.y - p.y) / d) * A.knock; resolveWalls(q, q.B.radius);
+        damage(room, p, q, A.dmg, Date.now() / 1000);
+        chargeSuper(p, A.dmg);
+        room.fx.push({ type: 'smack', x: q.x, y: q.y });
+      }
+      for (const m of room.mice) if (m.owner !== p.id && inCone(p, a, A.range, A.half, m.x, m.y, m.radius)) m.hp -= A.dmg;
+    } });
+  },
+  gadget(room, p, n, now) {
+    if (n === 1) {   // 에어컨 18도: 7초 동안 모든 적에게 지속 피해
+      const g = p.B.gadgets[0];
+      say(p, 'g1', 2);
+      p.acT = g.dur; p.acTick = 0;
+      room.fx.push({ type: 'ac', id: p.id, x: p.x, y: p.y });
+    } else {         // 펜 내려놓고 여기 보자: 모든 적 기절
+      const g = p.B.gadgets[1];
+      say(p, 'g2', 2);
+      const hits = [];
+      for (const q of room.players.values()) {
+        if (q.id === p.id || q.dead) continue;
+        q.stunT = Math.max(q.stunT, g.stun); hits.push(q.id);
+      }
+      room.fx.push({ type: 'look', id: p.id, x: p.x, y: p.y, hits });
+    }
+  },
+  // 너 등신이냐? — 조준한 직선의 첫 번째 상대를 5초 동안 조종
+  super(room, p, a, now) {
+    const S = p.B.super;
+    say(p, 'sup', 2);
+    const ca = Math.cos(a), sa = Math.sin(a);
+    let target = null, best = Infinity;
+    for (const q of room.players.values()) {
+      if (q.id === p.id || q.dead || q.ctrlBy || q.ctrlId) continue;
+      const dx = q.x - p.x, dy = q.y - p.y;
+      const along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca);
+      if (along < -q.B.radius || along > S.range + q.B.radius || perp > S.width + q.B.radius) continue;
+      if (along < best) { best = along; target = q; }
+    }
+    room.fx.push({ type: 'ctrl', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: S.range, hit: target ? target.id : null });
+    if (target) {
+      p.ctrlId = target.id; p.ctrlT = S.dur; target.ctrlBy = p.id;
+      target.input = { mx: 0, my: 0 }; p.input = { mx: 0, my: 0 };
+      target.speech = { text: '...네?', t: 1.5 };
+    }
+  },
+};
+
 function doAttack(room, p, ang, now) {
   if (!canAct(p) || p.ammo < 1 || p.atkCd > 0) return;
   p.lastHit = Math.max(p.lastHit, now - G.regenDelay + 1);
@@ -195,7 +271,7 @@ function doGadget(room, p, n, now) {
   SKILLS[p.B.id].gadget(room, p, n === 2 ? 2 : 1, now);
 }
 function doSuper(room, p, ang, now) {
-  if (!canAct(p) || p.sup < 1) return;
+  if (!p.B.super || !canAct(p) || p.sup < 1) return;
   p.sup = 0;
   const a = Number.isFinite(ang) ? ang : p.facing;
   p.facing = a;
@@ -204,6 +280,17 @@ function doSuper(room, p, ang, now) {
 
 function botThink(room, p, now) {
   const b = p.bot, B = p.B;
+  if (p.ctrlBy) return;                       // 조종당하는 중
+  if (p.ctrlId) {                             // 조종하는 중: 꼭두각시를 가까운 적에게 보내서 공격
+    const t = room.players.get(p.ctrlId); if (!t) return;
+    let tg = null, bd = Infinity;
+    for (const q of room.players.values()) { if (q.id === p.id || q.id === t.id || q.dead) continue; const d = Math.hypot(q.x - t.x, q.y - t.y); if (d < bd) { bd = d; tg = q; } }
+    if (!tg) { p.input = { mx: 0, my: 0 }; return; }
+    const dx = tg.x - t.x, dy = tg.y - t.y;
+    p.input = { mx: dx / (bd || 1), my: dy / (bd || 1) };
+    if (bd < t.B.attack.range + 10 && Math.random() < 0.2) doAttack(room, t, Math.atan2(dy, dx), now);
+    return;
+  }
   let target = null, best = Infinity;
   for (const q of room.players.values()) {
     if (q.id === p.id || q.dead) continue;
@@ -216,10 +303,10 @@ function botThink(room, p, now) {
     const jitter = Math.sin(now * 3 + p.x) * 0.4;
     p.input.mx = dx / d - (dy / d) * jitter;
     p.input.my = dy / d + (dx / d) * jitter;
-    if (best < B.attack.range + 10 && Math.random() < 0.18) doAttack(room, p, Math.atan2(dy, dx), now);
-    if (best < 220 && Math.random() < 0.01) doGadget(room, p, 1, now);
+    if (best < B.attack.range + 10 && Math.random() < (B.attack.aim === 'dir' ? 0.1 : 0.18)) doAttack(room, p, Math.atan2(dy, dx), now);
+    if (best < 220 && Math.random() < (B.id === 'hyeonsil' ? 0.004 : 0.01)) doGadget(room, p, 1, now);
     if (best < 500 && Math.random() < 0.006) doGadget(room, p, 2, now);
-    if (best < B.super.range - 30 && p.sup >= 1 && Math.random() < 0.05) doSuper(room, p, Math.atan2(dy, dx), now);
+    if (B.super && best < B.super.range - 30 && p.sup >= 1 && Math.random() < 0.05) doSuper(room, p, Math.atan2(dy, dx), now);
     if (p.hp < B.maxHp * 0.3 && Math.random() < 0.5) { p.input.mx *= -1; p.input.my *= -1; }
   } else {
     if (b.wanderT <= 0) {
@@ -232,6 +319,29 @@ function botThink(room, p, now) {
 
 function step(room) {
   const now = Date.now() / 1000;
+  // 지연 실행 (휘두르기 판정 등)
+  for (const a of room.pending) a.t -= DT;
+  const due = room.pending.filter((a) => a.t <= 0);
+  room.pending = room.pending.filter((a) => a.t > 0);
+  for (const a of due) a.fn();
+  // 조종: 조종하는 사람의 이동 입력 → 꼭두각시에게
+  for (const p of room.players.values()) {
+    if (!p.ctrlId) continue;
+    const t = room.players.get(p.ctrlId);
+    p.ctrlT -= DT;
+    if (!t || t.dead || p.dead || p.stunT > 0 || p.ctrlT <= 0) { releaseCtrl(room, p); continue; }
+    t.input = { ...p.input };
+  }
+  // 에어컨: 켜놓은 사람 말고 모두에게 지속 피해
+  for (const p of room.players.values()) {
+    if (p.acT <= 0) continue;
+    p.acT = Math.max(0, p.acT - DT); p.acTick -= DT;
+    if (p.acTick <= 0) {
+      const g = p.B.gadgets[0]; p.acTick = g.tick;
+      for (const q of room.players.values()) if (q.id !== p.id && !q.dead) damage(room, p, q, g.dmg, now, 'cold');
+    }
+    if (p.dead) p.acT = 0;
+  }
   for (const p of room.players.values()) {
     const B = p.B;
     if (p.speech) { p.speech.t -= DT; if (p.speech.t <= 0) p.speech = null; }
@@ -253,7 +363,7 @@ function step(room) {
     } else p.reloadT = 0;
     if (now - p.lastHit > G.regenDelay && p.hp < B.maxHp) p.hp = Math.min(B.maxHp, p.hp + B.maxHp * G.regenRate * DT);
 
-    if (p.stunT <= 0) {
+    if (p.stunT <= 0 && !p.ctrlId) {          // 조종하는 동안 본인은 제자리
       let { mx, my } = p.input;
       const len = Math.hypot(mx, my);
       if (len > 0.1) { mx /= len; my /= len; p.facing = Math.atan2(my, mx); } else { mx = 0; my = 0; }
@@ -305,6 +415,7 @@ function step(room) {
       ammo: p.ammo + p.reloadT / p.B.attack.reload, stun: p.stunT > 0,
       gCd: +p.gCd.toFixed(2), sup: +p.sup.toFixed(3), f: +p.facing.toFixed(2),
       k: p.kills, d: p.deaths, say: p.speech ? p.speech.text : null,
+      ctl: p.ctrlBy, ctrl: p.ctrlId, ctrlT: +(p.ctrlT || 0).toFixed(1), ac: +p.acT.toFixed(1),
     })),
     mice: room.mice.map((m) => ({ id: m.id, x: r1(m.x), y: r1(m.y), a: +m.ang.toFixed(2), c: m.color, hp: m.hp / m.maxHp })),
     fx: room.fx,
@@ -328,13 +439,18 @@ io.on('connection', (socket) => {
   });
   socket.on('input', (inp) => {
     const p = me();
-    if (!p || !inp) return;
+    if (!p || !inp || p.ctrlBy) return;      // 조종당하는 중엔 입력 무시
     p.input.mx = Math.max(-1, Math.min(1, +inp.mx || 0));
     p.input.my = Math.max(-1, Math.min(1, +inp.my || 0));
   });
-  socket.on('attack', (ang) => { const p = me(); if (p) doAttack(room, p, num(ang), Date.now() / 1000); });
-  socket.on('gadget', (n) => { const p = me(); if (p) doGadget(room, p, n === 2 ? 2 : 1, Date.now() / 1000); });
-  socket.on('super', (ang) => { const p = me(); if (p) doSuper(room, p, num(ang), Date.now() / 1000); });
+  // 조종 중이면 공격 버튼 → 꼭두각시가 공격
+  socket.on('attack', (ang) => {
+    const p = me(); if (!p || p.ctrlBy) return;
+    const t = p.ctrlId && room.players.get(p.ctrlId);
+    doAttack(room, t || p, num(ang), Date.now() / 1000);
+  });
+  socket.on('gadget', (n) => { const p = me(); if (p && !p.ctrlBy) doGadget(room, p, n === 2 ? 2 : 1, Date.now() / 1000); });
+  socket.on('super', (ang) => { const p = me(); if (p && !p.ctrlBy) doSuper(room, p, num(ang), Date.now() / 1000); });
   socket.on('addBot', () => {
     if (!room) return;
     const bots = [...room.players.values()].filter((p) => p.isBot).length;
@@ -345,10 +461,11 @@ io.on('connection', (socket) => {
   });
   socket.on('clearBots', () => {
     if (!room) return;
-    for (const [id, p] of room.players) if (p.isBot) room.players.delete(id);
+    for (const [id, p] of room.players) if (p.isBot) { releaseCtrl(room, p); room.players.delete(id); }
   });
   socket.on('disconnect', () => {
     if (!room) return;
+    const p = me(); if (p) releaseCtrl(room, p);
     room.players.delete(socket.id);
     if (![...room.players.values()].some((p) => !p.isBot)) rooms.delete(room.id);
   });

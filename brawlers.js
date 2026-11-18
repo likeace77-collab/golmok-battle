@@ -8,14 +8,14 @@ const BRAWLERS = {
     rarity: 'legendary',
     title: '아~ 이놈의 아이들',
     desc: '컴퓨터실의 지배자. 뚱뚱한 몸으로 내려찍어 주변 아이들을 한꺼번에 혼낸다.',
-    radius: 28, speed: 250, maxHp: 4200,
+    radius: 28, speed: 250, maxHp: 6000,
     attack: {
       name: '아~ 이놈의 아이들', aim: 'self',
       desc: '점프해서 내려찍어 주변 적 모두에게 피해를 준다. (범위 고정)',
       range: 150, dmg: 1000, ammo: 3, reload: 1.5, cd: 0.45,
     },
     gadgets: [
-      { name: 'AI야? 시키지도 않은 걸 하네', icon: '⚡', desc: '주변 적을 1.6초 동안 기절시키고 피해를 준다.', range: 260, stun: 1.6, dmg: 300 },
+      { name: 'AI야? 시키지도 않은 걸 하네', icon: '⚡', desc: '주변 적을 2초 동안 기절시키고 피해를 준다.', range: 260, stun: 2, dmg: 300 },
       { name: '마우스 소환', icon: '🖱️', desc: '마우스 2마리를 소환해 8초 동안 적을 쫓아가 딸깍 공격한다.', count: 2, hp: 1200, speed: 320, dmg: 260, biteCd: 0.6, life: 8, radius: 16 },
     ],
     gadgetCd: 6,
@@ -36,10 +36,31 @@ const BRAWLERS = {
     id: 'hyeonsil',
     name: '현실쌤',
     rarity: null,          // 등급 미정
-    wip: true,             // 스킬 준비 중 → 아직 선택 불가
-    title: '수학쌤',
-    desc: '핑크색 옷에 털가죽 잠바를 걸친 수학 선생님. 스킬은 준비 중.',
-    radius: 28, speed: 250, maxHp: 3800,
+    title: '펜 내려놓고 여기 보자',
+    desc: '핑크색 옷에 털가죽 잠바, 큰 나무주걱을 든 수학 선생님. 교실 전체를 얼려버리고 학생을 마음대로 조종한다.',
+    radius: 28, speed: 240, maxHp: 5400,
+    attack: {
+      name: '주걱 스매쉬', aim: 'dir',
+      desc: '큰 나무주걱을 조금 느리게 휘둘러 앞쪽 부채꼴 범위에 강한 피해를 준다.',
+      range: 190, half: 1.0, dmg: 1500, ammo: 3, reload: 1.8, cd: 0.6, windup: 0.18, knock: 40,
+    },
+    gadgets: [
+      { name: '얘들아 덥지 않니?', icon: '❄️', desc: '에어컨을 18도로 틀어 7초 동안 모든 적 브롤러에게 계속 피해를 준다.', dur: 7, tick: 0.5, dmg: 100 },
+      { name: '펜 내려놓고 여기 보자', icon: '✋', desc: '모든 적 브롤러를 1.3초 동안 기절시킨다.', stun: 1.3 },
+    ],
+    gadgetCd: 6,
+    super: {
+      name: '너 등신이냐?', aim: 'line',
+      desc: '조준한 방향의 첫 번째 상대를 5초 동안 조종한다. 조종하는 동안 내 이동·공격 버튼으로 그 상대를 움직이고 공격시킨다.',
+      need: 4800, range: 460, width: 45, dur: 5,
+    },
+    lines: {
+      atk: ['주걱 맛 좀 볼래?', '조용히 해!', '집중 안 하지?'],
+      g1: ['얘들아 덥지 않니?', '에어컨 18도~'],
+      g2: ['펜 내려놓고 여기 보자!'],
+      sup: ['너 등신이냐?', '너 등신이냐??'],
+      kill: ['숙제 두 배!', '나가서 손 들고 있어', '이것도 못 풀어?'],
+    },
   },
 };
 
