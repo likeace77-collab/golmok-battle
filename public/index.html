@@ -836,10 +836,10 @@ function makeJaeyeol(teamColor) {
     band: std('#f0c890'),
   };
   const root = new THREE.Group();
-  const model = new THREE.Group(); model.scale.setScalar(0.8); root.add(model);
+  const model = new THREE.Group(); model.scale.setScalar(0.7); root.add(model);   // 2등신: 대가리가 커진 만큼 전체는 살짝 줄임
   const body = new THREE.Group(); model.add(body);
   const ring = new THREE.Mesh(new THREE.RingGeometry(1.35, 1.65, 48), new THREE.MeshBasicMaterial({ color: teamColor, transparent: true, opacity: 0.9 }));
-  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; ring.scale.setScalar(0.95); root.add(ring);
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; ring.scale.setScalar(1.0); root.add(ring);
   const blob = new THREE.Mesh(new THREE.CircleGeometry(1.2, 32), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.25 }));
   blob.rotation.x = -Math.PI / 2; blob.position.y = 0.03; root.add(blob);
 
@@ -888,7 +888,7 @@ function makeJaeyeol(teamColor) {
   for (const s of [-1, 1]) { const pk = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.28, 0.2), std('#15161c')); pk.position.set(s * 0.6, 0.12, 0.12); torso.add(pk); }   // 주머니 입구
 
   // 큰 대가리
-  const head = new THREE.Group(); head.position.y = 2.38; torso.add(head);
+  const head = new THREE.Group(); head.position.y = 2.72; head.scale.setScalar(1.45); torso.add(head);   // 2등신 대가리
   const face = new THREE.Mesh(new THREE.SphereGeometry(0.95, 30, 24), m.skin); face.scale.set(1.04, 1, 0.97); head.add(face);
   const jaw = new THREE.Mesh(new THREE.SphereGeometry(0.62, 18, 14), m.skin); jaw.position.set(0, -0.48, 0.22); jaw.scale.set(1.15, 0.6, 1); head.add(jaw);
   // 가오 머리: 옆으로 넘긴 긴 앞머리 + 한 가닥 + 목덜미까지
@@ -930,7 +930,7 @@ function makeJaeyeol(teamColor) {
   const b1 = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.11, 0.02), m.band); band.add(b1);
   const b2 = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.11, 0.025), std('#e0b070')); band.add(b2);
 
-  const stars = new THREE.Group(); stars.position.y = 4.4; model.add(stars); stars.visible = false;
+  const stars = new THREE.Group(); stars.position.y = 5.6; model.add(stars); stars.visible = false;
   for (let i = 0; i < 4; i++) {
     const st = new THREE.Mesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshBasicMaterial({ color: '#ffe23a' }));
     st.position.set(Math.cos(i * Math.PI / 2) * 0.9, 0, Math.sin(i * Math.PI / 2) * 0.9); stars.add(st);
