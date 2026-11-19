@@ -817,6 +817,128 @@ function makeJunhoo(teamColor) {
   return { root, model, body, torso, head, legs, arms, stars, flashMats: [m.skin, m.blazer, m.shirt, m.pants] };
 }
 
+// ── 김재열 3D 모델 ────────────────────────────────
+// 큰 대가리 · 두꺼운 뿔테안경(한쪽 반사광) · 길게 넘긴 가오 머리 · 반창고
+// 가오 포즈: 턱 치켜들고 내려다보기, 몸 뒤로 젖힘, 두 손 주머니, 마이는 어깨에만 걸침, 풍선껌
+function makeJaeyeol(teamColor) {
+  const m = {
+    skin: std('#f1c6a0', { roughness: 0.6 }),
+    shirt: std('#f6f7fb', { roughness: 0.8 }),
+    blazer: std('#15161c', { roughness: 0.45, metalness: 0.1, side: THREE.DoubleSide }),
+    tie: std('#1f3fa8', { roughness: 0.5 }),
+    pants: std('#22242c', { roughness: 0.75 }),
+    shoe: std('#111', { roughness: 0.35 }), sole: std('#f2f2f2'),
+    hair: std('#1b130e', { roughness: 0.45, metalness: 0.05 }),
+    frame: std('#3a1d10', { roughness: 0.25 }),
+    lens: new THREE.MeshStandardMaterial({ color: '#d9f0ff', transparent: true, opacity: 0.28, roughness: 0.05, metalness: 0.3 }),
+    glare: new THREE.MeshBasicMaterial({ color: '#ffffff' }),
+    eye: std('#111'), mouth: std('#7a2a2a'), gum: std('#ff8ac6', { roughness: 0.25, transparent: true, opacity: 0.92 }),
+    band: std('#f0c890'),
+  };
+  const root = new THREE.Group();
+  const model = new THREE.Group(); model.scale.setScalar(0.8); root.add(model);
+  const body = new THREE.Group(); model.add(body);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(1.35, 1.65, 48), new THREE.MeshBasicMaterial({ color: teamColor, transparent: true, opacity: 0.9 }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; ring.scale.setScalar(0.95); root.add(ring);
+  const blob = new THREE.Mesh(new THREE.CircleGeometry(1.2, 32), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.25 }));
+  blob.rotation.x = -Math.PI / 2; blob.position.y = 0.03; root.add(blob);
+
+  // 다리: 슬림 교복 바지 + 하이탑. 한쪽 다리는 삐딱하게
+  const legs = [];
+  for (const sx of [-0.3, 0.3]) {
+    const hip = new THREE.Group(); hip.position.set(sx, 1.1, 0); body.add(hip);
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.2, 1.0, 12), m.pants); leg.position.y = -0.5; hip.add(leg);
+    const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.32, 0.68), m.shoe); shoe.position.set(0, -1.0, 0.1); hip.add(shoe);
+    const sole = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.7), m.sole); sole.position.set(0, -1.14, 0.1); hip.add(sole);
+    legs.push(hip);
+  }
+  legs[1].rotation.z = -0.16;   // 짝다리
+
+  // 몸통: 셔츠 밖으로 빼입고, 넥타이 느슨하게, 카라 세움
+  const torso = new THREE.Group(); torso.position.y = 1.0; body.add(torso);
+  const shirt = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.6, 1.45, 18), m.shirt); shirt.position.y = 0.72; torso.add(shirt);
+  const vneck = new THREE.Mesh(new THREE.CircleGeometry(0.2, 3), m.skin); vneck.position.set(0, 1.3, 0.56); vneck.rotation.z = -Math.PI / 2; vneck.scale.set(1, 0.8, 1); torso.add(vneck);
+  const knot = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.15, 0.08), m.tie); knot.position.set(0.06, 1.12, 0.58); knot.rotation.z = 0.35; torso.add(knot);
+  const tie = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.62, 0.04), m.tie); tie.position.set(0.14, 0.78, 0.6); tie.rotation.z = 0.28; torso.add(tie);
+  for (const s of [-1, 1]) {
+    const col = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.22, 0.04), m.shirt); col.position.set(s * 0.26, 1.52, 0.42); col.rotation.set(-0.5, s * 0.6, s * 0.25); torso.add(col);   // 세운 카라
+  }
+  // 어깨에만 걸친 교복 마이 (팔은 안 끼움)
+  const cape = new THREE.Group(); torso.add(cape);
+  const OPEN = 0.95;
+  const shell = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.9, 1.45, 22, 1, true, OPEN, Math.PI * 2 - OPEN * 2), m.blazer); shell.position.y = 0.82; cape.add(shell);
+  const capS = new THREE.Mesh(new THREE.SphereGeometry(0.73, 22, 10, Math.PI / 2 + OPEN, Math.PI * 2 - OPEN * 2, 0, Math.PI / 2), m.blazer); capS.scale.y = 0.45; capS.position.y = 1.54; cape.add(capS);
+  const sleeves = [];
+  for (const s of [-1, 1]) {   // 빈 소매가 덜렁덜렁
+    const piv = new THREE.Group(); piv.position.set(s * 0.82, 1.5, -0.12); cape.add(piv);
+    const sl = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.17, 1.15, 10), m.blazer); sl.position.y = -0.58; piv.add(sl);
+    piv.rotation.z = s * 0.08; sleeves.push(piv);
+  }
+  // 팔: 셔츠 소매 걷음 + 두 손은 주머니에
+  const arms = [];
+  for (const s of [-1, 1]) {
+    const shd = new THREE.Group(); shd.position.set(s * 0.62, 1.38, 0.02); torso.add(shd);
+    const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.5, 10), m.shirt); sleeve.position.y = -0.25; shd.add(sleeve);
+    const roll = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.05, 6, 12), m.shirt); roll.rotation.x = Math.PI / 2; roll.position.y = -0.5; shd.add(roll);
+    const fore = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.13, 0.45, 10), m.skin); fore.position.y = -0.74; shd.add(fore);
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), m.skin); hand.position.y = -0.98; hand.scale.set(0.8, 0.5, 0.8); shd.add(hand);   // 주머니에 반쯤 들어간 손
+    shd.rotation.z = s * 0.1; shd.userData.baseZ = s * 0.1;
+    arms.push(shd);
+  }
+  for (const s of [-1, 1]) { const pk = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.28, 0.2), std('#15161c')); pk.position.set(s * 0.6, 0.12, 0.12); torso.add(pk); }   // 주머니 입구
+
+  // 큰 대가리
+  const head = new THREE.Group(); head.position.y = 2.38; torso.add(head);
+  const face = new THREE.Mesh(new THREE.SphereGeometry(0.95, 30, 24), m.skin); face.scale.set(1.04, 1, 0.97); head.add(face);
+  const jaw = new THREE.Mesh(new THREE.SphereGeometry(0.62, 18, 14), m.skin); jaw.position.set(0, -0.48, 0.22); jaw.scale.set(1.15, 0.6, 1); head.add(jaw);
+  // 가오 머리: 옆으로 넘긴 긴 앞머리 + 한 가닥 + 목덜미까지
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(1.0, 30, 16, 0, Math.PI * 2, 0, Math.PI / 2.15), m.hair); cap.position.set(0, 0.08, -0.05); cap.scale.set(1.06, 1.05, 1.06); cap.rotation.x = -0.22; head.add(cap);
+  const vol = new THREE.Mesh(new THREE.SphereGeometry(0.85, 22, 14), m.hair); vol.position.set(0.1, 0.62, 0.05); vol.scale.set(1.15, 0.55, 1.1); head.add(vol);   // 정수리 볼륨
+  const bangs = [[0.55, 0.62, 0.62, 0.45, 0.2, 0.55, -0.5], [0.15, 0.6, 0.78, 0.5, 0.2, 0.6, -0.65], [-0.25, 0.5, 0.82, 0.5, 0.2, 0.55, -0.8], [-0.62, 0.3, 0.7, 0.42, 0.18, 0.5, -1.0]];
+  for (const [x, y, z, sx, sy, sz, rz] of bangs) {   // 오른쪽 위에서 왼쪽 아래로 쓸어넘김
+    const b = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 10), m.hair); b.position.set(x, y, z); b.scale.set(sx, sy, sz); b.rotation.set(0.35, 0, rz); head.add(b);
+  }
+  const lock = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.5, 4, 8), m.hair); lock.position.set(-0.38, 0.12, 0.92); lock.rotation.set(0.25, 0, -0.5); head.add(lock);   // 눈썹 덮는 가오 한 가닥
+  for (const s of [-1, 1]) {   // 귀를 덮고 턱선까지 오는 옆머리 (끝으로 갈수록 가늘게)
+    const side = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), m.hair); side.position.set(s * 0.9, -0.1, 0.02); side.scale.set(0.16, 0.5, 0.38); side.rotation.z = s * 0.12; head.add(side);
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.35, 8), m.hair); tip.position.set(s * 0.86, -0.62, 0.12); tip.rotation.set(Math.PI, 0, -s * 0.15); head.add(tip);
+  }
+  const back = new THREE.Mesh(new THREE.CylinderGeometry(0.98, 0.78, 1.1, 24, 1, true, Math.PI * 0.55, Math.PI * 0.9), std('#1b130e', { roughness: 0.45, side: THREE.DoubleSide })); back.position.set(0, -0.35, -0.05); head.add(back);   // 목덜미까지 오는 뒷머리
+  // 얼굴
+  for (const s of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), m.skin); ear.position.set(s * 0.98, -0.05, 0); head.add(ear);
+    // 반쯤 감은 눈 (내려다보는 눈빛)
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), m.eye); eye.position.set(s * 0.32, 0.02, 0.88); eye.scale.set(1.3, 0.55, 0.6); head.add(eye);
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.05, 0.05), std('#c99a76')); lid.position.set(s * 0.32, 0.07, 0.9); head.add(lid);
+    // 두꺼운 뿔테
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.075, 8, 28), m.frame); rim.position.set(s * 0.34, 0.04, 0.95); rim.scale.set(1.15, 0.85, 1); head.add(rim);
+    const lens = new THREE.Mesh(new THREE.CircleGeometry(0.24, 22), m.lens); lens.position.set(s * 0.34, 0.04, 0.965); lens.scale.set(1.15, 0.85, 1); head.add(lens);
+    const top = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.12, 0.1), m.frame); top.position.set(s * 0.34, 0.24, 0.96); head.add(top);
+    const tm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.95), m.frame); tm.position.set(s * 0.92, 0.1, 0.5); tm.rotation.y = s * 0.1; head.add(tm);
+  }
+  // 왼쪽 렌즈 반사광 (눈이 안 보임 = 가오)
+  for (const [y, w] of [[0.1, 0.22], [-0.02, 0.14]]) { const g = new THREE.Mesh(new THREE.BoxGeometry(w, 0.05, 0.01), m.glare); g.position.set(-0.32, y, 0.975); g.rotation.z = 0.6; head.add(g); }
+  const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.07, 0.07), m.frame); bridge.position.set(0, 0.08, 0.98); head.add(bridge);
+  // 눈썹: 오른쪽만 치켜올림
+  const browR = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.07, 0.05), m.hair); browR.position.set(0.34, 0.4, 0.88); browR.rotation.z = -0.3; head.add(browR);
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), m.skin); nose.position.set(0, -0.15, 0.95); head.add(nose);
+  // 비웃는 입 + 풍선껌
+  const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.035, 6, 16, Math.PI * 0.55), m.mouth); mouth.position.set(0.12, -0.38, 0.86); mouth.rotation.z = Math.PI * 1.32; head.add(mouth);   // 한쪽만 올라간 비웃음
+  const gum = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12), m.gum); gum.position.set(-0.12, -0.42, 1.0); gum.scale.setScalar(0.01); head.add(gum);
+  // "반창고는 패션이야"
+  const band = new THREE.Group(); band.position.set(0.55, -0.2, 0.78); band.rotation.set(0, 0.55, -0.4); head.add(band);
+  const b1 = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.11, 0.02), m.band); band.add(b1);
+  const b2 = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.11, 0.025), std('#e0b070')); band.add(b2);
+
+  const stars = new THREE.Group(); stars.position.y = 4.4; model.add(stars); stars.visible = false;
+  for (let i = 0; i < 4; i++) {
+    const st = new THREE.Mesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshBasicMaterial({ color: '#ffe23a' }));
+    st.position.set(Math.cos(i * Math.PI / 2) * 0.9, 0, Math.sin(i * Math.PI / 2) * 0.9); stars.add(st);
+  }
+  shadowAll(model);
+  return { root, model, body, torso, head, legs, arms, stars, sleeves, gum, flashMats: [m.skin, m.shirt, m.blazer, m.pants] };
+}
+
 // ── 마우스(소환수) 3D ──────────────────────────────
 function makeMouse(color) {
   const g = new THREE.Group();
@@ -835,7 +957,7 @@ function makeMouse(color) {
 }
 
 // 브롤러 id → 3D 모델 함수 (새 브롤러 추가 시 여기에 등록)
-const MODELS = { jungbo: makeTeacher, hyeonsil: makeHyeonsil, junhoo: makeJunhoo };
+const MODELS = { jungbo: makeTeacher, hyeonsil: makeHyeonsil, junhoo: makeJunhoo, jaeyeol: makeJaeyeol };
 const makeModel = (id, color) => (MODELS[id] || makeTeacher)(color);
 
 // ── 로비 3D 쇼케이스 ──────────────────────────────
@@ -1748,7 +1870,16 @@ function animateTeacher(v, p, dt, now) {
   M.torso.rotation.z = Math.sin(v.phase) * 0.07 * walk;
   M.head.rotation.y = 0;
 
-  const H = v.kind === 'hyeonsil', K = v.kind === 'junhoo', J = !H && !K;
+  const H = v.kind === 'hyeonsil', K = v.kind === 'junhoo', JY = v.kind === 'jaeyeol', J = !H && !K && !JY;
+  // 김재열: 두 손 주머니 · 턱 치켜들기 · 몸 젖히기 · 어깨 비스듬히 (걸을 때도 건들건들)
+  if (JY) {
+    armX = [0.22 + s * 0.12 * walk, 0.22 - s * 0.12 * walk]; armZ = [-0.08, 0.08];
+    lean = -0.14 + walk * 0.08;
+    M.head.rotation.x = -0.22; M.head.rotation.z = 0.12 + Math.sin(now * 1.6) * 0.04;
+    M.torso.rotation.y = 0.18 + Math.sin(v.phase) * 0.12 * walk;
+    if (M.sleeves) M.sleeves.forEach((sl, i) => { sl.rotation.x = Math.sin(v.phase + i) * 0.35 * walk + Math.sin(now * 2 + i) * 0.05; });
+    if (M.gum) { const g = (now * 0.3 + (v.seed || 0)) % 1; const k = g < 0.42 ? g / 0.42 : g < 0.45 ? 1.15 : 0.01; M.gum.scale.setScalar(Math.max(0.01, g < 0.45 ? k : 0.01)); }
+  }
   // 김준후: 평소엔 가슴 펴고 건들건들
   if (K && walk < 0.2) { M.head.rotation.z = Math.sin(now * 2.5) * 0.12; lean = -0.08; armZ = [-0.45, 0.45]; }
   // 김준후 백초크: 확 덮치고 → 끌어와서 목 조르기
@@ -1840,7 +1971,7 @@ function animateTeacher(v, p, dt, now) {
   if (p.ctl && !p.dead) {
     for (const m of M.flashMats) { m.emissive.r = Math.max(m.emissive.r, 0.35); m.emissive.b = Math.max(m.emissive.b, 0.45); }
     M.head.rotation.z = Math.sin(now * 6) * 0.15;
-  } else M.head.rotation.z = 0;
+  } else if (!JY) M.head.rotation.z = 0;
 
   // 김준후: 각성 오라 · 1짱 왕관 · 돌진 잔상 · 쫄 땀
   if (K) {
