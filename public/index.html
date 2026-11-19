@@ -1284,7 +1284,7 @@ function fxChoke(f) {
   const g = new THREE.Group(); g.position.set(x, 0.14, z); g.rotation.y = -f.a;
   const w = new THREE.Mesh(sectorGeo(1, f.h), addMat(f.aw ? '#ff5a1f' : '#ffe36b', 0.45, true)); w.rotation.x = -Math.PI / 2; g.add(w);
   addFx(0.3, g, (k) => { w.scale.setScalar(f.r * S * ease(Math.min(1, k * 2.5))); w.material.opacity = 0.45 * (1 - k); });
-  if (!f.tid) { popup('헛손질~', { x: x + Math.cos(f.a) * 2, z: z + Math.sin(f.a) * 2 }, 4, '#cfcfcf', 20, 0.7); return; }
+  if (!f.tid) return;
   const tx = f.tx * S, tz = f.ty * S;
   const fx2 = x + Math.cos(f.a) * 2.3, fz2 = z + Math.sin(f.a) * 2.3;   // 끌려오는 자리 (내 앞)
   beam(x, z, tx, tz, f.aw ? '#ff5a1f' : '#ffd84a', 0.3);                  // 잡아채는 손
@@ -1321,7 +1321,7 @@ function fxTackleHit(f) {
   ringFx(x, z, 7, '#ff9a1f', 0.55); ringFx(x, z, 5, '#ffffff', 0.45, 0.06); ringFx(x, z, 9, '#ffd84a', 0.7, 0.12);
   burst(x, 1.5, z, 60, ['#ff9a1f', '#ffd84a', '#ffffff', '#c9a27a', '#ff2a2a'], { speed: 16, size: 0.28, up: 12, life: 1.0 });
   popup('쾅!!', { x, z }, 5.5, '#ffffff', 56, 0.9);
-  later(0.12, () => popup('4초 기절!', { x, z }, 4, '#ffd84a', 24, 1.2));
+  later(0.12, () => popup('2.5초 기절!', { x, z }, 4, '#ffd84a', 24, 1.2));
   for (let i = 0; i < 6; i++) { const st = new THREE.Mesh(new THREE.OctahedronGeometry(0.3), new THREE.MeshBasicMaterial({ color: '#ffe23a' })); const a = i / 6 * Math.PI * 2; st.position.set(x, 3, z); addFx(0.7, st, (k) => { st.position.set(x + Math.cos(a + k * 4) * 2 * k, 3 + k * 1.5, z + Math.sin(a + k * 4) * 2 * k); st.scale.setScalar(1 - k); }); }
   if (isNear(x, z, 20)) shake = Math.max(shake, 1.3);
 }

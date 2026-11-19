@@ -84,8 +84,8 @@ const BRAWLERS = {
     radius: 24, speed: 265, maxHp: 4800,
     attack: {
       name: '백초크', aim: 'dir',
-      desc: '앞쪽 범위의 상대를 끌어와서 1초 동안 기절시키고 피해를 준다.',
-      range: 210, half: 0.55, dmg: 1300, stun: 1, ammo: 3, reload: 1.6, cd: 0.6,
+      desc: '앞쪽 범위의 상대를 끌어와서 0.5초 동안 기절시키고 피해를 준다.',
+      range: 210, half: 0.55, dmg: 1300, stun: 0.5, ammo: 3, reload: 1.6, cd: 0.6,
     },
     gadgets: [
       { name: '간식 털어먹기', icon: '🍪', desc: '친구의 가방을 털어 얻은 간식을 먹고 체력을 2000 회복한다.', heal: 2000 },
@@ -94,12 +94,12 @@ const BRAWLERS = {
     gadgetCd: 6,
     super: {
       name: '태클', aim: 'line',
-      desc: '상대에게 돌진해서 부딪힌 상대에게 피해를 주고 4초 동안 기절시킨다.',
-      need: 3900, range: 470, width: 40, dmg: 1000, stun: 4, dashTime: 0.32,
+      desc: '상대에게 돌진해서 부딪힌 상대에게 피해를 주고 2.5초 동안 기절시킨다.',
+      need: 4700, range: 470, width: 40, dmg: 1000, stun: 2.5, dashTime: 0.32,
     },
     starPowers: [
       { id: 'sibi', name: '시비걸기준비과정', icon: '😏',
-        desc: '큰 범위 안에 상대가 있으면 궁극기가 저절로 엄청 빠르게 충전된다.', range: 420, fullIn: 6 },
+        desc: '큰 범위 안에 상대가 있으면 궁극기가 저절로 엄청 빠르게 충전된다.', range: 420, fullIn: 9 },
       { id: 'jjang', name: '우리학교 1짱 김준후', icon: '👑',
         desc: '체력이 가득 차 있으면 공격력 20%·재장전 속도 30%·이동 속도 15% 증가. 대신 공격 범위가 15% 줄어든다.', dmgMul: 1.2, reloadMul: 1.3, speedMul: 1.15, rangeMul: 0.85 },
     ],

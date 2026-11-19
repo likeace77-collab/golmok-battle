@@ -75,6 +75,17 @@ function resolveWalls(map, o, r) {
     }
   }
 }
+// 두 점 사이에 벽이 있는지 (공격은 벽을 못 넘음)
+function clearPath(map, x1, y1, x2, y2) {
+  const d = Math.hypot(x2 - x1, y2 - y1), n = Math.ceil(d / 10);
+  for (let i = 1; i < n; i++) {
+    const t = i / n, x = x1 + (x2 - x1) * t, y = y1 + (y2 - y1) * t;
+    if (map.walls.some((w) => !w.broken && x > w.x && x < w.x + w.w && y > w.y && y < w.y + w.h)) return false;
+  }
+  return true;
+}
+const sees = (room, p, q) => clearPath(room.map, p.x, p.y, q.x, q.y);
+
 function freeSpot(map, x, y, r, spread) {
   for (let i = 0; i < 80; i++) {
     const nx = x + (Math.random() - 0.5) * spread * (1 + i / 20), ny = y + (Math.random() - 0.5) * spread * (1 + i / 20);
@@ -248,7 +259,7 @@ const SKILLS = {
       room.fx.push({ type: 'pulse', id: p.id, x: p.x, y: p.y, r: A.range, c: p.color });
       if (Math.random() < 0.45) say(p, 'atk', 1.2);
       for (const q of enemies(room, p)) {
-        if (Math.hypot(q.x - p.x, q.y - p.y) > A.range + q.B.radius) continue;
+        if (Math.hypot(q.x - p.x, q.y - p.y) > A.range + q.B.radius || !sees(room, p, q)) continue;
         damage(room, p, q, A.dmg, now); chargeSuper(p, A.dmg); reflectHit(room, p, q, now);
       }
       for (const m of room.mice) if (m.owner !== p.id && Math.hypot(m.x - p.x, m.y - p.y) <= A.range + m.radius) m.hp -= A.dmg;
@@ -281,7 +292,7 @@ const SKILLS = {
       say(p, 'sup', 1.8);
       room.fx.push({ type: 'super', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: S.range, h: S.half });
       for (const q of enemies(room, p)) {
-        if (!inCone(p, a, S.range, S.half, q.x, q.y, q.B.radius)) continue;
+        if (!inCone(p, a, S.range, S.half, q.x, q.y, q.B.radius) || !sees(room, p, q)) continue;
         const d = Math.hypot(q.x - p.x, q.y - p.y) || 1;
         q.x += ((q.x - p.x) / d) * S.knock; q.y += ((q.y - p.y) / d) * S.knock;
         resolveWalls(room.map, q, q.B.radius);
@@ -302,7 +313,7 @@ const SKILLS = {
         if (p.dead || p.out || !room.players.has(p.id)) return;
         const t = Date.now() / 1000;
         for (const q of enemies(room, p)) {
-          if (!inCone(p, a, A.range, A.half, q.x, q.y, q.B.radius)) continue;
+          if (!inCone(p, a, A.range, A.half, q.x, q.y, q.B.radius) || !sees(room, p, q)) continue;
           const d = Math.hypot(q.x - p.x, q.y - p.y) || 1;
           q.x += ((q.x - p.x) / d) * A.knock; q.y += ((q.y - p.y) / d) * A.knock; resolveWalls(room.map, q, q.B.radius);
           damage(room, p, q, A.dmg, t); chargeSuper(p, A.dmg);
@@ -342,7 +353,7 @@ const SKILLS = {
         if (q.ctrlBy || q.ctrlId) continue;
         const dx = q.x - p.x, dy = q.y - p.y;
         const along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca);
-        if (along < -q.B.radius || along > S.range + q.B.radius || perp > S.width + q.B.radius) continue;
+        if (along < -q.B.radius || along > S.range + q.B.radius || perp > S.width + q.B.radius || !sees(room, p, q)) continue;
         if (along < best) { best = along; target = q; }
       }
       room.fx.push({ type: 'ctrl', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: S.range, hit: target ? target.id : null });
@@ -365,7 +376,7 @@ SKILLS.junhoo = {
     if (aw) { const g = p.B.gadgets[1]; range *= g.rangeMul; dmg = g.dmg; p.aw = false; }
     let target = null, best = Infinity;
     for (const q of enemies(room, p)) {
-      if (!inCone(p, a, range, A.half, q.x, q.y, q.B.radius)) continue;
+      if (!inCone(p, a, range, A.half, q.x, q.y, q.B.radius) || !sees(room, p, q)) continue;
       const d = Math.hypot(q.x - p.x, q.y - p.y);
       if (d < best) { best = d; target = q; }
     }
