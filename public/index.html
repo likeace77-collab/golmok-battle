@@ -1825,7 +1825,25 @@ function aimAngle(kind = 'sup') {   // 서버 좌표 기준 각도
   return isTouch ? autoAim(range, me) : me.f;
 }
 function doSuper() { if (!socket) return; const a = aimAngle('sup'); socket.emit('super', a == null ? undefined : a); }
-function doAttack() { if (!socket) return; const a = aimAngle('atk'); socket.emit('attack', a == null ? undefined : a); }
+// 거리 조절 공격(김재열): 드래그한 길이 / 마우스 거리 / 자동조준 시 적까지 거리 → 0.15~1
+function autoDist(range, src) {
+  let best = Infinity;
+  for (const q of state.players) { if (q.id === myId || q.id === src.id || q.dead || q.out) continue; best = Math.min(best, Math.hypot(q.x - src.x, q.y - src.y)); }
+  return best <= range + 120 ? best / range : 1;
+}
+function aimDist() {
+  const me = atkSrc(), v = me && views[me.id]; if (!me || !v) return 1;
+  const range = BR[me.b].attack.range * (me.b === 'jaeyeol' && me.sp === 'gao' ? 1.15 : 1), A = aims.atk;
+  let d;
+  if (A.id !== null) d = A.drag > 14 ? A.drag / 48 : autoDist(range, me);
+  else if (!isTouch && mouse.on) {
+    ray.setFromCamera({ x: mouse.x / W * 2 - 1, y: -(mouse.y / H) * 2 + 1 }, camera);
+    d = ray.ray.intersectPlane(ground, hitP) ? Math.hypot(hitP.x - v.model.root.position.x, hitP.z - v.model.root.position.z) / (range * S) : 1;
+  } else d = autoDist(range, me);
+  return Math.max(0.15, Math.min(1, d));
+}
+const atkPayload = (a) => { const me = atkSrc(); return me && BR[me.b].attack.aim === 'tri' ? { a, d: aimDist() } : a; };
+function doAttack() { if (!socket) return; const a = aimAngle('atk'); socket.emit('attack', a == null ? undefined : atkPayload(a)); }
 renderer.domElement.addEventListener('contextmenu', (e) => { e.preventDefault(); if (mode === 'game') doSuper(); });
 addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 renderer.domElement.addEventListener('mousedown', (e) => { if (socket && mode === 'game' && !isTouch && e.button === 0) doAttack(); });
@@ -1862,6 +1880,7 @@ function aimButton(el, kind, fire) {
     const B = BR[me.b]; if (kind === 'sup' && !B.super) return;
     const range = kind === 'atk' ? B.attack.range : B.super.range;
     const a = ang ?? autoAim(range, me);
+    if (kind === 'atk' && B.attack.aim === 'tri') { const d = A.drag > 14 ? Math.max(0.15, Math.min(1, A.drag / 48)) : Math.max(0.15, Math.min(1, autoDist(range, me))); socket.emit(fire, a == null ? undefined : { a, d }); return; }
     socket.emit(fire, a == null ? undefined : a);
   };
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
@@ -2290,7 +2309,7 @@ function frame(nowMs) {
           if (B.attack.aim === 'tri') {
             const g = new THREE.PlaneGeometry(r, B.attack.width * 2 * S); g.translate(r / 2, 0, 0);
             const line = new THREE.Mesh(g, addMat('#3cd8ff', 0.28)); line.rotation.x = -Math.PI / 2; atkMesh.add(line);
-            const land = new THREE.Mesh(new THREE.CircleGeometry(B.attack.lobR * S, 32), addMat('#ff6ad5', 0.3)); land.rotation.x = -Math.PI / 2; land.position.set(r, 0.01, 0); atkMesh.add(land);
+            const land = new THREE.Mesh(new THREE.CircleGeometry(B.attack.lobR * S, 32), addMat('#ff6ad5', 0.3)); land.rotation.x = -Math.PI / 2; land.position.set(r, 0.01, 0); atkMesh.add(land); atkMesh.userData.land = land; atkMesh.userData.r = r;
           } else {
             const fill = new THREE.Mesh(dirAtk ? sectorGeo(r, B.attack.half) : new THREE.CircleGeometry(r, 48), addMat('#ffe36b', dirAtk ? 0.22 : 0.18)); fill.rotation.x = -Math.PI / 2;
             atkMesh.add(fill);
@@ -2301,6 +2320,9 @@ function frame(nowMs) {
         atkInd.position.set(v.model.root.position.x, 0.09, v.model.root.position.z);
         atkMesh.scale.setScalar((src.aw ? 2 : 1) * (src.jj ? 0.85 : 1) * (src.b === 'jaeyeol' && src.sp === 'gao' ? 1.15 : 1));
         if (dirAtk) { const a = aimAngle('atk'); if (a != null) atkInd.rotation.y = -a; }
+        if (atkMesh.userData.land) {   // 착지 지점이 드래그 길이를 따라 움직임 (이 값을 놓을 때 그대로 보냄)
+          atkMesh.userData.land.position.x = atkMesh.userData.r * aimDist();
+        }
       }
       const cm = $('ctrlMsg');
       if (me.ctl) { cm.style.display = 'block'; cm.textContent = '🎮 조종당하는 중!'; }

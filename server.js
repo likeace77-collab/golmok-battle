@@ -445,12 +445,13 @@ function lineHit(room, p, a, range, width) {
 
 SKILLS.jaeyeol = {
   // 세모 던지기 빔: 직선 빔 + 포물선 세모가 동시에
-  attack(room, p, a, now) {
+  attack(room, p, a, now, dist = 1) {        // dist: 던진 세모가 떨어질 거리 비율 (시리우스처럼 조절)
     const A = p.B.attack, gao = hasSP(p, 'gao') ? SP(p, 'gao').atkMul : 1;
     p.ammo -= 1; p.atkCd = A.cd; p.facing = a;
     const range = A.range * gao, ca = Math.cos(a), sa = Math.sin(a);
     const { target, end } = lineHit(room, p, a, range, A.width);
-    const lx = Math.max(20, Math.min(room.map.w - 20, p.x + ca * range)), ly = Math.max(20, Math.min(room.map.h - 20, p.y + sa * range));
+    const lr = range * dist;
+    const lx = Math.max(20, Math.min(room.map.w - 20, p.x + ca * lr)), ly = Math.max(20, Math.min(room.map.h - 20, p.y + sa * lr));
     room.fx.push({ type: 'tri', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), ex: p.x + ca * end, ey: p.y + sa * end, hit: target ? target.id : null, lx, ly, t: A.lobTime, r: A.lobR * gao });
     if (Math.random() < 0.35) say(p, 'atk', 1.1);
     if (target) { damage(room, p, target, Math.round(A.dmg * gao), now, 'tri'); chargeSuper(p, A.dmg); }
@@ -497,10 +498,10 @@ SKILLS.jaeyeol = {
   },
 };
 
-function doAttack(room, p, ang, now) {
+function doAttack(room, p, ang, now, dist) {
   if (room.phase !== 'play' || !canAct(p) || p.ammo < 1 || p.atkCd > 0 || p.scaredT > 0 || p.noAtkT > 0 || p.dash) return;
   p.lastHit = Math.max(p.lastHit, now - G.regenDelay + 1);
-  SKILLS[p.B.id].attack(room, p, Number.isFinite(ang) ? ang : p.facing, now);
+  SKILLS[p.B.id].attack(room, p, Number.isFinite(ang) ? ang : p.facing, now, Number.isFinite(dist) ? Math.max(0.15, Math.min(1, dist)) : 1);
 }
 function doGadget(room, p, slot, now) {           // slot: 1 또는 2 (더블 가젯 모드에서만 2)
   if (room.phase !== 'play' || !canAct(p) || p.gCd > 0) return;
@@ -545,7 +546,7 @@ function botThink(room, p, now) {
   const fight = () => {
     const dx = target.x - p.x, dy = target.y - p.y;
     moveToward(p, target.x, target.y, 0.4, now);
-    if (best < B.attack.range + 10 && Math.random() < (B.attack.aim === 'dir' ? 0.1 : 0.18)) doAttack(room, p, Math.atan2(dy, dx), now);
+    if (best < B.attack.range + 10 && Math.random() < (B.attack.aim === 'dir' ? 0.1 : 0.18)) doAttack(room, p, Math.atan2(dy, dx), now, best / B.attack.range);
     if (best < 220 && Math.random() < 0.006) doGadget(room, p, 1, now);
     if (mode.doubleGadget && best < 400 && Math.random() < 0.005) doGadget(room, p, 2, now);
     if (B.super && best < B.super.range - 30 && p.sup >= 1 && Math.random() < 0.05) doSuper(room, p, Math.atan2(dy, dx), now);
@@ -914,7 +915,11 @@ io.on('connection', (socket) => {
     p.input.my = Math.max(-1, Math.min(1, +inp.my || 0));
   });
   // 조종 중이면 공격·가젯·궁극기 모두 꼭두각시의 스킬로
-  socket.on('attack', (ang) => { const p = me(); if (p && !p.ctrlBy) doAttack(room, puppetOr(p), num(ang), Date.now() / 1000); });
+  socket.on('attack', (x) => {   // 숫자(각도) 또는 { a: 각도, d: 거리 비율 0~1 }
+    const p = me(); if (!p || p.ctrlBy) return;
+    const o = x && typeof x === 'object' ? x : { a: x };
+    doAttack(room, puppetOr(p), num(o.a), Date.now() / 1000, num(o.d));
+  });
   socket.on('gadget', (n) => { const p = me(); if (p && !p.ctrlBy) doGadget(room, puppetOr(p), n === 2 ? 2 : 1, Date.now() / 1000); });
   socket.on('super', (ang) => { const p = me(); if (p && !p.ctrlBy) doSuper(room, puppetOr(p), num(ang), Date.now() / 1000); });
   socket.on('addBot', () => {
