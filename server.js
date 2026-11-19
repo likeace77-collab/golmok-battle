@@ -105,14 +105,15 @@ function spawnPoint(room, p, slot) {
 
 // ── 플레이어 ───────────────────────────────────────
 function cleanLoadout(B, lo = {}, mode) {
-  const g = [0, 1].includes(lo.g) ? lo.g : 0;
-  const sp = B.starPowers.some((s) => s.id === lo.sp) ? lo.sp : B.starPowers[0].id;
+  const okG = [0, 1].filter((i) => B.gadgets[i] && !B.gadgets[i].wip);
+  const g = okG.includes(lo.g) ? lo.g : okG[0];
+  const sp = B.starPowers.some((s) => s.id === lo.sp && !s.wip) ? lo.sp : B.starPowers.find((s) => !s.wip).id;
   const gears = [...new Set((Array.isArray(lo.gears) ? lo.gears : []).filter((id) => GEARS.some((x) => x.id === id)))].slice(0, 2);
-  return { g: mode.doubleGadget ? [0, 1] : [g], sp, gears };
+  return { g: mode.doubleGadget ? okG : [g], sp, gears };
 }
 function randomLoadout(B) {
   const gs = GEARS.map((x) => x.id).sort(() => Math.random() - 0.5);
-  return { g: Math.random() < 0.5 ? 0 : 1, sp: pick(B.starPowers).id, gears: gs.slice(0, 2) };
+  return { g: Math.random() < 0.5 ? 0 : 1, sp: pick(B.starPowers.filter((s) => !s.wip)).id, gears: gs.slice(0, 2) };
 }
 function newPlayer(room, id, name, isBot, brawlerId, loadout) {
   const B = BRAWLERS[brawlerId] || BRAWLERS.jungbo;
@@ -123,7 +124,7 @@ function newPlayer(room, id, name, isBot, brawlerId, loadout) {
     x: 0, y: 0, hp: B.maxHp, ammo: B.attack.ammo, reloadT: 0, atkCd: 0,
     stunT: 0, frozenT: 0, gCd: 0, facing: Math.PI / 2, sup: 0,
     acT: 0, acTick: 0, ctrlId: null, ctrlT: 0, ctrlBy: null,
-    aw: false, fear: 0, scaredT: 0, dash: null, noAtkT: 0,
+    aw: false, fear: 0, scaredT: 0, dash: null, noAtkT: 0, flailT: 0, flailHit: null,
     shield: 0, fullT: 0, rf: 0, ajT: 30, gems: 0,
     lastHit: 0, dead: false, respawnT: 0, out: false, rank: 0,
     kills: 0, deaths: 0, input: { mx: 0, my: 0 }, speech: null,
@@ -135,12 +136,13 @@ const has = (p, gear) => p.lo.gears.includes(gear);
 const hasSP = (p, sp) => p.lo.sp === sp;
 const SP = (p, id) => p.B.starPowers.find((s) => s.id === id);
 const jjang = (p) => hasSP(p, 'jjang') && p.hp >= p.B.maxHp;     // 김준후 스파2: 풀피 버프
-const speedOf = (p) => p.B.speed * (has(p, 'speed') ? 1.1 : 1) * (jjang(p) ? SP(p, 'jjang').speedMul : 1);
+const SPEED_MUL = 0.85;   // 전체 이동속도 (느리게)
+const speedOf = (p) => p.B.speed * SPEED_MUL * (has(p, 'speed') ? 1.1 : 1) * (jjang(p) ? SP(p, 'jjang').speedMul : 1) * (p.flailT > 0 ? 1.5 : 1);
 function resetBody(room, p, slot) {
   const s = spawnPoint(room, p, slot);
   Object.assign(p, {
     x: s.x, y: s.y, hp: p.B.maxHp, dead: false, ammo: p.B.attack.ammo, stunT: 0, frozenT: 0, acT: 0,
-    rf: 0, gems: 0, shield: 0, fullT: 0, respawnT: 0, input: { mx: 0, my: 0 }, aw: false, dash: null, noAtkT: 0,   // 쫄 게이지는 부활해도 유지
+    rf: 0, gems: 0, shield: 0, fullT: 0, respawnT: 0, input: { mx: 0, my: 0 }, aw: false, dash: null, noAtkT: 0, flailT: 0,   // 쫄 게이지는 부활해도 유지
   });
   releaseCtrl(room, p, false);
 }
@@ -425,9 +427,10 @@ function dashStep(room, p, now) {
       const touch = (w) => (nx - Math.max(w.x, Math.min(nx, w.x + w.w))) ** 2 + (ny - Math.max(w.y, Math.min(ny, w.y + w.h))) ** 2 < r * r;
       const w = D.breakWalls && room.map.walls.find((w) => !w.broken && touch(w));
       if (w) { w.broken = true; room.fx.push({ type: 'wallBreak', i: room.map.walls.indexOf(w), x: w.x + w.w / 2, y: w.y + w.h / 2 }); }
-      else { p.dash = null; room.fx.push({ type: 'dashWall', id: p.id, x: p.x, y: p.y, a: +D.a.toFixed(3), kind: D.kind }); return; }   // 벽 못 넘음
+      else { p.dash = null; if (D.onEnd) { D.onEnd(now); return; } room.fx.push({ type: 'dashWall', id: p.id, x: p.x, y: p.y, a: +D.a.toFixed(3), kind: D.kind }); return; }   // 벽 못 넘음
     }
     p.x = nx; p.y = ny;
+    if (D.pass) continue;                 // 뒷발차기: 돌진 중엔 안 부딪힘
     for (const q of enemies(room, p)) {
       if (Math.hypot(q.x - p.x, q.y - p.y) > r + q.B.radius + 8) continue;
       q.x += ca * 60; q.y += sa * 60; resolveWalls(room.map, q, q.B.radius);   // 부딪혀서 밀려남
@@ -437,7 +440,7 @@ function dashStep(room, p, now) {
       p.dash = null; return;
     }
   }
-  if (D.left <= 0) { p.dash = null; room.fx.push({ type: 'tackleEnd', id: p.id, x: p.x, y: p.y }); }
+  if (D.left <= 0) { p.dash = null; if (D.onEnd) D.onEnd(now); else room.fx.push({ type: 'tackleEnd', id: p.id, x: p.x, y: p.y }); }
 }
 
 // 직선 위 첫 번째 적 + 벽에서 끊기는 지점
@@ -506,6 +509,59 @@ SKILLS.jaeyeol = {
     say(p, 'sup', 1.6);
     p.dash = { a, left: S.range, speed: S.range / S.dashTime, dmg: big ? SP(p, 'daedu').dmg : S.dmg, stun: S.stun, hitFx: 'headbutt', kind: 'headbutt', breakWalls: big };
     room.fx.push({ type: 'rocket', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), big });
+  },
+};
+
+SKILLS.jinho = {
+  // 목 길게 뻗기: 직선 위 모든 적 1100 (벽에서 끊김)
+  attack(room, p, a, now) {
+    const A = p.B.attack, mul = hasSP(p, 'tall') ? SP(p, 'tall').mul : 1;
+    p.ammo -= 1; p.atkCd = A.cd; p.facing = a;
+    const range = A.range * mul, ca = Math.cos(a), sa = Math.sin(a);
+    let end = range;
+    for (let d = 10; d <= range; d += 10) if (!clearPath(room.map, p.x, p.y, p.x + ca * d, p.y + sa * d)) { end = d - 10; break; }
+    room.fx.push({ type: 'neck', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), len: Math.round(end), d: A.delay });
+    if (Math.random() < 0.35) say(p, 'atk', 1.1);
+    room.pending.push({ t: A.delay, fn: () => {
+      if (p.dead || !room.players.has(p.id)) return;
+      const t = Date.now() / 1000;
+      for (const q of enemies(room, p)) {
+        const dx = q.x - p.x, dy = q.y - p.y, along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca);
+        if (along < 0 || along > end + q.B.radius || perp > A.width + q.B.radius) continue;
+        damage(room, p, q, A.dmg, t, 'neck'); chargeSuper(p, A.dmg);
+        room.fx.push({ type: 'neckHit', x: q.x, y: q.y });
+      }
+    } });
+  },
+  gadget(room, p, idx, now) {
+    if (idx !== 0) return;                        // 2가젯은 준비 중
+    const g = p.B.gadgets[0];
+    say(p, 'g1', 2);
+    p.flailT = g.dur; p.flailHit = new Set();
+    room.fx.push({ type: 'flail', id: p.id, x: p.x, y: p.y, dur: g.dur });
+  },
+  // 기린 뒷발차기: 뒤돌아 조금 돌진(벽 부숨) → 뒷발로 부채꼴 2000
+  super(room, p, a, now) {
+    const S = p.B.super, mul = hasSP(p, 'tall') ? SP(p, 'tall').mul : 1;
+    say(p, 'sup', 1.6);
+    room.fx.push({ type: 'kickStart', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3) });
+    p.dash = { a, left: S.dash, speed: S.dash / S.dashTime, kind: 'kick', breakWalls: true, pass: true, onEnd: (t) => {
+      const kr = S.kickR * mul, ca = Math.cos(a), sa = Math.sin(a);
+      for (let d = 10; d <= kr; d += 10) {           // 뒷발 닿는 곳의 벽도 부숨
+        const x = p.x + ca * d, y = p.y + sa * d;
+        const w = room.map.walls.find((w) => !w.broken && x > w.x - 6 && x < w.x + w.w + 6 && y > w.y - 6 && y < w.y + w.h + 6);
+        if (w) { w.broken = true; room.fx.push({ type: 'wallBreak', i: room.map.walls.indexOf(w), x: w.x + w.w / 2, y: w.y + w.h / 2 }); }
+      }
+      const hits = [];
+      for (const q of enemies(room, p)) {
+        if (!inCone(p, a, kr, S.kickHalf, q.x, q.y, q.B.radius)) continue;
+        const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1;
+        for (let k = 0; k < S.knock; k += 8) { const nx = q.x + dx / d * 8, ny = q.y + dy / d * 8; if (hitsWall(room.map, nx, ny, q.B.radius)) break; q.x = nx; q.y = ny; }
+        q.stunT = Math.max(q.stunT, 0.5);
+        damage(room, p, q, S.dmg, t, 'kick'); hits.push(q.id);
+      }
+      room.fx.push({ type: 'kick', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: kr, hits });
+    } };
   },
 };
 
@@ -758,6 +814,17 @@ function step(room) {
     p.frozenT = Math.max(0, p.frozenT - DT);
     if (p.dash) { dashStep(room, p, now); if (p.dead) continue; }
     if (p.noAtkT > 0) p.noAtkT = Math.max(0, p.noAtkT - DT);
+    if (p.flailT > 0) {                          // 훠이훠이: 주위 적 계속 밀어냄, 처음 닿을 때 600
+      p.flailT = Math.max(0, p.flailT - DT);
+      const g = p.B.gadgets[0], rr = g.range * (hasSP(p, 'tall') ? SP(p, 'tall').mul : 1);
+      for (const q of enemies(room, p)) {
+        const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1;
+        if (d > rr + q.B.radius) continue;
+        const nx = q.x + dx / d * g.push, ny = q.y + dy / d * g.push;
+        if (!hitsWall(room.map, nx, ny, q.B.radius)) { q.x = nx; q.y = ny; }
+        if (!p.flailHit.has(q.id)) { p.flailHit.add(q.id); damage(room, p, q, g.dmg, now, 'flail'); room.fx.push({ type: 'flailHit', x: q.x, y: q.y }); }
+      }
+    }
     if (p.scaredT > 0) { p.scaredT -= DT; if (p.scaredT <= 0) { p.scaredT = 0; p.fear = 0; } }
     // 김준후 스파1: 근처에 상대가 있으면 궁 자동 충전
     if (hasSP(p, 'sibi') && B.super && p.sup < 1) {
@@ -859,7 +926,7 @@ function step(room) {
       k: p.kills, d: p.deaths, say: p.speech ? p.speech.text : null,
       ctl: p.ctrlBy, ctrl: p.ctrlId, ctrlT: +(p.ctrlT || 0).toFixed(1), ac: +p.acT.toFixed(1),
       g: p.lo.g, sp: p.lo.sp, gear: p.lo.gears, sh: r1(p.shield), rf: +p.rf.toFixed(3), aj: Math.ceil(p.ajT), gems: p.gems,
-      aw: p.aw, fear: +p.fear.toFixed(2), scared: +p.scaredT.toFixed(1), dash: !!p.dash, jj: jjang(p), na: +p.noAtkT.toFixed(1),
+      aw: p.aw, fear: +p.fear.toFixed(2), scared: +p.scaredT.toFixed(1), dash: !!p.dash, jj: jjang(p), na: +p.noAtkT.toFixed(1), fl: +p.flailT.toFixed(1),
     })),
     mice: room.mice.map((m) => ({ id: m.id, x: r1(m.x), y: r1(m.y), a: +m.ang.toFixed(2), c: m.color, hp: m.hp / m.maxHp })),
     fx: room.fx,

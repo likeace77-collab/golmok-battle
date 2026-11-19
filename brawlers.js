@@ -120,11 +120,11 @@ const BRAWLERS = {
     role: '컨트롤러',
     title: '후… 왔냐.',
     desc: '큰 대가리에 두꺼운 뿔테안경. 반창고는 패션이고, 멍은 이긴 거다. 세모를 던지고, 대가리로 박고, "나랑 사귈..레?"로 상대를 굳혀버리는 컨트롤러.',
-    radius: 28, speed: 250, maxHp: 5000,
+    radius: 28, speed: 250, maxHp: 5800,
     attack: {
       name: '세모 던지기 빔', aim: 'tri',
       desc: '세모 빔(직선)과 던진 세모(사거리 끝에 착지)가 같이 나간다. 각각 800, 한 명에게 둘 다 맞히면 보너스 200으로 총 1800.',
-      range: 380, width: 26, dmg: 800, lobDmg: 800, bothBonus: 200, lobR: 85, lobTime: 0.55, ammo: 3, reload: 1.7, cd: 0.5,
+      range: 500, width: 30, dmg: 800, lobDmg: 800, bothBonus: 200, lobR: 100, lobTime: 0.55, ammo: 3, reload: 1.35, cd: 0.45,
     },
     gadgets: [
       { name: '어깨빵', icon: '💥', desc: '주위의 적에게 700 피해를 주고 날려버린다.', range: 170, dmg: 700, knock: 190 },
@@ -146,6 +146,39 @@ const BRAWLERS = {
       g2: ['나랑 사귈..레?', '나..나랑 사귈레?'],
       sup: ['대가리 박치기!!!', '이게 대두의 힘이다'],
       kill: ['…이긴 거야.', '후… 가오 살았다', '반창고는 패션이야'],
+    },
+  },
+  jinho: {
+    id: 'jinho',
+    name: '이진호',
+    rarity: 'mythic',
+    title: '키 173',
+    desc: '키가 무려 173인 남자애. 기린을 닮았고 목이 엄청 길다. 긴 목을 쭉 뻗어 멀리 있는 상대를 들이받는다.',
+    radius: 26, speed: 260, maxHp: 4600,
+    attack: {
+      name: '목 길게 뻗기', aim: 'line',
+      desc: '목을 길게 쭉 뻗었다가 다시 끌고 온다. 목에 맞은 상대는 모두 1100 피해. 사정거리가 엄청 길다. (벽에 막힘)',
+      range: 620, width: 34, dmg: 1100, ammo: 3, reload: 1.6, cd: 0.6, delay: 0.18,
+    },
+    gadgets: [
+      { name: '훠이훠이', icon: '🙌', desc: '6초 동안 긴 팔을 신명나게 휘저어 주위의 적을 모두 밀쳐내며 600 피해를 주고, 이동 속도가 150%가 된다.', dur: 6, range: 170, dmg: 600, push: 26 },
+      { name: '준비 중', icon: '🔒', desc: '두 번째 가젯은 아직 준비 중이에요.', wip: true },
+    ],
+    gadgetCd: 8,
+    super: {
+      name: '기린 뒷발차기', aim: 'line',
+      desc: '뒤돌아서 조금 돌진하며 뒷발로 걷어찬다. 앞을 막는 벽을 부수고, 걷어찬 상대에게 2000 피해.',
+      need: 4400, range: 200, width: 60, dash: 150, dmg: 2000, kickR: 150, kickHalf: 0.75, knock: 160, dashTime: 0.22,
+    },
+    starPowers: [
+      { id: 'tall', name: '큰 키', icon: '🦒', desc: '모든 공격의 사정거리가 25% 늘어난다.', mul: 1.25 },
+      { id: 'wip2', name: '준비 중', icon: '🔒', desc: '두 번째 스타파워는 아직 준비 중이에요.', wip: true },
+    ],
+    lines: {
+      atk: ['목 들어간다~', '닿았다!', '173의 위엄'],
+      g1: ['훠이훠이~!!', '저리 가 저리 가!'],
+      sup: ['기린 뒷발차기!!!', '뒤 조심해라~'],
+      kill: ['키 차이 봐라', '173은 다르다', '목 길이 승'],
     },
   },
 };

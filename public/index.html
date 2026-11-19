@@ -933,6 +933,84 @@ function makeJaeyeol(teamColor) {
   return { root, model, body, torso, head, legs, arms, stars, sleeves, gum, flashMats: [m.skin, m.shirt, m.blazer, m.pants] };
 }
 
+// ── 이진호 3D 모델 ────────────────────────────────
+// 키 173 · 기린 닮음 · 목이 엄청 김 · 노란 후드티(기린 무늬) · 긴 팔다리 · 기린 뿔 같은 머리 두 뭉치
+function makeJinho(teamColor) {
+  const m = {
+    skin: std('#f0c49e', { roughness: 0.6 }),
+    hood: std('#f7c84a', { roughness: 0.8 }),
+    spot: std('#a5652f', { roughness: 0.85 }),
+    pants: std('#3b4a63', { roughness: 0.75 }),
+    shoe: std('#f4f4f4'), sole: std('#333'),
+    hair: std('#3a2416', { roughness: 0.7 }),
+    eye: std('#111'), mouth: std('#7a2a2a'), cheek: std('#f39a8a'),
+  };
+  const root = new THREE.Group();
+  const model = new THREE.Group(); model.scale.setScalar(0.78); root.add(model);
+  const body = new THREE.Group(); model.add(body);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(1.35, 1.65, 48), new THREE.MeshBasicMaterial({ color: teamColor, transparent: true, opacity: 0.9 }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; ring.scale.setScalar(1.05); root.add(ring);
+  const blob = new THREE.Mesh(new THREE.CircleGeometry(1.2, 32), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.25 }));
+  blob.rotation.x = -Math.PI / 2; blob.position.y = 0.03; root.add(blob);
+  const spots = (parent, n, place) => { for (let i = 0; i < n; i++) { const sp = new THREE.Mesh(new THREE.CircleGeometry(0.1 + Math.random() * 0.08, 6), m.spot); place(sp, i); parent.add(sp); } };
+
+  // 긴 다리
+  const legs = [];
+  for (const sx of [-0.3, 0.3]) {
+    const hip = new THREE.Group(); hip.position.set(sx, 1.55, 0); body.add(hip);
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.17, 1.45, 12), m.pants); leg.position.y = -0.72; hip.add(leg);
+    const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.24, 0.72), m.shoe); shoe.position.set(0, -1.47, 0.12); hip.add(shoe);
+    const sole = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.07, 0.74), m.sole); sole.position.set(0, -1.58, 0.12); hip.add(sole);
+    legs.push(hip);
+  }
+  // 마른 몸통: 노란 후드티 + 기린 무늬
+  const torso = new THREE.Group(); torso.position.y = 1.45; body.add(torso);
+  const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.48, 1.35, 18), m.hood); tr.position.y = 0.68; torso.add(tr);
+  spots(torso, 12, (sp, i) => { const a = (i / 12) * Math.PI * 2 + Math.random() * 0.3; sp.position.set(Math.sin(a) * 0.51, 0.2 + Math.random() * 1.0, Math.cos(a) * 0.51); sp.rotation.y = a; });
+  const hoodie = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.13, 8, 20), m.hood); hoodie.rotation.x = Math.PI / 2; hoodie.position.set(0, 1.38, -0.12); torso.add(hoodie);
+  const pocket = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.25, 0.04), std('#e8b43a')); pocket.position.set(0, 0.35, 0.49); torso.add(pocket);
+  // 긴 팔
+  const arms = [];
+  for (const s of [-1, 1]) {
+    const shd = new THREE.Group(); shd.position.set(s * 0.56, 1.28, 0); torso.add(shd);
+    const up = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.14, 1.45, 10), m.hood); up.position.y = -0.72; shd.add(up);
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), m.skin); hand.position.y = -1.52; shd.add(hand);
+    shd.rotation.z = s * 0.12; shd.userData.baseZ = s * 0.12;
+    arms.push(shd);
+  }
+  // 엄청 긴 목 (공격 때 늘어남): neckPivot 기준으로 위로 뻗음, 목 끝에 머리
+  const neckPivot = new THREE.Group(); neckPivot.position.y = 1.32; torso.add(neckPivot);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.2, 1, 14), m.skin); neck.geometry.translate(0, 0.5, 0); neck.scale.y = 1.9; neckPivot.add(neck);
+  const neckSpots = new THREE.Group(); neckPivot.add(neckSpots);
+  spots(neckSpots, 7, (sp, i) => { const a = i * 2.1; sp.position.set(Math.sin(a) * 0.19, 0.25 + i * 0.22, Math.cos(a) * 0.19); sp.rotation.y = a; sp.scale.setScalar(0.6); });
+  const head = new THREE.Group(); head.position.y = 1.9; neckPivot.add(head);
+  // 길쭉한 기린 얼굴
+  const face = new THREE.Mesh(new THREE.SphereGeometry(0.55, 24, 18), m.skin); face.scale.set(0.95, 1.15, 1); face.position.y = 0.32; head.add(face);
+  const snout = new THREE.Mesh(new THREE.SphereGeometry(0.4, 18, 14), m.skin); snout.scale.set(0.95, 0.75, 1.05); snout.position.set(0, 0.0, 0.32); head.add(snout);
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.58, 22, 12, 0, Math.PI * 2, 0, Math.PI / 2.4), m.hair); cap.position.set(0, 0.48, -0.04); cap.scale.set(1, 0.9, 1.02); head.add(cap);
+  for (const s of [-1, 1]) {
+    const ossi = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.36, 8), m.hair); ossi.position.set(s * 0.22, 1.02, -0.05); ossi.rotation.z = -s * 0.15; head.add(ossi);   // 기린 뿔 같은 삐친 머리
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), m.hair); knob.position.set(s * 0.25, 1.22, -0.05); head.add(knob);
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), m.skin); ear.scale.set(1.4, 0.55, 0.7); ear.position.set(s * 0.6, 0.55, -0.05); ear.rotation.z = s * 0.4; head.add(ear);   // 옆으로 뻗은 귀
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), m.eye); eye.position.set(s * 0.22, 0.5, 0.46); head.add(eye);
+    const hl = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 5), new THREE.MeshBasicMaterial({ color: '#fff' })); hl.position.set(s * 0.22 + 0.025, 0.53, 0.52); head.add(hl);
+    const nos = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), std('#a8735a')); nos.position.set(s * 0.12, 0.08, 0.7); head.add(nos);
+    const ch = new THREE.Mesh(new THREE.CircleGeometry(0.08, 12), m.cheek); ch.position.set(s * 0.36, 0.18, 0.5); ch.rotation.y = s * 0.6; head.add(ch);
+  }
+  const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.03, 6, 16, Math.PI), m.mouth); mouth.position.set(0, -0.12, 0.6); mouth.rotation.z = Math.PI; head.add(mouth);   // 해맑은 웃음
+  // 훠이훠이 바람 (평소엔 숨김)
+  const wind = new THREE.Group(); wind.visible = false; model.add(wind);
+  for (let i = 0; i < 3; i++) { const w = new THREE.Mesh(new THREE.TorusGeometry(1.6 + i * 0.35, 0.05, 6, 40, Math.PI * 1.2), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.6 })); w.rotation.x = Math.PI / 2; w.position.y = 2.6 + i * 0.25; wind.add(w); }
+
+  const stars = new THREE.Group(); stars.position.y = 5.9; model.add(stars); stars.visible = false;
+  for (let i = 0; i < 4; i++) {
+    const st = new THREE.Mesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshBasicMaterial({ color: '#ffe23a' }));
+    st.position.set(Math.cos(i * Math.PI / 2) * 0.9, 0, Math.sin(i * Math.PI / 2) * 0.9); stars.add(st);
+  }
+  shadowAll(model);
+  return { root, model, body, torso, head, legs, arms, stars, neck, neckPivot, neckSpots, wind, flashMats: [m.skin, m.hood, m.pants] };
+}
+
 // ── 마우스(소환수) 3D ──────────────────────────────
 function makeMouse(color) {
   const g = new THREE.Group();
@@ -951,7 +1029,7 @@ function makeMouse(color) {
 }
 
 // 브롤러 id → 3D 모델 함수 (새 브롤러 추가 시 여기에 등록)
-const MODELS = { jungbo: makeTeacher, hyeonsil: makeHyeonsil, junhoo: makeJunhoo, jaeyeol: makeJaeyeol };
+const MODELS = { jungbo: makeTeacher, hyeonsil: makeHyeonsil, junhoo: makeJunhoo, jaeyeol: makeJaeyeol, jinho: makeJinho };
 const makeModel = (id, color) => (MODELS[id] || makeTeacher)(color);
 
 // ── 로비 3D 쇼케이스 ──────────────────────────────
@@ -1276,6 +1354,40 @@ function fxWallBreak(f) {
   if (isNear(x, z, 22)) shake = Math.max(shake, 1);
 }
 
+// ── 이진호 이펙트 ──
+function fxNeck(f) {
+  const x = f.x * S, z = f.y * S, v = views[f.id];
+  if (v) { v.atkT = 0; v.facing = Math.atan2(Math.cos(f.a), Math.sin(f.a)); v.neckLen = Math.max(3, f.len * S / 0.78); }
+  const ex = x + Math.cos(f.a) * f.len * S, ez = z + Math.sin(f.a) * f.len * S;
+  // 쭉 뻗는 바람 자국
+  for (let i = 0; i < 3; i++) {
+    const ln = new THREE.Mesh(new THREE.BoxGeometry(1, 0.05, 0.05), addMat('#fff3b0', 0.9, true));
+    const g = new THREE.Group(); g.position.set(x, 3.2 + (i - 1) * 0.45, z); g.rotation.y = -f.a; ln.position.x = 0; g.add(ln);
+    addFx(0.35, g, (k) => { const L = f.len * S * Math.min(1, k * 2.2); ln.scale.x = Math.max(0.01, L); ln.position.x = L / 2; ln.material.opacity = 0.9 * (1 - k); }, i * 0.03);
+  }
+  later(f.d, () => { ringFx(ex, ez, 2.2, '#f7c84a', 0.35); burst(ex, 3, ez, 12, ['#f7c84a', '#a5652f', '#ffffff'], { speed: 5, size: 0.18, up: 3, life: 0.45 }); });
+}
+function fxFlail(f) {
+  const v = views[f.id], pos = v ? v.model.root.position : { x: f.x * S, z: f.y * S };
+  if (v) v.g1T = 0;
+  popup('훠이훠이~!!', pos, 7, '#ffe36b', 38, 1.3);
+  ringFx(pos.x, pos.z, 4.5, '#ffffff', 0.5); ringFx(pos.x, pos.z, 3.5, '#f7c84a', 0.45, 0.08);
+  burst(pos.x, 3, pos.z, 30, ['#ffffff', '#f7c84a', '#bff6ff'], { speed: 9, size: 0.18, up: 3, life: 0.7, grav: 2 });
+}
+function fxKick(f) {
+  const x = f.x * S, z = f.y * S;
+  const g = new THREE.Group(); g.position.set(x, 0.15, z); g.rotation.y = -f.a;
+  const w = new THREE.Mesh(sectorGeo(1, 0.75), addMat('#ff9a1f', 0.6, true)); w.rotation.x = -Math.PI / 2; g.add(w);
+  addFx(0.4, g, (k) => { w.scale.setScalar(f.r * S * ease(Math.min(1, k * 2.5))); w.material.opacity = 0.6 * (1 - k); });
+  const fx2 = x + Math.cos(f.a) * f.r * S * 0.6, fz2 = z + Math.sin(f.a) * f.r * S * 0.6;
+  flash(fx2, 1.2, fz2, '#ffffff', 3, 0.3); flash(fx2, 1.2, fz2, '#ff9a1f', 2.4, 0.45);
+  ringFx(fx2, fz2, 6, '#ff9a1f', 0.55); ringFx(fx2, fz2, 8, '#ffd84a', 0.7, 0.1);
+  burst(fx2, 1, fz2, 50, ['#ff9a1f', '#ffd84a', '#ffffff', '#a5652f'], { speed: 15, size: 0.28, up: 9, life: 0.9 });
+  popup('뻥!!!', { x: fx2, z: fz2 }, 5.5, '#ffffff', 56, 0.9);
+  for (const id of f.hits || []) { const t = views[id]; if (t) popup('🦶 2000', t.model.root.position, 4.6, '#ffd84a', 26, 1); }
+  if (isNear(x, z, 22)) shake = Math.max(shake, 1.2);
+}
+
 function fxChoke(f) {
   const x = f.x * S, z = f.y * S, v = views[f.id];
   if (v) { v.atkT = 0; v.facing = Math.atan2(Math.cos(f.a), Math.sin(f.a)); }
@@ -1451,8 +1563,8 @@ const myB = () => BR[selected];
 function getLO(id) {
   const b = BR[id]; let lo = {};
   try { lo = JSON.parse(LS.get('jb_lo_' + id, '{}')) || {}; } catch (e) {}
-  if (![0, 1].includes(lo.g)) lo.g = 0;
-  if (!b.starPowers || !b.starPowers.some((x) => x.id === lo.sp)) lo.sp = b.starPowers ? b.starPowers[0].id : null;
+  if (![0, 1].includes(lo.g) || !b.gadgets[lo.g] || b.gadgets[lo.g].wip) lo.g = 0;
+  if (!b.starPowers || !b.starPowers.some((x) => x.id === lo.sp && !x.wip)) lo.sp = b.starPowers ? b.starPowers.find((x) => !x.wip).id : null;
   if (!Array.isArray(lo.gears)) lo.gears = ['shield', 'dmg'];
   lo.gears = lo.gears.filter((g) => META.gears.some((x) => x.id === g)).slice(0, 2);
   return lo;
@@ -1544,9 +1656,9 @@ function openDetail(id) {
       ${b.super ? sk('🔥', '#ff7a2f', '궁극기', b.super.name, b.super.desc + (b.super.dmg ? ` · 피해 ${b.super.dmg}` : '')) : ''}
       ${b.trait ? sk(b.trait.icon, '#8fd3ff', '특성', b.trait.name, b.trait.desc) : ''}
       <div class="sec">🔧 가젯 — 1개 선택 (더블 가젯 모드에선 둘 다)</div>
-      ${b.gadgets.map((g, i) => sk(g.icon, '#4fd2ff', '가젯', g.name, g.desc, { k: 'g', v: i, on: lo.g === i })).join('')}
+      ${b.gadgets.map((g, i) => g.wip ? sk(g.icon, '#888', '가젯', g.name, g.desc) : sk(g.icon, '#4fd2ff', '가젯', g.name, g.desc, { k: 'g', v: i, on: lo.g === i })).join('')}
       <div class="sec">⭐ 스타파워 — 1개 선택</div>
-      ${(b.starPowers || []).map((x) => sk(x.icon, '#ffd84a', '스타파워', x.name, x.desc, { k: 'sp', v: x.id, on: lo.sp === x.id })).join('')}
+      ${(b.starPowers || []).map((x) => x.wip ? sk(x.icon, '#888', '스타파워', x.name, x.desc) : sk(x.icon, '#ffd84a', '스타파워', x.name, x.desc, { k: 'sp', v: x.id, on: lo.sp === x.id })).join('')}
       <div class="sec">⚙️ 기어 — 6개 중 2개 선택 (<span id="gCnt">${lo.gears.length}</span>/2)</div>
       <div class="gears">${META.gears.map((g) => `<div class="gear${lo.gears.includes(g.id) ? ' on' : ''}" data-gear="${g.id}"><i>${g.icon}</i><b>${g.name}</b><small>${g.desc}</small></div>`).join('')}</div>
       <div class="acts"><button class="btn" id="dSel">${id === selected ? '✓ 선택됨' : '선택'}</button><button class="btn gray" id="dClose">닫기</button></div>
@@ -1733,6 +1845,12 @@ function handleFx(list) {
     else if (f.type === 'dmg') { if (f.k === 'cold') popup(String(f.v), { x, z }, 4.4, '#9fe8ff', 15, 0.6); else popup(String(f.v), { x, z }, 4.8, '#ffffff', f.v >= 1000 ? 26 : 20); }
     else if (f.type === 'choke') fxChoke(f);
     else if (f.type === 'tri') fxTri(f);
+    else if (f.type === 'neck') fxNeck(f);
+    else if (f.type === 'neckHit') { flash(x, 2.4, z, '#f7c84a', 1.5, 0.25); popup('목치기!', { x, z }, 4.6, '#ffe36b', 24, 0.6); }
+    else if (f.type === 'flail') fxFlail(f);
+    else if (f.type === 'flailHit') { popup('퍽!', { x, z }, 4.4, '#fff', 26, 0.6); burst(x, 2, z, 10, ['#ffffff', '#f7c84a'], { speed: 6, size: 0.15, up: 3, life: 0.4 }); }
+    else if (f.type === 'kickStart') { const v = views[f.id]; if (v) { v.superT = 0; v.facing = Math.atan2(-Math.cos(f.a), -Math.sin(f.a)); } popup('기린 뒷발차기!!!', { x, z }, 7, '#ff9a1f', 40, 1.1); }
+    else if (f.type === 'kick') fxKick(f);
     else if (f.type === 'triBoth') { popup('더블 세모!! ▲▲', { x, z }, 6.2, '#ff6ad5', 34, 1.1); flash(x, 2, z, '#ff6ad5', 2.2, 0.35); }
     else if (f.type === 'shoulder') fxShoulder(f);
     else if (f.type === 'confess') fxConfess(f);
@@ -1800,15 +1918,35 @@ function atkSrc() {
   const me = state.players.find((p) => p.id === myId); if (!me) return null;
   return (me.ctrl && state.players.find((q) => q.id === me.ctrl)) || me;
 }
-function autoAim(range, src) {    // 사거리 안 가장 가까운 적
-  const me = src || state.players.find((p) => p.id === myId); if (!me) return null;
-  let best = (range || (BR[me.b].super ? BR[me.b].super.range : 300)) + 120, a = me.f;
-  for (const q of state.players) {
-    if (q.id === myId || q.id === me.id || q.dead) continue;
-    const d = Math.hypot(q.x - me.x, q.y - me.y);
-    if (d < best) { best = d; a = Math.atan2(q.y - me.y, q.x - me.x); }
+// 두 점 사이에 벽이 있는지 (서버와 같은 판정)
+function clearPath(x1, y1, x2, y2) {
+  if (!MAP) return true;
+  const d = Math.hypot(x2 - x1, y2 - y1), n = Math.ceil(d / 10), br = new Set(state.broken || []);
+  for (let i = 1; i < n; i++) {
+    const t = i / n, x = x1 + (x2 - x1) * t, y = y1 + (y2 - y1) * t;
+    if (MAP.walls.some((w, j) => !br.has(j) && x > w.x && x < w.x + w.w && y > w.y && y < w.y + w.h)) return false;
   }
-  return a;
+  return true;
+}
+// 자동조준 대상: 적(같은 팀·조종한 사람·죽은 사람 제외) 중에서 사거리 안 + 벽 안 가린 적 우선, 없으면 가장 가까운 적
+function autoTarget(range, src) {
+  const me = src || state.players.find((p) => p.id === myId); if (!me) return null;
+  const meP = state.players.find((p) => p.id === myId);
+  const team = meP && meP.team;
+  let best = null, bs = Infinity;
+  for (const q of state.players) {
+    if (q.id === myId || q.id === me.id || q.dead || q.out) continue;
+    if (team != null && q.team === team) continue;
+    const d = Math.hypot(q.x - me.x, q.y - me.y);
+    const score = d + (d > range ? 2000 : 0) + (clearPath(me.x, me.y, q.x, q.y) ? 0 : 1000);
+    if (score < bs) { bs = score; best = q; }
+  }
+  return best;
+}
+function autoAim(range, src) {
+  const me = src || state.players.find((p) => p.id === myId); if (!me) return null;
+  const t = autoTarget(range || (BR[me.b].super ? BR[me.b].super.range : 300), me);
+  return t ? Math.atan2(t.y - me.y, t.x - me.x) : me.f;
 }
 function aimAngle(kind = 'sup') {   // 서버 좌표 기준 각도
   const me = atkSrc(), v = me && views[me.id];     // 조종 중이면 꼭두각시 기준
@@ -1827,15 +1965,14 @@ function aimAngle(kind = 'sup') {   // 서버 좌표 기준 각도
 function doSuper() { if (!socket) return; const a = aimAngle('sup'); socket.emit('super', a == null ? undefined : a); }
 // 거리 조절 공격(김재열): 드래그한 길이 / 마우스 거리 / 자동조준 시 적까지 거리 → 0.15~1
 function autoDist(range, src) {
-  let best = Infinity;
-  for (const q of state.players) { if (q.id === myId || q.id === src.id || q.dead || q.out) continue; best = Math.min(best, Math.hypot(q.x - src.x, q.y - src.y)); }
-  return best <= range + 120 ? best / range : 1;
+  const t = autoTarget(range, src);
+  return t ? Math.hypot(t.x - src.x, t.y - src.y) / range : 1;
 }
 function aimDist() {
   const me = atkSrc(), v = me && views[me.id]; if (!me || !v) return 1;
   const range = BR[me.b].attack.range * (me.b === 'jaeyeol' && me.sp === 'gao' ? 1.15 : 1), A = aims.atk;
   let d;
-  if (A.id !== null) d = A.drag > 14 ? A.drag / 48 : autoDist(range, me);
+  if (A.id !== null) d = A.drag > 20 ? A.drag / 48 : autoDist(range, me);
   else if (!isTouch && mouse.on) {
     ray.setFromCamera({ x: mouse.x / W * 2 - 1, y: -(mouse.y / H) * 2 + 1 }, camera);
     d = ray.ray.intersectPlane(ground, hitP) ? Math.hypot(hitP.x - v.model.root.position.x, hitP.z - v.model.root.position.z) / (range * S) : 1;
@@ -1858,29 +1995,29 @@ function aimButton(el, kind, fire) {
   el.addEventListener('pointerdown', (e) => {
     e.preventDefault(); e.stopPropagation(); if (!socket) return;
     const r = el.getBoundingClientRect();
-    Object.assign(A, { id: e.pointerId, sx: r.left + r.width / 2, sy: r.top + r.height / 2, drag: 0, maxDrag: 0, cancel: false, ang: null });
+    Object.assign(A, { id: e.pointerId, sx: r.left + r.width / 2, sy: r.top + r.height / 2, px: e.clientX, py: e.clientY, drag: 0, maxDrag: 0, cancel: false, ang: null });
     try { el.setPointerCapture(e.pointerId); } catch (_) {}
     aimJoy.className = kind; aimJoy.style.left = A.sx + 'px'; aimJoy.style.top = A.sy + 'px'; aimJoy.style.display = 'block'; aimKnob.style.transform = '';
   });
   el.addEventListener('pointermove', (e) => {
     if (e.pointerId !== A.id) return;
-    const dx = e.clientX - A.sx, dy = e.clientY - A.sy, d = Math.hypot(dx, dy);
+    const dx = e.clientX - A.px, dy = e.clientY - A.py, d = Math.hypot(dx, dy);   // 처음 누른 자리 기준
     A.drag = d; A.maxDrag = Math.max(A.maxDrag, d);
-    if (d > 14) A.ang = Math.atan2(dy, dx);
-    A.cancel = d <= 14 && A.maxDrag > 30;
+    if (d > 20) A.ang = Math.atan2(dy, dx);
+    A.cancel = d <= 20 && A.maxDrag > 34;
     aimJoy.classList.toggle('cancel', A.cancel);
     const k = Math.min(d, 48); aimKnob.style.transform = d ? `translate(${dx / d * k}px,${dy / d * k}px)` : '';
   });
   const end = (e) => {
     if (e.pointerId !== A.id) return;
-    const ang = A.drag > 14 ? A.ang : null;
+    const ang = A.drag > 20 ? A.ang : null;
     A.id = null; aimJoy.style.display = 'none';
     if (e.type === 'pointercancel' || !socket || A.cancel) return;
     const me = atkSrc(); if (!me) return;
     const B = BR[me.b]; if (kind === 'sup' && !B.super) return;
     const range = kind === 'atk' ? B.attack.range : B.super.range;
     const a = ang ?? autoAim(range, me);
-    if (kind === 'atk' && B.attack.aim === 'tri') { const d = A.drag > 14 ? Math.max(0.15, Math.min(1, A.drag / 48)) : Math.max(0.15, Math.min(1, autoDist(range, me))); socket.emit(fire, a == null ? undefined : { a, d }); return; }
+    if (kind === 'atk' && B.attack.aim === 'tri') { const d = A.drag > 20 ? Math.max(0.15, Math.min(1, A.drag / 48)) : Math.max(0.15, Math.min(1, autoDist(range, me))); socket.emit(fire, a == null ? undefined : { a, d }); return; }
     socket.emit(fire, a == null ? undefined : a);
   };
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
@@ -1979,7 +2116,31 @@ function animateTeacher(v, p, dt, now) {
   M.torso.rotation.z = Math.sin(v.phase) * 0.07 * walk;
   M.head.rotation.y = 0;
 
-  const H = v.kind === 'hyeonsil', K = v.kind === 'junhoo', JY = v.kind === 'jaeyeol', J = !H && !K && !JY;
+  const H = v.kind === 'hyeonsil', K = v.kind === 'junhoo', JY = v.kind === 'jaeyeol', JH = v.kind === 'jinho', J = !H && !K && !JY && !JH;
+  // 이진호: 목이 걸을 때 앞뒤로 껄렁, 공격 땐 목이 쭉 늘어났다 돌아옴
+  if (JH) {
+    let L = 1.9, tilt = Math.sin(v.phase) * 0.12 * walk + Math.sin(now * 1.5) * 0.04;
+    if (v.atkT < 0.5) {
+      const t = v.atkT, ext = v.neckLen || 30;
+      const q = t < 0.18 ? ease(t / 0.18) : t < 0.26 ? 1 : 1 - ease((t - 0.26) / 0.24);
+      L = 1.9 + (ext - 1.9) * q; tilt = 1.48 * Math.min(1, t / 0.08) * (t < 0.42 ? 1 : 1 - (t - 0.42) / 0.08);
+      lean = 0.2 * q;
+    }
+    M.neck.scale.y = L; M.head.position.y = L; M.neckPivot.rotation.x = tilt;
+    M.neckSpots.scale.y = L / 1.9;
+    M.head.rotation.x = -tilt * 0.9;
+    // 훠이훠이: 팔 마구 휘젓기
+    M.wind.visible = !!p.fl && p.fl > 0 && !p.dead;
+    if (M.wind.visible) {
+      armX = [Math.sin(now * 22) * 2.2, Math.cos(now * 22) * 2.2]; armZ = [-1.2 - Math.sin(now * 17) * 0.8, 1.2 + Math.cos(now * 17) * 0.8];
+      M.wind.rotation.y = now * 9; bodyY += Math.abs(Math.sin(now * 14)) * 0.25;
+    }
+    // 뒷발차기: 뒤돌아(조준 반대쪽을 보고) 한쪽 다리를 뒤로 뻥
+    if (v.superT < 0.6) {
+      const t = v.superT, q = t < 0.2 ? t / 0.2 : 1 - Math.max(0, t - 0.4) / 0.2;
+      lean = 0.55 * q; v.kickLeg = -2.0 * Math.min(1, Math.max(0, (t - 0.12) / 0.1)) * (t < 0.45 ? 1 : 1 - (t - 0.45) / 0.15);
+    } else v.kickLeg = 0;
+  }
   // 김재열: 두 손 주머니 · 턱 치켜들기 · 몸 젖히기 · 어깨 비스듬히 (걸을 때도 건들건들)
   if (JY) {
     armX = [0.22 + s * 0.12 * walk, 0.22 - s * 0.12 * walk]; armZ = [-0.08, 0.08];
@@ -2062,6 +2223,7 @@ function animateTeacher(v, p, dt, now) {
       M.head.rotation.y = Math.sin(now * 50) * 0.1 * (1 - r); }
   }
   M.arms[0].rotation.x = armX[0]; M.arms[1].rotation.x = armX[1];
+  if (JH && v.kickLeg) M.legs[1].rotation.x = v.kickLeg;
   M.arms[0].rotation.z = armZ[0]; M.arms[1].rotation.z = armZ[1];
   M.body.position.y = bodyY;
   M.body.scale.set(sx, sy, sx);
@@ -2300,13 +2462,16 @@ function frame(nowMs) {
         const a = aimAngle('sup'); if (a != null) aimInd.rotation.y = -a;
       }
       // 기본공격 조준: 범위 고정(정보쌤) → 주변 원 / 방향 공격(현실쌤) → 부채꼴
-      const dirAtk = B.attack.aim === 'dir' || B.attack.aim === 'tri';
+      const dirAtk = B.attack.aim === 'dir' || B.attack.aim === 'tri' || B.attack.aim === 'line';
       atkInd.visible = !src.dead && !!v && (aims.atk.id !== null ? !aims.atk.cancel : (dirAtk && !isTouch));
       if (atkInd.visible) {
         if (!atkMesh) {
           const r = B.attack.range * S;
           atkMesh = new THREE.Group();
-          if (B.attack.aim === 'tri') {
+          if (B.attack.aim === 'line') {
+            const g = new THREE.PlaneGeometry(r, B.attack.width * 2 * S); g.translate(r / 2, 0, 0);
+            const line = new THREE.Mesh(g, addMat('#f7c84a', 0.3)); line.rotation.x = -Math.PI / 2; atkMesh.add(line);
+          } else if (B.attack.aim === 'tri') {
             const g = new THREE.PlaneGeometry(r, B.attack.width * 2 * S); g.translate(r / 2, 0, 0);
             const line = new THREE.Mesh(g, addMat('#3cd8ff', 0.28)); line.rotation.x = -Math.PI / 2; atkMesh.add(line);
             const land = new THREE.Mesh(new THREE.CircleGeometry(B.attack.lobR * S, 32), addMat('#ff6ad5', 0.3)); land.rotation.x = -Math.PI / 2; land.position.set(r, 0.01, 0); atkMesh.add(land); atkMesh.userData.land = land; atkMesh.userData.r = r;
@@ -2318,7 +2483,7 @@ function frame(nowMs) {
           atkInd.add(atkMesh);
         }
         atkInd.position.set(v.model.root.position.x, 0.09, v.model.root.position.z);
-        atkMesh.scale.setScalar((src.aw ? 2 : 1) * (src.jj ? 0.85 : 1) * (src.b === 'jaeyeol' && src.sp === 'gao' ? 1.15 : 1));
+        atkMesh.scale.setScalar((src.aw ? 2 : 1) * (src.jj ? 0.85 : 1) * (src.b === 'jaeyeol' && src.sp === 'gao' ? 1.15 : 1) * (src.b === 'jinho' && src.sp === 'tall' ? 1.25 : 1));
         if (dirAtk) { const a = aimAngle('atk'); if (a != null) atkInd.rotation.y = -a; }
         if (atkMesh.userData.land) {   // 착지 지점이 드래그 길이를 따라 움직임 (이 값을 놓을 때 그대로 보냄)
           atkMesh.userData.land.position.x = atkMesh.userData.r * aimDist();

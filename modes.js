@@ -96,4 +96,14 @@ const MODES = {
   },
 };
 
+// 맵 전체 크기 배율 (벽·스폰·광산 위치까지 같이 커짐)
+const MAP_SCALE = 1.6;
+for (const m of Object.values(MAPS)) {
+  const k = MAP_SCALE, R = (v) => Math.round(v * k);
+  m.w = R(m.w); m.h = R(m.h);
+  m.walls = m.walls.map((w) => ({ x: R(w.x), y: R(w.y), w: R(w.w), h: R(w.h) }));
+  if (m.spawns) m.spawns = m.spawns.map((s) => ({ x: R(s.x), y: R(s.y) }));
+  if (m.mine) m.mine = { x: R(m.mine.x), y: R(m.mine.y) };
+}
+
 module.exports = { MAPS, MODES };
