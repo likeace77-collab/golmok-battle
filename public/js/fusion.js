@@ -87,7 +87,7 @@ let FZ_MODE = 2;
 async function showFusion(mode) {
   G.screen = 'fusion'; app.className = '';
   if (mode === 2 || mode === 3) FZ_MODE = mode;
-  const N = FZ_MODE, cost = N === 3 ? FZ3_GP : FZ_GP, sel = Array(N).fill(null);
+  const N = FZ_MODE, free = !!G.user.fzFree?.[N], cost = free ? 0 : N === 3 ? FZ3_GP : FZ_GP, sel = Array(N).fill(null);
   const deckUids = new Set((G.user.decks || []).flatMap((d) => d.team.map((t) => t.uid)));
   const monOf = (uid) => uid && G.user.mons.find((x) => x.uid === uid);
   const pack = () => { const v = sel.filter(Boolean); sel.fill(null); v.forEach((x, i) => { sel[i] = x; }); };
@@ -96,11 +96,12 @@ async function showFusion(mode) {
     const slot = (i) => { const m = monOf(sel[i]); return m ? `<button class="fz-slot on${m.shiny ? ' is-shiny' : ''}" data-slot="${i}">${monArt(m.species, m.shiny)}<b>${fzName(m.species)}${m.plus ? ` +${m.plus}` : ''}</b><small>빼기</small></button>` : `<div class="fz-slot"><i>?</i><small>${['첫', '두', '세'][i]} 번째</small></div>`; };
     const ready = sel.every(Boolean), chosen = new Set(sel.filter(Boolean).map((u) => monOf(u)?.species));
     app.innerHTML = `${topbar('🧬 합체')}
-      <div class="fz-tabs"><button class="${N === 2 ? 'on' : ''}" data-mode="2">🧬 2단 합체</button><button class="${N === 3 ? 'on' : ''}" data-mode="3">🧬🧬 3단 합체</button></div>
+      <div class="fz-tabs"><button class="${N === 2 ? 'on' : ''}" data-mode="2">🧬 2단 합체${G.user.fzFree?.[2] ? '<em class="fz-free">무료</em>' : ''}</button><button class="${N === 3 ? 'on' : ''}" data-mode="3">🧬🧬 3단 합체${G.user.fzFree?.[3] ? '<em class="fz-free">무료</em>' : ''}</button></div>
+      ${free ? `<p class="fz-freeband">🎁 ${N === 3 ? '3단' : '2단'} 합체 <b>첫 번째는 무료</b>예요! 마음껏 시험해 보세요.</p>` : ''}
       <section class="fz-hero${N === 3 ? ' tri' : ''}"><div class="fz-pair${N === 3 ? ' n3' : ''}">${sel.map((_, i) => slot(i)).join('<b class="fz-plus">＋</b>')}<b class="fz-arrow">➜</b><div class="fz-slot fz-mystery${ready ? ' ready' : ''}"><i>?</i><small>${ready ? '무엇이 태어날까…?' : '새 골목몬'}</small></div></div>
         <p>${N === 3 ? '세' : '두'} 골목몬을 합쳐 <b>세상에 하나뿐인 새 골목몬</b>을 탄생시켜요. 능력치는 ${N === 3 ? '세' : '두'} 골목몬의 평균에서 조금 흔들리고, 기술은 ${N === 3 ? '셋' : '둘'}의 기술 중 <b>8개</b>를 물려받고, ${N === 3 ? '세' : '두'} 기술을 <b>합친</b> 합체기 <b>2개</b>가 생겨요. 특성·메가진화·거다이맥스도 전용으로!</p>
         <p class="fz-warn">⚠️ 모습·이름·기술·능력치는 <b>합체해 봐야 알아요.</b> 되돌릴 수 없고, ${N === 3 ? '세' : '두'} 골목몬은 사라져요. 합체몬은 다시 합체할 수 없어요.</p>
-        <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn" id="fz-go" ${ready ? '' : 'disabled'}>🧬 ${N === 3 ? '3단 ' : ''}합체하기 (${fmt(cost)}GP)</button><button class="btn paper" id="fz-tree">🌳 합체 트리</button><button class="btn paper" id="fz-gal">🖼️ 갤러리·투표</button></div></section>
+        <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn" id="fz-go" ${ready ? '' : 'disabled'}>🧬 ${N === 3 ? '3단 ' : ''}합체하기 (${free ? '🎁 첫 합체 무료!' : `${fmt(cost)}GP`})</button><button class="btn paper" id="fz-tree">🌳 합체 트리</button><button class="btn paper" id="fz-gal">🖼️ 갤러리·투표</button></div></section>
       <section class="panel"><h2>합체할 골목몬 ${N}마리 고르기 <small class="muted">${mons.length}마리 · 이미 합체한 골목몬은 안 보여요</small></h2>
         <div class="box-grid fz-grid">${mons.map((m) => { const sp = G.data.MONSTERS[m.species], on = sel.includes(m.uid), same = !on && chosen.has(m.species); return `<button class="box-card${m.shiny ? ' is-shiny' : ''}${on ? ' fz-on' : ''}" data-uid="${m.uid}" ${same ? 'disabled title="같은 골목몬끼리는 합체할 수 없어요"' : ''} style="--tc:${G.data.TYPES[sp.types[0]].c}">${m.shiny ? '<em class="shiny-dot">✨</em>' : ''}${m.plus ? `<em class="plus-dot">+${m.plus}</em>` : ''}${monArt(m.species, m.shiny)}<b>${esc(sp.n)}</b>${deckUids.has(m.uid) ? '<small class="fz-deck">덱</small>' : ''}</button>`; }).join('') || '<p class="wait">합체할 수 있는 골목몬이 없어요.</p>'}</div></section>`;
     app.querySelector('#back').onclick = () => { app.className = ''; showLobby(); };
@@ -123,11 +124,11 @@ async function showFusion(mode) {
 function confirmFuse(sel, redraw) {
   const ms = sel.map((uid) => G.user.mons.find((x) => x.uid === uid));
   if (ms.some((m) => !m)) return;
-  const N = ms.length, cost = N === 3 ? FZ3_GP : FZ_GP;
+  const N = ms.length, free = !!G.user.fzFree?.[N], cost = free ? 0 : N === 3 ? FZ3_GP : FZ_GP;
   const deckUids = new Set((G.user.decks || []).flatMap((d) => d.team.map((t) => t.uid)));
   const bg = openSheet(`<div class="fz-confirm"><h2>정말 ${N === 3 ? '3단 ' : ''}합체할까요?</h2>
     <div class="fz-pair small${N === 3 ? ' n3' : ''}">${ms.map((m) => `<span class="${m.shiny ? 'is-shiny' : ''}">${monArt(m.species, m.shiny)}<small>${fzName(m.species)}${m.plus ? ` +${m.plus}` : ''}</small></span>`).join('<b class="fz-plus">＋</b>')}</div>
-    <ul class="fz-list"><li>${N === 3 ? '세' : '두'} 골목몬은 <b>사라지고</b> 되돌릴 수 없어요.${ms.some((m) => m.plus) ? ' 강화(+)도 사라져요.' : ''}</li>${ms.some((m) => deckUids.has(m.uid)) ? '<li>덱에서도 빠져요.</li>' : ''}${ms.some((m) => m.shiny) ? '<li>✨ 이로치가 있으면 합체몬도 이로치!</li>' : ''}<li>어떤 골목몬이 나올지는 아무도 몰라요.</li><li>비용 ${fmt(cost)}GP (보유 ${fmt(G.user.gp)})</li></ul>
+    <ul class="fz-list"><li>${N === 3 ? '세' : '두'} 골목몬은 <b>사라지고</b> 되돌릴 수 없어요.${ms.some((m) => m.plus) ? ' 강화(+)도 사라져요.' : ''}</li>${ms.some((m) => deckUids.has(m.uid)) ? '<li>덱에서도 빠져요.</li>' : ''}${ms.some((m) => m.shiny) ? '<li>✨ 이로치가 있으면 합체몬도 이로치!</li>' : ''}<li>어떤 골목몬이 나올지는 아무도 몰라요.</li><li>${free ? '비용 <b>🎁 무료</b> (첫 합체 무료 서비스)' : `비용 ${fmt(cost)}GP (보유 ${fmt(G.user.gp)})`}</li></ul>
     <div class="row" style="gap:6px"><button class="btn paper" data-x>그만두기</button><button class="btn fz-big" data-go>🧬 합체!</button></div></div>`);
   bg.querySelector('[data-x]').onclick = closeSheet;
   bg.querySelector('[data-go]').onclick = async (e) => {

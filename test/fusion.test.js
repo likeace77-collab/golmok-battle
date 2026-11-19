@@ -16,7 +16,7 @@ test('합체: 두 마리가 사라지고 새 골목몬 한 마리가 태어나�
   const r = F.fuse(u, 'a', 'b');
   assert.ok(r.ok, r.error);
   assert.equal(u.mons.length, 3); assert.ok(!u.mons.some((m) => m.uid === 'a' || m.uid === 'b'));
-  assert.equal(u.gp, 100000 - F.FUSE_GP);
+  assert.equal(u.gp, 100000, '첫 2단 합체는 무료'); assert.ok(r.free);
   const sp = Data.MONSTERS[r.mon.species];
   assert.ok(sp.fz && sp.parents.includes('yeoubi') && sp.parents.includes('yeontan'));
   assert.equal(Object.keys(Data.MONSTERS).length, n, '도감·스카우트 목록에는 안 섞여요');
@@ -146,7 +146,7 @@ test('3단 합체: 세 마리 → 한 마리, 기술 8 + 3단 합체기 2, 메�
   const u = mk(); u.gp = 1e5; u.mons.push({ uid: 'h', species: 'horong', moves: [] }, { uid: 'k', species: 'kettle', moves: [] }, { uid: 'k2', species: 'kettle', moves: [] });
   assert.ok(F.fuse3(u, ['a', 'b', 'c']).error, '같은 골목몬 둘(연탄이) 안 됨');
   const r = F.fuse3(u, ['a', 'b', 'h']); assert.ok(r.ok, r.error);
-  assert.equal(u.gp, 1e5 - F.FUSE3_GP);
+  assert.equal(u.gp, 1e5, '첫 3단 합체는 무료');
   assert.ok(!u.mons.some((m) => ['a', 'b', 'h'].includes(m.uid)));
   const sp = Data.MONSTERS[r.mon.species];
   assert.ok(sp.tri && sp.parents.length === 3);
@@ -204,4 +204,12 @@ test('합체 대성공: 능력치 평균 ×1.2~1.3, 합체기 하나 더', () =>
   assert.equal(sp.moves.filter((x) => Data.MOVES[x].fzMove).length, 3); assert.equal(sp.moves.length, 11); assert.ok(sp.great);
   const r3 = F.fuse3(u, ['c', 'd', 'h']); assert.ok(r3.great); assert.equal(Data.MONSTERS[r3.mon.species].moves.length, 11);
   F.GREAT.p = 0;
+});
+
+test('합체 첫 번째 무료: 2단·3단 각각 한 번씩만', () => {
+  const u = mk(); u.gp = 1e5;
+  u.mons.push({ uid: 'h', species: 'horong', moves: [] }, { uid: 'k', species: 'kettle', moves: [] }, { uid: 'u2', species: 'usan', moves: [] }, { uid: 'j', species: 'jeonbot', moves: [] }, { uid: 'o', species: 'orak', moves: [] }, { uid: 'b2', species: 'bangpae', moves: [] });
+  const a = F.fuse(u, 'h', 'k'); assert.ok(a.free); assert.equal(u.gp, 1e5);
+  const b = F.fuse(u, 'u2', 'j'); assert.ok(!b.free); assert.equal(u.gp, 1e5 - F.FUSE_GP);
+  u.gp = 0; assert.ok(F.fuse3(u, ['o', 'b2', 'c']).ok, '돈 없어도 첫 3단은 무료');
 });

@@ -2380,3 +2380,7 @@ body:has(.rp-bar) #toast { bottom: 150px; z-index: 90; }
 .ct-gpic img { width: 100%; display: block; border-radius: 12px; border: 2px solid var(--gc); box-shadow: 0 0 18px var(--gc); background: #fff; }
 .ct-gmaxf .pad { margin-top: 6px; }
 .ct-gmaxf .ct-grow input { width: auto; flex: 1 1 auto; } .ct-gmaxf .ct-grow select { width: auto; flex: 0 0 auto; max-width: 40%; }
+
+.fz-free { font-style: normal; font-size: 10px; font-weight: 900; color: #fff; background: #d62839; border-radius: 999px; padding: 1px 6px; margin-left: 4px; vertical-align: 2px; animation: fzFree 1.2s ease-in-out infinite alternate; }
+@keyframes fzFree { to { transform: scale(1.12); } }
+.fz-freeband { margin: 8px 0; padding: 8px 12px; text-align: center; font-weight: 700; background: linear-gradient(90deg, #fff3b0, #FFD23F, #fff3b0); border: 3px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); }

@@ -307,10 +307,11 @@ function fuse3(u, uids, busy = new Set()) {
   if (sps.some((x) => x.fz)) return { error: '합체몬은 더 합체할 수 없어요.' };
   if (new Set(ms.map((m) => m.species)).size !== 3) return { error: '서로 다른 골목몬끼리만 합체할 수 있어요.' };
   if (ms.some((m) => NO_PARENT.has(m.species) || Data.BANNED.includes(m.species))) return { error: '이 골목몬은 합체할 수 없어요.' };
-  if (u.gp < FUSE3_GP) return { error: `3단 합체에 ${FUSE3_GP.toLocaleString('ko-KR')}GP가 필요해요.` };
+  const free = !(u.fzFreeUsed || {})[3]; // 🎁 3단 합체 첫 번째는 무료
+  if (!free && u.gp < FUSE3_GP) return { error: `3단 합체에 ${FUSE3_GP.toLocaleString('ko-KR')}GP가 필요해요.` };
   const f = makeFusion3(u, ms, sps); if (Math.random() < GREAT.p) greatUp(f, sps);
   db.fusions[f.id] = f; register(f);
-  u.gp -= FUSE3_GP;
+  if (free) (u.fzFreeUsed ||= {})[3] = Date.now(); else u.gp -= FUSE3_GP;
   u.mons = u.mons.filter((m) => !ms.includes(m));
   (u.decks || []).forEach((d) => { d.team = d.team.filter((t) => !uids.includes(t.uid)); });
   const shiny = ms.some((m) => m.shiny), aff = Math.round(ms.reduce((n, m) => n + (m.aff || 0), 0) / 3);
@@ -322,7 +323,7 @@ function fuse3(u, uids, busy = new Set()) {
   u.fusionLog.unshift({ id: f.id, a: rec(ms[0]), b: rec(ms[1]), c: rec(ms[2]), uid: m.uid, at: Date.now() });
   u.fusionLog = u.fusionLog.slice(0, 200);
   u.counts.fusions = (u.counts.fusions || 0) + 1;
-  return { ok: true, mon: m, fusion: pubOf(f.id), great: !!f.sp.great };
+  return { ok: true, mon: m, fusion: pubOf(f.id), great: !!f.sp.great, free };
 }
 
 // ✨ 대성공: 능력치가 부모 평균 ×1.2~1.3, 합체기 하나 더, 금빛 테두리
@@ -354,10 +355,11 @@ function fuse(u, uidA, uidB, busy = new Set()) {
   if (sa.fz || sb.fz) return { error: '합체몬은 더 합체할 수 없어요.' };
   if (A.species === B.species) return { error: '서로 다른 골목몬끼리만 합체할 수 있어요.' };
   if (NO_PARENT.has(A.species) || NO_PARENT.has(B.species) || Data.BANNED.includes(A.species) || Data.BANNED.includes(B.species)) return { error: '이 골목몬은 합체할 수 없어요.' };
-  if (u.gp < FUSE_GP) return { error: `합체에 ${FUSE_GP.toLocaleString('ko-KR')}GP가 필요해요.` };
+  const free = !(u.fzFreeUsed || {})[2]; // 🎁 2단 합체 첫 번째는 무료
+  if (!free && u.gp < FUSE_GP) return { error: `합체에 ${FUSE_GP.toLocaleString('ko-KR')}GP가 필요해요.` };
   const f = makeFusion(u, A, B, sa, sb); if (Math.random() < GREAT.p) greatUp(f, [sa, sb]);
   db.fusions[f.id] = f; register(f);
-  u.gp -= FUSE_GP;
+  if (free) (u.fzFreeUsed ||= {})[2] = Date.now(); else u.gp -= FUSE_GP;
   // 두 골목몬은 사라지고 새 골목몬 한 마리가 태어나요 (덱에서도 빠짐)
   u.mons = u.mons.filter((m) => m !== A && m !== B);
   (u.decks || []).forEach((d) => { d.team = d.team.filter((t) => t.uid !== uidA && t.uid !== uidB); });
@@ -369,7 +371,7 @@ function fuse(u, uidA, uidB, busy = new Set()) {
   u.fusionLog.unshift({ id: f.id, a: { species: A.species, shiny: !!A.shiny, plus: A.plus || 0 }, b: { species: B.species, shiny: !!B.shiny, plus: B.plus || 0 }, uid: m.uid, at: Date.now() });
   u.fusionLog = u.fusionLog.slice(0, 200);
   u.counts.fusions = (u.counts.fusions || 0) + 1;
-  return { ok: true, mon: m, fusion: pubOf(f.id), great: !!f.sp.great };
+  return { ok: true, mon: m, fusion: pubOf(f.id), great: !!f.sp.great, free };
 }
 
 // 특성 다시 뽑기: 리롤권 3장 또는 1,500GP. 지금 특성과 다른 특성, 여전히 다른 합체몬과 안 겹침
