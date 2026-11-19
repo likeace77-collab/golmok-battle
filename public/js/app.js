@@ -970,6 +970,7 @@ function openContestDex(e) {
   const mega = e.mega && (e.mega.n || e.mega.d || e.mega.image) ? e.mega : null;
   const boostSum = mega?.boost ? CT_STATS.reduce((a, k) => a + (mega.boost[k] || 0), 0) : 0;
   const z = e.z && e.z.n ? e.z : null;
+  const gmax = e.gmax && (e.gmax.n || e.gmax.d || e.gmax.image) ? e.gmax : null;
   const moves = Array.isArray(e.moves) ? e.moves.filter((m) => m.n) : null;
   const mline = (m) => [CT_CAT[m.cat] || '', m.pow ? `위력 ${m.pow}` : '', m.acc ? `명중 ${m.acc}` : '', m.pp ? `PP ${m.pp}` : ''].filter(Boolean).join(', ') + (m.d ? `. ${esc(m.d)}` : '');
   const bg = openSheet(`<div class="row" style="margin-bottom:10px"><h2>${e.winner ? '🏆 ' : ''}${esc(e.name)}</h2><button class="btn small paper" data-x>닫기</button></div>
@@ -990,6 +991,11 @@ function openContestDex(e) {
       ${mega.d ? `<p style="margin-top:8px;font-size:15px;line-height:1.4;white-space:pre-wrap">${esc(mega.d)}</p>` : ''}</section>` : ''}
     ${z ? `<section class="zbox" style="--zc:${tColor(z.type)}"><span>Z기술</span><b>${esc(z.n)}</b>
       <small>${z.type ? typeChip(z.type) : ''}${CT_CAT[z.cat] || ''}${z.pow ? `, 위력 ${z.pow}` : ''}, 반드시 명중.${z.d ? ' ' + esc(z.d) : ''}</small></section>` : ''}
+    ${gmax ? `<section class="gmaxbox" style="--gc:${tColor(gmax.type || e.types?.[0])}"><h3>거다이맥스</h3>
+      ${gmax.image ? `<div class="gmax-pic ct-gpic"><img src="${gmax.image}" alt="${esc(e.name)} 거다이맥스"></div>` : '<p class="gmax-rule">그림 없음</p>'}
+      ${gmax.d ? `<p style="margin:8px 0;font-size:15px;line-height:1.4;white-space:pre-wrap">${esc(gmax.d)}</p>` : ''}
+      <p class="gmax-rule">한 판에 한 번, 몇 턴 동안 거대한 괴수가 돼요. 체력이 크게 늘고, 기술은 거다이기술 1개와 다이기술 3개만 쓸 수 있어요.</p>
+      ${gmax.n ? `<div class="gmax-g">${gmax.type || e.types?.[0] ? typeChip(gmax.type || e.types[0]) : ''}<b>★ ${esc(gmax.n)}</b><small>거다이기술 · 반드시 명중.${gmax.fx ? ' ' + esc(gmax.fx) : ''}</small></div>` : ''}</section>` : ''}
     ${e.types?.length ? `<h3 class="dex-h">타입 상성</h3>${matchups(e.types)}` : ''}
     ${moves ? `<h3 class="dex-h">배울 수 있는 스킬 ${moves.length}개</h3>
       ${moves.map((m) => `<div class="mv">${m.type ? typeChip(m.type) : ''}<b>${esc(m.n)}</b>${m.sig ? '<em class="sigtag">전용기</em>' : ''}<small>${mline(m)}</small></div>`).join('')}`
@@ -1107,7 +1113,7 @@ function showContestForm(edit = null) {
       <div class="ct-mv-nums"><label>위력<input class="m-pow" type="number" inputmode="numeric" min="0" max="300" placeholder="80"></label><label>명중<input class="m-acc" type="number" inputmode="numeric" min="0" max="100" placeholder="100"></label><label>PP<input class="m-pp" type="number" inputmode="numeric" min="1" max="40" placeholder="10"></label></div>
       <input class="m-d" maxlength="120" placeholder="효과 (예: 30% 확률로 화상)"></div>`;
   app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>${edit ? '출품작 수정' : '신캐 만들기'}</h1></div>
-    <p class="ct-tip">도감과 같은 모양으로 만들어요. <b>이름과 설명</b>만 꼭 쓰면 되고, 나머지는 생각해 둔 만큼만 채워 주세요.</p>
+    <p class="ct-tip">도감과 같은 모양으로 만들어요 (기본 모습 · 메가진화 · Z기술 · 거다이맥스 · 기술). <b>이름과 설명</b>만 꼭 쓰면 되고, 나머지는 생각해 둔 만큼만 채워 주세요.</p>
     <section class="panel ct-form">
       <label class="fl">이름 <small>12자까지</small><input id="ct-name" maxlength="12" placeholder="예: 등신"></label>
       <div class="fl">타입 <small>2개까지</small><div class="ct-types">${types.map(([k, t]) => `<button type="button" data-type="${k}" style="--tc:${t.c}">${t.n}</button>`).join('')}</div></div>
@@ -1128,13 +1134,19 @@ function showContestForm(edit = null) {
         <div class="ct-zrow">${typeSel('z-type')}<select class="z-cat"><option value="p">물리</option><option value="s">특수</option></select></div>
         <label class="ct-zpow">위력<input class="z-pow" type="number" inputmode="numeric" min="0" max="400" placeholder="180"></label>
         <input id="ct-zd" maxlength="160" placeholder="Z기술 효과"></section>
+      <section class="gmaxbox ct-gmaxf" style="--gc:#d81b4a"><h3>거다이맥스 <small>선택</small></h3>
+        <p class="gmax-rule">한 판에 한 번 거대한 괴수로 변신하는 모습이에요. 그림과 거다이기술을 생각해 둔 만큼 채워 주세요.</p>
+        ${padHTML('pad-gmax')}
+        <textarea id="ct-gd" rows="3" maxlength="400" placeholder="거다이맥스 모습 설명 (예: 하늘을 덮는 연탄 탑이 되어 불꽃 구름을 뿜는다)"></textarea>
+        <div class="ct-grow"><input id="ct-gn" maxlength="16" placeholder="거다이기술 이름 (예: 거다이 구공탄)">${typeSel('g-type', '타입')}</div>
+        <input id="ct-gfx" maxlength="160" placeholder="거다이기술 효과 (예: 5턴 동안 상대 쪽에 불바다)"></section>
       <h3 class="dex-h">배울 수 있는 스킬 <small>10개까지 · 이름을 쓴 칸만 들어가요</small></h3>
       <div id="ct-moves">${[0, 1, 2, 3].map(moveRow).join('')}</div>
       <button type="button" class="btn small paper" id="ct-addmv">+ 기술 칸 추가</button>
       <button class="btn wide" id="ct-send">${edit ? '수정한 내용 저장' : '공모전에 내기'}</button>
     </section>`;
   app.querySelector('#back').onclick = () => showContest();
-  const pad = drawPad(app.querySelector('#pad-base')), mpad = drawPad(app.querySelector('#pad-mega'));
+  const pad = drawPad(app.querySelector('#pad-base')), mpad = drawPad(app.querySelector('#pad-mega')), gpad = drawPad(app.querySelector('#pad-gmax'));
   const picked = [];
   app.querySelectorAll('[data-type]').forEach((b) => {
     b.onclick = () => {
@@ -1179,6 +1191,8 @@ function showContestForm(edit = null) {
     sums();
     if (edit.image) pad.load(edit.image);
     if (edit.mega?.image) mpad.load(edit.mega.image);
+    set('#ct-gn', edit.gmax?.n); set('.g-type', edit.gmax?.type || ''); set('#ct-gfx', edit.gmax?.fx); set('#ct-gd', edit.gmax?.d);
+    if (edit.gmax?.image) gpad.load(edit.gmax.image);
   }
   app.querySelector('#ct-send').onclick = async (ev) => {
     const val = (id) => app.querySelector(id).value.trim();
@@ -1194,6 +1208,7 @@ function showContestForm(edit = null) {
       trait: { n: val('#ct-tn'), d: val('#ct-td') },
       mega: { n: val('#ct-mn'), d: val('#ct-md'), boost: stats('m'), image: mpad.used() ? mpad.data() : '' },
       z: { n: val('#ct-zn'), type: app.querySelector('.z-type').value, cat: app.querySelector('.z-cat').value, pow: num(app.querySelector('.z-pow')), d: val('#ct-zd') },
+      gmax: { n: val('#ct-gn'), type: app.querySelector('.g-type').value, fx: val('#ct-gfx'), d: val('#ct-gd'), image: gpad.used() ? gpad.data() : '' },
       moves, image: pad.used() ? pad.data() : '',
     };
     const btn = ev.currentTarget; btn.disabled = true; btn.textContent = '보내는 중...';

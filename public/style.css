@@ -2372,3 +2372,11 @@ body:has(.rp-bar) #toast { bottom: 150px; z-index: 90; }
 .mv5 { font-style: normal; font-size: 11px; font-weight: 900; color: #fff; background: #e0a800; border-radius: 6px; padding: 1px 5px; }
 .moves.ten > .mb:nth-child(5):last-child { grid-column: 1 / -1; }
 .ct-wait { position: absolute; top: -12px; right: 10px; font-style: normal; font-size: 11px; font-weight: 800; background: #eef; border: 2px solid #1a1433; border-radius: 999px; padding: 1px 8px; }
+
+/* 공모전 거다이맥스 */
+.ct-gmaxf textarea, .ct-gmaxf input { width: 100%; box-sizing: border-box; margin-top: 8px; border: 2px solid var(--ink); border-radius: 10px; padding: 8px; font: inherit; color: var(--ink); }
+.ct-gmaxf h3 small { font-family: var(--ui); font-size: 13px; opacity: .8; }
+.ct-grow { display: flex; gap: 6px; } .ct-grow input { flex: 1; min-width: 0; } .ct-grow select { margin-top: 8px; border: 2px solid var(--ink); border-radius: 10px; font: inherit; }
+.ct-gpic img { width: 100%; display: block; border-radius: 12px; border: 2px solid var(--gc); box-shadow: 0 0 18px var(--gc); background: #fff; }
+.ct-gmaxf .pad { margin-top: 6px; }
+.ct-gmaxf .ct-grow input { width: auto; flex: 1 1 auto; } .ct-gmaxf .ct-grow select { width: auto; flex: 0 0 auto; max-width: 40%; }

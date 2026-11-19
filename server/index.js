@@ -867,7 +867,7 @@ const CONTEST = { round: 2, always: true, title: '신캐 만들기 공모전', p
 const ctNow = (e) => (e.round || 1) === CONTEST.round;
 const PER_USER = 3, MAX_ENTRIES = 200, MAX_IMAGE = 400000;
 const cut = (v, n) => [...String(v ?? '').trim()].slice(0, n).join('');
-const entryView = (e, full) => ({ id: e.id, user: e.user, at: e.at, editedAt: e.editedAt, name: e.name, types: e.types, desc: e.desc, base: e.base, trait: e.trait, mega: e.mega, z: e.z, moves: e.moves, image: full ? e.image : undefined, hasImage: !!e.image, winner: !!e.winner });
+const entryView = (e, full) => ({ id: e.id, user: e.user, at: e.at, editedAt: e.editedAt, name: e.name, types: e.types, desc: e.desc, base: e.base, trait: e.trait, mega: e.mega, z: e.z, gmax: e.gmax, moves: e.moves, image: full ? e.image : undefined, hasImage: !!e.image, winner: !!e.winner });
 const CT_STATS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
 const okType = (t) => (Data.TYPES[t] && t !== 'none' ? t : '');
 const intIn = (v, lo, hi) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : 0; };
@@ -995,8 +995,8 @@ async function contestApi(req, res, route, auth, user) {
     if (!name) return json(res, 400, { error: '골목몬 이름을 넣어 주세요.' });
     if (!desc) return json(res, 400, { error: '골목몬 설명을 넣어 주세요.' });
     const types = (Array.isArray(body.types) ? body.types : []).filter((t) => Data.TYPES[t] && t !== 'none').filter((t, i, a) => a.indexOf(t) === i).slice(0, 2);
-    const image = imageIn(body.image), m = body.mega || {}, mimage = imageIn(m.image);
-    if (badImage(image) || badImage(mimage)) return json(res, 400, { error: '그림이 너무 크거나 형식이 맞지 않아요.' });
+    const image = imageIn(body.image), m = body.mega || {}, mimage = imageIn(m.image), g = body.gmax || {}, gimage = imageIn(g.image);
+    if (badImage(image) || badImage(mimage) || badImage(gimage)) return json(res, 400, { error: '그림이 너무 크거나 형식이 맞지 않아요.' });
     const z = body.z || {};
     const moves = (Array.isArray(body.moves) ? body.moves : []).slice(0, 10).map((x) => ({
       n: cut(x?.n, 16), type: okType(x?.type), cat: ['p', 's', 'x'].includes(x?.cat) ? x.cat : 'p',
@@ -1008,6 +1008,7 @@ async function contestApi(req, res, route, auth, user) {
       trait: typeof body.trait === 'string' ? { n: '', d: cut(body.trait, 300) } : { n: cut(body.trait?.n, 12), d: cut(body.trait?.d, 300) },
       mega: { n: cut(m.n, 16), d: cut(m.d, 400), boost: statsIn(m.boost, 100), image: mimage },
       z: { n: cut(z.n, 16), type: okType(z.type), cat: z.cat === 's' ? 's' : 'p', pow: intIn(z.pow, 0, 400), d: cut(z.d, 160) },
+      gmax: { n: cut(g.n, 16), type: okType(g.type), fx: cut(g.fx, 160), d: cut(g.d, 400), image: gimage }, // 거다이맥스: 거다이기술 이름·타입·효과, 모습 설명, 그림
       moves,
     };
     if (old) Object.assign(old, fields, { editedAt: Date.now() });
