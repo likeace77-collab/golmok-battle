@@ -1357,7 +1357,7 @@ function fxWallBreak(f) {
 // ── 이진호 이펙트 ──
 function fxNeck(f) {
   const x = f.x * S, z = f.y * S, v = views[f.id];
-  if (v) { v.atkT = 0; v.facing = Math.atan2(Math.cos(f.a), Math.sin(f.a)); v.neckLen = Math.max(3, f.len * S / 0.78); }
+  if (v) { v.atkT = 0; v.neckA = Math.atan2(Math.cos(f.a), Math.sin(f.a)); v.facing = v.neckA; v.neckLen = Math.max(2, f.len * S / 0.78 - 0.7); }   // 머리 끝이 판정 끝과 맞게
   const ex = x + Math.cos(f.a) * f.len * S, ez = z + Math.sin(f.a) * f.len * S;
   // 쭉 뻗는 바람 자국
   for (let i = 0; i < 3; i++) {
@@ -2092,7 +2092,8 @@ function animateTeacher(v, p, dt, now) {
   const mdx = root.position.x - ox, mdz = root.position.z - oz;
   const sp = Math.hypot(mdx, mdz) / Math.max(dt, 1e-3);
   v.speed += (sp - v.speed) * Math.min(1, dt * 10);
-  if (sp > 0.8) v.facing = lerpAngle(v.facing, Math.atan2(mdx, mdz), Math.min(1, dt * 14));
+  if (v.kind === 'jinho' && v.atkT < 0.5 && v.neckA != null) v.facing = v.neckA;          // 목 뻗는 중엔 방향 고정
+  else if (sp > 0.8) v.facing = lerpAngle(v.facing, Math.atan2(mdx, mdz), Math.min(1, dt * 14));
   root.rotation.y = v.facing;
 
   // 피격 / 사망 / 부활
@@ -2122,10 +2123,11 @@ function animateTeacher(v, p, dt, now) {
     let L = 1.9, tilt = Math.sin(v.phase) * 0.12 * walk + Math.sin(now * 1.5) * 0.04;
     if (v.atkT < 0.5) {
       const t = v.atkT, ext = v.neckLen || 30;
-      const q = t < 0.18 ? ease(t / 0.18) : t < 0.26 ? 1 : 1 - ease((t - 0.26) / 0.24);
-      L = 1.9 + (ext - 1.9) * q; tilt = 1.48 * Math.min(1, t / 0.08) * (t < 0.42 ? 1 : 1 - (t - 0.42) / 0.08);
-      lean = 0.2 * q;
-    }
+      const q = t < 0.015 ? 0 : t < 0.18 ? ease((t - 0.015) / 0.165) : t < 0.26 ? 1 : 1 - ease((t - 0.26) / 0.24);
+      L = 1.9 + (ext - 1.9) * q; tilt = 1.55 * Math.min(1, t / 0.015) * (t < 0.42 ? 1 : 1 - (t - 0.42) / 0.08);   // 수평으로 (몸은 안 숙임 → 목 끝이 상대 높이)
+      lean = 0; v.neckHold = true;
+    } else v.neckHold = false;
+    if (v.neckHold) { M.torso.rotation.z = 0; }
     M.neck.scale.y = L; M.head.position.y = L; M.neckPivot.rotation.x = tilt;
     M.neckSpots.scale.y = L / 1.9;
     M.head.rotation.x = -tilt * 0.9;

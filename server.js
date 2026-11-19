@@ -520,13 +520,15 @@ SKILLS.jinho = {
     const range = A.range * mul, ca = Math.cos(a), sa = Math.sin(a);
     let end = range;
     for (let d = 10; d <= range; d += 10) if (!clearPath(room.map, p.x, p.y, p.x + ca * d, p.y + sa * d)) { end = d - 10; break; }
+    p.rootT = A.delay + 0.18;              // 목 뻗는 동안 제자리 (목과 판정 위치가 어긋나지 않게)
+    const ox = p.x, oy = p.y;
     room.fx.push({ type: 'neck', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), len: Math.round(end), d: A.delay });
     if (Math.random() < 0.35) say(p, 'atk', 1.1);
     room.pending.push({ t: A.delay, fn: () => {
       if (p.dead || !room.players.has(p.id)) return;
       const t = Date.now() / 1000;
       for (const q of enemies(room, p)) {
-        const dx = q.x - p.x, dy = q.y - p.y, along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca);
+        const dx = q.x - ox, dy = q.y - oy, along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca);
         if (along < 0 || along > end + q.B.radius || perp > A.width + q.B.radius) continue;
         damage(room, p, q, A.dmg, t, 'neck'); chargeSuper(p, A.dmg);
         room.fx.push({ type: 'neckHit', x: q.x, y: q.y });
@@ -865,7 +867,8 @@ function step(room) {
       }
     }
     // 이동 (조종하는 동안 본인은 제자리)
-    if (p.stunT <= 0 && p.frozenT <= 0 && !p.ctrlId && !p.dash) {
+    if (p.rootT > 0) p.rootT -= DT;
+    if (p.stunT <= 0 && p.frozenT <= 0 && !p.ctrlId && !p.dash && !(p.rootT > 0)) {
       let { mx, my } = p.input;
       const len = Math.hypot(mx, my);
       if (len > 0.1) { mx /= len; my /= len; p.facing = Math.atan2(my, mx); } else { mx = 0; my = 0; }
