@@ -459,7 +459,9 @@ SKILLS.jaeyeol = {
       const t = Date.now() / 1000;
       for (const q of enemies(room, p)) {
         if (Math.hypot(q.x - lx, q.y - ly) > A.lobR * gao + q.B.radius) continue;
-        damage(room, p, q, Math.round(A.lobDmg * gao), t, 'lob'); chargeSuper(p, A.lobDmg);
+        const both = target && q.id === target.id;          // 빔 + 세모 둘 다 맞으면 보너스 → 800+800+200 = 1800
+        damage(room, p, q, Math.round((A.lobDmg + (both ? A.bothBonus : 0)) * gao), t, both ? 'triBoth' : 'lob'); chargeSuper(p, A.lobDmg);
+        if (both) room.fx.push({ type: 'triBoth', x: q.x, y: q.y });
       }
     } });
   },

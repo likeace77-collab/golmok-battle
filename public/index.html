@@ -1733,6 +1733,7 @@ function handleFx(list) {
     else if (f.type === 'dmg') { if (f.k === 'cold') popup(String(f.v), { x, z }, 4.4, '#9fe8ff', 15, 0.6); else popup(String(f.v), { x, z }, 4.8, '#ffffff', f.v >= 1000 ? 26 : 20); }
     else if (f.type === 'choke') fxChoke(f);
     else if (f.type === 'tri') fxTri(f);
+    else if (f.type === 'triBoth') { popup('더블 세모!! ▲▲', { x, z }, 6.2, '#ff6ad5', 34, 1.1); flash(x, 2, z, '#ff6ad5', 2.2, 0.35); }
     else if (f.type === 'shoulder') fxShoulder(f);
     else if (f.type === 'confess') fxConfess(f);
     else if (f.type === 'rocket') fxRocket(f);

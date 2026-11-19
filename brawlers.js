@@ -123,8 +123,8 @@ const BRAWLERS = {
     radius: 28, speed: 250, maxHp: 5000,
     attack: {
       name: '세모 던지기 빔', aim: 'tri',
-      desc: '세모 빔이 직선으로 날아가 처음 맞은 상대에게 피해를 주고, 동시에 던진 세모가 사거리 끝에 떨어져 주변에 피해를 준다.',
-      range: 380, width: 26, dmg: 900, lobDmg: 700, lobR: 85, lobTime: 0.55, ammo: 3, reload: 1.7, cd: 0.5,
+      desc: '세모 빔(직선)과 던진 세모(사거리 끝에 착지)가 같이 나간다. 각각 800, 한 명에게 둘 다 맞히면 보너스 200으로 총 1800.',
+      range: 380, width: 26, dmg: 800, lobDmg: 800, bothBonus: 200, lobR: 85, lobTime: 0.55, ammo: 3, reload: 1.7, cd: 0.5,
     },
     gadgets: [
       { name: '어깨빵', icon: '💥', desc: '주위의 적에게 700 피해를 주고 날려버린다.', range: 170, dmg: 700, knock: 190 },
