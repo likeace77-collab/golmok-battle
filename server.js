@@ -27,6 +27,7 @@ const G = { respawn: 3, regenDelay: 3, regenRate: 0.13, maxPlayers: 10, maxBots:
 const TEAM_COLORS = ['#4f8cff', '#ff4d4d'];
 const COLORS = ['#4f8cff', '#ff5d5d', '#3ccf7a', '#ffb02e', '#b56cff', '#22c3c3', '#ff7ac6', '#a0a0a0', '#ffe14a', '#8a5cff'];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const cloneMap = (id) => ({ ...MAPS[id], walls: MAPS[id].walls.map((w) => ({ ...w })) });   // 방마다 벽 따로 (대두가 부숨)
 const rooms = new Map();
 
 // ── 방 / 라운드 ────────────────────────────────────
@@ -34,7 +35,7 @@ function getRoom(modeId) {
   if (!rooms.has(modeId)) {
     const mode = MODES[modeId];
     const room = {
-      id: modeId, mode, map: MAPS[pick(mode.maps)],
+      id: modeId, mode, map: cloneMap(pick(mode.maps)),
       players: new Map(), mice: [], shards: [], gems: [], fx: [], pending: [],
       mouseSeq: 0, botSeq: 0, colorIdx: 0, shardSeq: 0, gemSeq: 0,
       phase: mode.rounds ? 'wait' : 'play', phaseT: mode.rounds ? 4 : 0,
@@ -51,6 +52,7 @@ const teamCount = (room, t) => [...room.players.values()].filter((p) => p.team =
 function hitsWall(map, x, y, r) {
   if (x < r || y < r || x > map.w - r || y > map.h - r) return true;
   return map.walls.some((w) => {
+    if (w.broken) return false;
     const cx = Math.max(w.x, Math.min(x, w.x + w.w));
     const cy = Math.max(w.y, Math.min(y, w.y + w.h));
     return (x - cx) ** 2 + (y - cy) ** 2 < r * r;
@@ -60,6 +62,7 @@ function resolveWalls(map, o, r) {
   o.x = Math.max(r, Math.min(map.w - r, o.x));
   o.y = Math.max(r, Math.min(map.h - r, o.y));
   for (const w of map.walls) {
+    if (w.broken) continue;
     const cx = Math.max(w.x, Math.min(o.x, w.x + w.w));
     const cy = Math.max(w.y, Math.min(o.y, w.y + w.h));
     const dx = o.x - cx, dy = o.y - cy;
@@ -109,7 +112,7 @@ function newPlayer(room, id, name, isBot, brawlerId, loadout) {
     x: 0, y: 0, hp: B.maxHp, ammo: B.attack.ammo, reloadT: 0, atkCd: 0,
     stunT: 0, frozenT: 0, gCd: 0, facing: Math.PI / 2, sup: 0,
     acT: 0, acTick: 0, ctrlId: null, ctrlT: 0, ctrlBy: null,
-    aw: false, fear: 0, scaredT: 0, dash: null,
+    aw: false, fear: 0, scaredT: 0, dash: null, noAtkT: 0,
     shield: 0, fullT: 0, rf: 0, ajT: 30, gems: 0,
     lastHit: 0, dead: false, respawnT: 0, out: false, rank: 0,
     kills: 0, deaths: 0, input: { mx: 0, my: 0 }, speech: null,
@@ -126,7 +129,7 @@ function resetBody(room, p, slot) {
   const s = spawnPoint(room, p, slot);
   Object.assign(p, {
     x: s.x, y: s.y, hp: p.B.maxHp, dead: false, ammo: p.B.attack.ammo, stunT: 0, frozenT: 0, acT: 0,
-    rf: 0, gems: 0, shield: 0, fullT: 0, respawnT: 0, input: { mx: 0, my: 0 }, aw: false, dash: null,   // 쫄 게이지는 부활해도 유지
+    rf: 0, gems: 0, shield: 0, fullT: 0, respawnT: 0, input: { mx: 0, my: 0 }, aw: false, dash: null, noAtkT: 0,   // 쫄 게이지는 부활해도 유지
   });
   releaseCtrl(room, p, false);
 }
@@ -394,32 +397,106 @@ SKILLS.junhoo = {
   super(room, p, a, now) {
     const S = p.B.super;
     say(p, 'sup', 1.6);
-    p.dash = { a, left: S.range, speed: S.range / S.dashTime };
+    p.dash = { a, left: S.range, speed: S.range / S.dashTime, dmg: S.dmg, stun: S.stun, hitFx: 'tackleHit', kind: 'tackle' };
     room.fx.push({ type: 'tackle', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: S.range });
   },
 };
-function dashStep(room, p, now) {      // 태클 돌진 이동 (틱마다)
-  const D = p.dash, S = p.B.super;
+// 돌진 (김준후 태클 · 김재열 박치기): 잘게 나눠 움직이며 벽에 닿으면 멈춤. 대두는 벽을 부숨
+function dashStep(room, p, now) {
+  const D = p.dash;
   if (p.stunT > 0 || p.frozenT > 0) { p.dash = null; return; }   // 돌진 중 기절하면 멈춤
-  const stepLen = Math.min(D.left, D.speed * DT);
-  const ox = p.x, oy = p.y;
-  p.x += Math.cos(D.a) * stepLen; p.y += Math.sin(D.a) * stepLen;
-  resolveWalls(room.map, p, p.B.radius);
-  D.left -= stepLen;
-  const moved = Math.hypot(p.x - ox, p.y - oy);
-  for (const q of enemies(room, p)) {
-    if (Math.hypot(q.x - p.x, q.y - p.y) > p.B.radius + q.B.radius + 8) continue;
-    q.x += Math.cos(D.a) * 60; q.y += Math.sin(D.a) * 60; resolveWalls(room.map, q, q.B.radius);   // 부딪혀서 밀려남
-    q.stunT = Math.max(q.stunT, S.stun);
-    damage(room, p, q, S.dmg, now, 'tackle');
-    room.fx.push({ type: 'tackleHit', id: p.id, tid: q.id, x: q.x, y: q.y, a: +D.a.toFixed(3) });
-    p.dash = null; return;
+  let move = Math.min(D.left, D.speed * DT);
+  const r = p.B.radius, ca = Math.cos(D.a), sa = Math.sin(D.a);
+  while (move > 0) {
+    const st = Math.min(8, move); move -= st; D.left -= st;
+    const nx = p.x + ca * st, ny = p.y + sa * st;
+    if (hitsWall(room.map, nx, ny, r)) {
+      const touch = (w) => (nx - Math.max(w.x, Math.min(nx, w.x + w.w))) ** 2 + (ny - Math.max(w.y, Math.min(ny, w.y + w.h))) ** 2 < r * r;
+      const w = D.breakWalls && room.map.walls.find((w) => !w.broken && touch(w));
+      if (w) { w.broken = true; room.fx.push({ type: 'wallBreak', i: room.map.walls.indexOf(w), x: w.x + w.w / 2, y: w.y + w.h / 2 }); }
+      else { p.dash = null; room.fx.push({ type: 'dashWall', id: p.id, x: p.x, y: p.y, a: +D.a.toFixed(3), kind: D.kind }); return; }   // 벽 못 넘음
+    }
+    p.x = nx; p.y = ny;
+    for (const q of enemies(room, p)) {
+      if (Math.hypot(q.x - p.x, q.y - p.y) > r + q.B.radius + 8) continue;
+      q.x += ca * 60; q.y += sa * 60; resolveWalls(room.map, q, q.B.radius);   // 부딪혀서 밀려남
+      q.stunT = Math.max(q.stunT, D.stun);
+      damage(room, p, q, D.dmg, now, D.kind);
+      room.fx.push({ type: D.hitFx, id: p.id, tid: q.id, x: q.x, y: q.y, a: +D.a.toFixed(3) });
+      p.dash = null; return;
+    }
   }
-  if (D.left <= 0 || moved < stepLen * 0.3) { p.dash = null; room.fx.push({ type: 'tackleEnd', id: p.id, x: p.x, y: p.y }); }
+  if (D.left <= 0) { p.dash = null; room.fx.push({ type: 'tackleEnd', id: p.id, x: p.x, y: p.y }); }
 }
 
+// 직선 위 첫 번째 적 + 벽에서 끊기는 지점
+function lineHit(room, p, a, range, width) {
+  const ca = Math.cos(a), sa = Math.sin(a);
+  let end = range;
+  for (let d = 10; d <= range; d += 10) if (hitsWall(room.map, p.x + ca * d, p.y + sa * d, 4)) { end = d; break; }
+  let target = null, best = end;
+  for (const q of enemies(room, p)) {
+    const dx = q.x - p.x, dy = q.y - p.y, along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca);
+    if (along < 0 || along > best + q.B.radius || perp > width + q.B.radius) continue;
+    best = along; target = q;
+  }
+  return { target, end: target ? best : end };
+}
+
+SKILLS.jaeyeol = {
+  // 세모 던지기 빔: 직선 빔 + 포물선 세모가 동시에
+  attack(room, p, a, now) {
+    const A = p.B.attack, gao = hasSP(p, 'gao') ? SP(p, 'gao').atkMul : 1;
+    p.ammo -= 1; p.atkCd = A.cd; p.facing = a;
+    const range = A.range * gao, ca = Math.cos(a), sa = Math.sin(a);
+    const { target, end } = lineHit(room, p, a, range, A.width);
+    const lx = Math.max(20, Math.min(room.map.w - 20, p.x + ca * range)), ly = Math.max(20, Math.min(room.map.h - 20, p.y + sa * range));
+    room.fx.push({ type: 'tri', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), ex: p.x + ca * end, ey: p.y + sa * end, hit: target ? target.id : null, lx, ly, t: A.lobTime, r: A.lobR * gao });
+    if (Math.random() < 0.35) say(p, 'atk', 1.1);
+    if (target) { damage(room, p, target, Math.round(A.dmg * gao), now, 'tri'); chargeSuper(p, A.dmg); }
+    room.pending.push({ t: A.lobTime, fn: () => {   // 던진 세모 착지 (벽 넘어감)
+      if (!room.players.has(p.id)) return;
+      const t = Date.now() / 1000;
+      for (const q of enemies(room, p)) {
+        if (Math.hypot(q.x - lx, q.y - ly) > A.lobR * gao + q.B.radius) continue;
+        damage(room, p, q, Math.round(A.lobDmg * gao), t, 'lob'); chargeSuper(p, A.lobDmg);
+      }
+    } });
+  },
+  gadget(room, p, idx, now) {
+    if (idx === 0) {                 // 어깨빵
+      const g = p.B.gadgets[0], gao = hasSP(p, 'gao') ? SP(p, 'gao') : null;
+      const range = gao ? gao.g1Range : g.range, dmg = gao ? gao.g1Dmg : g.dmg, knock = gao ? gao.g1Knock : g.knock;
+      say(p, 'g1', 1.5);
+      const hits = [];
+      for (const q of enemies(room, p)) {
+        const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1;
+        if (d > range + q.B.radius) continue;
+        for (let k = 0; k < knock; k += 8) { const nx = q.x + dx / d * 8, ny = q.y + dy / d * 8; if (hitsWall(room.map, nx, ny, q.B.radius)) break; q.x = nx; q.y = ny; }
+        q.stunT = Math.max(q.stunT, 0.3);
+        damage(room, p, q, dmg, now, 'shoulder'); hits.push(q.id);
+      }
+      room.fx.push({ type: 'shoulder', id: p.id, x: p.x, y: p.y, r: range, hits });
+    } else {                         // 나랑 사귈..레?
+      const g = p.B.gadgets[1];
+      say(p, 'g2', 2);
+      let target = null, best = g.range;
+      for (const q of enemies(room, p)) { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < best) { best = d; target = q; } }
+      room.fx.push({ type: 'confess', id: p.id, x: p.x, y: p.y, tid: target ? target.id : null });
+      if (target) { target.noAtkT = Math.max(target.noAtkT, g.dur); target.speech = { text: '…??? (충격)', t: 2 }; }
+    }
+  },
+  // 대가리 박치기: 로켓 돌진 (벽 못 넘음, 대두면 벽 부숨)
+  super(room, p, a, now) {
+    const S = p.B.super, big = hasSP(p, 'daedu');
+    say(p, 'sup', 1.6);
+    p.dash = { a, left: S.range, speed: S.range / S.dashTime, dmg: big ? SP(p, 'daedu').dmg : S.dmg, stun: S.stun, hitFx: 'headbutt', kind: 'headbutt', breakWalls: big };
+    room.fx.push({ type: 'rocket', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), big });
+  },
+};
+
 function doAttack(room, p, ang, now) {
-  if (room.phase !== 'play' || !canAct(p) || p.ammo < 1 || p.atkCd > 0 || p.scaredT > 0 || p.dash) return;
+  if (room.phase !== 'play' || !canAct(p) || p.ammo < 1 || p.atkCd > 0 || p.scaredT > 0 || p.noAtkT > 0 || p.dash) return;
   p.lastHit = Math.max(p.lastHit, now - G.regenDelay + 1);
   SKILLS[p.B.id].attack(room, p, Number.isFinite(ang) ? ang : p.facing, now);
 }
@@ -430,7 +507,7 @@ function doGadget(room, p, slot, now) {           // slot: 1 또는 2 (더블 �
   SKILLS[p.B.id].gadget(room, p, idx, now);
 }
 function doSuper(room, p, ang, now) {
-  if (room.phase !== 'play' || !p.B.super || !canAct(p) || p.sup < 1 || p.scaredT > 0 || p.dash) return;
+  if (room.phase !== 'play' || !p.B.super || !canAct(p) || p.sup < 1 || p.scaredT > 0 || p.noAtkT > 0 || p.dash) return;
   if (p.ctrlBy && p.B.id === 'hyeonsil') return;   // 꼭두각시 현실쌤은 조종 궁극기 못 씀
   p.sup = 0;
   const a = Number.isFinite(ang) ? ang : p.facing;
@@ -526,7 +603,7 @@ function fillBots(room) {
 // ── 라운드 진행 ────────────────────────────────────
 function startRound(room) {
   const mode = room.mode;
-  room.map = MAPS[pick(mode.maps)];
+  room.map = cloneMap(pick(mode.maps));
   room.mice = []; room.shards = []; room.gems = []; room.pending = [];
   room.gemT = 0; room.holdT = 0; room.holdTeam = -1; room.result = null; room.playT = 0;
   room.safe = mode.gas ? { x1: 0, y1: 0, x2: room.map.w, y2: room.map.h } : null;
@@ -560,7 +637,7 @@ function endRound(room, result) {
 }
 function changeMap(room) {   // 난투/더블가젯: 맵 로테이션
   const others = room.mode.maps.filter((m) => m !== room.map.id);
-  room.map = MAPS[pick(others.length ? others : room.mode.maps)];
+  room.map = cloneMap(pick(others.length ? others : room.mode.maps));
   room.mice = []; room.shards = []; room.pending = [];
   for (const p of room.players.values()) resetBody(room, p);
   room.mapT = room.mode.rotate;
@@ -666,6 +743,7 @@ function step(room) {
     p.stunT = Math.max(0, p.stunT - DT);
     p.frozenT = Math.max(0, p.frozenT - DT);
     if (p.dash) { dashStep(room, p, now); if (p.dead) continue; }
+    if (p.noAtkT > 0) p.noAtkT = Math.max(0, p.noAtkT - DT);
     if (p.scaredT > 0) { p.scaredT -= DT; if (p.scaredT <= 0) { p.scaredT = 0; p.fear = 0; } }
     // 김준후 스파1: 근처에 상대가 있으면 궁 자동 충전
     if (hasSP(p, 'sibi') && B.super && p.sup < 1) {
@@ -758,6 +836,7 @@ function step(room) {
     score: room.mode.id === 'gem' ? [teamGems(room, 0), teamGems(room, 1)] : null,
     hold: room.holdTeam >= 0 ? { team: room.holdTeam, t: +room.holdT.toFixed(1) } : null,
     shards: room.shards.map((s) => [s.id, r1(s.x), r1(s.y), s.r, 99]),
+    broken: room.map.walls.reduce((a, w, i) => (w.broken && a.push(i), a), []),
     players: [...room.players.values()].map((p) => ({
       id: p.id, name: p.name, b: p.B.id, color: p.color, bot: p.isBot, team: p.team,
       x: r1(p.x), y: r1(p.y), hp: r1(p.hp), dead: p.dead, out: p.out, rank: p.rank, respawn: Math.ceil(p.respawnT),
@@ -766,7 +845,7 @@ function step(room) {
       k: p.kills, d: p.deaths, say: p.speech ? p.speech.text : null,
       ctl: p.ctrlBy, ctrl: p.ctrlId, ctrlT: +(p.ctrlT || 0).toFixed(1), ac: +p.acT.toFixed(1),
       g: p.lo.g, sp: p.lo.sp, gear: p.lo.gears, sh: r1(p.shield), rf: +p.rf.toFixed(3), aj: Math.ceil(p.ajT), gems: p.gems,
-      aw: p.aw, fear: +p.fear.toFixed(2), scared: +p.scaredT.toFixed(1), dash: !!p.dash, jj: jjang(p),
+      aw: p.aw, fear: +p.fear.toFixed(2), scared: +p.scaredT.toFixed(1), dash: !!p.dash, jj: jjang(p), na: +p.noAtkT.toFixed(1),
     })),
     mice: room.mice.map((m) => ({ id: m.id, x: r1(m.x), y: r1(m.y), a: +m.ang.toFixed(2), c: m.color, hp: m.hp / m.maxHp })),
     fx: room.fx,
