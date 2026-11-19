@@ -2371,3 +2371,4 @@ body:has(.rp-bar) #toast { bottom: 150px; z-index: 90; }
 .mv-plus { background: linear-gradient(90deg, #fff7c2, #fff); border-color: #e0a800 !important; }
 .mv5 { font-style: normal; font-size: 11px; font-weight: 900; color: #fff; background: #e0a800; border-radius: 6px; padding: 1px 5px; }
 .moves.ten > .mb:nth-child(5):last-child { grid-column: 1 / -1; }
+.ct-wait { position: absolute; top: -12px; right: 10px; font-style: normal; font-size: 11px; font-weight: 800; background: #eef; border: 2px solid #1a1433; border-radius: 999px; padding: 1px 8px; }

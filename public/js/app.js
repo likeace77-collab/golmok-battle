@@ -1,6 +1,6 @@
 // 이벤트 목록: ends(마감 시각)가 지나면 '진행 중'에서 빠집니다.
 const EVENTS = [
-  { id: 'contest', title: '신캐 만들기 공모전', ends: Date.parse('2026-11-13T23:59:59+09:00'), period: '11월 13일(금)까지', desc: '나만의 골목몬을 만들어 올려 주세요! 우승작은 실제 게임에 출시되고, 만든 사람에게 그 골목몬의 신화 등급 칭호를 드려요.', open: () => showContest() },
+  { id: 'contest', title: '신캐 만들기 공모전', period: '상시', desc: '다시 열렸어요! 이제 기간 제한 없이 언제든 나만의 골목몬을 내 주세요. 괜찮은 작품은 개발자가 그때그때 바로 실제 게임에 출시하고, 만든 사람에게 그 골목몬의 신화 등급 칭호를 드려요. (출시작: 까모 · 선생님)', open: () => showContest() },
   { id: 'sunfish', title: '미니게임: 개복치 키우기', period: '상시', desc: '해파리를 먹여 개복치를 300cm까지 키워 보세요. 처음 성공하면 골목몬 등신을 무료로!', open: () => showSunfish() },
   { id: 'requests', title: '💡 요청사항', period: '상시', desc: '이런 시스템이 있으면 좋겠다! 원하는 걸 자유롭게 적어 주세요. 다른 사람 요청에 「나도 원해요」를 누르면 많이 원하는 것부터 개발자가 봐요.', open: () => showRequests() },
   { id: 'survey', title: '설문조사', period: '상시', desc: '지금 게임이 만족스러운지, 어떤 시스템이 생겼으면 좋겠는지 알려 주세요. 처음 답하면 1,000GP!', open: () => showSurvey() },
@@ -931,7 +931,7 @@ function showEvents() {
   const dday = (t) => { if (Date.now() > t) return '마감'; const d = Math.ceil((t - Date.now()) / 86400000) - 1; return d > 0 ? `D-${d}` : 'D-DAY'; }; // 마감일 자정 기준
   app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>EVENT</h1></div>
     ${EVENTS.length ? EVENTS.map((e) => `<button class="ev-card ev-${e.id}" data-ev="${e.id}">
-      <span class="ev-badge ${e.ends && Date.now() > e.ends ? 'off' : ''}">${e.ends ? dday(e.ends) : e.id === 'sunfish' ? (G.user.sunfish ? '클리어' : 'GAME') : e.id === 'requests' ? 'OPEN' : (G.user.surveyDone ? '답함' : 'NEW')}</span>
+      <span class="ev-badge ${e.ends && Date.now() > e.ends ? 'off' : ''}">${e.ends ? dday(e.ends) : e.id === 'sunfish' ? (G.user.sunfish ? '클리어' : 'GAME') : e.id === 'requests' ? 'OPEN' : e.id === 'contest' ? '상시' : (G.user.surveyDone ? '답함' : 'NEW')}</span>
       <h2>${esc(e.title)}</h2><small>${esc(e.period)}</small>
       <p>${esc(e.desc)}</p>
       <b class="ev-go">자세히 보기 ›</b></button>`).join('')
@@ -948,14 +948,14 @@ const tColor = (t) => G.data.TYPES[t]?.c || '#ccc';
 // 출품작 목록 카드 (누르면 도감처럼 자세히)
 function entryCard(e, { dev = false, mine = false, closed = false } = {}) {
   return `<article class="ct-entry ${e.winner ? 'win' : ''}">
-    ${e.winner ? '<em class="ct-win">🏆 우승</em>' : ''}
+    ${e.winner ? '<em class="ct-win">🎉 출시 결정</em>' : '<em class="ct-wait">⏳ 심사 중</em>'}
     <button class="ct-open" data-open="${e.id}">${e.image ? `<img src="${e.image}" alt="${esc(e.name)} 디자인">` : '<div class="ct-noimg">그림 없음</div>'}</button>
     <div class="ct-body"><h3>${esc(e.name)} ${typeChips(e.types)}</h3>
       <small>${esc(e.user)} · ${new Date(e.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}${e.editedAt ? ' (수정함)' : ''}</small>
       <p class="ct-desc">${esc(e.desc)}</p>
       <div class="row ct-acts">
         <button class="btn small" data-open="${e.id}">📖 도감처럼 보기</button>
-        ${dev ? `<button class="btn small ${e.winner ? 'paper' : ''}" data-win="${e.id}">${e.winner ? '우승 취소' : '🏆 우승으로 뽑기'}</button>` : ''}
+        ${dev ? `<button class="btn small ${e.winner ? 'paper' : ''}" data-win="${e.id}">${e.winner ? '출시 결정 취소' : '🎉 출시 결정'}</button>` : ''}
         ${mine && !closed ? `<button class="btn small paper" data-edit="${e.id}">✏️ 수정하기</button>` : ''}
         ${dev || (mine && !closed) ? `<button class="btn small paper" data-del="${e.id}">지우기</button>` : ''}
       </div></div></article>`;
@@ -1008,18 +1008,19 @@ async function showContest(tab = 'info') {
     const { info } = v, closed = info.closed;
     const left = Math.max(0, info.ends - Date.now()), days = Math.floor(left / 86400000), hours = Math.floor((left % 86400000) / 3600000);
     app.innerHTML = `<div class="topbar"><button class="btn small paper" id="back">돌아가기</button><h1>공모전</h1></div>
-      <section class="ct-hero"><s aria-hidden="true"></s><small>EVENT</small><h2>신캐 만들기 공모전</h2>
-        <p class="ct-due">${closed ? '접수 마감' : `11월 13일(금) 자정까지 · ${days}일 ${hours}시간 남음`}</p></section>
-      ${v.winner ? `<section class="panel ct-winner">🏆 우승작: <b>${esc(v.winner.name)}</b> (${esc(v.winner.user)})</section>` : ''}
+      <section class="ct-hero"><s aria-hidden="true"></s><small>EVENT · ${info.always ? "상시" : `${info.round || 1}회`}</small><h2>${esc(info.title || '신캐 만들기 공모전')}</h2>
+        <p class="ct-due">${info.always ? '🟢 상시 접수 중 · 기간 제한 없음' : closed ? '접수 마감' : `${esc(info.period || '')} · ${days}일 ${hours}시간 남음`}</p></section>
+      ${v.picks?.length ? `<section class="panel ct-winner">🎉 출시 결정: ${v.picks.map((p) => `<b>${esc(p.name)}</b> <small>(${esc(p.user)})</small>`).join(' · ')}</section>` : ''}
+      ${v.past?.length ? `<section class="panel ct-past">🎖️ 출시된 공모전 골목몬: ${v.past.map((p) => `<b>${esc(p.name)}</b> <small>(${esc(p.user)})</small>`).join(' · ')}</section>` : ''}
       <section class="panel ct-rules">
         <h3>이렇게 참가해요</h3>
         <ol><li>새 골목몬의 <b>디자인</b>을 직접 그리거나 사진으로 올려요.</li>
           <li><b>이름</b>, <b>타입</b>, <b>설명</b>을 적어요. 설명은 꼭 넣어 주세요! 어떤 골목몬인지, 성격이나 생김새, 사연까지 자세할수록 좋아요.</li>
           <li><b>특성</b>과 <b>기술셋</b>도 생각해 둔 게 있으면 적어 주세요.</li></ol>
         <h3>상품</h3>
-        <ul class="ct-prize"><li>🎮 우승한 골목몬을 <b>실제 게임에 출시</b></li><li>👑 그 골목몬과 관련된 <b>신화 등급 칭호</b> 지급</li></ul>
-        <p class="muted">마감 후 개발자가 출품작 중 하나를 뽑아요. 한 사람당 ${info.perUser}개까지 낼 수 있어요. 지금까지 ${info.count}개가 들어왔어요.</p>
-        ${closed ? '' : `<button class="btn wide" id="ct-new" ${v.mine.length >= info.perUser ? 'disabled' : ''}>${v.mine.length >= info.perUser ? '더 낼 수 없어요 (최대 ' + info.perUser + '개)' : '✏️ 신캐 만들어서 내기'}</button>`}
+        <ul class="ct-prize"><li>🎮 뽑힌 골목몬은 <b>실제 게임에 바로 출시</b></li><li>👑 그 골목몬과 관련된 <b>신화 등급 칭호</b> 지급</li></ul>
+        <p class="muted">${info.always ? '마감이 없어요! 개발자가 수시로 출품작을 보고, 괜찮은 작품은 그때그때 「출시 결정」해요. 뽑히면 우편과 알림이 가요.' : '마감 후 개발자가 출품작 중 하나를 뽑아요.'} 심사 중인 작품은 한 사람당 ${info.perUser}개까지 (뽑힌 작품은 빼고 세요). 지금까지 ${info.count}개가 들어왔어요.</p>
+        ${(() => { const n = v.mine.filter((e) => !e.winner).length; return closed ? '' : `<button class="btn wide" id="ct-new" ${n >= info.perUser ? 'disabled' : ''}>${n >= info.perUser ? `심사 중인 작품이 ${info.perUser}개예요 (결과를 기다리거나 하나 지워 주세요)` : '✏️ 신캐 만들어서 내기'}</button>`; })()}
       </section>
       ${v.mine.length ? `<h2 class="ct-sec">내 출품작</h2>${v.mine.map((e) => entryCard(e, { mine: true, closed })).join('')}` : ''}
       ${v.dev ? `<h2 class="ct-sec">전체 출품작 (${v.all.length}) <small>개발자에게만 보여요</small></h2>${v.all.length ? v.all.map((e) => entryCard(e, { dev: true, closed })).join('') : '<section class="panel"><p class="muted">아직 출품작이 없어요.</p></section>'}` : ''}`;

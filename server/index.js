@@ -862,7 +862,9 @@ function contestArt(res, info, mega, dl = false) {
   res.writeHead(200, { 'Content-Type': m[1], 'Cache-Control': 'public, max-age=3600', ...(dl ? { 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(`${info.name}${mega ? '-메가' : ''}.${ext}`)}` } : {}) }); // ?dl=1이면 내려받기
   res.end(Buffer.from(m[2], 'base64'));
 }
-const CONTEST = { title: '신캐 만들기 공모전', ends: Date.parse(process.env.CONTEST_ENDS || '2026-11-13T23:59:59+09:00') };
+// 2회부터는 상시: 마감 없이 언제든 내고, 개발자가 괜찮은 작품을 그때그때 「출시 결정」 (여러 개 가능). 1회 출품작은 round가 없어요 (= 1회)
+const CONTEST = { round: 2, always: true, title: '신캐 만들기 공모전', period: '상시 · 기간 제한 없음', ends: 0 };
+const ctNow = (e) => (e.round || 1) === CONTEST.round;
 const PER_USER = 3, MAX_ENTRIES = 200, MAX_IMAGE = 400000;
 const cut = (v, n) => [...String(v ?? '').trim()].slice(0, n).join('');
 const entryView = (e, full) => ({ id: e.id, user: e.user, at: e.at, editedAt: e.editedAt, name: e.name, types: e.types, desc: e.desc, base: e.base, trait: e.trait, mega: e.mega, z: e.z, moves: e.moves, image: full ? e.image : undefined, hasImage: !!e.image, winner: !!e.winner });
@@ -968,15 +970,17 @@ async function iconContestApi(req, res, route, auth, user, url) {
   return json(res, 404, { error: '없는 경로입니다.' });
 }
 async function contestApi(req, res, route, auth, user) {
-  const dev = isDev(user), closed = Date.now() > CONTEST.ends;
-  const mine = (e) => e.key === auth.key;
+  const dev = isDev(user), closed = !CONTEST.always && Date.now() > CONTEST.ends;
+  const mine = (e) => e.key === auth.key && ctNow(e);
+  const pending = (e) => mine(e) && !e.winner; // 출시 결정된 작품은 한도에서 빠져요
   const view = () => {
-    const w = contest.entries.find((e) => e.winner);
+    const now = contest.entries.filter(ctNow), wins = now.filter((e) => e.winner);
+    const past = Object.values(Data.MONSTERS).filter((m) => m.contest).map((m) => ({ name: m.n, user: m.contest.by, round: m.contest.round || 1 })); // 출시된 공모전 골목몬
     return {
-      info: { ...CONTEST, closed, count: contest.entries.length, perUser: PER_USER },
+      info: { ...CONTEST, closed, count: now.length, perUser: PER_USER },
       mine: contest.entries.filter(mine).map((e) => entryView(e, true)),
-      all: dev ? contest.entries.map((e) => entryView(e, true)) : undefined,
-      winner: w ? { name: w.name, user: w.user } : null, dev,
+      all: dev ? now.map((e) => entryView(e, true)) : undefined, past,
+      winner: null, picks: wins.map((e) => ({ name: e.name, user: e.user, at: e.pickedAt || 0 })), dev,
     };
   };
   if (route === 'GET /api/contest') return json(res, 200, view());
@@ -985,8 +989,8 @@ async function contestApi(req, res, route, auth, user) {
     if (closed) return json(res, 403, { error: '공모전 접수가 마감되었습니다.' });
     const old = body.id ? contest.entries.find((x) => x.id === String(body.id)) : null; // 수정
     if (body.id && !(old && mine(old))) return json(res, 403, { error: '내 출품작만 고칠 수 있어요.' });
-    if (!old && contest.entries.filter(mine).length >= PER_USER) return json(res, 400, { error: `한 사람당 ${PER_USER}개까지 낼 수 있어요. 기존 작품을 지우고 다시 내 주세요.` });
-    if (!old && contest.entries.length >= MAX_ENTRIES) return json(res, 400, { error: '출품작이 너무 많아 더 받을 수 없습니다.' });
+    if (!old && contest.entries.filter(pending).length >= PER_USER) return json(res, 400, { error: `심사 중인 작품은 한 사람당 ${PER_USER}개까지예요. 기존 작품을 지우거나 결과를 기다려 주세요.` });
+    if (!old && contest.entries.filter(ctNow).length >= MAX_ENTRIES) return json(res, 400, { error: '출품작이 너무 많아 더 받을 수 없습니다.' });
     const name = cut(body.name, 12), desc = cut(body.desc, 1000);
     if (!name) return json(res, 400, { error: '골목몬 이름을 넣어 주세요.' });
     if (!desc) return json(res, 400, { error: '골목몬 설명을 넣어 주세요.' });
@@ -1007,23 +1011,30 @@ async function contestApi(req, res, route, auth, user) {
       moves,
     };
     if (old) Object.assign(old, fields, { editedAt: Date.now() });
-    else contest.entries.push({ id: crypto.randomBytes(6).toString('hex'), key: auth.key, user: user.name, at: Date.now(), ...fields });
+    else contest.entries.push({ id: crypto.randomBytes(6).toString('hex'), round: CONTEST.round, key: auth.key, user: user.name, at: Date.now(), ...fields });
     saveContest();
     return json(res, 200, view());
   }
-  const e = contest.entries.find((x) => x.id === String(body.id ?? ''));
+  const e = contest.entries.find((x) => x.id === String(body.id ?? '') && ctNow(x)); // 지난 회차 작품은 못 건드림
   if (!e) return json(res, 404, { error: '없는 출품작입니다.' });
   if (route === 'POST /api/contest/delete') {
-    if (!dev && !(mine(e) && !closed)) return json(res, 403, { error: '지울 수 없는 출품작입니다.' });
+    if (!dev && !(mine(e) && !closed && !e.winner)) return json(res, 403, { error: e.winner ? '출시 결정된 작품은 지울 수 없어요.' : '지울 수 없는 출품작입니다.' });
     contest.entries = contest.entries.filter((x) => x !== e);
     saveContest();
     return json(res, 200, view());
   }
   if (route === 'POST /api/contest/winner') {
     if (!dev) return json(res, 403, { error: '개발자만 뽑을 수 있습니다.' });
-    const on = !e.winner;
-    for (const x of contest.entries) x.winner = false;
-    e.winner = on;
+    e.winner = !e.winner; // 상시 공모전: 여러 작품을 따로따로 출시 결정
+    if (e.winner) {
+      e.pickedAt = Date.now();
+      const au = db.users[e.key];
+      if (au) {
+        sendMail(au, { from: '골목대전 개발자', title: `🎉 「${e.name}」 출시 결정!`, body: `신캐 공모전에 낸 「${e.name}」이(가) 뽑혔어요! 곧 실제 게임에 나와요. 출시되면 그 골목몬의 신화 등급 칭호도 드려요. 고마워요!` });
+        if (online.has(e.key)) toast(e.key, `🎉 내 신캐 「${e.name}」 출시 결정!`); else notices.set(e.key, `🎉 내 신캐 「${e.name}」 출시 결정!`);
+      }
+      sysChatAll(`🎉 신캐 공모전: ${e.user}님의 「${e.name}」 출시 결정! 곧 골목에 나타나요`);
+    }
     saveContest();
     return json(res, 200, view());
   }
