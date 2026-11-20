@@ -230,8 +230,8 @@ const BRAWLERS = {
     radius: 22, speed: 268, maxHp: 3800,
     attack: {
       name: '머리뜯기', aim: 'line',
-      desc: '팔을 쭉 늘려 손을 날린다. 손이 상대 머리를 잡으면 연결되어 0.3초마다 100 피해. 너무 멀어지거나 사이에 벽이 생기면 끊긴다.',
-      range: 440, width: 24, handSpeed: 1500, breakRange: 600, tick: 0.3, dmg: 100, heal: 150, maxT: 5, ammo: 3, reload: 1.5, cd: 0.45,
+      desc: '팔을 쭉 늘려 손을 날린다. 손이 상대 머리를 잡으면 연결되어 0.15초마다 100 피해. 너무 멀어지거나 사이에 벽이 생기면 끊긴다.',
+      range: 440, width: 24, handSpeed: 1500, breakRange: 600, tick: 0.15, dmg: 100, heal: 75, maxT: 5, ammo: 3, reload: 1.5, cd: 0.45,
     },
     gadgets: [
       { name: '전력질주', icon: '🏃', desc: '앞으로 쭉 달려 나간 뒤 4초 동안 이동 속도 300%.', dash: 280, dur: 4, mul: 3 },
@@ -244,7 +244,7 @@ const BRAWLERS = {
       need: 2600, range: 340, dur: 3, every: 0.75, heal: 700, dmg: 500,
     },
     starPowers: [
-      { id: 'geoji', name: '거지들', icon: '🪙', desc: '머리뜯기로 우리 팀을 잡을 수 있다. 잡고 있는 팀원은 0.3초마다 150 회복.' },
+      { id: 'geoji', name: '거지들', icon: '🪙', desc: '머리뜯기로 우리 팀을 잡을 수 있다. 잡고 있는 팀원은 0.15초마다 75 회복.' },
       { id: 'economy', name: '경제야 살아라', icon: '📈', desc: '사랑을 했다에 맞은 상대는 2초 동안 기절한다.', stun: 2 },
     ],
     lines: {
