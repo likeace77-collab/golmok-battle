@@ -98,10 +98,14 @@
   .mpick { border: 3px solid #000; border-radius: 12px; box-shadow: 0 4px 0 #000; padding: 14px 10px; cursor: pointer; text-align: center; }
   .mpick b { display: block; font-size: 17px; } .mpick small { font-size: 11px; font-weight: 800; color: #fff; opacity: .9; text-shadow: 0 1px 2px #000; }
   .mpick.sel { outline: 4px solid #fff; outline-offset: -8px; }
-  #partyBox { position: absolute; right: 12px; bottom: 112px; display: none; padding: 6px 10px; font-weight: 900; font-size: 13px; max-width: 330px; }
+  #partyBox { position: absolute; right: 12px; bottom: 112px; z-index: 3; display: none; padding: 6px 10px; font-weight: 900; font-size: 13px; max-width: 330px; }
   #partyBox .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
   #partyBox .chip { background: rgba(0,0,0,.35); border-radius: 8px; padding: 2px 8px; font-size: 13px; }
   #partyBox .chip.off { opacity: .5; }
+  #partyBox .chip.sw { cursor: pointer; outline: 2px dashed rgba(255,255,255,.5); }
+  #partyBox .trow { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 4px; padding: 3px 5px; border-radius: 8px; }
+  #partyBox .trow.t0 { background: rgba(58,141,255,.35); } #partyBox .trow.t1 { background: rgba(255,74,74,.35); }
+  #partyBox .trow b { font-size: 12px; margin-right: 2px; }
   #partyBox button { margin-left: 6px; padding: 2px 8px; border: 2px solid #000; border-radius: 8px; background: #ff7a7a; font-weight: 900; font-size: 12px; cursor: pointer; }
   #olist .or .ib { margin-left: 6px; padding: 4px 10px; font-size: 13px; border: 3px solid #000; border-radius: 9px; font-weight: 900; cursor: pointer; box-shadow: 0 3px 0 #000; color: #000; }
   #olist .or .ib.join { background: #3ce07f; } #olist .or .ib.inv { background: #ffd84a; } #olist .or .ib:disabled { opacity: .5; }
@@ -2455,8 +2459,14 @@ function renderParty() {
   if (!party) { el.style.display = 'none'; refreshLobby(); return; }
   el.style.display = 'block';
   const esc = (t) => String(t).replace(/</g, '&lt;');
-  el.innerHTML = `👥 파티 ${party.members.length}명 ${amLeader() ? '· 내가 방장' : '· 방장이 시작'}<button id="ptLeave">나가기</button><div class="chips">${party.members.map((m) => `<span class="chip${m.on ? '' : ' off'}">${m.leader ? '👑 ' : ''}${esc(m.name)}${m.cid === CID ? ' (나)' : ''}</span>`).join('')}</div>`;
+  const M = META.modes[party.mode], lead = amLeader();
+  const chip = (m) => `<span class="chip${m.on ? '' : ' off'}${M.team && (lead || m.cid === CID) ? ' sw' : ''}" data-c="${m.cid}" data-t="${m.team}">${m.leader ? '👑 ' : ''}${esc(m.name)}${m.cid === CID ? ' (나)' : ''}</span>`;
+  const body = M.team
+    ? [0, 1].map((t) => `<div class="trow t${t}"><b>${t ? '🔴 레드' : '🔵 블루'}</b>${party.members.filter((m) => m.team === t).map(chip).join('') || '<span style="opacity:.6">봇</span>'}</div>`).join('') + `<div style="font-size:11px;opacity:.8;margin-top:2px">이름을 누르면 팀 이동${lead ? ' (방장은 누구든)' : ''}</div>`
+    : `<div class="chips">${party.members.map(chip).join('')}</div><div style="font-size:11px;opacity:.8">개인전이라 서로 적이에요</div>`;
+  el.innerHTML = `👥 파티 ${party.members.length}명 ${lead ? '· 내가 방장' : '· 방장이 시작'}<button id="ptLeave">나가기</button>${body}`;
   $('ptLeave').onclick = () => socket.emit('partyLeave');
+  if (M.team) for (const c of el.querySelectorAll('.chip.sw')) c.onclick = () => socket.emit('partyTeam', { cid: c.dataset.c, team: 1 - +c.dataset.t });
   if (!amLeader()) { selMode = party.mode; try { localStorage.setItem('jb_map_' + party.mode, party.map); } catch (e) {} }   // 방장이 고른 모드·맵 따라감
   refreshLobby();
 }

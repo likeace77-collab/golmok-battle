@@ -149,7 +149,7 @@ const hasSP = (p, sp) => p.lo.sp === sp;
 const SP = (p, id) => p.B.starPowers.find((s) => s.id === id);
 const jjang = (p) => hasSP(p, 'jjang') && p.hp >= p.B.maxHp;     // 김준후 스파2: 풀피 버프
 const SPEED_MUL = 0.85;   // 전체 이동속도 (느리게)
-const speedOf = (p) => p.B.speed * SPEED_MUL * (has(p, 'speed') ? 1.1 : 1) * (jjang(p) ? SP(p, 'jjang').speedMul : 1) * (p.flailT > 0 ? 1.5 : 1) * (p.sprintT > 0 ? p.B.gadgets[0].mul : 1);
+const speedOf = (p) => p.B.speed * SPEED_MUL * (has(p, 'speed') ? 1.1 : 1) * (jjang(p) ? SP(p, 'jjang').speedMul : 1) * (p.flailT > 0 ? 1.5 : 1) * (p.sprintT > 0 ? p.B.gadgets[0].mul : 1) * (p.isBot && !p.home ? BOT.speed : 1);
 function resetBody(room, p, slot) {
   const s = spawnPoint(room, p, slot);
   Object.assign(p, {
@@ -790,6 +790,7 @@ function moveToward(p, x, y, jitter = 0.3, now = 0) {
   p.input = { mx: c - s * j, my: s + c * j };
   return d;
 }
+const BOT = { aimErr: 0.3, react: 0.45, atkRate: 0.6, skillRate: 0.5, speed: 0.92 };
 function botThink(room, p, now) {
   const b = p.bot, B = p.B, mode = room.mode;
   if (p.ctrlBy) return;
@@ -808,13 +809,18 @@ function botThink(room, p, now) {
   let target = null, best = Infinity;
   for (const q of enemies(room, p)) { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < best) { best = d; target = q; } }
   b.wanderT -= DT;
+  // 봇 난이도 (패치: 조금 약하게) — 조준이 살짝 빗나가고, 상대를 처음 보면 반응이 늦고, 공격·스킬을 덜 자주 씀
+  const aimErr = () => (Math.random() + Math.random() - 1) * BOT.aimErr;
+  if (target && b.tgtId !== target.id) { b.tgtId = target.id; b.seeT = BOT.react; }
+  if (b.seeT > 0) b.seeT -= DT;
   const fight = () => {
     const dx = target.x - p.x, dy = target.y - p.y;
     moveToward(p, target.x, target.y, 0.4, now);
-    if (best < B.attack.range + 10 && Math.random() < (B.attack.aim === 'dir' ? 0.1 : 0.18)) doAttack(room, p, Math.atan2(dy, dx), now, best / B.attack.range);
-    if (best < 220 && Math.random() < 0.006) doGadget(room, p, 1, now);
-    if (mode.doubleGadget && best < 400 && Math.random() < 0.005) doGadget(room, p, 2, now);
-    if (B.super && best < B.super.range - 30 && p.sup >= 1 && Math.random() < 0.05) doSuper(room, p, Math.atan2(dy, dx), now);
+    if (b.seeT > 0) return;                       // 아직 반응 전
+    if (best < B.attack.range + 10 && Math.random() < (B.attack.aim === 'dir' ? 0.1 : 0.18) * BOT.atkRate) doAttack(room, p, Math.atan2(dy, dx) + aimErr(), now, best / B.attack.range);
+    if (best < 220 && Math.random() < 0.006 * BOT.skillRate) doGadget(room, p, 1, now);
+    if (mode.doubleGadget && best < 400 && Math.random() < 0.005 * BOT.skillRate) doGadget(room, p, 2, now);
+    if (B.super && best < B.super.range - 30 && p.sup >= 1 && Math.random() < 0.05 * BOT.skillRate) doSuper(room, p, Math.atan2(dy, dx) + aimErr() * 0.6, now);
     if (p.hp < B.maxHp * 0.3 && Math.random() < 0.5) { p.input.mx *= -1; p.input.my *= -1; }
   };
   // 쇼다운: 독가스 밖이면 안으로
@@ -1317,7 +1323,7 @@ const PARTY_MAX = 6;
 const sidOfCid = (cid) => { for (const [sid, o] of online) if (o.cid === cid) return sid; return null; };
 const nameOfCid = (cid) => { const sid = sidOfCid(cid); return sid ? online.get(sid).name : null; };
 function partyInfo(pt) {
-  return { id: pt.id, mode: pt.mode, map: pt.map, members: pt.members.map((c) => ({ cid: c, name: nameOfCid(c) || '(접속 끊김)', leader: c === pt.leader, on: !!sidOfCid(c) })) };
+  return { id: pt.id, mode: pt.mode, map: pt.map, members: pt.members.map((c) => ({ cid: c, name: nameOfCid(c) || '(접속 끊김)', leader: c === pt.leader, on: !!sidOfCid(c), team: pt.teams[c] || 0 })) };
 }
 function partySync(pt) {
   for (const c of pt.members) { const sid = sidOfCid(c); if (sid) io.to(sid).emit('party', partyInfo(pt)); }
@@ -1387,12 +1393,19 @@ io.on('connection', (socket) => {
     if (!lo || lo.status !== 'lobby') { socket.emit('partyMsg', '초대한 사람이 이미 게임을 시작했어요'); return; }
     let pt = parties.get(cidParty.get(fromCid));
     if (!pt) {
-      pt = { id: 'pt' + ++partySeq, leader: fromCid, members: [fromCid], mode: (lo.pendSel && lo.pendSel.mode) || 'ffa', map: (lo.pendSel && lo.pendSel.map) || 'random' };
+      pt = { id: 'pt' + ++partySeq, leader: fromCid, members: [fromCid], teams: {}, mode: (lo.pendSel && lo.pendSel.mode) || 'ffa', map: (lo.pendSel && lo.pendSel.map) || 'random' };
       parties.set(pt.id, pt); cidParty.set(fromCid, pt.id);
     }
     if (pt.members.length >= PARTY_MAX) { socket.emit('partyMsg', '파티가 꽉 찼어요'); return; }
     if (cidParty.get(me.cid) !== pt.id) { partyLeave(me.cid); pt.members.push(me.cid); cidParty.set(me.cid, pt.id); }
     partySync(pt);
+  });
+  socket.on('partyTeam', ({ cid, team } = {}) => {     // 팀 나누기: 본인 또는 방장이 바꿈
+    const me = online.get(socket.id); const pt = me && parties.get(cidParty.get(me.cid));
+    if (!pt || !pt.members.includes(cid) || (cid !== me.cid && pt.leader !== me.cid)) return;
+    const t = team === 1 ? 1 : 0, M = MODES[pt.mode];
+    if (M.teamSize && pt.members.filter((c) => c !== cid && (pt.teams[c] || 0) === t).length >= M.teamSize) { socket.emit('partyMsg', `한 팀은 ${M.teamSize}명까지예요`); return; }
+    pt.teams[cid] = t; partySync(pt);
   });
   socket.on('partyLeave', () => { const me = online.get(socket.id); if (me && me.cid) partyLeave(me.cid); });
   socket.on('partySel', ({ mode, map } = {}) => {      // 방장이 모드·맵 바꾸면 모두에게
@@ -1433,8 +1446,10 @@ io.on('connection', (socket) => {
     const p = newPlayer(room, socket.id, acc ? acc.u.name : '게스트' + Math.floor(1000 + Math.random() * 9000), false, bid, loadout);
     if (acc) p.userKey = acc.key;
     if (room.mode.team) {
-      const pc = room.party ? humans(room).filter((q) => q.team === 0).length : -1;   // 파티는 같은 팀부터 채움
-      p.team = room.party ? (pc < room.mode.teamSize ? 0 : 1) : teamCount(room, 0) <= teamCount(room, 1) ? 0 : 1;
+      if (pt && room.party === pt.id) {              // 파티: 로비에서 정한 팀으로 (꽉 찼으면 반대 팀)
+        const want = pt.teams[oe.cid] || 0;
+        p.team = humans(room).filter((q) => q.team === want).length < room.mode.teamSize ? want : 1 - want;
+      } else p.team = teamCount(room, 0) <= teamCount(room, 1) ? 0 : 1;
       p.color = TEAM_COLORS[p.team];
       const bot = [...room.players.values()].find((q) => q.isBot && !q.struct && q.team === p.team);   // 봇 자리를 대신 차지
       if (bot) removeBot(room, bot);
