@@ -15,7 +15,7 @@ const BRAWLERS = {
       range: 150, dmg: 1000, ammo: 3, reload: 1.5, cd: 0.45,
     },
     gadgets: [
-      { name: 'AI야? 시키지도 않은 걸 하네', icon: '⚡', desc: '주변 적을 3초 동안 기절시키고 피해를 준다.', range: 260, stun: 3, dmg: 300 },
+      { name: 'AI야? 시키지도 않은 걸 하네', icon: '⚡', desc: '주변 적을 2초 동안 기절시키고 피해를 준다.', range: 260, stun: 2, dmg: 300 },
       { name: '마우스 소환', icon: '🖱️', desc: '마우스 2마리를 소환해 8초 동안 적을 쫓아가 딸깍 공격한다.', count: 2, hp: 1200, speed: 320, dmg: 260, biteCd: 0.6, life: 8, radius: 16 },
     ],
     gadgetCd: 6,
@@ -128,16 +128,16 @@ const BRAWLERS = {
     },
     gadgets: [
       { name: '어깨빵', icon: '💥', desc: '주위의 적에게 700 피해를 주고 날려버린다.', range: 170, dmg: 700, knock: 190 },
-      { name: '나랑 사귈..레?', icon: '💔', desc: '가장 가까운 상대를 충격에 빠트려 3초 동안 공격 불능으로 만든다.', range: 420, dur: 3 },
+      { name: '나랑 사귈..레?', icon: '💔', desc: '가장 가까운 상대를 충격에 빠트려 2초 동안 공격 불능으로 만든다.', range: 420, dur: 2 },
     ],
     gadgetCd: 6,
     super: {
       name: '대가리 박치기', aim: 'line',
-      desc: '로켓처럼 대가리로 돌진해서 부딪힌 상대에게 2000 피해. 벽은 넘지 못한다.',
-      need: 4200, range: 520, width: 40, dmg: 2000, stun: 0.6, dashTime: 0.38,
+      desc: '로켓처럼 대가리로 돌진해서 부딪힌 상대에게 1800 피해. 벽은 넘지 못한다.',
+      need: 4200, range: 520, width: 40, dmg: 1800, stun: 0.6, dashTime: 0.38,
     },
     starPowers: [
-      { id: 'daedu', name: '대두', icon: '🗿', desc: '대가리 박치기 피해가 2500으로 늘어나고, 벽을 부수면서 돌진한다.', dmg: 2500 },
+      { id: 'daedu', name: '대두', icon: '🗿', desc: '대가리 박치기 피해가 2300으로 늘어나고, 벽을 부수면서 돌진한다.', dmg: 2300 },
       { id: 'gao', name: '가오업', icon: '😎', desc: '일반공격 범위·피해가 조금 늘어나고, 어깨빵 피해가 900이 되며 날리는 범위가 늘어난다.', atkMul: 1.15, g1Dmg: 900, g1Range: 210, g1Knock: 250 },
     ],
     lines: {
@@ -218,6 +218,41 @@ const BRAWLERS = {
       g1: ['와그작와그작', '심 맛있다'],
       g2: ['종이 냠냠', 'A4는 진리'],
       kill: ['ㅋㅋㅋ 썰렁했지?', '아재개그 맛 어때', '웃기지?'],
+    },
+  },
+  yedam: {
+    id: 'yedam',
+    name: '방예담',
+    rarity: 'mythic',
+    role: '힐러',
+    title: '사랑을 했다~',
+    desc: '키 작고 비쩍 마른 학생. 팔을 쭉 늘려 상대 머리채를 잡고 안 놔준다. 노래 한 곡이면 우리 팀은 살아나고 상대는 귀가 아프다.',
+    radius: 22, speed: 268, maxHp: 3800,
+    attack: {
+      name: '머리뜯기', aim: 'line',
+      desc: '팔을 쭉 늘려 손을 날린다. 손이 상대 머리를 잡으면 연결되어 0.3초마다 100 피해. 너무 멀어지거나 사이에 벽이 생기면 끊긴다.',
+      range: 440, width: 24, handSpeed: 1500, breakRange: 600, tick: 0.3, dmg: 100, heal: 150, maxT: 5, ammo: 3, reload: 1.5, cd: 0.45,
+    },
+    gadgets: [
+      { name: '전력질주', icon: '🏃', desc: '앞으로 쭉 달려 나간 뒤 4초 동안 이동 속도 300%.', dash: 280, dur: 4, mul: 3 },
+      { name: '연필 던지기', icon: '✏️', desc: '가까운 상대에게 연필을 던져 500 피해.', dmg: 500, speed: 1100, range: 560 },
+    ],
+    gadgetCd: 8,
+    super: {
+      name: '사랑을 했다', aim: 'self',
+      desc: '3초 동안 노래를 불러 주위 팀원은 0.75초마다 700 회복, 상대는 500 피해.',
+      need: 2600, range: 340, dur: 3, every: 0.75, heal: 700, dmg: 500,
+    },
+    starPowers: [
+      { id: 'geoji', name: '거지들', icon: '🪙', desc: '머리뜯기로 우리 팀을 잡을 수 있다. 잡고 있는 팀원은 0.3초마다 150 회복.' },
+      { id: 'economy', name: '경제야 살아라', icon: '📈', desc: '사랑을 했다에 맞은 상대는 2초 동안 기절한다.', stun: 2 },
+    ],
+    lines: {
+      atk: ['머리 내놔!', '잡았다~', '안 놔줘'],
+      g1: ['튀어!!!', '전력질주~'],
+      g2: ['연필 받아라', '샤프 아니고 연필'],
+      sup: ['🎵 사랑을 했다~', '🎵 노래 한 곡 갑니다'],
+      kill: ['머리숱 정리 완료', '한 곡 더?', 'ㅋㅋ 탈모 조심'],
     },
   },
 };
