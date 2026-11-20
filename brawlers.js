@@ -235,8 +235,8 @@ const BRAWLERS = {
     radius: 22, speed: 268, maxHp: 3800,
     attack: {
       name: '머리뜯기', aim: 'line',
-      desc: '팔을 쭉 늘려 손을 날린다. 손이 상대 머리를 잡으면 연결되어 0.15초마다 100 피해. 너무 멀어지거나 사이에 벽이 생기면 끊긴다.',
-      range: 440, width: 24, handSpeed: 1500, breakRange: 600, tick: 0.15, dmg: 100, heal: 75, maxT: 5, ammo: 3, reload: 1.5, cd: 0.45,
+      desc: '팔을 쭉 늘려 손을 날린다. 손이 상대 머리를 잡으면 연결되어 0.15초마다 100 피해, 준 피해의 30%만큼 회복. 한 번에 2명까지 잡을 수 있다. 너무 멀어지거나 사이에 벽이 생기면 끊긴다.',
+      range: 440, width: 24, handSpeed: 1500, breakRange: 600, tick: 0.15, dmg: 100, heal: 75, maxT: 5, lifesteal: 0.3, maxGrab: 2, ammo: 3, reload: 1.5, cd: 0.45,
     },
     gadgets: [
       { name: '전력질주', icon: '🏃', desc: '앞으로 쭉 달려 나간 뒤 4초 동안 이동 속도 300%.', dash: 280, dur: 4, mul: 3 },

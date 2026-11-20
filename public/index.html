@@ -646,7 +646,7 @@ function updateBullets(now) {
     const [x, y] = ipos('b' + id, sx, sy);
     let m = bulletMeshes[id];
     if (!m) { m = bulletMeshes[id] = kind === 'pencil' ? makePencil() : kind === 'hand' ? new THREE.Group() : makeStaple(); m.position.set(x * S, 2.0, y * S); scene.add(m); }
-    if (kind === 'hand' && views[owner]) { const o = views[owner].model.root.position; armTo(owner, o, x * S, 2.0, y * S); }
+    if (kind === 'hand' && views[owner]) { const o = views[owner].model.root.position; armTo('f' + id, o, x * S, 2.0, y * S); }
     if (kind === 'pencil') { m.position.set(x * S, 2.2, y * S); m.rotation.y = -a + Math.PI / 2; continue; }
     m.position.x = x * S; m.position.z = y * S;
     m.rotation.y = -a + Math.PI / 2;
@@ -654,11 +654,14 @@ function updateBullets(now) {
   for (const id in bulletMeshes) if (!seen.has(id)) { scene.remove(bulletMeshes[id]); delete bulletMeshes[id]; }
   for (const p of state.players) {        // 머리 잡고 있는 중
     if (!p.th || p.dead) continue;
-    const ov = views[p.id], tv = views[p.th]; if (!ov || !tv) continue;
-    const t = tv.model.root.position; armTo(p.id, ov.model.root.position, t.x, 2.6, t.z);
-    stretchArms[p.id].userData.sl.material = p.tha ? sleeveMat : sleeveMat;
+    const ov = views[p.id]; if (!ov) continue;
+    for (const tid of p.th) { const tv = views[tid]; if (!tv) continue; const t = tv.model.root.position; armTo(p.id + ':' + tid, ov.model.root.position, t.x, 2.6, t.z); }
   }
-  for (const k in stretchArms) stretchArms[k].visible = stretchArms[k].userData.used;
+  for (const k in stretchArms) {
+    const a = stretchArms[k]; a.visible = a.userData.used;
+    if (!a.userData.used && (a.userData.idle = (a.userData.idle || 0) + 1) > 120) { scene.remove(a); delete stretchArms[k]; }   // 안 쓰는 팔 정리
+    else if (a.userData.used) a.userData.idle = 0;
+  }
 }
 // 브롤볼 공
 let ballMesh = null;

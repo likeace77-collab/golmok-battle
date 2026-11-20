@@ -154,7 +154,7 @@ function resetBody(room, p, slot) {
   const s = spawnPoint(room, p, slot);
   Object.assign(p, {
     x: s.x, y: s.y, hp: p.B.maxHp, dead: false, ammo: p.B.attack.ammo, stunT: 0, frozenT: 0, acT: 0,
-    rf: 0, gems: 0, shield: 0, fullT: 0, respawnT: 0, input: { mx: 0, my: 0 }, aw: false, dash: null, noAtkT: 0, flailT: 0, jailT: 0, teth: null, sprintT: 0,   // 쫄 게이지는 부활해도 유지
+    rf: 0, gems: 0, shield: 0, fullT: 0, respawnT: 0, input: { mx: 0, my: 0 }, aw: false, dash: null, noAtkT: 0, flailT: 0, jailT: 0, teths: [], sprintT: 0,   // 쫄 게이지는 부활해도 유지
   });
   releaseCtrl(room, p, false);
 }
@@ -693,7 +693,10 @@ SKILLS.yedam = {
     shoot(room, p, a, { speed: A.handSpeed, range: A.range, dmg: 0, kind: 'hand', ally: hasSP(p, 'geoji'), onHit: (q, t) => {
       if (p.dead || !room.players.has(p.id)) return;
       const ally = !isEnemy(room, p, q);
-      p.teth = { tid: q.id, ally, acc: A.tick, t: 0 };       // 잡자마자 첫 틱
+      // 최대 2명까지 동시에 잡음 (같은 사람이면 다시 잡기, 3번째면 제일 오래된 손 놓기)
+      p.teths = p.teths.filter((T) => T.tid !== q.id);
+      if (p.teths.length >= A.maxGrab) p.teths.shift();
+      p.teths.push({ tid: q.id, ally, acc: A.tick, t: 0 });       // 잡자마자 첫 틱
       room.fx.push({ type: 'grab', id: p.id, tid: q.id, x: q.x, y: q.y, ally });
       if (ally && (!p.geojiT || t - p.geojiT > 6)) { p.geojiT = t; room.fx.push({ type: 'geoji', id: p.id, x: p.x, y: p.y }); }
     } });
@@ -1150,18 +1153,28 @@ function step(room) {
     if (p.noAtkT > 0) p.noAtkT = Math.max(0, p.noAtkT - DT);
     if (p.jailT > 0) p.jailT = Math.max(0, p.jailT - DT);
     if (p.sprintT > 0) p.sprintT = Math.max(0, p.sprintT - DT);
-    if (p.teth) {                                 // 머리뜯기 연결 유지
-      const T = p.teth, A = B.attack, q = room.players.get(T.tid);
-      T.t += DT; T.acc += DT;
-      const ok = q && !q.dead && !q.out && p.stunT <= 0 && p.frozenT <= 0 && T.t < A.maxT
-        && Math.hypot(q.x - p.x, q.y - p.y) <= A.breakRange && clearPath(room.map, p.x, p.y, q.x, q.y)
-        && (T.ally ? !isEnemy(room, p, q) : isEnemy(room, p, q));
-      if (!ok) { room.fx.push({ type: 'tethBreak', id: p.id, x: q ? q.x : p.x, y: q ? q.y : p.y }); p.teth = null; }
-      else while (T.acc >= A.tick) {
-        T.acc -= A.tick;
-        if (T.ally) chargeSuper(p, heal(room, p, q, A.heal) * 0.5);
-        else { damage(room, p, q, A.dmg, now, 'hair'); chargeSuper(p, A.dmg); if (q.dead) { p.teth = null; break; } }
-      }
+    if (p.teths && p.teths.length) {              // 머리뜯기 연결 유지 (최대 2명)
+      const A = B.attack;
+      p.teths = p.teths.filter((T) => {
+        const q = room.players.get(T.tid);
+        T.t += DT; T.acc += DT;
+        const ok = q && !q.dead && !q.out && p.stunT <= 0 && p.frozenT <= 0 && T.t < A.maxT
+          && Math.hypot(q.x - p.x, q.y - p.y) <= A.breakRange && clearPath(room.map, p.x, p.y, q.x, q.y)
+          && (T.ally ? !isEnemy(room, p, q) : isEnemy(room, p, q));
+        if (!ok) { room.fx.push({ type: 'tethBreak', id: p.id, x: q ? q.x : p.x, y: q ? q.y : p.y }); return false; }
+        while (T.acc >= A.tick) {
+          T.acc -= A.tick;
+          if (T.ally) chargeSuper(p, heal(room, p, q, A.heal) * 0.5);
+          else {
+            const before = q.hp + (q.shield || 0);
+            damage(room, p, q, A.dmg, now, 'hair'); chargeSuper(p, A.dmg);
+            const dealt = Math.max(0, before - Math.max(0, q.hp) - (q.shield || 0));
+            if (dealt > 0) { const h = Math.min(dealt * A.lifesteal, B.maxHp - p.hp); if (h > 0) p.hp += h; }   // 준 피해의 30% 회복
+            if (q.dead) return false;
+          }
+        }
+        return true;
+      });
     }
     if (p.flailT > 0) {                          // 훠이훠이: 주위 적 계속 밀어냄, 처음 닿을 때 600
       p.flailT = Math.max(0, p.flailT - DT);
@@ -1282,7 +1295,7 @@ function step(room) {
       k: p.kills, d: p.deaths, say: p.speech ? p.speech.text : null,
       ctl: p.ctrlBy, ctrl: p.ctrlId, ctrlT: +(p.ctrlT || 0).toFixed(1), ac: +p.acT.toFixed(1),
       g: p.lo.g, sp: p.lo.sp, gear: p.lo.gears, sh: r1(p.shield), rf: +p.rf.toFixed(3), aj: Math.ceil(p.ajT), gems: p.gems,
-      aw: p.aw, fear: +p.fear.toFixed(2), scared: +p.scaredT.toFixed(1), dash: !!p.dash, jj: jjang(p), na: +p.noAtkT.toFixed(1), fl: +p.flailT.toFixed(1), jail: +p.jailT.toFixed(1), s9: p.st9, nj: p.nextJoke, th: p.teth ? p.teth.tid : undefined, tha: p.teth ? p.teth.ally : undefined, spr: p.sprintT > 0 ? +p.sprintT.toFixed(1) : undefined, bty: room.mode.id === 'bounty' ? p.bounty : undefined, st: p.struct || undefined,
+      aw: p.aw, fear: +p.fear.toFixed(2), scared: +p.scaredT.toFixed(1), dash: !!p.dash, jj: jjang(p), na: +p.noAtkT.toFixed(1), fl: +p.flailT.toFixed(1), jail: +p.jailT.toFixed(1), s9: p.st9, nj: p.nextJoke, th: p.teths && p.teths.length ? p.teths.map((T) => T.tid) : undefined, spr: p.sprintT > 0 ? +p.sprintT.toFixed(1) : undefined, bty: room.mode.id === 'bounty' ? p.bounty : undefined, st: p.struct || undefined,
     })),
     mice: room.mice.map((m) => ({ id: m.id, x: r1(m.x), y: r1(m.y), a: +m.ang.toFixed(2), c: m.color, hp: m.hp / m.maxHp })),
     fx: room.fx,
