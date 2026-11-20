@@ -255,6 +255,10 @@ const BRAWLERS = {
       kill: ['머리숱 정리 완료', '한 곡 더?', 'ㅋㅋ 탈모 조심'],
     },
   },
+};
+
+// 보관 중인 브롤러 (목록에서 뺌 — 다시 넣으려면 BRAWLERS 안으로 옮기면 됨. 3D 모델 makeSuho는 index.html에 그대로 있음)
+const SHELVED = {
   suho: {
     id: 'suho',
     name: '정수호',
