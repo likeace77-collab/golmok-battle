@@ -1092,6 +1092,7 @@ function step(room) {
 
   const r1 = (v) => Math.round(v);
   io.to(room.id).emit('state', {
+    ts: Date.now(),          // 클라이언트 보간용 서버 시각
     mode: room.mode.id, map: room.map.id, phase: room.phase, phaseT: +room.phaseT.toFixed(1),
     mapT: Math.ceil(room.mapT), playT: Math.floor(room.playT), result: room.result,
     safe: room.safe ? { x1: r1(room.safe.x1), y1: r1(room.safe.y1), x2: r1(room.safe.x2), y2: r1(room.safe.y2) } : null,

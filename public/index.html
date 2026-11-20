@@ -167,6 +167,7 @@
   .bub { display: none; margin: 0 auto 6px; background: #fff; color: #111; border: 3px solid #000; border-radius: 12px; padding: 4px 10px; font-weight: 900; font-size: 14px; position: relative; animation: pop .18s ease-out; }
   .bub:after { content: ''; position: absolute; left: 50%; bottom: -9px; margin-left: -7px; border: 7px solid transparent; border-top-color: #000; border-bottom: 0; }
   @keyframes pop { from { transform: scale(.3); } to { transform: scale(1); } }
+  #fps { position: fixed; left: 8px; bottom: 6px; z-index: 50; font: 700 11px sans-serif; color: rgba(255,255,255,.55); pointer-events: none; text-shadow: 0 1px 2px #000; }
   .pp { position: absolute; transform: translate(-50%, -50%); font-weight: 900; white-space: nowrap; }
   .bigcap { position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%); font-size: min(11vw, 76px); font-weight: 900; white-space: nowrap; pointer-events: none; z-index: 30;
     -webkit-text-stroke: 4px #000; paint-order: stroke fill; text-shadow: 0 6px 0 #000, 0 0 30px rgba(255,200,40,.7); animation: capIn 1.7s ease-out forwards; }
@@ -537,13 +538,14 @@ function armTo(key, from, x, y, z) {
 function updateBullets(now) {
   const seen = new Set();
   for (const k in stretchArms) stretchArms[k].userData.used = false;
-  for (const [id, x, y, a, kind, owner] of state.bullets || []) {
+  for (const [id, sx, sy, a, kind, owner] of state.bullets || []) {
     seen.add(String(id));
+    const [x, y] = ipos('b' + id, sx, sy);
     let m = bulletMeshes[id];
     if (!m) { m = bulletMeshes[id] = kind === 'pencil' ? makePencil() : kind === 'hand' ? new THREE.Group() : makeStaple(); m.position.set(x * S, 2.0, y * S); scene.add(m); }
     if (kind === 'hand' && views[owner]) { const o = views[owner].model.root.position; armTo(owner, o, x * S, 2.0, y * S); }
     if (kind === 'pencil') { m.position.set(x * S, 2.2, y * S); m.rotation.y = -a + Math.PI / 2; continue; }
-    m.position.x += (x * S - m.position.x) * 0.7; m.position.z += (y * S - m.position.z) * 0.7;
+    m.position.x = x * S; m.position.z = y * S;
     m.rotation.y = -a + Math.PI / 2;
   }
   for (const id in bulletMeshes) if (!seen.has(id)) { scene.remove(bulletMeshes[id]); delete bulletMeshes[id]; }
@@ -2165,7 +2167,7 @@ function connect() {
     $('botBtn').style.display = $('clearBtn').style.display = rounds ? 'none' : '';
   });
   socket.on('state', (s) => {
-    state = s;
+    state = s; onSnap(s);
     if (s.map !== curMapId && META.maps[s.map]) { MAP = META.maps[s.map]; buildMap(MAP); }
     else if (s.broken && s.broken.length < brokenSeen.size) buildMap(MAP);      // 새 판: 벽 복구
     for (const i of s.broken || []) if (!brokenSeen.has(i) && wallMeshes[i]) { brokenSeen.add(i); wallMeshes[i].visible = false; }
@@ -2513,12 +2515,10 @@ const ease = (t) => 1 - Math.pow(1 - t, 3);
 
 function animateTeacher(v, p, dt, now) {
   const M = v.model, root = M.root;
-  const tx = p.x * S, tz = p.y * S;
+  const [ix, iy] = ipos(p.id, p.x, p.y);
+  const tx = ix * S, tz = iy * S;
   const ox = root.position.x, oz = root.position.z;
-  if (Math.hypot(tx - ox, tz - oz) > 10) root.position.set(tx, 0, tz);
-  const k = Math.min(1, dt * 14);
-  root.position.x += (tx - root.position.x) * k;
-  root.position.z += (tz - root.position.z) * k;
+  root.position.x = tx; root.position.z = tz;
   const mdx = root.position.x - ox, mdz = root.position.z - oz;
   const sp = Math.hypot(mdx, mdz) / Math.max(dt, 1e-3);
   v.speed += (sp - v.speed) * Math.min(1, dt * 10);
@@ -2782,9 +2782,9 @@ function updateLabel(v, p) {
 }
 
 function animateMouse(mv, m, dt, now) {
-  const tx = m.x * S, tz = m.y * S, g = mv.obj.g;
-  const k = Math.min(1, dt * 14);
-  g.position.x += (tx - g.position.x) * k; g.position.z += (tz - g.position.z) * k;
+  const [ix, iy] = ipos('m' + m.id, m.x, m.y);
+  const tx = ix * S, tz = iy * S, g = mv.obj.g;
+  g.position.x = tx; g.position.z = tz;
   g.rotation.y = lerpAngle(g.rotation.y, Math.atan2(Math.cos(m.a), Math.sin(m.a)), Math.min(1, dt * 12));
   mv.obj.inner.position.y = Math.abs(Math.sin(now * 18 + mv.seed)) * 0.25;
   mv.obj.inner.rotation.z = Math.sin(now * 18 + mv.seed) * 0.15;
@@ -2825,10 +2825,63 @@ function modeHud(me) {
   } else pm.style.display = 'none';
 }
 
+// ── 부드러운 움직임: 서버 스냅샷 보간 ──────────────
+// 서버는 초당 30번 위치를 보냄 → 받은 위치 두 개 사이를 매 프레임 이어서 그림 (약간 과거를 보여줘서 끊김 없음)
+const INTERP_DELAY = 60;            // ms
+let tOff = null;
+const hist = new Map();             // id → [{t, x, y}]
+function onSnap(s) {
+  if (!s.ts) return;
+  const off = performance.now() - s.ts;
+  if (tOff == null || off < tOff) tOff = off; else tOff += (off - tOff) * 0.005;   // 가장 빨리 온 패킷 기준 (네트워크 흔들림 무시)
+  const push = (k, x, y) => { let h = hist.get(k); if (!h) hist.set(k, h = []); if (h.length && h[h.length - 1].t >= s.ts) return; h.push({ t: s.ts, x, y }); if (h.length > 15) h.shift(); };
+  for (const p of s.players) push(p.id, p.x, p.y);
+  for (const b of s.bullets || []) push('b' + b[0], b[1], b[2]);
+  for (const m of s.mice || []) push('m' + m.id, m.x, m.y);
+  for (const [k, h] of hist) if (s.ts - h[h.length - 1].t > 3000) hist.delete(k);
+}
+function ipos(k, fx, fy) {
+  const h = hist.get(k); if (!h || !h.length || tOff == null) return [fx, fy];
+  const rt = performance.now() - tOff - INTERP_DELAY;
+  const L = h[h.length - 1];
+  if (rt >= L.t) {                    // 패킷이 늦으면 잠깐(최대 0.1초) 진행 방향으로 이어서
+    const P = h[h.length - 2]; if (!P || L.t === P.t) return [L.x, L.y];
+    const u = Math.min(rt - L.t, 100) / (L.t - P.t);
+    if (Math.hypot(L.x - P.x, L.y - P.y) > 200) return [L.x, L.y];
+    return [L.x + (L.x - P.x) * u, L.y + (L.y - P.y) * u];
+  }
+  for (let i = h.length - 1; i > 0; i--) {
+    const a = h[i - 1], b = h[i];
+    if (rt < a.t) continue;
+    if (Math.hypot(b.x - a.x, b.y - a.y) > 200) return [b.x, b.y];   // 순간이동/부활은 그냥 점프
+    const u = (rt - a.t) / (b.t - a.t || 1);
+    return [a.x + (b.x - a.x) * u, a.y + (b.y - a.y) * u];
+  }
+  return [h[0].x, h[0].y];
+}
+
+// ── 프레임 측정 + 자동 화질 (느리면 해상도·그림자 낮춤) ──
+const fpsEl = document.createElement('div'); fpsEl.id = 'fps'; document.body.appendChild(fpsEl);
+let fpsN = 0, fpsT = 0, fpsLow = 0, pr = Math.min(devicePixelRatio || 1, 2);
+function fpsTick(dtMs) {
+  fpsN++; fpsT += dtMs;
+  if (fpsT < 1000) return;
+  const fps = Math.round(fpsN * 1000 / fpsT); fpsN = 0; fpsT = 0;
+  fpsEl.textContent = fps + ' FPS';
+  if (fps < 45 && mode !== 'lobby') {
+    if (++fpsLow >= 2) {
+      fpsLow = 0;
+      if (pr > 1) { pr = Math.max(1, pr - 0.25); renderer.setPixelRatio(pr); resize(); }
+      else if (sun.shadow.mapSize.x > 1024) { sun.shadow.mapSize.set(1024, 1024); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } renderer.shadowMap.type = THREE.PCFShadowMap; }
+    }
+  } else fpsLow = 0;
+}
+
 // ── 메인 루프 ────────────────────────────────────
 const camTarget = new THREE.Vector3(40, 0, 30);
 let last = performance.now();
 function frame(nowMs) {
+  fpsTick(nowMs - last);
   const dt = Math.min(0.05, (nowMs - last) / 1000); last = nowMs;
   const now = nowMs / 1000;
   if (MAP) {
