@@ -136,4 +136,12 @@ function routes(app) {
 
 const trophiesOf = (key) => (db.users[key] ? db.users[key].trophies || 0 : 0);
 
-module.exports = { load, routes, userFromToken, addTrophies, addStat, trophiesOf, flush };
+// 가입한 전체 플레이어 (공개 정보만)
+function allUsers() {
+  return Object.entries(db.users).map(([key, u]) => ({
+    key, name: u.name, trophies: u.trophies || 0, kills: (u.stats && u.stats.kills) || 0, wins: (u.stats && u.stats.wins) || 0,
+    games: (u.stats && u.stats.games) || 0, lastSeen: u.lastSeen || u.createdAt || 0, createdAt: u.createdAt || 0,
+  }));
+}
+
+module.exports = { load, routes, userFromToken, addTrophies, addStat, trophiesOf, allUsers, flush };

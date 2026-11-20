@@ -135,6 +135,11 @@
   #olist .or { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 9px; background: rgba(0,0,0,.28); margin-top: 5px; }
   #olist .or b { font-size: 15px; } #olist .or .st { margin-left: auto; font-size: 12px; font-weight: 800; text-align: right; }
   #olist .or .tr { font-size: 12px; color: #ffd84a; font-weight: 900; }
+  #olist .or .rk { width: 26px; text-align: center; font-weight: 900; font-size: 15px; }
+  #olist .or .dot { width: 9px; height: 9px; border-radius: 50%; background: #666; flex: none; }
+  #olist .or .dot.on { background: #3ce07f; box-shadow: 0 0 6px #3ce07f; }
+  #olist .or.me { outline: 2px solid #ffd84a; }
+  #olist .or .sub { font-size: 11px; opacity: .75; font-weight: 700; }
   #trPop { position: fixed; left: 50%; top: 30%; transform: translateX(-50%); z-index: 12; font-size: 30px; font-weight: 900; color: #ffd84a; pointer-events: none; opacity: 0; transition: opacity .3s, top .8s; }
   #modal { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; background: rgba(10,6,30,.7); }
   #modal .box { width: min(90vw, 340px); padding: 18px; text-align: center; }
@@ -208,6 +213,7 @@
   <div id="onlineBtn" class="panel stroke"><i></i>온라인 <span id="oCnt">-</span>명</div>
   <div id="lbtns">
     <div class="lb panel stroke" id="openB"><span class="ic">🧑‍🏫</span>브롤러</div>
+    <div class="lb panel stroke" id="openPlayers"><span class="ic">👥</span>플레이어</div>
     <div class="lb panel stroke" id="openHelp"><span class="ic">❔</span>조작법</div>
   </div>
   <div id="showName" class="stroke"><span class="rbadge" id="sRar">전설</span><span class="role" id="sRole" style="display:none"></span><div class="nm2" id="sName">정보쌤</div><div class="tt" id="sTitle"></div><div id="sLoad"></div></div>
@@ -1331,6 +1337,39 @@ function fxSummon(x, z) {
   burst(x, 0.5, z, 26, ['#7dff8a', '#d8ffd0', '#ffffff'], { speed: 4, size: 0.14, up: 14, life: 0.9, grav: 8 });
 }
 
+// ── 조준 히트박스: 채움 + 진한 그림자 테두리 + 밝은 테두리 (밝은 바닥에서도 잘 보이게) ──
+function aimShape(o) {
+  // o: { type: 'rect'|'sector'|'circle', r, w(반폭), half, color, edge, rays: [각도...] }
+  const g = new THREE.Group(), flat = new THREE.Group(); flat.rotation.x = -Math.PI / 2; g.add(flat);
+  const fillM = addMat(o.color, 0.4), edgeM = addMat(o.edge || '#ffffff', 1), darkM = addMat('#140a28', 0.75);
+  const th = 0.24;
+  const strip = (x1, y1, x2, y2, w, m, z) => {
+    const len = Math.hypot(x2 - x1, y2 - y1); const mm = new THREE.Mesh(new THREE.PlaneGeometry(len + w, w), m);
+    mm.position.set((x1 + x2) / 2, (y1 + y2) / 2, z); mm.rotation.z = Math.atan2(y2 - y1, x2 - x1); flat.add(mm); return mm;
+  };
+  const both = (x1, y1, x2, y2) => { strip(x1, y1, x2, y2, th * 2.2, darkM, 0.005); strip(x1, y1, x2, y2, th, edgeM, 0.01); };
+  const { r } = o;
+  if (o.type === 'rect') {
+    const f = new THREE.Mesh(new THREE.PlaneGeometry(r, o.w * 2), fillM); f.position.x = r / 2; flat.add(f);
+    both(0, o.w, r, o.w); both(0, -o.w, r, -o.w); both(r, -o.w, r, o.w);
+  } else if (o.type === 'sector') {
+    flat.add(new THREE.Mesh(new THREE.CircleGeometry(r, 48, -o.half, o.half * 2), fillM));
+    const dk = new THREE.Mesh(new THREE.RingGeometry(r - th * 1.6, r + th * 0.6, 48, 1, -o.half, o.half * 2), darkM); dk.position.z = 0.005; flat.add(dk);
+    const ed = new THREE.Mesh(new THREE.RingGeometry(r - th, r, 48, 1, -o.half, o.half * 2), edgeM); ed.position.z = 0.01; flat.add(ed);
+    for (const s of [-1, 1]) both(0, 0, r * Math.cos(s * o.half), r * Math.sin(s * o.half));
+  } else {
+    flat.add(new THREE.Mesh(new THREE.CircleGeometry(r, 56), fillM));
+    const dk = new THREE.Mesh(new THREE.RingGeometry(r - th * 1.6, r + th * 0.6, 56), darkM); dk.position.z = 0.005; flat.add(dk);
+    const ed = new THREE.Mesh(new THREE.RingGeometry(r - th, r, 56), edgeM); ed.position.z = 0.01; flat.add(ed);
+  }
+  // 투사체 하나하나의 길 (서현우 스테이플러 심 등)
+  const rayM = addMat('#ffffff', 0.95), rayD = addMat('#140a28', 0.5);
+  for (const a of o.rays || []) { const c = Math.cos(a), sn = Math.sin(a); strip(r * 0.08 * c, r * 0.08 * sn, r * c, r * sn, 0.3, rayD, 0.011); strip(r * 0.08 * c, r * 0.08 * sn, r * c, r * sn, 0.12, rayM, 0.012); }
+  g.userData.fillM = fillM; g.userData.edgeM = edgeM;
+  return g;
+}
+const pulseAim = (g, now) => { if (g && g.userData.fillM) { g.userData.fillM.opacity = 0.36 + Math.sin(now * 7) * 0.08; } };
+
 function sectorGeo(r, half, inner = 0) {
   return inner > 0 ? new THREE.RingGeometry(inner, r, 40, 1, -half, half * 2) : new THREE.CircleGeometry(r, 40, -half, half * 2);
 }
@@ -1990,6 +2029,20 @@ $('onlineBtn').onclick = () => {
     const rows = list.map((o) => `<div class="or"><b>${o.name.replace(/</g, '&lt;')}</b>${o.guest ? '<span style="font-size:11px;opacity:.7">게스트</span>' : `<span class="tr">🏆${o.trophies}</span>`}
       <span class="st">${o.status === 'game' ? `<span style="color:#7cffb0">${o.modeName} 플레이 중</span><br>${o.brawler || ''}` : '<span style="opacity:.8">로비</span>'}</span></div>`).join('');
     modal(`<h3 class="stroke">🟢 지금 온라인 ${list.length}명</h3><div id="olist">${rows || '아무도 없어요'}</div>`);
+  });
+};
+// 가입한 전체 플레이어 목록 (트로피 순)
+const agoText = (t) => { const m = Math.floor((Date.now() - t) / 60000); return m < 1 ? '방금' : m < 60 ? m + '분 전' : m < 1440 ? Math.floor(m / 60) + '시간 전' : Math.floor(m / 1440) + '일 전'; };
+$('openPlayers').onclick = () => {
+  if (!socket) return;
+  socket.emit('players', (list) => {
+    const esc = (t) => String(t).replace(/</g, '&lt;');
+    const medal = ['🥇', '🥈', '🥉'];
+    const nOn = list.filter((u) => u.online).length;
+    const rows = list.map((u, i) => `<div class="or${account && account.name === u.name ? ' me' : ''}"><span class="rk">${medal[i] || i + 1}</span><span class="dot${u.online ? ' on' : ''}"></span>
+      <div><b>${esc(u.name)}</b><div class="sub">⚔️ ${u.kills}킬 · 👑 ${u.wins}승 · 🎮 ${u.games}판</div></div>
+      <span class="st"><span class="tr">🏆${u.trophies}</span><br>${u.online ? `<span style="color:#7cffb0">${u.status === 'game' ? u.modeName + ' 중' : '로비'}</span>` : `<span style="opacity:.7">${agoText(u.lastSeen)}</span>`}</span></div>`).join('');
+    modal(`<h3 class="stroke">👥 플레이어 ${list.length}명 <span style="font-size:14px;color:#7cffb0">· 접속 ${nOn}</span></h3><div id="olist">${rows || '아직 가입한 사람이 없어요'}</div>`);
   });
 };
 $('exitBtn').onclick = () => location.reload();
@@ -2672,16 +2725,17 @@ function frame(nowMs) {
       // 조준 표시
       const v = views[src.id];
       if (aimInd.userData.b !== src.b) { if (aimMesh) aimInd.remove(aimMesh); aimMesh = null; aimInd.userData.b = src.b; }
-      if (atkInd.userData.b !== src.b) { if (atkMesh) atkInd.remove(atkMesh); atkMesh = null; atkInd.userData.b = src.b; }
+      const atkN = src.b === 'hyeonwoo' ? (src.s9 ? 9 : src.sp === 'fullsix' && src.ammo >= B.attack.ammo - 0.01 ? 6 : 5) : 0;   // 지금 쏘면 나갈 심 개수
+      if (atkInd.userData.b !== src.b + atkN) { if (atkMesh) atkInd.remove(atkMesh); atkMesh = null; atkInd.userData.b = src.b + atkN; }
       aimInd.visible = !!B.super && src.sup >= 1 && !src.dead && !!v && (aims.sup.id !== null ? !aims.sup.cancel : !isTouch);
       if (aimInd.visible) {
         if (!aimMesh) {
-          let g;
-          if (B.super.aim === 'line') { g = new THREE.PlaneGeometry(B.super.range * S, B.super.width * 2 * S); g.translate(B.super.range * S / 2, 0, 0); }
-          else g = sectorGeo(B.super.range * S, B.super.half);
-          aimMesh = new THREE.Mesh(g, addMat(B.super.aim === 'line' ? '#d36bff' : '#ff8a1f', 0.25)); aimMesh.rotation.x = -Math.PI / 2; aimInd.add(aimMesh);
+          const line = B.super.aim === 'line';
+          aimMesh = aimShape(line ? { type: 'rect', r: B.super.range * S, w: B.super.width * S, color: '#b44cff', edge: '#d77bff' }
+            : { type: 'sector', r: B.super.range * S, half: B.super.half, color: '#ff6a00', edge: '#ff9a2a' });
+          aimInd.add(aimMesh);
         }
-        aimInd.position.set(v.model.root.position.x, 0.08, v.model.root.position.z);
+        aimInd.position.set(v.model.root.position.x, 0.08, v.model.root.position.z); pulseAim(aimMesh, now);
         const a = aimAngle('sup'); if (a != null) aimInd.rotation.y = -a;
       }
       // 기본공격 조준: 범위 고정(정보쌤) → 주변 원 / 방향 공격(현실쌤) → 부채꼴
@@ -2691,21 +2745,21 @@ function frame(nowMs) {
         if (!atkMesh) {
           const r = B.attack.range * S;
           atkMesh = new THREE.Group();
-          if (B.attack.aim === 'line') {
-            const g = new THREE.PlaneGeometry(r, B.attack.width * 2 * S); g.translate(r / 2, 0, 0);
-            const line = new THREE.Mesh(g, addMat('#f7c84a', 0.3)); line.rotation.x = -Math.PI / 2; atkMesh.add(line);
-          } else if (B.attack.aim === 'tri') {
-            const g = new THREE.PlaneGeometry(r, B.attack.width * 2 * S); g.translate(r / 2, 0, 0);
-            const line = new THREE.Mesh(g, addMat('#3cd8ff', 0.28)); line.rotation.x = -Math.PI / 2; atkMesh.add(line);
-            const land = new THREE.Mesh(new THREE.CircleGeometry(B.attack.lobR * S, 32), addMat('#ff6ad5', 0.3)); land.rotation.x = -Math.PI / 2; land.position.set(r, 0.01, 0); atkMesh.add(land); atkMesh.userData.land = land; atkMesh.userData.r = r;
-          } else {
-            const fill = new THREE.Mesh(dirAtk ? sectorGeo(r, B.attack.half) : new THREE.CircleGeometry(r, 48), addMat('#ffe36b', dirAtk ? 0.22 : 0.18)); fill.rotation.x = -Math.PI / 2;
-            atkMesh.add(fill);
-          }
-          if (!dirAtk) { const edge = new THREE.Mesh(new THREE.RingGeometry(r * 0.94, r, 48), addMat('#fff3b0', 0.8)); edge.rotation.x = -Math.PI / 2; edge.position.y = 0.01; atkMesh.add(edge); }
+          let shape;
+          if (B.attack.aim === 'line') shape = aimShape({ type: 'rect', r, w: B.attack.width * S, color: '#ffb800', edge: '#ffd21a' });
+          else if (B.attack.aim === 'tri') {
+            shape = aimShape({ type: 'rect', r, w: B.attack.width * S, color: '#00b4ff', edge: '#3cd8ff' });
+            const land = aimShape({ type: 'circle', r: B.attack.lobR * S, color: '#ff2ab8', edge: '#ff6ad5' }); land.position.set(r, 0.02, 0); atkMesh.add(land); atkMesh.userData.land = land; atkMesh.userData.r = r;
+          } else if (dirAtk) {
+            const n = atkN || B.attack.count || 0, half = B.attack.half * (n > 5 ? 1.25 : 1), rays = [];
+            for (let i = 0; i < n; i++) rays.push(-half + 2 * half * (n === 1 ? 0.5 : i / (n - 1)));
+            shape = aimShape({ type: 'sector', r, half, color: n > 5 ? '#ff7a00' : '#ffb800', edge: n > 5 ? '#ff9a1a' : '#ffd21a', rays });
+          } else shape = aimShape({ type: 'circle', r, color: '#ffb800', edge: '#ffd21a' });
+          atkMesh.add(shape); atkMesh.userData.shape = shape;
           atkInd.add(atkMesh);
         }
         atkInd.position.set(v.model.root.position.x, 0.09, v.model.root.position.z);
+        pulseAim(atkMesh.userData.shape, now); if (atkMesh.userData.land) pulseAim(atkMesh.userData.land, now);
         atkMesh.scale.setScalar((src.aw ? 2 : 1) * (src.jj ? 0.85 : 1) * (src.b === 'jaeyeol' && src.sp === 'gao' ? 1.15 : 1) * (src.b === 'jinho' && src.sp === 'tall' ? 1.25 : 1));
         if (dirAtk) { const a = aimAngle('atk'); if (a != null) atkInd.rotation.y = -a; }
         if (atkMesh.userData.land) {   // 착지 지점이 드래그 길이를 따라 움직임 (이 값을 놓을 때 그대로 보냄)

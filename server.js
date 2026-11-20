@@ -1066,6 +1066,14 @@ io.on('connection', (socket) => {
     socket.emit('onlineCount', online.size);
   });
   socket.on('online', (cb) => { if (typeof cb === 'function') cb(onlineList()); });
+  socket.on('players', (cb) => {      // 가입한 전체 플레이어 + 지금 접속 중인지
+    if (typeof cb !== 'function') return;
+    const on = new Map(); for (const o of online.values()) if (o.key) on.set(o.key, o);
+    cb(auth.allUsers().map(({ key, ...u }) => {
+      const o = on.get(key);
+      return { ...u, online: !!o, status: o ? o.status : null, modeName: o && o.mode && MODES[o.mode] ? MODES[o.mode].icon + ' ' + MODES[o.mode].name : null };
+    }).sort((a, b) => b.trophies - a.trophies || b.lastSeen - a.lastSeen));
+  });
   const me = () => room && room.players.get(socket.id);
   const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : NaN);
   const puppetOr = (p) => (p.ctrlId && room.players.get(p.ctrlId)) || p;   // 조종 중이면 꼭두각시가 행동
