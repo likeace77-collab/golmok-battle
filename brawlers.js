@@ -261,7 +261,7 @@ const BRAWLERS = {
     rarity: null,
     wip: true,               // 디자인만 — 스킬 정해지면 wip 빼기
     title: '목주름 빅맥',
-    desc: '예담이만 한 키에 살짝 통통하고 귀여운 학생. 목에 주름이 빅맥처럼 겹겹이 쌓여 있다.',
+    desc: '키가 작고 살짝 통통한 귀염둥이. 체육복 지퍼를 끝까지 못 올리는 이유는 목에 빅맥처럼 겹겹이 쌓인 주름 때문이다.',
     radius: 25, speed: 255, maxHp: 4800,
     attack: { name: '준비 중', ammo: 0, range: 0 }, gadgets: [], starPowers: [], super: null,
   },

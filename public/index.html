@@ -1296,18 +1296,18 @@ function makeYedam(teamColor) {
 }
 
 // ── 정수호 3D 모델 ────────────────────────────────
-// 예담이 키 · 살짝 통통 · 동글동글 귀여운 얼굴(볼터치) · 목주름이 빅맥처럼 겹겹이
+// 작은 키 · 살짝 통통 · 동글동글 귀여운 얼굴(볼터치) · 하늘색 체육복 · 목주름이 빅맥처럼 겹겹이
 function makeSuho(teamColor) {
   const m = {
     skin: std('#f5cfae', { roughness: 0.55 }), crease: std('#d9a888', { roughness: 0.6 }),
-    sweater: std('#3f7a5a', { roughness: 0.95 }), shirt: std('#f6f6f8', { roughness: 0.7 }),
-    pants: std('#2e3445', { roughness: 0.75 }), shoe: std('#2b2b30', { roughness: 0.5 }),
+    sweater: std('#5aa8e6', { roughness: 0.6 }), shirt: std('#5aa8e6', { roughness: 0.6 }), stripe: std('#ffffff', { roughness: 0.6 }), tee: std('#ffffff', { roughness: 0.8 }),
+    pants: std('#4a8fd0', { roughness: 0.6 }), shoe: std('#f2f2f2', { roughness: 0.5 }), sole: std('#e05050'),
     hair: std('#1f1612', { roughness: 0.5 }), eye: std('#120a06', { roughness: 0.15 }),
     white: new THREE.MeshBasicMaterial({ color: '#ffffff' }), blush: new THREE.MeshBasicMaterial({ color: '#ff9a9a', transparent: true, opacity: 0.55 }),
     lip: std('#d27c78'), brow: std('#2a1c14'),
   };
   const root = new THREE.Group();
-  const model = new THREE.Group(); model.scale.setScalar(0.72); root.add(model);
+  const model = new THREE.Group(); model.scale.setScalar(0.62); root.add(model);
   const body = new THREE.Group(); model.add(body);
   const ring = new THREE.Mesh(new THREE.RingGeometry(1.35, 1.65, 48), new THREE.MeshBasicMaterial({ color: teamColor, transparent: true, opacity: 0.9 }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; ring.scale.setScalar(1.18); root.add(ring);
@@ -1318,20 +1318,25 @@ function makeSuho(teamColor) {
     const hip = new THREE.Group(); hip.position.set(sx, 0.95, 0); body.add(hip);
     const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.22, 0.82, 12), m.pants); leg.position.y = -0.42; hip.add(leg);
     const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.22, 0.6), m.shoe); shoe.position.set(0, -0.86, 0.07); hip.add(shoe);
+    const sole = new THREE.Mesh(new THREE.BoxGeometry(0.41, 0.06, 0.61), m.sole); sole.position.set(0, -0.96, 0.07); hip.add(sole);
+    const ls = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.8, 0.05), m.stripe); ls.position.set(sx > 0 ? 0.24 : -0.24, -0.42, 0); hip.add(ls);   // 바지 옆 흰 줄
     legs.push(hip);
   }
   const torso = new THREE.Group(); torso.position.y = 0.88; body.add(torso);
-  // 둥근 배 (니트 조끼 + 흰 셔츠)
+  // 둥근 배 (하늘색 체육복 집업 — 지퍼가 목까지 못 올라감)
   const belly = new THREE.Mesh(new THREE.SphereGeometry(0.72, 24, 18), m.sweater); belly.scale.set(1, 1.0, 0.92); belly.position.y = 0.55; torso.add(belly);
   const chest = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.7, 0.6, 20), m.sweater); chest.position.y = 0.95; torso.add(chest);
   const shoulders = new THREE.Mesh(new THREE.SphereGeometry(0.6, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), m.sweater); shoulders.scale.set(1.05, 0.45, 0.9); shoulders.position.y = 1.22; torso.add(shoulders);
-  for (const s of [-1, 1]) { const col = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 0.05), m.shirt); col.position.set(s * 0.16, 1.38, 0.38); col.rotation.set(-0.4, s * 0.5, s * 0.5); torso.add(col); }
-  const btn = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 5), m.shirt); btn.position.set(0, 0.85, 0.66); torso.add(btn);
+  const tee = new THREE.Mesh(new THREE.ConeGeometry(0.26, 0.5, 3), m.tee); tee.rotation.set(Math.PI, 0, 0); tee.position.set(0, 1.12, 0.52); tee.scale.z = 0.4; torso.add(tee);   // 지퍼 사이로 흰 티
+  const zip = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.75, 0.03), std('#d8dce4', { metalness: 0.7 })); zip.position.set(0, 0.5, 0.71); zip.rotation.x = -0.12; torso.add(zip);
+  const pull = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.11, 0.03), std('#d8dce4', { metalness: 0.7 })); pull.position.set(0, 0.84, 0.66); torso.add(pull);
+  for (const s of [-1, 1]) { const col = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.16, 0.06), m.sweater); col.position.set(s * 0.24, 1.36, 0.36); col.rotation.set(-0.3, s * 0.6, s * 0.6); torso.add(col); }
   const arms = [];
   for (const s of [-1, 1]) {
     const shd = new THREE.Group(); shd.position.set(s * 0.68, 1.15, 0); torso.add(shd);
     const sl = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.18, 0.8, 10), m.shirt); sl.position.y = -0.4; shd.add(sl);
     const hand = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 8), m.skin); hand.position.y = -0.88; shd.add(hand);
+    for (const k of [-1, 1]) { const st = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.78, 0.04), m.stripe); st.position.set(s * 0.19, -0.4, k * 0.05); shd.add(st); }   // 소매 흰 줄 두 개
     shd.rotation.z = s * 0.28; shd.userData.baseZ = s * 0.28; arms.push(shd);
   }
   // ★ 목주름 빅맥: 살 고리가 겹겹이 (사이사이 진한 주름 선)
@@ -1362,7 +1367,7 @@ function makeSuho(teamColor) {
   const stars = new THREE.Group(); stars.position.y = 4.1; model.add(stars); stars.visible = false;
   for (let i = 0; i < 4; i++) { const st = new THREE.Mesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshBasicMaterial({ color: '#ffe23a' })); st.position.set(Math.cos(i * Math.PI / 2) * 0.8, 0, Math.sin(i * Math.PI / 2) * 0.8); stars.add(st); }
   shadowAll(model);
-  return { root, model, body, torso, head, legs, arms, stars, flashMats: [m.skin, m.sweater, m.shirt, m.pants] };
+  return { root, model, body, torso, head, legs, arms, stars, flashMats: [m.skin, m.sweater, m.pants] };
 }
 
 // ── 마우스(소환수) 3D ──────────────────────────────
