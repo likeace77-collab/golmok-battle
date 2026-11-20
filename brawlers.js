@@ -6,6 +6,7 @@ const BRAWLERS = {
     id: 'jungbo',
     name: '정보쌤',
     rarity: 'legendary',
+    role: '탱커',
     title: '아~ 이놈의 아이들',
     desc: '컴퓨터실의 지배자. 뚱뚱한 몸으로 내려찍어 주변 아이들을 한꺼번에 혼낸다.',
     radius: 28, speed: 250, maxHp: 6000,
@@ -42,6 +43,7 @@ const BRAWLERS = {
     id: 'hyeonsil',
     name: '현실쌤',
     rarity: 'legendary',
+    role: '데미지딜러',
     title: '펜 내려놓고 여기 보자',
     desc: '핑크색 옷에 털가죽 잠바, 큰 나무주걱을 든 수학 선생님. 교실 전체를 얼려버리고 학생을 마음대로 조종한다.',
     radius: 28, speed: 240, maxHp: 5400,
@@ -79,6 +81,7 @@ const BRAWLERS = {
     id: 'junhoo',
     name: '김준후',
     rarity: 'epic',        // 영웅
+    role: '어쌔신',
     title: '나 김준후야!!!',
     desc: '안경 쓴 작은 학생. 몸은 작은데 엄청 나댄다. 상대를 끌어와 백초크를 걸고 태클로 날려버린다. 근데 많이 맞으면 쫄아버림.',
     radius: 24, speed: 265, maxHp: 4800,
@@ -152,6 +155,7 @@ const BRAWLERS = {
     id: 'jinho',
     name: '이진호',
     rarity: 'mythic',
+    role: '어쌔신',
     title: '키 173',
     desc: '키가 무려 173인 남자애. 기린을 닮았고 목이 엄청 길다. 긴 목을 쭉 뻗어 멀리 있는 상대를 들이받는다.',
     radius: 26, speed: 260, maxHp: 4600,
@@ -185,6 +189,7 @@ const BRAWLERS = {
     id: 'hyeonwoo',
     name: '서현우',
     rarity: 'super',       // 초희귀
+    role: '데미지딜러',
     title: '아재개그 장인',
     desc: '키는 작지만 턱선이 날렵하고 눈이 큰 잘생긴 학생. 입에서 스테이플러 심을 뿜고, 아재개그 한 마디로 상대를 박살낸다.',
     radius: 24, speed: 262, maxHp: 4400,
@@ -301,6 +306,7 @@ function publicBrawlers() {
 const ROBOTS = {
   robot: { id:'robot', name:'훈련 로봇', radius:28, speed:0, maxHp:5000, attack:{ ammo:0, range:0 }, gadgets:[], starPowers:[], super:null },
   bigrobot: { id:'bigrobot', name:'튼튼 로봇', radius:40, speed:0, maxHp:20000, attack:{ ammo:0, range:0 }, gadgets:[], starPowers:[], super:null },
+  safe: { id:'safe', name:'금고', radius:52, speed:0, maxHp:60000, attack:{ ammo:0, range:0 }, gadgets:[], starPowers:[], super:null },    // 하이스트
 };
 
 module.exports = { BRAWLERS, GEARS, AJAE, ROBOTS, publicBrawlers };
