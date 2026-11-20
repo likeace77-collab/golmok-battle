@@ -18,7 +18,7 @@ const BRAWLERS = {
       { name: 'AI야? 시키지도 않은 걸 하네', icon: '⚡', desc: '주변 적을 2초 동안 기절시키고 피해를 준다.', range: 260, stun: 2, dmg: 300 },
       { name: '마우스 소환', icon: '🖱️', desc: '마우스 2마리를 소환해 8초 동안 적을 쫓아가 딸깍 공격한다.', count: 2, hp: 1200, speed: 320, dmg: 260, biteCd: 0.6, life: 8, radius: 16 },
     ],
-    gadgetCd: 6,
+    gadgetCd: 9,
     super: {
       name: '이놈의 아이들', aim: 'dir',
       desc: '부채꼴로 고함을 질러 큰 피해를 주고 적을 밀쳐낸다.',
@@ -54,7 +54,7 @@ const BRAWLERS = {
       { name: '얘들아 덥지 않니?', icon: '❄️', desc: '에어컨을 18도로 틀어 7초 동안 모든 적 브롤러에게 계속 피해를 준다.', dur: 7, tick: 0.5, dmg: 100 },
       { name: '펜 내려놓고 여기 보자', icon: '✋', desc: '모든 적 브롤러를 2초 동안 기절시킨다.', stun: 2 },
     ],
-    gadgetCd: 6,
+    gadgetCd: 9,
     super: {
       name: '너 등신이냐?', aim: 'line',
       desc: '조준한 방향의 첫 번째 상대를 5초 동안 조종한다. 조종하는 동안 그 상대의 공격·가젯·궁극기를 대신 쓸 수 있다.',
@@ -91,7 +91,7 @@ const BRAWLERS = {
       { name: '간식 털어먹기', icon: '🍪', desc: '친구의 가방을 털어 얻은 간식을 먹고 체력을 2000 회복한다.', heal: 2000 },
       { name: '나 김준후야!!!', icon: '😤', desc: '각성해서 다음 일반공격의 범위가 두 배로 넓어지고 피해가 2000으로 늘어난다.', rangeMul: 2, dmg: 2000 },
     ],
-    gadgetCd: 6,
+    gadgetCd: 9,
     super: {
       name: '태클', aim: 'line',
       desc: '상대에게 돌진해서 부딪힌 상대에게 피해를 주고 2.5초 동안 기절시킨다.',
@@ -130,7 +130,7 @@ const BRAWLERS = {
       { name: '어깨빵', icon: '💥', desc: '주위의 적에게 700 피해를 주고 날려버린다.', range: 170, dmg: 700, knock: 190 },
       { name: '나랑 사귈..레?', icon: '💔', desc: '가장 가까운 상대를 충격에 빠트려 2초 동안 공격 불능으로 만든다.', range: 420, dur: 2 },
     ],
-    gadgetCd: 6,
+    gadgetCd: 14,
     super: {
       name: '대가리 박치기', aim: 'line',
       desc: '로켓처럼 대가리로 돌진해서 부딪힌 상대에게 1800 피해. 벽은 넘지 못한다.',
@@ -164,7 +164,7 @@ const BRAWLERS = {
       { name: '훠이훠이', icon: '🙌', desc: '4초 동안 긴 팔을 신명나게 휘저어 주위의 적을 모두 밀쳐내며 600 피해를 주고, 이동 속도가 150%가 된다.', dur: 4, range: 170, dmg: 600, push: 26 },
       { name: '준비 중', icon: '🔒', desc: '두 번째 가젯은 아직 준비 중이에요.', wip: true },
     ],
-    gadgetCd: 8,
+    gadgetCd: 11,
     super: {
       name: '기린 뒷발차기', aim: 'line',
       desc: '뒤돌아서 조금 돌진하며 뒷발로 걷어찬다. 앞을 막는 벽을 부수고, 걷어찬 상대에게 2000 피해.',
@@ -197,7 +197,7 @@ const BRAWLERS = {
       { name: '스테이플러 심 먹기', icon: '📎', desc: '심을 와그작 씹어먹고 궁극기를 가득 충전한다. 다음 일반공격은 심 9개 발사.', count: 9 },
       { name: '종이 먹기', icon: '📄', desc: '종이를 냠냠 먹고 체력 1500 회복.', heal: 1500 },
     ],
-    gadgetCd: 7,
+    gadgetCd: 10,
     super: {
       name: '아재개그', aim: 'line',
       desc: '조준한 쪽의 상대에게 랜덤한 아재개그 하나: ① 피아노를 던지면? 어떻게 피아노 — 절대 못 피하는 피아노 1800 ② 민수 당긴수 — 밀었다가 끌어옴 (700 + 800) ③ 참기름이 고소해서 — 3초 감옥에 가둠 (가둔 동안 때릴 수 있음)',
@@ -237,7 +237,7 @@ const BRAWLERS = {
       { name: '전력질주', icon: '🏃', desc: '앞으로 쭉 달려 나간 뒤 4초 동안 이동 속도 300%.', dash: 280, dur: 4, mul: 3 },
       { name: '연필 던지기', icon: '✏️', desc: '가까운 상대에게 연필을 던져 500 피해.', dmg: 500, speed: 1100, range: 560 },
     ],
-    gadgetCd: 8,
+    gadgetCd: 11,
     super: {
       name: '사랑을 했다', aim: 'self',
       desc: '3초 동안 노래를 불러 주위 팀원은 0.75초마다 700 회복, 상대는 500 피해.',
