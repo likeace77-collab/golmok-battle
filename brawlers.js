@@ -157,8 +157,8 @@ const BRAWLERS = {
     radius: 26, speed: 260, maxHp: 4600,
     attack: {
       name: '목 길게 뻗기', aim: 'line',
-      desc: '목을 길게 쭉 뻗었다가 다시 끌고 온다. 목에 맞은 상대는 모두 1100 피해. 사정거리가 엄청 길다. (벽에 막힘)',
-      range: 560, width: 34, dmg: 1100, ammo: 3, reload: 1.6, cd: 0.6, delay: 0.18,
+      desc: '목을 길게 쭉 뻗었다가 다시 끌고 온다. 목에 맞은 상대는 모두 1250 피해. 사정거리가 엄청 길다. (벽에 막힘)',
+      range: 560, width: 34, dmg: 1250, ammo: 3, reload: 1.6, cd: 0.6, delay: 0.18,
     },
     gadgets: [
       { name: '훠이훠이', icon: '🙌', desc: '4초 동안 긴 팔을 신명나게 휘저어 주위의 적을 모두 밀쳐내며 600 피해를 주고, 이동 속도가 150%가 된다.', dur: 4, range: 170, dmg: 600, push: 26 },
