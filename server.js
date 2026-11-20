@@ -591,12 +591,13 @@ function stepBullets(room, now) {
 }
 
 SKILLS.hyeonwoo = {
-  // 스테이플러 심: 부채꼴로 5발 (가젯1 뒤엔 9발, 스파2 궁 찼을 땐 6발)
+  // 스테이플러 심: 부채꼴로 5발 (가젯1 뒤엔 9발, 스파2 탄창 꽉 찼을 땐 6발)
   attack(room, p, a, now) {
     const A = p.B.attack;
+    const full = p.ammo >= A.ammo - 0.01;        // 쏘기 전 탄창 3칸이 다 차 있었나
     p.ammo -= 1; p.atkCd = A.cd; p.facing = a;
     let n = A.count;
-    if (hasSP(p, 'fullsix') && p.sup >= 1) n = SP(p, 'fullsix').count;
+    if (hasSP(p, 'fullsix') && full) n = SP(p, 'fullsix').count;
     if (p.st9) { n = p.B.gadgets[0].count; p.st9 = false; }
     const spread = A.half * 2 * (n > 5 ? 1.25 : 1);
     for (let i = 0; i < n; i++) shoot(room, p, a - spread / 2 + spread * (n === 1 ? 0.5 : i / (n - 1)), { speed: A.bulletSpeed, range: A.range, dmg: A.dmg, kind: 'staple' });

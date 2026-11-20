@@ -206,7 +206,7 @@ const BRAWLERS = {
     },
     starPowers: [
       { id: 'preview', name: '아재개그 미리보기', icon: '🔮', desc: '다음 궁극기에 어떤 아재개그가 나올지 미리 볼 수 있다.' },
-      { id: 'fullsix', name: '에모가 다 차있을 때', icon: '⚡', desc: '궁극기가 가득 차 있으면 스테이플러 심을 6개 발사한다.', count: 6 },
+      { id: 'fullsix', name: '에모가 다 차있을 때', icon: '⚡', desc: '일반공격 탄창 3칸이 다 차 있을 때 쏘면 스테이플러 심을 6개 발사한다.', count: 6 },
     ],
     jokes: [
       { id: 'piano', q: '피아노를 던지면?', a: '어떻게 피아노~', icon: '🎹' },
