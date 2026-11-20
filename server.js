@@ -811,7 +811,7 @@ function addRobot(room, r) {
 // ── 봇 채우기 ──────────────────────────────────────
 function addBot(room, team) {
   const id = 'bot' + ++room.botSeq;
-  const bid = pick(Object.keys(BRAWLERS));
+  const bid = pick(Object.keys(BRAWLERS).filter((k) => !BRAWLERS[k].wip));
   const p = newPlayer(room, id, '봇' + room.botSeq, true, bid, null);
   if (team != null) { p.team = team; p.color = TEAM_COLORS[team]; }
   room.players.set(id, p);
@@ -1161,7 +1161,7 @@ io.on('connection', (socket) => {
     const rid = MODES[modeId].training ? 'training:' + socket.id : modeId;   // 훈련장은 혼자만
     const fresh = !rooms.has(rid);
     room = getRoom(modeId, rid);
-    const bid = BRAWLERS[brawler] ? brawler : 'jungbo';
+    const bid = BRAWLERS[brawler] && !BRAWLERS[brawler].wip ? brawler : 'jungbo';
     const acc = auth.userFromToken(token);                     // 로그인 안 했으면 게스트
     const p = newPlayer(room, socket.id, acc ? acc.u.name : '게스트' + Math.floor(1000 + Math.random() * 9000), false, bid, loadout);
     if (acc) p.userKey = acc.key;

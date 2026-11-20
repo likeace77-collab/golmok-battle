@@ -255,6 +255,16 @@ const BRAWLERS = {
       kill: ['머리숱 정리 완료', '한 곡 더?', 'ㅋㅋ 탈모 조심'],
     },
   },
+  suho: {
+    id: 'suho',
+    name: '정수호',
+    rarity: null,
+    wip: true,               // 디자인만 — 스킬 정해지면 wip 빼기
+    title: '목주름 빅맥',
+    desc: '예담이만 한 키에 살짝 통통하고 귀여운 학생. 목에 주름이 빅맥처럼 겹겹이 쌓여 있다.',
+    radius: 25, speed: 255, maxHp: 4800,
+    attack: { name: '준비 중', ammo: 0, range: 0 }, gadgets: [], starPowers: [], super: null,
+  },
 };
 
 // 기어 (6개 중 2개 장착)
