@@ -328,6 +328,7 @@ const THEMES = {
   cafeteria:  { floor: ['#fff4d6', '#f3dfa8'], border: ['#5fbf8a', '#3f9a6a'], bg: '#283d2c' },
   playground: { floor: ['#6cc24a', '#5fb540'], border: ['#a0703f', '#7a5230'], bg: '#2d4724', grass: true },
   gym:        { floor: ['#e2b06f', '#d6a25f'], border: ['#3a6fd8', '#2a54ad'], bg: '#1b2848', planks: true },
+  training:   { floor: ['#b9bec8', '#a9afba'], border: ['#ffc83a', '#d9a21a'], bg: '#22262e' },
 };
 const floorCache = {};
 function floorTexFor(theme) {
@@ -451,6 +452,14 @@ const OBST = {
     const b = new THREE.Mesh(new THREE.BoxGeometry(sw * 0.92, 0.7, sd * 0.92), std('#4a8af5', { roughness: 0.7 })); b.position.y = 1.05;
     const top = new THREE.Mesh(new THREE.BoxGeometry(sw * 0.85, 0.12, sd * 0.85), std('#f2f2f2')); top.position.y = 1.46;
     g.add(a, b, top);
+  },
+  training(g, sw, sd) {     // 콘크리트 블록 + 노랑·검정 경고 줄무늬
+    const c = new THREE.Mesh(new THREE.BoxGeometry(sw, 1.6, sd), std('#8d939e', { roughness: 0.9 })); c.position.y = 0.8; g.add(c);
+    const along = sw >= sd, len = along ? sw : sd, n = Math.max(2, Math.round(len / 0.9));
+    for (let i = 0; i < n; i++) {
+      const st = new THREE.Mesh(new THREE.BoxGeometry(along ? len / n : sw + 0.04, 0.3, along ? sd + 0.04 : len / n), std(i % 2 ? '#ffd23a' : '#222'));
+      const o = -len / 2 + (i + 0.5) * len / n; st.position.set(along ? o : 0, 1.35, along ? 0 : o); g.add(st);
+    }
   },
 };
 
@@ -1105,6 +1114,56 @@ function makeHyeonwoo(teamColor) {
   return { root, model, body, torso, head, legs, arms, stars, stapler, flashMats: [m.skin, m.shirt, m.vest, m.pants] };
 }
 
+// ── 훈련장 로봇 3D ────────────────────────────────
+// 회색 몸통 + 과녁 가슴판 + 모니터 얼굴, 바닥에 고정된 받침대 (안 움직임)
+function makeRobot(teamColor, big) {
+  const m = {
+    metal: std('#b8c0cc', { metalness: 0.15, roughness: 0.45 }), dark: std('#5a606c', { metalness: 0.2, roughness: 0.5 }),
+    red: std('#e8433a', { roughness: 0.5 }), white: std('#f4f4f4', { roughness: 0.5 }),
+    screen: new THREE.MeshBasicMaterial({ color: '#0d2a3a' }), eye: new THREE.MeshBasicMaterial({ color: '#5ee0ff' }),
+    stripeY: std('#ffd23a'), stripeK: std('#222'),
+  };
+  const root = new THREE.Group();
+  const model = new THREE.Group(); model.scale.setScalar(big ? 1.25 : 0.85); root.add(model);
+  const body = new THREE.Group(); model.add(body);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(1.35, 1.65, 48), new THREE.MeshBasicMaterial({ color: '#8a96a8', transparent: true, opacity: 0.7 }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; root.add(ring);
+  const blob = new THREE.Mesh(new THREE.CircleGeometry(1.2, 32), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.25 }));
+  blob.rotation.x = -Math.PI / 2; blob.position.y = 0.03; root.add(blob);
+  // 받침대 (노랑·검정 줄무늬)
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.15, 0.35, 24), m.dark); base.position.y = 0.18; body.add(base);
+  for (let i = 0; i < 8; i++) { const st = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.12, 0.06), i % 2 ? m.stripeY : m.stripeK); const a = i / 8 * Math.PI * 2; st.position.set(Math.sin(a) * 1.1, 0.2, Math.cos(a) * 1.1); st.rotation.y = a; body.add(st); }
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.8, 10), m.metal); pole.position.y = 0.7; body.add(pole);
+  const legs = [new THREE.Group(), new THREE.Group()]; legs.forEach((l) => body.add(l));
+  // 몸통 + 과녁
+  const torso = new THREE.Group(); torso.position.y = 1.05; body.add(torso);
+  const chest = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 0.9), m.metal); chest.position.y = 0.75; torso.add(chest);
+  const tgt = new THREE.Group(); tgt.position.set(0, 0.78, 0.46); torso.add(tgt);
+  [[0.55, m.white], [0.42, m.red], [0.28, m.white], [0.14, m.red]].forEach(([r, mat], i) => { const c = new THREE.Mesh(new THREE.CircleGeometry(r, 28), mat); c.position.z = i * 0.006; tgt.add(c); });
+  for (const s of [-1, 1]) { const bolt = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), m.dark); bolt.position.set(s * 0.62, 1.38, 0.46); torso.add(bolt); }
+  const arms = [];
+  for (const s of [-1, 1]) {
+    const shd = new THREE.Group(); shd.position.set(s * 0.88, 1.25, 0); torso.add(shd);
+    const joint = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), m.dark); shd.add(joint);
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.9, 8), m.metal); arm.position.y = -0.5; shd.add(arm);
+    const claw = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.22, 0.3), m.dark); claw.position.y = -1.0; shd.add(claw);
+    shd.rotation.z = s * 0.35; shd.userData.baseZ = s * 0.35; arms.push(shd);
+  }
+  // 모니터 얼굴
+  const head = new THREE.Group(); head.position.y = 1.85; torso.add(head);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.25, 8), m.dark); neck.position.y = -0.2; head.add(neck);
+  const box = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.8, 0.8), m.metal); box.position.y = 0.3; head.add(box);
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.58), m.screen); scr.position.set(0, 0.3, 0.41); head.add(scr);
+  for (const s of [-1, 1]) { const e = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.2), m.eye); e.position.set(s * 0.2, 0.36, 0.42); head.add(e); }
+  const mouth = new THREE.Mesh(new THREE.PlaneGeometry(0.36, 0.05), m.eye); mouth.position.set(0, 0.16, 0.42); head.add(mouth);
+  const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.4, 6), m.dark); ant.position.set(0, 0.88, 0); head.add(ant);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), new THREE.MeshBasicMaterial({ color: '#ff5050' })); bulb.position.set(0, 1.1, 0); head.add(bulb);
+  const stars = new THREE.Group(); stars.position.y = 4.2; model.add(stars); stars.visible = false;
+  for (let i = 0; i < 4; i++) { const st = new THREE.Mesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshBasicMaterial({ color: '#ffe23a' })); st.position.set(Math.cos(i * Math.PI / 2) * 0.8, 0, Math.sin(i * Math.PI / 2) * 0.8); stars.add(st); }
+  shadowAll(model);
+  return { root, model, body, torso, head, legs, arms, stars, bulb, flashMats: [m.metal, m.white] };
+}
+
 // ── 마우스(소환수) 3D ──────────────────────────────
 function makeMouse(color) {
   const g = new THREE.Group();
@@ -1123,7 +1182,7 @@ function makeMouse(color) {
 }
 
 // 브롤러 id → 3D 모델 함수 (새 브롤러 추가 시 여기에 등록)
-const MODELS = { jungbo: makeTeacher, hyeonsil: makeHyeonsil, junhoo: makeJunhoo, jaeyeol: makeJaeyeol, jinho: makeJinho, hyeonwoo: makeHyeonwoo };
+const MODELS = { jungbo: makeTeacher, hyeonsil: makeHyeonsil, junhoo: makeJunhoo, jaeyeol: makeJaeyeol, jinho: makeJinho, hyeonwoo: makeHyeonwoo, robot: (c) => makeRobot(c, false), bigrobot: (c) => makeRobot(c, true) };
 const makeModel = (id, color) => (MODELS[id] || makeTeacher)(color);
 
 // ── 로비 3D 쇼케이스 ──────────────────────────────
@@ -1874,7 +1933,7 @@ $('openHelp').onclick = () => modal(`<h3 class="stroke">조작법</h3><div id="h
   <b>이동</b> 왼쪽 화면 드래그 · PC는 WASD<br>
   <b>기본공격</b> 공격 버튼 탭 또는 드래그 후 놓기 · PC는 Space/좌클릭<br>
   <b>가젯</b> 고른 가젯 1개 · PC는 Q (더블 가젯 모드에선 E로 두 번째 가젯)<br>
-  <b>모드</b> 오른쪽 아래 모드 박스를 눌러서 난투 · 쇼다운 · 젬 그랩 · 더블 가젯 중 선택<br>
+  <b>모드</b> 오른쪽 아래 모드 박스를 눌러서 난투 · 쇼다운 · 젬 그랩 · 더블 가젯 · 훈련장 중 선택<br>
   <b>로드아웃</b> 브롤러 화면에서 가젯 1 · 스타파워 1 · 기어 2개를 골라요<br>
   <b>궁극기</b> 버튼 드래그로 조준 → 놓으면 발사, 탭하면 자동조준 · PC는 R/우클릭<br>
   <b>현실쌤 조종 중</b>에는 모든 버튼이 조종당하는 상대의 스킬로 나가요 (분홍 테두리)<br>
@@ -1901,7 +1960,7 @@ function connect() {
     $('lobby').style.display = 'none'; $('lobbyBg').style.display = 'none';
     $('top').style.display = 'flex';
     $('ctrl').style.display = 'block';
-    const rounds = META.modes[d.mode] && META.modes[d.mode].rounds;   // 라운드 모드는 봇 자동
+    const rounds = META.modes[d.mode] && (META.modes[d.mode].rounds || META.modes[d.mode].training);   // 라운드 모드는 봇 자동, 훈련장은 로봇 고정
     $('botBtn').style.display = $('clearBtn').style.display = rounds ? 'none' : '';
   });
   socket.on('state', (s) => {
@@ -2255,7 +2314,8 @@ function animateTeacher(v, p, dt, now) {
   M.torso.rotation.z = Math.sin(v.phase) * 0.07 * walk;
   M.head.rotation.y = 0;
 
-  const H = v.kind === 'hyeonsil', K = v.kind === 'junhoo', JY = v.kind === 'jaeyeol', JH = v.kind === 'jinho', HW = v.kind === 'hyeonwoo', J = !H && !K && !JY && !JH && !HW;
+  const H = v.kind === 'hyeonsil', K = v.kind === 'junhoo', JY = v.kind === 'jaeyeol', JH = v.kind === 'jinho', HW = v.kind === 'hyeonwoo', RB = v.kind === 'robot' || v.kind === 'bigrobot', J = !H && !K && !JY && !JH && !HW && !RB;
+  if (RB && M.bulb) M.bulb.visible = Math.sin(now * 5) > 0 || v.hitT < 0.4;   // 맞으면 경고등
   // 서현우: 심 뱉을 땐 고개 쭉 + 입에 스테이플러, 개그 칠 땐 손가락 척
   if (HW) {
     M.head.rotation.x = 0; M.head.rotation.z = 0;
@@ -2472,7 +2532,7 @@ function updateLabel(v, p) {
   const hasFear = BR[p.b] && BR[p.b].trait;
   L.fb.style.display = hasFear ? 'block' : 'none';
   if (hasFear) { const sc = p.scared > 0; L.fb.classList.toggle('scared', sc); L.fear.style.width = (sc ? p.scared / BR[p.b].trait.dur : p.fear) * 100 + '%'; }
-  L.hp.style.width = (100 * p.hp / (BR[p.b] ? BR[p.b].maxHp : p.hp || 1)) + '%';
+  L.hp.style.width = (100 * p.hp / (BR[p.b] ? BR[p.b].maxHp : p.mhp || p.hp || 1)) + '%';
   L.am.forEach((b, i) => { const f = Math.max(0, Math.min(1, p.ammo - i)); b.style.width = f * 100 + '%'; b.style.background = f >= 1 ? '#ffb02e' : '#8a6a32'; });
   if (p.say !== L.lastSay) { L.lastSay = p.say; if (p.say) { L.bub.textContent = p.say; L.bub.style.display = 'block'; L.bub.style.animation = 'none'; L.bub.offsetWidth; L.bub.style.animation = ''; } else L.bub.style.display = 'none'; }
 }
@@ -2503,6 +2563,8 @@ function modeHud(me) {
   } else if (M.id === 'showdown') {
     const alive = state.players.filter((p) => !p.out).length;
     h.innerHTML = `<div class="gs">💀 남은 인원 ${alive}</div>` + (me && me.out && state.phase === 'play' ? `<div style="color:#ff9a9a">${me.rank ? me.rank + '등으로 탈락! ' : ''}관전 중...</div>` : '');
+  } else if (M.training) {
+    h.innerHTML = `<div class="gs" style="font-size:15px">🎯 훈련장 · 로봇은 3초 안 맞으면 다시 풀피</div>`;
   } else {
     h.innerHTML = `<div class="gs" style="font-size:15px">${M.icon} ${M.name} · ${MAP ? MAP.name : ''} · 맵 변경 ${fmtT(state.mapT || 0)}</div>`;
   }
@@ -2581,7 +2643,7 @@ function frame(nowMs) {
   // HUD
   if (MAP) {
     const me = state.players.find((p) => p.id === myId);
-    const board = [...state.players].sort((a, b) => b.k - a.k || a.d - b.d);
+    const board = state.players.filter((p) => !p.mhp).sort((a, b) => b.k - a.k || a.d - b.d);
     $('board').innerHTML = board.slice(0, W <= 720 ? 5 : 10).map((p) => `<div style="color:${p.id === myId ? '#ffd84a' : '#fff'}">${p.name} ${p.k}킬 ${p.d}데스</div>`).join('');
     for (let i = feed.length - 1; i >= 0; i--) { feed[i].t -= dt; if (feed[i].t <= 0) feed.splice(i, 1); }
     $('feed').innerHTML = feed.map((f) => `<div>${f.text}</div>`).join('');

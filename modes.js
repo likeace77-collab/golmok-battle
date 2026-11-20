@@ -69,6 +69,19 @@ const MAPS = {
       { x: 280, y: 880, w: 120, h: 40 }, { x: 800, y: 880, w: 120, h: 40 },
     ],
   },
+  training: {
+    id: 'training', name: '훈련장', theme: 'training', w: 1600, h: 1200,
+    spawns: [{ x: 250, y: 600 }],
+    walls: [
+      { x: 840, y: 340, w: 30, h: 150 },       // 벽 뒤 로봇 테스트용
+      { x: 380, y: 260, w: 120, h: 60 }, { x: 380, y: 880, w: 120, h: 60 },
+      { x: 1250, y: 300, w: 80, h: 600 },
+    ],
+    robots: [
+      { id: 'robot', x: 470, y: 470 }, { id: 'robot', x: 470, y: 600 }, { id: 'robot', x: 470, y: 730 },
+      { id: 'robot', x: 640, y: 600 }, { id: 'bigrobot', x: 760, y: 760 }, { id: 'robot', x: 930, y: 420 },
+    ],
+  },
 };
 
 const MODES = {
@@ -94,6 +107,11 @@ const MODES = {
     desc: '가젯 2개를 모두 들고 싸우는 난투!',
     team: false, respawn: true, rounds: false, rotate: 240, doubleGadget: true, maps: ['computer', 'math', 'cafeteria'],
   },
+  training: {
+    id: 'training', name: '훈련장', icon: '🎯', color: '#8a96a8',
+    desc: '가만히 서 있는 로봇으로 스킬 연습! 혼자만 들어가는 방. 트로피는 안 올라요.',
+    team: false, respawn: true, rounds: false, training: true, maps: ['training'],
+  },
 };
 
 // 맵 전체 크기 배율 (벽·스폰·광산 위치까지 같이 커짐)
@@ -103,6 +121,7 @@ for (const m of Object.values(MAPS)) {
   m.w = R(m.w); m.h = R(m.h);
   m.walls = m.walls.map((w) => ({ x: R(w.x), y: R(w.y), w: R(w.w), h: R(w.h) }));
   if (m.spawns) m.spawns = m.spawns.map((s) => ({ x: R(s.x), y: R(s.y) }));
+  if (m.robots) m.robots = m.robots.map((r) => ({ ...r, x: R(r.x), y: R(r.y) }));
   if (m.mine) m.mine = { x: R(m.mine.x), y: R(m.mine.y) };
 }
 

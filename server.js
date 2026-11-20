@@ -5,7 +5,7 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
-const { BRAWLERS, GEARS, AJAE, publicBrawlers } = require('./brawlers');
+const { BRAWLERS, GEARS, AJAE, ROBOTS, publicBrawlers } = require('./brawlers');
 const { MAPS, MODES } = require('./modes');
 const auth = require('./auth');
 
@@ -31,19 +31,20 @@ const cloneMap = (id) => ({ ...MAPS[id], walls: MAPS[id].walls.map((w) => ({ ...
 const rooms = new Map();
 
 // ── 방 / 라운드 ────────────────────────────────────
-function getRoom(modeId) {
-  if (!rooms.has(modeId)) {
+function getRoom(modeId, rid = modeId) {
+  if (!rooms.has(rid)) {
     const mode = MODES[modeId];
     const room = {
-      id: modeId, mode, map: cloneMap(pick(mode.maps)),
+      id: rid, mode, map: cloneMap(pick(mode.maps)),
       players: new Map(), mice: [], shards: [], gems: [], fx: [], pending: [], bullets: [], bulletSeq: 0,
       mouseSeq: 0, botSeq: 0, colorIdx: 0, shardSeq: 0, gemSeq: 0,
       phase: mode.rounds ? 'wait' : 'play', phaseT: mode.rounds ? 4 : 0,
       mapT: mode.rotate || 0, gemT: 0, holdT: 0, holdTeam: -1, safe: null, playT: 0, result: null,
     };
-    rooms.set(modeId, room);
+    rooms.set(rid, room);
+    if (mode.training) for (const r of room.map.robots || []) addRobot(room, r);
   }
-  return rooms.get(modeId);
+  return rooms.get(rid);
 }
 const humans = (room) => [...room.players.values()].filter((p) => !p.isBot);
 const teamCount = (room, t) => [...room.players.values()].filter((p) => p.team === t).length;
@@ -95,6 +96,8 @@ function freeSpot(map, x, y, r, spread) {
 }
 function spawnPoint(room, p, slot) {
   const map = room.map, r = p.B.radius;
+  if (p.home) return { x: p.home.x, y: p.home.y };
+  if (room.mode.training && map.spawns) return freeSpot(map, map.spawns[0].x, map.spawns[0].y, r, 160);
   if (room.mode.team && map.spawns) { const s = map.spawns[p.team]; return freeSpot(map, s.x, s.y, r, 160); }
   if (room.mode.id === 'showdown' && slot != null) {   // 맵 가장자리를 따라 고르게
     const a = (slot / 8) * Math.PI * 2;
@@ -116,11 +119,11 @@ function randomLoadout(B) {
   return { g: Math.random() < 0.5 ? 0 : 1, sp: pick(B.starPowers.filter((s) => !s.wip)).id, gears: gs.slice(0, 2) };
 }
 function newPlayer(room, id, name, isBot, brawlerId, loadout) {
-  const B = BRAWLERS[brawlerId] || BRAWLERS.jungbo;
+  const B = BRAWLERS[brawlerId] || ROBOTS[brawlerId] || BRAWLERS.jungbo;
   const p = {
     id, name: (name || B.name).slice(0, 10), isBot, B, team: null,
     color: COLORS[room.colorIdx++ % COLORS.length],
-    lo: cleanLoadout(B, loadout || randomLoadout(B), room.mode),
+    lo: ROBOTS[B.id] ? { g: [], sp: null, gears: [] } : cleanLoadout(B, loadout || randomLoadout(B), room.mode),
     x: 0, y: 0, hp: B.maxHp, ammo: B.attack.ammo, reloadT: 0, atkCd: 0,
     stunT: 0, frozenT: 0, gCd: 0, facing: Math.PI / 2, sup: 0,
     acT: 0, acTick: 0, ctrlId: null, ctrlT: 0, ctrlBy: null,
@@ -192,10 +195,10 @@ function damage(room, attacker, target, dmg, now, kind) {
 }
 function kill(room, attacker, target, kind) {
   target.hp = 0; target.dead = true; target.deaths++; target.speech = null;
-  target.respawnT = G.respawn;
+  target.respawnT = target.home ? 1.5 : G.respawn;
   if (attacker && attacker.id !== target.id) {
     attacker.kills++; if (Math.random() < 0.5) say(attacker, 'kill');
-    giveTrophies(attacker, 1, 'kills');      // 처치 +1 트로피
+    if (!room.mode.training) giveTrophies(attacker, 1, 'kills');      // 처치 +1 트로피 (훈련장 제외)
   }
   room.fx.push({ type: 'kill', a: attacker ? attacker.name : '독가스', b: target.name, aid: attacker ? attacker.id : null, bid: target.id, k: kind });
   room.mice = room.mice.filter((m) => m.owner !== target.id);
@@ -732,6 +735,15 @@ function botThink(room, p, now) {
   p.input = { mx: b.wanderX, my: b.wanderY };
 }
 
+// ── 훈련장 로봇 ────────────────────────────────────
+function addRobot(room, r) {
+  const id = 'rb' + ++room.botSeq;
+  const p = newPlayer(room, id, ROBOTS[r.id].name, true, r.id, null);
+  p.home = { x: r.x, y: r.y }; p.color = '#8a96a8';
+  room.players.set(id, p); resetBody(room, p);
+  return p;
+}
+
 // ── 봇 채우기 ──────────────────────────────────────
 function addBot(room, team) {
   const id = 'bot' + ++room.botSeq;
@@ -802,6 +814,7 @@ function changeMap(room) {   // 난투/더블가젯: 맵 로테이션
 function roundLogic(room, now) {
   const mode = room.mode;
   if (!mode.rounds) {
+    if (!mode.rotate) return;     // 훈련장: 맵 고정
     room.mapT -= DT;
     if (room.mapT <= 0) changeMap(room);
     return;
@@ -892,7 +905,10 @@ function step(room) {
       continue;
     }
     if (!playing) { p.input = p.isBot ? { mx: 0, my: 0 } : p.input; continue; }   // 대기/결과 중엔 정지
-    if (p.isBot) botThink(room, p, now);
+    if (p.home) {      // 훈련 로봇: 가만히. 3초 안 맞으면 제자리 + 풀피
+      p.input = { mx: 0, my: 0 };
+      if (now - p.lastHit > 3 && !p.dash) { p.hp = p.B.maxHp; p.x = p.home.x; p.y = p.home.y; }
+    } else if (p.isBot) botThink(room, p, now);
     p.atkCd = Math.max(0, p.atkCd - DT);
     p.gCd = Math.max(0, p.gCd - DT);
     p.stunT = Math.max(0, p.stunT - DT);
@@ -1009,7 +1025,7 @@ function step(room) {
     broken: room.map.walls.reduce((a, w, i) => (w.broken && a.push(i), a), []),
     players: [...room.players.values()].map((p) => ({
       id: p.id, name: p.name, b: p.B.id, color: p.color, bot: p.isBot, team: p.team,
-      x: r1(p.x), y: r1(p.y), hp: r1(p.hp), dead: p.dead, out: p.out, rank: p.rank, respawn: Math.ceil(p.respawnT),
+      x: r1(p.x), y: r1(p.y), hp: r1(p.hp), mhp: p.home ? p.B.maxHp : undefined, dead: p.dead, out: p.out, rank: p.rank, respawn: Math.ceil(p.respawnT),
       ammo: p.ammo + p.reloadT / p.B.attack.reload, stun: p.stunT > 0, fz: p.frozenT > 0,
       gCd: +p.gCd.toFixed(2), sup: +p.sup.toFixed(3), f: +p.facing.toFixed(2),
       k: p.kills, d: p.deaths, say: p.speech ? p.speech.text : null,
@@ -1055,8 +1071,9 @@ io.on('connection', (socket) => {
   socket.on('join', ({ token, brawler, mode, loadout } = {}) => {
     if (room) return;
     const modeId = MODES[mode] ? mode : 'ffa';
-    const fresh = !rooms.has(modeId);
-    room = getRoom(modeId);
+    const rid = MODES[modeId].training ? 'training:' + socket.id : modeId;   // 훈련장은 혼자만
+    const fresh = !rooms.has(rid);
+    room = getRoom(modeId, rid);
     const bid = BRAWLERS[brawler] ? brawler : 'jungbo';
     const acc = auth.userFromToken(token);                     // 로그인 안 했으면 게스트
     const p = newPlayer(room, socket.id, acc ? acc.u.name : '게스트' + Math.floor(1000 + Math.random() * 9000), false, bid, loadout);
@@ -1090,13 +1107,13 @@ io.on('connection', (socket) => {
   socket.on('gadget', (n) => { const p = me(); if (p && !p.ctrlBy) doGadget(room, puppetOr(p), n === 2 ? 2 : 1, Date.now() / 1000); });
   socket.on('super', (ang) => { const p = me(); if (p && !p.ctrlBy) doSuper(room, puppetOr(p), num(ang), Date.now() / 1000); });
   socket.on('addBot', () => {
-    if (!room || room.mode.rounds) return;         // 라운드 모드는 자동으로 채움
+    if (!room || room.mode.rounds || room.mode.training) return;         // 라운드 모드는 자동으로 채움
     const bots = [...room.players.values()].filter((p) => p.isBot).length;
     if (room.players.size >= G.maxPlayers || bots >= G.maxBots) return;
     resetBody(room, addBot(room));
   });
   socket.on('clearBots', () => {
-    if (!room || room.mode.rounds) return;
+    if (!room || room.mode.rounds || room.mode.training) return;
     for (const p of [...room.players.values()]) if (p.isBot) removeBot(room, p);
   });
   socket.on('disconnect', () => {

@@ -184,7 +184,7 @@ const BRAWLERS = {
   hyeonwoo: {
     id: 'hyeonwoo',
     name: '서현우',
-    rarity: null,          // 등급 미정
+    rarity: 'super',       // 초희귀
     title: '아재개그 장인',
     desc: '키는 작지만 턱선이 날렵하고 눈이 큰 잘생긴 학생. 입에서 스테이플러 심을 뿜고, 아재개그 한 마디로 상대를 박살낸다.',
     radius: 24, speed: 262, maxHp: 4400,
@@ -248,4 +248,10 @@ function publicBrawlers() {
   return out;
 }
 
-module.exports = { BRAWLERS, GEARS, AJAE, publicBrawlers };
+// 훈련장 로봇 (선택 목록엔 안 나옴): 움직이지도 공격하지도 않음
+const ROBOTS = {
+  robot: { id:'robot', name:'훈련 로봇', radius:28, speed:0, maxHp:5000, attack:{ ammo:0, range:0 }, gadgets:[], starPowers:[], super:null },
+  bigrobot: { id:'bigrobot', name:'튼튼 로봇', radius:40, speed:0, maxHp:20000, attack:{ ammo:0, range:0 }, gadgets:[], starPowers:[], super:null },
+};
+
+module.exports = { BRAWLERS, GEARS, AJAE, ROBOTS, publicBrawlers };
