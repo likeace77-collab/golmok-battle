@@ -1307,7 +1307,7 @@ function makeSuho(teamColor) {
     lip: std('#d27c78'), brow: std('#2a1c14'),
   };
   const root = new THREE.Group();
-  const model = new THREE.Group(); model.scale.setScalar(0.69)   // 예담이보다 아주 살짝(1cm) 큼; root.add(model);
+  const model = new THREE.Group(); model.scale.setScalar(0.69); root.add(model);   // 예담이보다 아주 살짝(1cm) 큼
   const body = new THREE.Group(); model.add(body);
   const ring = new THREE.Mesh(new THREE.RingGeometry(1.35, 1.65, 48), new THREE.MeshBasicMaterial({ color: teamColor, transparent: true, opacity: 0.9 }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; ring.scale.setScalar(1.18); root.add(ring);
