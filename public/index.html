@@ -1296,7 +1296,7 @@ function makeYedam(teamColor) {
 }
 
 // ── 정수호 3D 모델 ────────────────────────────────
-// 작은 키 · 살짝 통통 · 동글동글 귀여운 얼굴(볼터치) · 하늘색 체육복 · 목주름이 빅맥처럼 겹겹이
+// 작은 키(예담이보다 1cm 큼) · 살짝 통통 · 동글동글 귀여운 얼굴(볼터치) · 하늘색 체육복 · 목주름이 빅맥처럼 겹겹이
 function makeSuho(teamColor) {
   const m = {
     skin: std('#f5cfae', { roughness: 0.55 }), crease: std('#d9a888', { roughness: 0.6 }),
@@ -1307,7 +1307,7 @@ function makeSuho(teamColor) {
     lip: std('#d27c78'), brow: std('#2a1c14'),
   };
   const root = new THREE.Group();
-  const model = new THREE.Group(); model.scale.setScalar(0.62); root.add(model);
+  const model = new THREE.Group(); model.scale.setScalar(0.69)   // 예담이보다 아주 살짝(1cm) 큼; root.add(model);
   const body = new THREE.Group(); model.add(body);
   const ring = new THREE.Mesh(new THREE.RingGeometry(1.35, 1.65, 48), new THREE.MeshBasicMaterial({ color: teamColor, transparent: true, opacity: 0.9 }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; ring.scale.setScalar(1.18); root.add(ring);
