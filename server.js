@@ -36,7 +36,7 @@ function getRoom(modeId) {
     const mode = MODES[modeId];
     const room = {
       id: modeId, mode, map: cloneMap(pick(mode.maps)),
-      players: new Map(), mice: [], shards: [], gems: [], fx: [], pending: [],
+      players: new Map(), mice: [], shards: [], gems: [], fx: [], pending: [], bullets: [], bulletSeq: 0,
       mouseSeq: 0, botSeq: 0, colorIdx: 0, shardSeq: 0, gemSeq: 0,
       phase: mode.rounds ? 'wait' : 'play', phaseT: mode.rounds ? 4 : 0,
       mapT: mode.rotate || 0, gemT: 0, holdT: 0, holdTeam: -1, safe: null, playT: 0, result: null,
@@ -124,7 +124,8 @@ function newPlayer(room, id, name, isBot, brawlerId, loadout) {
     x: 0, y: 0, hp: B.maxHp, ammo: B.attack.ammo, reloadT: 0, atkCd: 0,
     stunT: 0, frozenT: 0, gCd: 0, facing: Math.PI / 2, sup: 0,
     acT: 0, acTick: 0, ctrlId: null, ctrlT: 0, ctrlBy: null,
-    aw: false, fear: 0, scaredT: 0, dash: null, noAtkT: 0, flailT: 0, flailHit: null,
+    aw: false, fear: 0, scaredT: 0, dash: null, noAtkT: 0, flailT: 0, flailHit: null, st9: false, jailT: 0,
+    nextJoke: B.jokes ? pick(B.jokes).id : null,
     shield: 0, fullT: 0, rf: 0, ajT: 30, gems: 0,
     lastHit: 0, dead: false, respawnT: 0, out: false, rank: 0,
     kills: 0, deaths: 0, input: { mx: 0, my: 0 }, speech: null,
@@ -142,7 +143,7 @@ function resetBody(room, p, slot) {
   const s = spawnPoint(room, p, slot);
   Object.assign(p, {
     x: s.x, y: s.y, hp: p.B.maxHp, dead: false, ammo: p.B.attack.ammo, stunT: 0, frozenT: 0, acT: 0,
-    rf: 0, gems: 0, shield: 0, fullT: 0, respawnT: 0, input: { mx: 0, my: 0 }, aw: false, dash: null, noAtkT: 0, flailT: 0,   // 쫄 게이지는 부활해도 유지
+    rf: 0, gems: 0, shield: 0, fullT: 0, respawnT: 0, input: { mx: 0, my: 0 }, aw: false, dash: null, noAtkT: 0, flailT: 0, jailT: 0,   // 쫄 게이지는 부활해도 유지
   });
   releaseCtrl(room, p, false);
 }
@@ -567,6 +568,88 @@ SKILLS.jinho = {
   },
 };
 
+// ── 투사체 (서현우 스테이플러 심) ──
+function shoot(room, p, a, o) {
+  room.bullets.push({ id: ++room.bulletSeq, owner: p.id, x: p.x + Math.cos(a) * 20, y: p.y + Math.sin(a) * 20, a, v: o.speed, left: o.range, dmg: o.dmg, kind: o.kind });
+}
+function stepBullets(room, now) {
+  for (const b of room.bullets) {
+    const owner = room.players.get(b.owner);
+    let move = b.v * DT;
+    while (move > 0 && b.left > 0) {
+      const st = Math.min(10, move); move -= st; b.left -= st;
+      b.x += Math.cos(b.a) * st; b.y += Math.sin(b.a) * st;
+      if (hitsWall(room.map, b.x, b.y, 3)) { b.left = 0; room.fx.push({ type: 'bulletWall', x: b.x, y: b.y }); break; }   // 벽에 막힘
+      const q = owner && enemies(room, owner).find((q) => Math.hypot(q.x - b.x, q.y - b.y) < q.B.radius + 8);
+      if (q) { damage(room, owner, q, b.dmg, now, b.kind); chargeSuper(owner, b.dmg); room.fx.push({ type: 'bulletHit', x: q.x, y: q.y }); b.left = 0; break; }
+    }
+  }
+  room.bullets = room.bullets.filter((b) => b.left > 0);
+}
+
+SKILLS.hyeonwoo = {
+  // 스테이플러 심: 부채꼴로 5발 (가젯1 뒤엔 9발, 스파2 궁 찼을 땐 6발)
+  attack(room, p, a, now) {
+    const A = p.B.attack;
+    p.ammo -= 1; p.atkCd = A.cd; p.facing = a;
+    let n = A.count;
+    if (hasSP(p, 'fullsix') && p.sup >= 1) n = SP(p, 'fullsix').count;
+    if (p.st9) { n = p.B.gadgets[0].count; p.st9 = false; }
+    const spread = A.half * 2 * (n > 5 ? 1.25 : 1);
+    for (let i = 0; i < n; i++) shoot(room, p, a - spread / 2 + spread * (n === 1 ? 0.5 : i / (n - 1)), { speed: A.bulletSpeed, range: A.range, dmg: A.dmg, kind: 'staple' });
+    room.fx.push({ type: 'spit', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), n });
+    if (Math.random() < 0.3) say(p, 'atk', 1);
+  },
+  gadget(room, p, idx, now) {
+    if (idx === 0) {                 // 스테이플러 심 먹기: 궁 가득 + 다음 공격 9발
+      say(p, 'g1', 1.6); p.sup = 1; p.st9 = true;
+      room.fx.push({ type: 'eatStaple', id: p.id, x: p.x, y: p.y });
+    } else {                         // 종이 먹기: 1500 회복
+      say(p, 'g2', 1.6);
+      const heal = Math.min(p.B.gadgets[1].heal, p.B.maxHp - p.hp); p.hp += heal;
+      room.fx.push({ type: 'eatPaper', id: p.id, x: p.x, y: p.y, v: Math.round(heal) });
+    }
+  },
+  // 아재개그: 조준한 쪽 상대에게 랜덤 개그 (미리 정해둔 nextJoke 사용 → 스파1이면 미리 보임)
+  super(room, p, a, now) {
+    const S = p.B.super, joke = p.B.jokes.find((j) => j.id === p.nextJoke) || p.B.jokes[0];
+    p.nextJoke = pick(p.B.jokes).id;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    let target = null, best = Infinity;
+    for (const q of enemies(room, p)) {
+      const dx = q.x - p.x, dy = q.y - p.y, along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca);
+      if (along < -q.B.radius || along > S.range + q.B.radius || perp > S.width + q.B.radius) continue;
+      if (along + perp < best) { best = along + perp; target = q; }
+    }
+    p.speech = { text: joke.q, t: 2.2 };
+    room.fx.push({ type: 'joke', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), joke: joke.id, q: joke.q, ans: joke.a, tid: target ? target.id : null });
+    if (!target) { later(room, 1.2, () => { p.speech = { text: '…썰렁하네', t: 1.5 }; }); return; }
+    const tid = target.id;
+    const T = () => { const q = room.players.get(tid); return q && !q.dead && !q.out ? q : null; };
+    if (joke.id === 'piano') {        // 무조건 맞는 피아노 (따라감)
+      later(room, S.piano.fall, () => { const q = T(); if (!q) return; damage(room, p, q, S.piano.dmg, Date.now() / 1000, 'piano'); q.stunT = Math.max(q.stunT, 0.4); room.fx.push({ type: 'pianoHit', tid, x: q.x, y: q.y }); });
+    } else if (joke.id === 'pushpull') {   // 밀었다가 → 끌어오기
+      const q = target, dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1;
+      for (let k = 0; k < S.pushpull.push; k += 8) { const nx = q.x + dx / d * 8, ny = q.y + dy / d * 8; if (hitsWall(room.map, nx, ny, q.B.radius)) break; q.x = nx; q.y = ny; }
+      q.stunT = Math.max(q.stunT, S.pushpull.wait + 0.3);
+      damage(room, p, q, S.pushpull.pushDmg, now, 'push');
+      room.fx.push({ type: 'push', id: p.id, tid, x: q.x, y: q.y });
+      later(room, S.pushpull.wait, () => {
+        const q = T(); if (!q || p.dead) return;
+        const ddx = q.x - p.x, ddy = q.y - p.y, dd = Math.hypot(ddx, ddy) || 1, keep = p.B.radius + q.B.radius + 10;
+        const steps = Math.max(0, (dd - keep) / 8);
+        for (let k = 0; k < steps; k++) { const nx = q.x - ddx / dd * 8, ny = q.y - ddy / dd * 8; if (hitsWall(room.map, nx, ny, q.B.radius)) break; q.x = nx; q.y = ny; }
+        damage(room, p, q, S.pushpull.pullDmg, Date.now() / 1000, 'pull');
+        room.fx.push({ type: 'pull', id: p.id, tid, x: q.x, y: q.y });
+      });
+    } else {                          // 참기름 감옥: 3초 갇힘 (맞을 수는 있음)
+      target.jailT = S.jail.dur; target.stunT = Math.max(target.stunT, S.jail.dur);
+      room.fx.push({ type: 'jail', id: p.id, tid, x: target.x, y: target.y });
+    }
+  },
+};
+const later = (room, t, fn) => room.pending.push({ t, fn });
+
 function doAttack(room, p, ang, now, dist) {
   if (room.phase !== 'play' || !canAct(p) || p.ammo < 1 || p.atkCd > 0 || p.scaredT > 0 || p.noAtkT > 0 || p.dash) return;
   p.lastHit = Math.max(p.lastHit, now - G.regenDelay + 1);
@@ -676,7 +759,7 @@ function fillBots(room) {
 function startRound(room) {
   const mode = room.mode;
   room.map = cloneMap(pick(mode.maps));
-  room.mice = []; room.shards = []; room.gems = []; room.pending = [];
+  room.mice = []; room.shards = []; room.gems = []; room.pending = []; room.bullets = [];
   room.gemT = 0; room.holdT = 0; room.holdTeam = -1; room.result = null; room.playT = 0;
   room.safe = mode.gas ? { x1: 0, y1: 0, x2: room.map.w, y2: room.map.h } : null;
   if (mode.team) {   // 사람은 팀 균형 맞춰 재배치
@@ -710,7 +793,7 @@ function endRound(room, result) {
 function changeMap(room) {   // 난투/더블가젯: 맵 로테이션
   const others = room.mode.maps.filter((m) => m !== room.map.id);
   room.map = cloneMap(pick(others.length ? others : room.mode.maps));
-  room.mice = []; room.shards = []; room.pending = [];
+  room.mice = []; room.shards = []; room.pending = []; room.bullets = [];
   for (const p of room.players.values()) resetBody(room, p);
   room.mapT = room.mode.rotate;
   room.fx.push({ type: 'round', map: room.map.id });
@@ -816,6 +899,7 @@ function step(room) {
     p.frozenT = Math.max(0, p.frozenT - DT);
     if (p.dash) { dashStep(room, p, now); if (p.dead) continue; }
     if (p.noAtkT > 0) p.noAtkT = Math.max(0, p.noAtkT - DT);
+    if (p.jailT > 0) p.jailT = Math.max(0, p.jailT - DT);
     if (p.flailT > 0) {                          // 훠이훠이: 주위 적 계속 밀어냄, 처음 닿을 때 600
       p.flailT = Math.max(0, p.flailT - DT);
       const g = p.B.gadgets[0], rr = g.range * (hasSP(p, 'tall') ? SP(p, 'tall').mul : 1);
@@ -910,6 +994,7 @@ function step(room) {
     }
   }
   room.mice = room.mice.filter((m) => m.life > 0 && m.hp > 0 && room.players.has(m.owner));
+  stepBullets(room, now);
 
   const r1 = (v) => Math.round(v);
   io.to(room.id).emit('state', {
@@ -920,6 +1005,7 @@ function step(room) {
     score: room.mode.id === 'gem' ? [teamGems(room, 0), teamGems(room, 1)] : null,
     hold: room.holdTeam >= 0 ? { team: room.holdTeam, t: +room.holdT.toFixed(1) } : null,
     shards: room.shards.map((s) => [s.id, r1(s.x), r1(s.y), s.r, 99]),
+    bullets: room.bullets.map((b) => [b.id, r1(b.x), r1(b.y), +b.a.toFixed(2)]),
     broken: room.map.walls.reduce((a, w, i) => (w.broken && a.push(i), a), []),
     players: [...room.players.values()].map((p) => ({
       id: p.id, name: p.name, b: p.B.id, color: p.color, bot: p.isBot, team: p.team,
@@ -929,7 +1015,7 @@ function step(room) {
       k: p.kills, d: p.deaths, say: p.speech ? p.speech.text : null,
       ctl: p.ctrlBy, ctrl: p.ctrlId, ctrlT: +(p.ctrlT || 0).toFixed(1), ac: +p.acT.toFixed(1),
       g: p.lo.g, sp: p.lo.sp, gear: p.lo.gears, sh: r1(p.shield), rf: +p.rf.toFixed(3), aj: Math.ceil(p.ajT), gems: p.gems,
-      aw: p.aw, fear: +p.fear.toFixed(2), scared: +p.scaredT.toFixed(1), dash: !!p.dash, jj: jjang(p), na: +p.noAtkT.toFixed(1), fl: +p.flailT.toFixed(1),
+      aw: p.aw, fear: +p.fear.toFixed(2), scared: +p.scaredT.toFixed(1), dash: !!p.dash, jj: jjang(p), na: +p.noAtkT.toFixed(1), fl: +p.flailT.toFixed(1), jail: +p.jailT.toFixed(1), s9: p.st9, nj: p.nextJoke,
     })),
     mice: room.mice.map((m) => ({ id: m.id, x: r1(m.x), y: r1(m.y), a: +m.ang.toFixed(2), c: m.color, hp: m.hp / m.maxHp })),
     fx: room.fx,

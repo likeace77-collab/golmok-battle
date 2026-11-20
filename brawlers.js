@@ -123,12 +123,12 @@ const BRAWLERS = {
     radius: 28, speed: 250, maxHp: 5800,
     attack: {
       name: '세모 던지기 빔', aim: 'tri',
-      desc: '세모 빔(직선)과 던진 세모(사거리 끝에 착지)가 같이 나간다. 각각 800, 한 명에게 둘 다 맞히면 보너스 200으로 총 1800.',
-      range: 500, width: 30, dmg: 800, lobDmg: 800, bothBonus: 200, lobR: 100, lobTime: 0.55, ammo: 3, reload: 1.35, cd: 0.45,
+      desc: '세모 빔(직선)과 던진 세모(사거리 끝에 착지)가 같이 나간다. 각각 700, 한 명에게 둘 다 맞히면 보너스 100으로 총 1500.',
+      range: 500, width: 30, dmg: 700, lobDmg: 700, bothBonus: 100, lobR: 100, lobTime: 0.55, ammo: 3, reload: 1.35, cd: 0.45,
     },
     gadgets: [
       { name: '어깨빵', icon: '💥', desc: '주위의 적에게 700 피해를 주고 날려버린다.', range: 170, dmg: 700, knock: 190 },
-      { name: '나랑 사귈..레?', icon: '💔', desc: '가장 가까운 상대를 충격에 빠트려 5초 동안 공격 불능으로 만든다.', range: 420, dur: 5 },
+      { name: '나랑 사귈..레?', icon: '💔', desc: '가장 가까운 상대를 충격에 빠트려 3초 동안 공격 불능으로 만든다.', range: 420, dur: 3 },
     ],
     gadgetCd: 6,
     super: {
@@ -158,10 +158,10 @@ const BRAWLERS = {
     attack: {
       name: '목 길게 뻗기', aim: 'line',
       desc: '목을 길게 쭉 뻗었다가 다시 끌고 온다. 목에 맞은 상대는 모두 1100 피해. 사정거리가 엄청 길다. (벽에 막힘)',
-      range: 620, width: 34, dmg: 1100, ammo: 3, reload: 1.6, cd: 0.6, delay: 0.18,
+      range: 560, width: 34, dmg: 1100, ammo: 3, reload: 1.6, cd: 0.6, delay: 0.18,
     },
     gadgets: [
-      { name: '훠이훠이', icon: '🙌', desc: '6초 동안 긴 팔을 신명나게 휘저어 주위의 적을 모두 밀쳐내며 600 피해를 주고, 이동 속도가 150%가 된다.', dur: 6, range: 170, dmg: 600, push: 26 },
+      { name: '훠이훠이', icon: '🙌', desc: '4초 동안 긴 팔을 신명나게 휘저어 주위의 적을 모두 밀쳐내며 600 피해를 주고, 이동 속도가 150%가 된다.', dur: 4, range: 170, dmg: 600, push: 26 },
       { name: '준비 중', icon: '🔒', desc: '두 번째 가젯은 아직 준비 중이에요.', wip: true },
     ],
     gadgetCd: 8,
@@ -179,6 +179,45 @@ const BRAWLERS = {
       g1: ['훠이훠이~!!', '저리 가 저리 가!'],
       sup: ['기린 뒷발차기!!!', '뒤 조심해라~'],
       kill: ['키 차이 봐라', '173은 다르다', '목 길이 승'],
+    },
+  },
+  hyeonwoo: {
+    id: 'hyeonwoo',
+    name: '서현우',
+    rarity: null,          // 등급 미정
+    title: '아재개그 장인',
+    desc: '키는 작지만 턱선이 날렵하고 눈이 큰 잘생긴 학생. 입에서 스테이플러 심을 뿜고, 아재개그 한 마디로 상대를 박살낸다.',
+    radius: 24, speed: 262, maxHp: 4400,
+    attack: {
+      name: '스테이플러 심 발사', aim: 'dir',
+      desc: '입에서 스테이플러 심 5개를 부채꼴로 발사한다. 한 개당 400 피해.',
+      range: 520, half: 0.4, count: 5, dmg: 400, bulletSpeed: 1150, ammo: 3, reload: 1.5, cd: 0.4,
+    },
+    gadgets: [
+      { name: '스테이플러 심 먹기', icon: '📎', desc: '심을 와그작 씹어먹고 궁극기를 가득 충전한다. 다음 일반공격은 심 9개 발사.', count: 9 },
+      { name: '종이 먹기', icon: '📄', desc: '종이를 냠냠 먹고 체력 1500 회복.', heal: 1500 },
+    ],
+    gadgetCd: 7,
+    super: {
+      name: '아재개그', aim: 'line',
+      desc: '조준한 쪽의 상대에게 랜덤한 아재개그 하나: ① 피아노를 던지면? 어떻게 피아노 — 절대 못 피하는 피아노 1800 ② 민수 당긴수 — 밀었다가 끌어옴 (700 + 800) ③ 참기름이 고소해서 — 3초 감옥에 가둠 (가둔 동안 때릴 수 있음)',
+      need: 4000, range: 560, width: 70,
+      piano: { dmg: 1800, fall: 0.7 }, pushpull: { push: 220, pushDmg: 700, pullDmg: 800, wait: 0.55 }, jail: { dur: 3 },
+    },
+    starPowers: [
+      { id: 'preview', name: '아재개그 미리보기', icon: '🔮', desc: '다음 궁극기에 어떤 아재개그가 나올지 미리 볼 수 있다.' },
+      { id: 'fullsix', name: '에모가 다 차있을 때', icon: '⚡', desc: '궁극기가 가득 차 있으면 스테이플러 심을 6개 발사한다.', count: 6 },
+    ],
+    jokes: [
+      { id: 'piano', q: '피아노를 던지면?', a: '어떻게 피아노~', icon: '🎹' },
+      { id: 'pushpull', q: '민수 당긴수!', a: '밀었다 당겼다~', icon: '↔️' },
+      { id: 'jail', q: '참기름과 김밥이 싸웠는데 김밥이 감옥에 간 이유는?', a: '참기름이 고소해서!', icon: '⛓️' },
+    ],
+    lines: {
+      atk: ['퉤퉤퉤!', '심 받아라~', '찰칵찰칵'],
+      g1: ['와그작와그작', '심 맛있다'],
+      g2: ['종이 냠냠', 'A4는 진리'],
+      kill: ['ㅋㅋㅋ 썰렁했지?', '아재개그 맛 어때', '웃기지?'],
     },
   },
 };

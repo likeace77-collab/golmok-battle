@@ -461,7 +461,30 @@ const gemMat = std('#c070ff', { emissive: '#8a2be2', emissiveIntensity: 0.7, rou
 const gasGroup = new THREE.Group(); scene.add(gasGroup);
 const gasMat = new THREE.MeshBasicMaterial({ color: '#a03cff', transparent: true, opacity: 0.45, depthWrite: false });   // 보라색 독가스 (잔디 위에서도 잘 보이게)
 for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(1, 3, 1), gasMat); m.position.y = 1.5; gasGroup.add(m); }
+const bulletMeshes = {};
+const stapleGeo = (() => { const g = new THREE.Group(); return g; })();
+const stapleMat = std('#d8dce4', { metalness: 0.9, roughness: 0.25, emissive: '#555', emissiveIntensity: 0.4 });
+function makeStaple() {   // ㄷ자 스테이플러 심
+  const g = new THREE.Group();
+  const top = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.07, 0.07), stapleMat); g.add(top);
+  for (const s of [-1, 1]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.25), stapleMat); leg.position.set(s * 0.25, 0, 0.12); g.add(leg); }
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 1.2), new THREE.MeshBasicMaterial({ color: "#fff6c0", transparent: true, opacity: 0.22, depthWrite: false })); glow.rotation.x = -Math.PI / 2; glow.position.z = -0.6; g.add(glow);
+  g.scale.setScalar(1.8);
+  return g;
+}
+function updateBullets(now) {
+  const seen = new Set();
+  for (const [id, x, y, a] of state.bullets || []) {
+    seen.add(String(id));
+    let m = bulletMeshes[id];
+    if (!m) { m = bulletMeshes[id] = makeStaple(); m.position.set(x * S, 2.0, y * S); scene.add(m); }
+    m.position.x += (x * S - m.position.x) * 0.7; m.position.z += (y * S - m.position.z) * 0.7;
+    m.rotation.y = -a + Math.PI / 2;
+  }
+  for (const id in bulletMeshes) if (!seen.has(id)) { scene.remove(bulletMeshes[id]); delete bulletMeshes[id]; }
+}
 function updateWorld(now) {
+  updateBullets(now);
   const seen = new Set();
   for (const [id, x, y] of state.gems || []) {
     seen.add(String(id));
@@ -1011,6 +1034,77 @@ function makeJinho(teamColor) {
   return { root, model, body, torso, head, legs, arms, stars, neck, neckPivot, neckSpots, wind, flashMats: [m.skin, m.hood, m.pants] };
 }
 
+// ── 서현우 3D 모델 ────────────────────────────────
+// 작은 키 · 날렵한 V라인 턱 · 큰 눈 · 잘생김 · 단정한 투블럭 · 흰 셔츠 + 베이지 니트 조끼
+function makeHyeonwoo(teamColor) {
+  const m = {
+    skin: std('#f6d2b4', { roughness: 0.5 }),
+    shirt: std('#fbfbfd', { roughness: 0.7 }),
+    vest: std('#d9c3a0', { roughness: 0.9 }),
+    pants: std('#2b2f3a', { roughness: 0.7 }),
+    shoe: std('#5a3a25', { roughness: 0.4 }),
+    hair: std('#1e1612', { roughness: 0.45, metalness: 0.05 }),
+    eye: std('#1a0f0a', { roughness: 0.2 }), iris: std('#5a3a22', { roughness: 0.2 }),
+    white: new THREE.MeshBasicMaterial({ color: '#ffffff' }), lip: std('#d98a80'), brow: std('#2a1c14'),
+  };
+  const root = new THREE.Group();
+  const model = new THREE.Group(); model.scale.setScalar(0.72); root.add(model);
+  const body = new THREE.Group(); model.add(body);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(1.35, 1.65, 48), new THREE.MeshBasicMaterial({ color: teamColor, transparent: true, opacity: 0.9 }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; ring.scale.setScalar(1.15); root.add(ring);
+  const blob = new THREE.Mesh(new THREE.CircleGeometry(1.1, 32), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.25 }));
+  blob.rotation.x = -Math.PI / 2; blob.position.y = 0.03; root.add(blob);
+  const legs = [];
+  for (const sx of [-0.3, 0.3]) {
+    const hip = new THREE.Group(); hip.position.set(sx, 1.0, 0); body.add(hip);
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.2, 0.9, 12), m.pants); leg.position.y = -0.45; hip.add(leg);
+    const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.22, 0.62), m.shoe); shoe.position.set(0, -0.92, 0.08); hip.add(shoe);
+    legs.push(hip);
+  }
+  const torso = new THREE.Group(); torso.position.y = 0.92; body.add(torso);
+  const shirt = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.52, 1.25, 18), m.shirt); shirt.position.y = 0.66; torso.add(shirt);
+  const vest = new THREE.Mesh(new THREE.CylinderGeometry(0.585, 0.56, 1.0, 18, 1, true, 0.42, Math.PI * 2 - 0.84), m.vest); vest.position.y = 0.6; torso.add(vest);
+  const vneck = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.45, 3), m.shirt); vneck.position.set(0, 1.0, 0.55); vneck.rotation.set(Math.PI, 0, 0); torso.add(vneck);
+  for (const s of [-1, 1]) { const col = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.14, 0.04), m.shirt); col.position.set(s * 0.17, 1.28, 0.48); col.rotation.set(-0.3, s * 0.5, s * 0.4); torso.add(col); }
+  const arms = [];
+  for (const s of [-1, 1]) {
+    const shd = new THREE.Group(); shd.position.set(s * 0.63, 1.22, 0); torso.add(shd);
+    const sl = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.16, 0.95, 10), m.shirt); sl.position.y = -0.47; shd.add(sl);
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), m.skin); hand.position.y = -1.02; shd.add(hand);
+    shd.rotation.z = s * 0.14; shd.userData.baseZ = s * 0.14; arms.push(shd);
+  }
+  // 머리: 날렵한 V라인 (위는 둥글고 턱으로 뾰족하게)
+  const head = new THREE.Group(); head.position.y = 2.05; torso.add(head);
+  const pts = [];
+  for (let i = 0; i <= 24; i++) { const t = -1 + (i / 24) * 2; const w = t < -0.2 ? 0.7 * (0.22 + 0.78 * Math.pow((t + 1) / 0.8, 0.55)) : 0.7 * Math.sqrt(Math.max(0, 1 - ((t + 0.2) / 1.2) ** 2)); pts.push(new THREE.Vector2(Math.max(0.02, w), t * 0.82)); }
+  const face = new THREE.Mesh(new THREE.LatheGeometry(pts, 32), m.skin); face.scale.set(0.95, 0.95, 0.92); face.position.y = 0.1; head.add(face);
+  // 단정한 투블럭 + 살짝 내린 앞머리
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.74, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2.1), m.hair); cap.position.set(0, 0.22, -0.04); cap.scale.set(1.02, 0.95, 1.05); cap.rotation.x = -0.15; head.add(cap);
+  const top = new THREE.Mesh(new THREE.SphereGeometry(0.64, 22, 12), m.hair); top.position.set(0.05, 0.55, 0.02); top.scale.set(1.1, 0.55, 1.12); head.add(top);
+  const bang = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 10), m.hair); bang.position.set(0.12, 0.5, 0.52); bang.scale.set(0.55, 0.17, 0.3); bang.rotation.set(0.5, 0, -0.35); head.add(bang);
+  // 큰 눈 (반짝임 두 개)
+  for (const s of [-1, 1]) {
+    const w = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 10), m.white); w.scale.set(1, 1.15, 0.45); w.position.set(s * 0.26, 0.14, 0.58); head.add(w);
+    const ir = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10), m.iris); ir.scale.set(1, 1.15, 0.4); ir.position.set(s * 0.26, 0.12, 0.62); head.add(ir);
+    const pu = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), m.eye); pu.scale.set(1, 1.1, 0.4); pu.position.set(s * 0.26, 0.12, 0.66); head.add(pu);
+    const h1 = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), m.white); h1.position.set(s * 0.26 + 0.05, 0.19, 0.68); head.add(h1);
+    const h2 = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 5), m.white); h2.position.set(s * 0.26 - 0.04, 0.07, 0.68); head.add(h2);
+    const lash = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.035, 0.03), m.eye); lash.position.set(s * 0.26, 0.31, 0.6); lash.rotation.z = -s * 0.12; head.add(lash);
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.045, 0.04), m.brow); brow.position.set(s * 0.26, 0.42, 0.57); brow.rotation.z = -s * 0.08; head.add(brow);
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), m.skin); ear.scale.set(0.6, 1, 0.8); ear.position.set(s * 0.66, 0.1, 0); head.add(ear);
+  }
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.2, 8), m.skin); nose.position.set(0, -0.04, 0.68); nose.rotation.x = Math.PI / 2 + 0.3; head.add(nose);
+  const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.022, 6, 14, Math.PI), m.lip); mouth.position.set(0, -0.3, 0.55); mouth.rotation.z = Math.PI; head.add(mouth);   // 살짝 미소
+  // 입에서 나오는 스테이플러 (공격 때)
+  const stapler = new THREE.Group(); stapler.position.set(0, -0.3, 0.7); stapler.visible = false; head.add(stapler);
+  const sb = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.5), std('#d22b2b', { roughness: 0.4 })); stapler.add(sb);
+  const stt = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.06, 0.48), std('#c9ccd2', { metalness: 0.8, roughness: 0.3 })); stt.position.y = 0.09; stapler.add(stt);
+  const stars = new THREE.Group(); stars.position.y = 4.1; model.add(stars); stars.visible = false;
+  for (let i = 0; i < 4; i++) { const st = new THREE.Mesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshBasicMaterial({ color: '#ffe23a' })); st.position.set(Math.cos(i * Math.PI / 2) * 0.8, 0, Math.sin(i * Math.PI / 2) * 0.8); stars.add(st); }
+  shadowAll(model);
+  return { root, model, body, torso, head, legs, arms, stars, stapler, flashMats: [m.skin, m.shirt, m.vest, m.pants] };
+}
+
 // ── 마우스(소환수) 3D ──────────────────────────────
 function makeMouse(color) {
   const g = new THREE.Group();
@@ -1029,7 +1123,7 @@ function makeMouse(color) {
 }
 
 // 브롤러 id → 3D 모델 함수 (새 브롤러 추가 시 여기에 등록)
-const MODELS = { jungbo: makeTeacher, hyeonsil: makeHyeonsil, junhoo: makeJunhoo, jaeyeol: makeJaeyeol, jinho: makeJinho };
+const MODELS = { jungbo: makeTeacher, hyeonsil: makeHyeonsil, junhoo: makeJunhoo, jaeyeol: makeJaeyeol, jinho: makeJinho, hyeonwoo: makeHyeonwoo };
 const makeModel = (id, color) => (MODELS[id] || makeTeacher)(color);
 
 // ── 로비 3D 쇼케이스 ──────────────────────────────
@@ -1386,6 +1480,40 @@ function fxKick(f) {
   popup('뻥!!!', { x: fx2, z: fz2 }, 5.5, '#ffffff', 56, 0.9);
   for (const id of f.hits || []) { const t = views[id]; if (t) popup('🦶 2000', t.model.root.position, 4.6, '#ffd84a', 26, 1); }
   if (isNear(x, z, 22)) shake = Math.max(shake, 1.2);
+}
+
+// ── 서현우 이펙트 ──
+function fxJoke(f) {
+  const v = views[f.id]; if (v) { v.superT = 0; v.facing = Math.atan2(Math.cos(f.a), Math.sin(f.a)); }
+  const pos = v ? v.model.root.position : { x: f.x * S, z: f.y * S };
+  popup('🎤 ' + f.q, pos, 7.2, '#ffe36b', f.q.length > 14 ? 20 : 28, 2.2);
+  setTimeout(() => popup(f.ans, pos, 6.2, '#ffffff', 30, 1.6), 900);
+  const tv = f.tid && views[f.tid];
+  if (!tv) return;
+  const tp = tv.model.root.position;
+  if (f.joke === 'piano') {   // 하늘에서 피아노가 떨어짐 (상대를 따라감)
+    const pg = new THREE.Group();
+    const bodyM = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.4, 1.8), std('#111', { roughness: 0.2, metalness: 0.3 })); pg.add(bodyM);
+    const keys = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.12, 0.45), std('#fafafa')); keys.position.set(0, 0.3, 1.0); pg.add(keys);
+    for (let i = 0; i < 9; i++) { const k = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.28), std('#111')); k.position.set(-1.3 + i * 0.32, 0.38, 0.92); pg.add(k); }
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.1, 1.8), std('#1a1a1a', { metalness: 0.4 })); lid.position.set(0, 1.2, -0.3); lid.rotation.x = -0.6; pg.add(lid);
+    for (const [x, z] of [[-1.4, -0.7], [1.4, -0.7], [0, 0.7]]) { const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.2), std('#111')); leg.position.set(x, -1.2, z); pg.add(leg); }
+    shadowAll(pg);
+    const sh = new THREE.Mesh(new THREE.CircleGeometry(1.8, 24), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.3 })); sh.rotation.x = -Math.PI / 2;
+    addFx(0.7, sh, (k) => { sh.position.set(tp.x, 0.06, tp.z); sh.scale.setScalar(0.3 + k * 0.9); });
+    addFx(0.7, pg, (k) => { pg.position.set(tp.x, 22 - 19.5 * k * k, tp.z); pg.rotation.set(Math.sin(k * 6) * 0.3, k * 2, 0); });
+  } else if (f.joke === 'pushpull') {
+    popup('민수!', tp, 5, '#7cc8ff', 30, 0.8);
+  } else {
+    popup('고소해서~', tp, 5, '#ffd84a', 28, 1);
+  }
+}
+function fxSpit(f) {
+  const v = views[f.id]; if (v) { v.atkT = 0; v.facing = Math.atan2(Math.cos(f.a), Math.sin(f.a)); }
+  const x = f.x * S + Math.cos(f.a) * 1, z = f.y * S + Math.sin(f.a) * 1;
+  flash(x, 2.0, z, f.n > 5 ? '#ffd84a' : '#ffffff', f.n > 5 ? 1.6 : 1.0, 0.18);
+  burst(x, 2.0, z, f.n * 2, ['#d8dce4', '#ffffff'], { speed: 5, size: 0.1, up: 2, life: 0.3 });
+  if (f.n > 5) popup(f.n === 9 ? '심 9연발!!' : '심 6연발!', { x, z }, 4.6, '#ffd84a', 26, 0.8);
 }
 
 function fxChoke(f) {
@@ -1845,6 +1973,16 @@ function handleFx(list) {
     else if (f.type === 'dmg') { if (f.k === 'cold') popup(String(f.v), { x, z }, 4.4, '#9fe8ff', 15, 0.6); else popup(String(f.v), { x, z }, 4.8, '#ffffff', f.v >= 1000 ? 26 : 20); }
     else if (f.type === 'choke') fxChoke(f);
     else if (f.type === 'tri') fxTri(f);
+    else if (f.type === 'spit') fxSpit(f);
+    else if (f.type === 'bulletHit') { flash(x, 2, z, '#ffffff', 0.7, 0.15); burst(x, 2, z, 4, ['#d8dce4', '#ffffff'], { speed: 4, size: 0.08, up: 2, life: 0.25 }); }
+    else if (f.type === 'bulletWall') burst(x, 1.8, z, 3, ['#d8dce4'], { speed: 3, size: 0.08, up: 1, life: 0.2 });
+    else if (f.type === 'eatStaple') { const v = views[f.id]; if (v) v.g1T = 0; popup('와그작📎 궁 충전!', { x, z }, 5.4, '#ffd84a', 28, 1.2); burst(x, 3, z, 20, ['#d8dce4', '#ffd84a', '#ffffff'], { speed: 4, size: 0.12, up: 5, life: 0.7 }); ringFx(x, z, 3, '#ffd84a', 0.5); }
+    else if (f.type === 'eatPaper') { const v = views[f.id]; if (v) v.g2T = 0; popup(f.v > 0 ? `+${f.v} 📄` : '배불러~', { x, z }, 5.2, '#3ce07f', 32, 1.2); burst(x, 3, z, 16, ['#ffffff', '#3ce07f'], { speed: 3, size: 0.2, up: 5, life: 0.8 }); ringFx(x, z, 3, '#3ce07f', 0.5); }
+    else if (f.type === 'joke') fxJoke(f);
+    else if (f.type === 'pianoHit') { flash(x, 1.5, z, '#ffffff', 4, 0.3); ringFx(x, z, 7, '#ffffff', 0.5); burst(x, 1, z, 60, ['#111', '#fafafa', '#8a5a2c', '#ffd84a'], { speed: 14, size: 0.3, up: 10, life: 1.1 }); popup('쾅!! 🎹 1800', { x, z }, 5.5, '#ffffff', 46, 1.1); if (isNear(x, z, 22)) shake = Math.max(shake, 1.3); }
+    else if (f.type === 'push') { const pv = views[f.id]; if (pv) beam(pv.model.root.position.x, pv.model.root.position.z, x, z, '#7cc8ff', 0.3); ringFx(x, z, 3, '#7cc8ff', 0.4); popup('밀었다~ 700', { x, z }, 4.8, '#7cc8ff', 26, 0.8); }
+    else if (f.type === 'pull') { const pv = views[f.id]; if (pv) beam(x, z, pv.model.root.position.x, pv.model.root.position.z, '#ff8ac6', 0.35); flash(x, 2, z, '#ff8ac6', 1.8, 0.3); popup('당긴수! 800', { x, z }, 4.8, '#ff8ac6', 30, 0.9); if (isNear(x, z)) shake = Math.max(shake, 0.6); }
+    else if (f.type === 'jail') { ringFx(x, z, 3, '#9aa0aa', 0.5); burst(x, 4, z, 20, ['#9aa0aa', '#ffd84a'], { speed: 4, size: 0.2, up: 2, life: 0.6 }); popup('⛓️ 감옥행 3초', { x, z }, 5.6, '#cfd4dc', 28, 1.4); }
     else if (f.type === 'neck') fxNeck(f);
     else if (f.type === 'neckHit') { flash(x, 2.4, z, '#f7c84a', 1.5, 0.25); popup('목치기!', { x, z }, 4.6, '#ffe36b', 24, 0.6); }
     else if (f.type === 'flail') fxFlail(f);
@@ -2117,7 +2255,15 @@ function animateTeacher(v, p, dt, now) {
   M.torso.rotation.z = Math.sin(v.phase) * 0.07 * walk;
   M.head.rotation.y = 0;
 
-  const H = v.kind === 'hyeonsil', K = v.kind === 'junhoo', JY = v.kind === 'jaeyeol', JH = v.kind === 'jinho', J = !H && !K && !JY && !JH;
+  const H = v.kind === 'hyeonsil', K = v.kind === 'junhoo', JY = v.kind === 'jaeyeol', JH = v.kind === 'jinho', HW = v.kind === 'hyeonwoo', J = !H && !K && !JY && !JH && !HW;
+  // 서현우: 심 뱉을 땐 고개 쭉 + 입에 스테이플러, 개그 칠 땐 손가락 척
+  if (HW) {
+    M.head.rotation.x = 0; M.head.rotation.z = 0;
+    if (M.stapler) M.stapler.visible = v.atkT < 0.3;
+    if (v.atkT < 0.3) { const q = v.atkT < 0.06 ? v.atkT / 0.06 : 1 - (v.atkT - 0.06) / 0.24; M.head.rotation.x = -0.25 * q; lean = 0.15 * q; M.head.position.z = 0.15 * q; } else M.head.position.z = 0;
+    if (v.superT < 1.2) { const q = v.superT < 0.15 ? v.superT / 0.15 : 1 - Math.max(0, v.superT - 0.9) / 0.3; armX[1] = -2.2 * q; armZ[1] = -0.2 * q; armZ[0] = -0.9 * q; armX[0] = -0.3 * q; M.head.rotation.z = 0.15 * q; }
+    if (v.g1T < 0.8 || v.g2T < 0.8) { const t = Math.min(v.g1T, v.g2T); const q = 1 - t / 0.8; armX = [-2.1 * q + Math.sin(now * 25) * 0.2 * q, -2.1 * q]; armZ = [0.5 * q, -0.5 * q]; M.head.rotation.x = Math.sin(now * 25) * 0.08 * q; }
+  }
   // 이진호: 목이 걸을 때 앞뒤로 껄렁, 공격 땐 목이 쭉 늘어났다 돌아옴
   if (JH) {
     let L = 1.9, tilt = Math.sin(v.phase) * 0.12 * walk + Math.sin(now * 1.5) * 0.04;
@@ -2288,6 +2434,16 @@ function animateTeacher(v, p, dt, now) {
       v.swT = (v.swT || 0) - dt; if (v.swT <= 0) { v.swT = 0.35; burst(root.position.x, 3.2, root.position.z, 2, ['#8fd3ff', '#ffffff'], { speed: 1.5, size: 0.12, up: 2, life: 0.6 }); }
     }
   }
+  // 참기름 감옥
+  if (p.jail > 0 && !p.dead) {
+    if (!v.cage) {
+      v.cage = new THREE.Group(); const bm = std('#7a7f88', { metalness: 0.9, roughness: 0.3 });
+      for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 4.4, 6), bm); bar.position.set(Math.cos(a) * 1.4, 2.2, Math.sin(a) * 1.4); v.cage.add(bar); }
+      for (const y of [0.1, 4.4]) { const rg = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.1, 6, 24), bm); rg.rotation.x = Math.PI / 2; rg.position.y = y; v.cage.add(rg); }
+      shadowAll(v.cage); root.add(v.cage);
+    }
+    v.cage.visible = true;
+  } else if (v.cage) v.cage.visible = false;
   // 아재개그로 얼어붙음
   if (!v.ice) { v.ice = new THREE.Mesh(new THREE.BoxGeometry(2.6, 4.6, 2.6), new THREE.MeshPhysicalMaterial({ color: '#bfefff', transparent: true, opacity: 0.45, roughness: 0.05, clearcoat: 1 })); v.ice.position.y = 2.3; root.add(v.ice); }
   v.ice.visible = !!p.fz && !p.dead;
@@ -2308,7 +2464,7 @@ function updateLabel(v, p) {
   const [x, y, vis] = toScreen(pos.x, 5.0 + v.model.body.position.y * 0.5, pos.z);
   L.d.style.display = p.dead || p.out || !vis ? 'none' : 'block';
   L.d.style.left = x + 'px'; L.d.style.top = y + 'px';
-  L.nm.textContent = `${p.na > 0 ? '💔 ' : ''}${p.scared > 0 ? '😰 ' : ''}${p.aw ? '🔥 ' : ''}${p.ctl ? '🎮 ' : ''}${p.gems ? '💎' + p.gems + ' ' : ''}${p.name}  ${p.hp}${p.sh > 0 ? ' 🛡' + p.sh : ''}`;
+  L.nm.textContent = `${p.jail > 0 ? '⛓️ ' : ''}${p.na > 0 ? '💔 ' : ''}${p.scared > 0 ? '😰 ' : ''}${p.aw ? '🔥 ' : ''}${p.ctl ? '🎮 ' : ''}${p.gems ? '💎' + p.gems + ' ' : ''}${p.name}  ${p.hp}${p.sh > 0 ? ' 🛡' + p.sh : ''}`;
   const meP = state.players.find((q) => q.id === myId);
   L.d.classList.toggle('ally', p.id !== myId && p.team != null && meP && meP.team === p.team);
   L.rfb.style.display = p.rf > 0 ? 'block' : 'none'; L.rf.style.width = p.rf * 100 + '%';
@@ -2444,6 +2600,9 @@ function frame(nowMs) {
       $('bAtk').classList.toggle('puppet', src !== me);
       const B = BR[src.b];
       const sb = $('bSup'), pct = Math.round(src.sup * 100);
+      const jk = src.b === 'hyeonwoo' && src.sp === 'preview' && src.nj && BR.hyeonwoo.jokes.find((j) => j.id === src.nj);
+      const sbHTML = jk ? `${jk.icon}<small>다음 개그</small>` : '궁극기<small>드래그</small>';
+      if (sb.dataset.h !== sbHTML) { sb.dataset.h = sbHTML; sb.innerHTML = sbHTML; }
       sb.classList.toggle('off', !B.super);
       if (!B.super) { sb.classList.remove('ready'); } else
       { sb.classList.toggle('ready', src.sup >= 1);
