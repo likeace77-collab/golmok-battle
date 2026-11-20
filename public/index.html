@@ -98,6 +98,11 @@
   .mpick { border: 3px solid #000; border-radius: 12px; box-shadow: 0 4px 0 #000; padding: 14px 10px; cursor: pointer; text-align: center; }
   .mpick b { display: block; font-size: 17px; } .mpick small { font-size: 11px; font-weight: 800; color: #fff; opacity: .9; text-shadow: 0 1px 2px #000; }
   .mpick.sel { outline: 4px solid #fff; outline-offset: -8px; }
+  #partyBox { position: absolute; right: 12px; bottom: 112px; display: none; padding: 6px 10px; font-weight: 900; font-size: 13px; max-width: 330px; }
+  #partyBox .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  #partyBox .chip { background: rgba(0,0,0,.35); border-radius: 8px; padding: 2px 8px; font-size: 13px; }
+  #partyBox .chip.off { opacity: .5; }
+  #partyBox button { margin-left: 6px; padding: 2px 8px; border: 2px solid #000; border-radius: 8px; background: #ff7a7a; font-weight: 900; font-size: 12px; cursor: pointer; }
   #olist .or .ib { margin-left: 6px; padding: 4px 10px; font-size: 13px; border: 3px solid #000; border-radius: 9px; font-weight: 900; cursor: pointer; box-shadow: 0 3px 0 #000; color: #000; }
   #olist .or .ib.join { background: #3ce07f; } #olist .or .ib.inv { background: #ffd84a; } #olist .or .ib:disabled { opacity: .5; }
   #invite { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 60; display: none; padding: 10px 14px; border-radius: 14px; border: 3px solid #000; box-shadow: 0 5px 0 #000;
@@ -243,6 +248,7 @@
   </div>
   <div id="showName" class="stroke"><span class="rbadge" id="sRar">전설</span><span class="role" id="sRole" style="display:none"></span><div class="nm2" id="sName">정보쌤</div><div class="tt" id="sTitle"></div><div id="sLoad"></div></div>
   <div id="status" class="stroke"></div>
+  <div id="partyBox" class="panel stroke"></div>
   <div id="playWrap">
     <div id="modeBox" class="panel stroke"><b id="mName">⚔️ 난투</b><span id="mDesc"></span><small>▶ 눌러서 모드 변경</small></div>
     <button class="pbtn stroke" id="playBtn" style="color:#fff">플레이</button>
@@ -270,7 +276,7 @@
 <div id="trPop" class="stroke"></div>
 <div id="modal"><div class="box panel" id="mBox"></div></div>
 <div id="ui"></div>
-<div id="top"><button id="exitBtn">◀ 로비</button><button id="invBtn">👥 초대</button><button id="botBtn">+ 봇 추가</button><button id="clearBtn">봇 삭제</button></div>
+<div id="top"><button id="exitBtn">◀ 로비</button><button id="botBtn">+ 봇 추가</button><button id="clearBtn">봇 삭제</button></div>
 <div id="invite"></div>
 <div id="board" class="stroke"></div>
 <div id="modeHud" class="stroke"></div>
@@ -2222,6 +2228,7 @@ function refreshLobby() {
   const M = META.modes[selMode];
   if (M) { const sm = selMapOf(M.id); $('mName').textContent = `${M.icon} ${M.name}`; $('mDesc').textContent = M.maps.length > 1 ? '🗺️ ' + (sm === 'random' ? '랜덤 맵' : META.maps[sm].name) : M.desc.split('.')[0]; $('modeBox').style.background = `linear-gradient(${M.color}, #2b2c58)`; }
   setShowcase(b.id);
+  $('playBtn').textContent = party && !amLeader() ? '방장 대기' : '플레이';
 }
 function buildGrid() {
   const ids = Object.keys(BR);
@@ -2352,7 +2359,7 @@ function buildModes() {
     c.onclick = () => {
       selMode = M.id; LS.set('jb_mode', M.id); syncPrefs();
       if (M.maps.length > 1) return openMapPick(M);
-      $('mscreen').style.display = 'none'; refreshLobby();
+      $('mscreen').style.display = 'none'; refreshLobby(); partySel();
     };
     g.appendChild(c);
   }
@@ -2367,10 +2374,10 @@ function openMapPick(M) {
   modal(`<h3 class="stroke">${M.icon} ${M.name} · 맵 선택</h3><div id="mpicks">${html}</div>`);
   $('mOk').textContent = '닫기';
   for (const el of document.querySelectorAll('.mpick')) el.onclick = () => {
-    LS.set('jb_map_' + M.id, el.dataset.m); $('modal').style.display = 'none'; $('mscreen').style.display = 'none'; refreshLobby();
+    LS.set('jb_map_' + M.id, el.dataset.m); $('modal').style.display = 'none'; $('mscreen').style.display = 'none'; refreshLobby(); partySel();
   };
 }
-$('modeBox').onclick = () => { buildModes(); $('mscreen').style.display = 'flex'; };
+$('modeBox').onclick = () => { if (party && !amLeader()) { toast('모드는 방장이 골라요'); return; } buildModes(); $('mscreen').style.display = 'flex'; };
 $('mBack').onclick = () => { $('mscreen').style.display = 'none'; };
 $('openB').onclick = () => { buildGrid(); $('bscreen').style.display = 'flex'; };
 $('bBack').onclick = () => { $('bscreen').style.display = 'none'; };
@@ -2395,16 +2402,19 @@ Promise.all([fetch('/api/brawlers').then((r) => r.json()), fetch('/api/meta').th
 
 // 서버 연결은 로비에 들어오자마자 (접속자 목록에 보이게)
 let joined = false;
+// 브라우저 고유값 (파티 유지용)
+const CID = (() => { let c = null; try { c = sessionStorage.getItem('jb_cid'); } catch (e) {} if (!c || c.length < 8) { c = Math.random().toString(36).slice(2) + Date.now().toString(36); try { sessionStorage.setItem('jb_cid', c); } catch (e) {} } return c; })();   // 탭마다 다름, 새로고침해도 유지
 function connect() {
-  if (socket) { socket.emit('hello', { token }); return; }
+  if (socket) { socket.emit('hello', { token, cid: CID }); return; }
   socket = io();
   socket.on('connect', () => {
-    socket.emit('hello', { token });
-    let aj = null; try { aj = sessionStorage.getItem('jb_autojoin'); sessionStorage.removeItem('jb_autojoin'); } catch (e) {}
-    if (aj) setTimeout(() => joinRid(aj), 400);      // 초대 수락하고 새로고침한 경우 바로 입장
+    socket.emit('hello', { token, cid: CID });
   });
   socket.on('onlineCount', (n) => { $('oCnt').textContent = n; });
   socket.on('invited', showInvite);
+  socket.on('party', (pt) => { party = pt; renderParty(); });
+  socket.on('partyGo', ({ rid }) => { if (mode === 'game' || joined) return; doJoin(rid); });
+  socket.on('partyMsg', (t) => toast(t));
   socket.on('joined', (d) => {
     myId = d.id; mode = 'game';
     $('lobby').style.display = 'none'; $('lobbyBg').style.display = 'none';
@@ -2427,41 +2437,55 @@ function connect() {
     requestAnimationFrame(() => { el.style.transition = 'opacity .6s 0.6s, top 1.2s'; el.style.top = '26%'; el.style.opacity = 0; });
   });
 }
-$('playBtn').onclick = () => {
+function doJoin(rid) {
   if (joined || !myB() || !socket) return;
   joined = true;
   $('status').textContent = '입장 중...';
-  socket.emit('join', { token, brawler: selected, mode: selMode, map: selMapOf(selMode), rid: pendingRid, loadout: getLO(selected) });
-  pendingRid = null;
-};
-// ── 초대 / 참가 ──
-let pendingRid = null;
-function joinRid(rid) {       // 어떤 방으로 바로 들어가기 (게임 중이면 새로고침 후 자동 입장)
-  if (mode === 'game') { try { sessionStorage.setItem('jb_autojoin', rid); } catch (e) {} location.reload(); return; }
-  pendingRid = rid; $('playBtn').click();
+  socket.emit('join', { token, brawler: selected, mode: selMode, map: selMapOf(selMode), rid, loadout: getLO(selected) });
 }
+$('playBtn').onclick = () => {
+  if (party && !amLeader()) { toast('방장이 시작하면 같이 들어가요'); return; }
+  doJoin(null);
+};
+// ── 파티 (게임 시작 전에 로비에서 친구 모으기) ──
+var party = null;
+function amLeader() { return !party || party.members.some((m) => m.cid === CID && m.leader); }
+function renderParty() {
+  const el = $('partyBox');
+  if (!party) { el.style.display = 'none'; refreshLobby(); return; }
+  el.style.display = 'block';
+  const esc = (t) => String(t).replace(/</g, '&lt;');
+  el.innerHTML = `👥 파티 ${party.members.length}명 ${amLeader() ? '· 내가 방장' : '· 방장이 시작'}<button id="ptLeave">나가기</button><div class="chips">${party.members.map((m) => `<span class="chip${m.on ? '' : ' off'}">${m.leader ? '👑 ' : ''}${esc(m.name)}${m.cid === CID ? ' (나)' : ''}</span>`).join('')}</div>`;
+  $('ptLeave').onclick = () => socket.emit('partyLeave');
+  if (!amLeader()) { selMode = party.mode; try { localStorage.setItem('jb_map_' + party.mode, party.map); } catch (e) {} }   // 방장이 고른 모드·맵 따라감
+  refreshLobby();
+}
+function partySel() { if (party && amLeader()) socket.emit('partySel', { mode: selMode, map: selMapOf(selMode) }); }
+let toastT = null;
+function toast(t) { const el = $('invite'); el.innerHTML = String(t).replace(/</g, '&lt;'); el.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => { el.style.display = 'none'; }, 2500); }
+// ── 초대 (로비에 있는 사람끼리, 수락하면 파티) ──
 function openOnline() {
   if (!socket) return;
   socket.emit('online', (list) => {
     const esc = (t) => String(t).replace(/</g, '&lt;');
     const rows = list.map((o) => `<div class="or"><div style="flex:1"><b>${esc(o.name)}${o.me ? ' (나)' : ''}</b> ${o.guest ? '<span style="font-size:11px;opacity:.7">게스트</span>' : `<span class="tr">🏆${o.trophies}</span>`}
       <div class="sub">${o.status === 'game' ? `<span style="color:#7cffb0">${o.modeName}${o.mapName ? ' · ' + esc(o.mapName) : ''} 중</span> ${o.brawler || ''}` : '로비'}</div></div>
-      ${o.me ? '' : `${o.status === 'game' && o.rid ? `<button class="ib join" data-r="${o.rid}">참가</button>` : ''}<button class="ib inv" data-s="${o.sid}">초대</button>`}</div>`).join('');
+      ${o.me ? '' : o.status === 'lobby' ? `<button class="ib inv" data-s="${o.sid}">초대</button>` : ''}</div>`).join('');
     modal(`<h3 class="stroke">🟢 지금 온라인 ${list.length}명</h3><div id="olist">${rows || '아무도 없어요'}</div>`);
-    for (const b of document.querySelectorAll('#olist .ib.join')) b.onclick = () => { $('modal').style.display = 'none'; joinRid(b.dataset.r); };
     for (const b of document.querySelectorAll('#olist .ib.inv')) b.onclick = () => {
       b.disabled = true; b.textContent = '보냄';
-      socket.emit('invite', { to: b.dataset.s, mode: selMode, map: selMapOf(selMode) }, (r) => { if (!r.ok) { b.textContent = '실패'; addFeed(r.msg, 4); } });
+      socket.emit('invite', { to: b.dataset.s, mode: selMode, map: selMapOf(selMode) }, (r) => { if (!r.ok) { b.textContent = '실패'; toast(r.msg); } });
     };
   });
 }
 let inviteT = null;
 function showInvite(d) {
   const el = $('invite');
-  el.innerHTML = `📨 <b>${String(d.from).replace(/</g, '&lt;')}</b>님의 초대!<div style="font-size:14px;margin-top:3px">${d.modeName} · ${d.mapName}</div><div class="acts"><button id="invYes" style="background:#3ce07f">참가</button><button id="invNo" style="background:#ddd">거절</button></div>`;
+  if (mode === 'game' || joined) return;         // 게임 중엔 초대 안 받음
+  el.innerHTML = `📨 <b>${String(d.from).replace(/</g, '&lt;')}</b>님이 파티에 초대했어요!<div style="font-size:14px;margin-top:3px">${d.modeName} · ${d.mapName}</div><div class="acts"><button id="invYes" style="background:#3ce07f">수락</button><button id="invNo" style="background:#ddd">거절</button></div>`;
   el.style.display = 'block';
   clearTimeout(inviteT); inviteT = setTimeout(() => { el.style.display = 'none'; }, 20000);
-  $('invYes').onclick = () => { el.style.display = 'none'; joinRid(d.rid); };
+  $('invYes').onclick = () => { el.style.display = 'none'; socket.emit('inviteAccept', { fromCid: d.fromCid }); };
   $('invNo').onclick = () => { el.style.display = 'none'; };
 }
 // 접속자 목록
@@ -2489,7 +2513,7 @@ $('patchBtn').onclick = () => {
   if (P[0]) { try { localStorage.setItem('jb_patch', P[0].ver); } catch (e) {} } patchBadge();
 };
 $('exitBtn').onclick = () => location.reload();
-$('invBtn').onclick = () => openOnline();
+
 $('botBtn').onclick = (e) => { e.target.blur(); socket && socket.emit('addBot'); };
 $('clearBtn').onclick = (e) => { e.target.blur(); socket && socket.emit('clearBots'); };
 
