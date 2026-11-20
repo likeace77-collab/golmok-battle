@@ -102,7 +102,23 @@
   #partyBox .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
   #partyBox .chip { background: rgba(0,0,0,.35); border-radius: 8px; padding: 2px 8px; font-size: 13px; }
   #partyBox .chip.off { opacity: .5; }
-  #partyBox .chip.sw { cursor: pointer; outline: 2px dashed rgba(255,255,255,.5); }
+  #partyBox .ph { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  #partyBox .code { background: rgba(0,0,0,.4); border-radius: 7px; padding: 1px 7px; letter-spacing: 1px; color: #ffd84a; cursor: pointer; }
+  #partyBox button.g { background: #3ce07f; margin-left: auto; }
+  #partyBox .srow { display: flex; gap: 5px; align-items: center; margin-top: 5px; padding: 4px; border-radius: 9px; background: rgba(0,0,0,.2); }
+  #partyBox .srow.t0 { background: rgba(58,141,255,.35); } #partyBox .srow.t1 { background: rgba(255,74,74,.35); }
+  #partyBox .tl { width: 18px; text-align: center; }
+  #partyBox .slot { width: 84px; height: 62px; border: 3px solid #000; border-radius: 9px; text-align: center; cursor: pointer; box-shadow: 0 3px 0 #000; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+  #partyBox .slot.p { background: linear-gradient(#ffd27a, #e8a33a); color: #000; }
+  #partyBox .slot.p.me { background: linear-gradient(#ffe86a, #ffc21a); outline: 2px solid #fff; }
+  #partyBox .slot.offl { opacity: .55; }
+  #partyBox .slot.ai { background: linear-gradient(#3d4a78, #263055); }
+  #partyBox .slot.off { background: repeating-linear-gradient(45deg, #333 0 6px, #444 6px 12px); opacity: .8; }
+  #partyBox .si { font-size: 18px; line-height: 1; } #partyBox .sn { font-size: 12.5px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; padding: 0 3px; }
+  #partyBox .ss { font-size: 10px; background: rgba(0,0,0,.35); color: #fff; margin: 1px 6px 0; border-radius: 5px; }
+  #partyBox .slot.ai .ss { background: #2fb8ff; color: #000; }
+  #partyBox .hint { font-size: 11px; opacity: .85; margin-top: 4px; }
+  .smenu { display: flex; flex-direction: column; gap: 8px; } .smenu .btn.red { background: linear-gradient(#ff6a6a, #d03030); color: #fff; }
   #partyBox .trow { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 4px; padding: 3px 5px; border-radius: 8px; }
   #partyBox .trow.t0 { background: rgba(58,141,255,.35); } #partyBox .trow.t1 { background: rgba(255,74,74,.35); }
   #partyBox .trow b { font-size: 12px; margin-right: 2px; }
@@ -247,6 +263,7 @@
   <div id="patchBtn" class="panel stroke">📜 패치노트<b id="patchNew">N</b></div>
   <div id="lbtns">
     <div class="lb panel stroke" id="openB"><span class="ic">🧑‍🏫</span>브롤러</div>
+    <div class="lb panel stroke" id="openFriendly"><span class="ic">🤝</span>친선전</div>
     <div class="lb panel stroke" id="openPlayers"><span class="ic">👥</span>플레이어</div>
     <div class="lb panel stroke" id="openHelp"><span class="ic">❔</span>조작법</div>
   </div>
@@ -2230,7 +2247,7 @@ function refreshLobby() {
       lo.gears.map((g) => `<span title="기어">${META.gears.find((x) => x.id === g).icon}</span>`).join('');
   }
   const M = META.modes[selMode];
-  if (M) { const sm = selMapOf(M.id); $('mName').textContent = `${M.icon} ${M.name}`; $('mDesc').textContent = M.maps.length > 1 ? '🗺️ ' + (sm === 'random' ? '랜덤 맵' : META.maps[sm].name) : M.desc.split('.')[0]; $('modeBox').style.background = `linear-gradient(${M.color}, #2b2c58)`; }
+  if (M) { const sm = selMapOf(M.id); $('mName').textContent = `${M.icon} ${M.name}`; $('mDesc').textContent = M.id === 'ffa' || M.id === 'double' ? '🌐 모두 같은 방' : M.maps.length > 1 ? '🗺️ ' + (sm === 'random' ? '랜덤 맵' : META.maps[sm].name) : M.desc.split('.')[0]; $('modeBox').style.background = `linear-gradient(${M.color}, #2b2c58)`; }
   setShowcase(b.id);
   $('playBtn').textContent = party && !amLeader() ? '방장 대기' : '플레이';
 }
@@ -2359,17 +2376,17 @@ function buildModes() {
     const c = document.createElement('div');
     c.className = 'mcard stroke' + (M.id === selMode ? ' sel' : '');
     c.style.background = `linear-gradient(135deg, ${M.color}, #2b2c58)`;
-    c.innerHTML = `<div class="mi">${M.icon}</div><div class="mn">${M.name}</div><div class="md">${M.desc}</div><div class="mm">🗺️ 맵 ${M.maps.length}개 ${M.maps.length > 1 ? '· 눌러서 맵 고르기' : ''}</div>`;
+    c.innerHTML = `<div class="mi">${M.icon}</div><div class="mn">${M.name}</div><div class="md">${M.desc}</div><div class="mm">🗺️ 맵 ${M.maps.length}개 ${M.id === 'ffa' || M.id === 'double' ? '· 모두 같은 방 (맵 돌아감)' : M.maps.length > 1 ? '· 눌러서 맵 고르기' : ''}</div>`;
     c.onclick = () => {
       selMode = M.id; LS.set('jb_mode', M.id); syncPrefs();
-      if (M.maps.length > 1) return openMapPick(M);
+      if (M.maps.length > 1 && M.id !== 'ffa' && M.id !== 'double') return openMapPick(M);
       $('mscreen').style.display = 'none'; refreshLobby(); partySel();
     };
     g.appendChild(c);
   }
 }
 // 맵 고르기 (🎲 랜덤 = 여러 맵이 돌아가며 나옴)
-const selMapOf = (m) => { const v = LS0('jb_map_' + m, 'random'); return META.modes[m] && META.modes[m].maps.includes(v) ? v : 'random'; };
+const selMapOf = (m) => { if (m === 'ffa' || m === 'double') return 'random'; const v = LS0('jb_map_' + m, 'random'); return META.modes[m] && META.modes[m].maps.includes(v) ? v : 'random'; };
 function openMapPick(M) {
   const cur = selMapOf(M.id), T = (id) => (typeof THEMES !== 'undefined' && THEMES[META.maps[id].theme]) || { floor: ['#888', '#666'] };
   const card = (id, name, bg, sub) => `<div class="mpick${cur === id ? ' sel' : ''}" data-m="${id}" style="background:${bg}"><b class="stroke">${name}</b><small>${sub}</small></div>`;
@@ -2460,16 +2477,55 @@ function renderParty() {
   el.style.display = 'block';
   const esc = (t) => String(t).replace(/</g, '&lt;');
   const M = META.modes[party.mode], lead = amLeader();
-  const chip = (m) => `<span class="chip${m.on ? '' : ' off'}${M.team && (lead || m.cid === CID) ? ' sw' : ''}" data-c="${m.cid}" data-t="${m.team}">${m.leader ? '👑 ' : ''}${esc(m.name)}${m.cid === CID ? ' (나)' : ''}</span>`;
-  const body = M.team
-    ? [0, 1].map((t) => `<div class="trow t${t}"><b>${t ? '🔴 레드' : '🔵 블루'}</b>${party.members.filter((m) => m.team === t).map(chip).join('') || '<span style="opacity:.6">봇</span>'}</div>`).join('') + `<div style="font-size:11px;opacity:.8;margin-top:2px">이름을 누르면 팀 이동${lead ? ' (방장은 누구든)' : ''}</div>`
-    : `<div class="chips">${party.members.map(chip).join('')}</div><div style="font-size:11px;opacity:.8">개인전이라 서로 적이에요</div>`;
-  el.innerHTML = `👥 파티 ${party.members.length}명 ${lead ? '· 내가 방장' : '· 방장이 시작'}<button id="ptLeave">나가기</button>${body}`;
+  const head = `<div class="ph">🤝 친선 전투 <span class="code" id="ptCode">코드 ${party.code}</span><button id="ptInv" class="g">초대</button><button id="ptLeave">나가기</button></div>`;
+  let body;
+  if (party.shared) {
+    body = `<div class="chips">${party.members.map((m) => `<span class="chip${m.on ? '' : ' off'}">${m.leader ? '👑 ' : ''}${esc(m.name)}${m.cid === CID ? ' (나)' : ''}</span>`).join('')}</div><div class="hint">${M.icon} ${M.name}은 모두 같은 방 · 방장이 시작하면 같이 들어가요</div>`;
+  } else {
+    const card = (v, i) => v.k === 'p'
+      ? `<div class="slot p${v.cid === CID ? ' me' : ''}${v.on ? '' : ' offl'}" data-i="${i}"><div class="si">${v.leader ? '👑' : '🙂'}</div><div class="sn">${esc(v.name)}</div><div class="ss">${v.cid === CID ? '나' : '친구'}</div></div>`
+      : v.k === 'ai' ? `<div class="slot ai" data-i="${i}"><div class="si">🤖</div><div class="sn">AI</div><div class="ss">초대</div></div>`
+      : `<div class="slot off" data-i="${i}"><div class="si">✖</div><div class="sn">비활성</div><div class="ss">빈자리</div></div>`;
+    const rows = party.team ? [party.slots.slice(0, party.half), party.slots.slice(party.half)] : [party.slots.slice(0, 3), party.slots.slice(3)];
+    body = rows.map((r, ri) => `<div class="srow${party.team ? ' t' + ri : ''}">${party.team ? `<b class="tl">${ri ? '🔴' : '🔵'}</b>` : ''}${r.map((v, j) => card(v, ri * (party.team ? party.half : 3) + j)).join('')}</div>`).join('') +
+      `<div class="hint">${party.team ? '자리를 눌러 팀 이동' : '쇼다운: 다 같이 적'}${lead ? ' · AI 자리는 끄고 켤 수 있어요' : ''}</div>`;
+  }
+  el.innerHTML = head + body;
   $('ptLeave').onclick = () => socket.emit('partyLeave');
-  if (M.team) for (const c of el.querySelectorAll('.chip.sw')) c.onclick = () => socket.emit('partyTeam', { cid: c.dataset.c, team: 1 - +c.dataset.t });
-  if (!amLeader()) { selMode = party.mode; try { localStorage.setItem('jb_map_' + party.mode, party.map); } catch (e) {} }   // 방장이 고른 모드·맵 따라감
+  $('ptInv').onclick = () => openOnline();
+  $('ptCode').onclick = () => { try { navigator.clipboard.writeText(party.code); toast('팀 코드 복사: ' + party.code); } catch (e) {} };
+  for (const c of el.querySelectorAll('.slot')) c.onclick = () => slotMenu(+c.dataset.i);
+  if (!lead) { selMode = party.mode; try { localStorage.setItem('jb_map_' + party.mode, party.map); } catch (e) {} }   // 방장이 고른 모드·맵 따라감
   refreshLobby();
 }
+function slotMenu(i) {
+  const v = party.slots[i], lead = amLeader(), acts = [];
+  if (v.k !== 'p') acts.push(['move', '🙋 여기로 이동']);
+  if (lead && v.k === 'ai') acts.push(['off', '✖ 비활성화 (봇 없음)']);
+  if (lead && v.k === 'off') acts.push(['ai', '🤖 AI 켜기']);
+  if (v.k !== 'p') acts.push(['inv', '📨 친구 초대']);
+  if (!acts.length) return;
+  modal(`<h3 class="stroke">자리 ${i + 1}</h3><div class="smenu">${acts.map(([k, t]) => `<button class="btn${k === 'off' ? ' red' : ''}" data-a="${k}">${t}</button>`).join('')}</div>`);
+  $('mOk').textContent = '닫기';
+  for (const b of document.querySelectorAll('.smenu button')) b.onclick = () => {
+    $('modal').style.display = 'none';
+    if (b.dataset.a === 'inv') return openOnline();
+    socket.emit('partySlot', { idx: i, act: b.dataset.a });
+  };
+}
+// 친선 전투 버튼: 팀 만들기 / 코드로 참가
+function openFriendly() {
+  if (!socket) return;
+  if (party) { modal(`<h3 class="stroke">🤝 친선 전투</h3><div style="font-size:15px">팀 코드 <b style="font-size:24px;letter-spacing:3px;color:#ffd84a">${party.code}</b><br>친구에게 코드를 알려주거나 초대하세요</div>`); return; }
+  modal(`<h3 class="stroke">🤝 친선 전투</h3><div style="font-size:14px;margin-bottom:8px">친구랑 팀을 짜서 처음부터 같이 시작해요</div>
+    <button class="btn" id="fCreate" style="width:100%">팀 만들기</button>
+    <div style="margin:12px 0 4px;font-weight:900">또는 팀 코드로 참가</div>
+    <div style="display:flex;gap:6px"><input id="fCode" maxlength="6" placeholder="ABC123" style="flex:1;font-size:20px;text-transform:uppercase;letter-spacing:3px;padding:6px 10px;border-radius:10px;border:3px solid #000;font-weight:900"><button class="btn" id="fJoin">참가</button></div>`);
+  $('mOk').textContent = '닫기';
+  $('fCreate').onclick = () => { socket.emit('partyCreate', { mode: SHAREDM(selMode) || META.modes[selMode].training ? 'gem' : selMode, map: selMapOf(selMode) }); $('modal').style.display = 'none'; };
+  $('fJoin').onclick = () => socket.emit('partyCode', { code: $('fCode').value }, (r) => { if (r.ok) $('modal').style.display = 'none'; else toast(r.msg); });
+}
+const SHAREDM = (m) => m === 'ffa' || m === 'double';
 function partySel() { if (party && amLeader()) socket.emit('partySel', { mode: selMode, map: selMapOf(selMode) }); }
 let toastT = null;
 function toast(t) { const el = $('invite'); el.innerHTML = String(t).replace(/</g, '&lt;'); el.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => { el.style.display = 'none'; }, 2500); }
@@ -2492,14 +2548,15 @@ let inviteT = null;
 function showInvite(d) {
   const el = $('invite');
   if (mode === 'game' || joined) return;         // 게임 중엔 초대 안 받음
-  el.innerHTML = `📨 <b>${String(d.from).replace(/</g, '&lt;')}</b>님이 파티에 초대했어요!<div style="font-size:14px;margin-top:3px">${d.modeName} · ${d.mapName}</div><div class="acts"><button id="invYes" style="background:#3ce07f">수락</button><button id="invNo" style="background:#ddd">거절</button></div>`;
+  el.innerHTML = `📨 <b>${String(d.from).replace(/</g, '&lt;')}</b>님이 친선 전투에 초대했어요!<div style="font-size:14px;margin-top:3px">${d.modeName} · ${d.mapName}</div><div class="acts"><button id="invYes" style="background:#3ce07f">수락</button><button id="invNo" style="background:#ddd">거절</button></div>`;
   el.style.display = 'block';
   clearTimeout(inviteT); inviteT = setTimeout(() => { el.style.display = 'none'; }, 20000);
-  $('invYes').onclick = () => { el.style.display = 'none'; socket.emit('inviteAccept', { fromCid: d.fromCid }); };
+  $('invYes').onclick = () => { el.style.display = 'none'; socket.emit('inviteAccept', { pid: d.pid }); };
   $('invNo').onclick = () => { el.style.display = 'none'; };
 }
 // 접속자 목록
 $('onlineBtn').onclick = () => openOnline();
+$('openFriendly').onclick = () => openFriendly();
 // 가입한 전체 플레이어 목록 (트로피 순)
 const agoText = (t) => { const m = Math.floor((Date.now() - t) / 60000); return m < 1 ? '방금' : m < 60 ? m + '분 전' : m < 1440 ? Math.floor(m / 60) + '시간 전' : Math.floor(m / 1440) + '일 전'; };
 $('openPlayers').onclick = () => {

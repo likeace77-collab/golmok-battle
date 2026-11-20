@@ -894,6 +894,14 @@ function addBot(room, team) {
 function removeBot(room, p) { releaseCtrl(room, p, false); if (p.gems) dropGems(room, p); room.players.delete(p.id); }
 function fillBots(room) {
   const mode = room.mode;
+  if (room.partyCfg) {             // 친선 전투: 로비에서 켜 둔 AI 자리만큼만 봇
+    const bots = (t) => [...room.players.values()].filter((p) => p.isBot && !p.struct && (mode.team ? p.team === t : true));
+    for (const t of mode.team ? [0, 1] : [0]) {
+      while (bots(t).length > room.partyCfg.ai[t]) removeBot(room, bots(t)[0]);
+      while (bots(t).length < room.partyCfg.ai[t]) addBot(room, mode.team ? t : null);
+    }
+    return;
+  }
   if (mode.id === 'showdown') {
     for (const p of [...room.players.values()]) if (p.isBot) removeBot(room, p);
     while (room.players.size < mode.size) addBot(room);
@@ -1314,30 +1322,69 @@ setInterval(() => { for (const room of rooms.values()) step(room); }, 1000 / TIC
 // ── 접속자 목록 (로비에 있는 사람 + 플레이 중인 사람) ──
 const online = new Map();   // socket.id → { name, key, status, mode, brawler }
 let onlineDirty = false;
-// ── 파티: 게임 시작 전에 로비에서 친구를 모아서 같이 입장 ──
-// 브라우저마다 cid(고유값)로 구분 → 새로고침해도 파티 유지 (60초 안에 다시 오면)
-const parties = new Map();        // pid → { id, leader: cid, members: [cid], mode, map }
+// ── 친선 전투 (파티): 게임 시작 전에 로비에서 팀을 짜서 같이 입장 ──
+// 브라우저 탭마다 cid로 구분 → 새로고침해도 파티 유지 (60초 안에 다시 오면)
+// 자리(slots): 팀 모드는 [블루 ×팀인원, 레드 ×팀인원], 쇼다운은 6자리. 각 자리 = 사람(cid) / 'ai' / 'off'(비활성)
+const parties = new Map();        // pid → { id, code, leader, members, mode, map, slots }
 const cidParty = new Map();       // cid → pid
 let partySeq = 0;
-const PARTY_MAX = 6;
+const SHARED = (m) => m === 'ffa' || m === 'double';      // 난투·더블 가젯은 모두 같은 방 (초대 없이도)
+const slotCount = (m) => { const M = MODES[m]; return M.team ? M.teamSize * 2 : M.size || 0; };
+const partyMax = (pt) => Math.max(6, slotCount(pt.mode));
 const sidOfCid = (cid) => { for (const [sid, o] of online) if (o.cid === cid) return sid; return null; };
 const nameOfCid = (cid) => { const sid = sidOfCid(cid); return sid ? online.get(sid).name : null; };
+function newCode() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c; do { c = ''; for (let i = 0; i < 6; i++) c += A[Math.floor(Math.random() * A.length)]; } while ([...parties.values()].some((p) => p.code === c)); return c; }
+function makeParty(leaderCid, mode, map) {
+  const pt = { id: 'pt' + ++partySeq, code: newCode(), leader: leaderCid, members: [leaderCid], mode: MODES[mode] && !MODES[mode].training ? mode : 'gem', map: map || 'random', slots: [] };
+  parties.set(pt.id, pt); cidParty.set(leaderCid, pt.id); layoutSlots(pt);
+  return pt;
+}
+// 모드가 바뀌면 자리 다시 짜기 (사람들은 원래 팀 최대한 유지)
+function layoutSlots(pt) {
+  const n = slotCount(pt.mode), M = MODES[pt.mode], old = pt.slots || [];
+  const half = M.team ? M.teamSize : n;
+  const prevTeam = (c) => { const i = old.indexOf(c); return i < 0 ? 0 : M.team && old.length && i >= old.length / 2 ? 1 : 0; };
+  const slots = new Array(n).fill('ai');
+  for (const c of pt.members) {
+    const want = prevTeam(c), order = M.team ? [want, 1 - want] : [0];
+    let put = false;
+    for (const t of order) { const st = M.team ? t * half : 0, en = M.team ? st + half : n; for (let i = st; i < en; i++) if (slots[i] === 'ai') { slots[i] = c; put = true; break; } if (put) break; }
+  }
+  pt.slots = slots;
+}
+function putInSlot(pt, cid) {
+  if (!slotCount(pt.mode)) return true;
+  let i = pt.slots.indexOf('ai'); if (i < 0) i = pt.slots.indexOf('off');
+  if (i < 0) return false;
+  pt.slots[i] = cid; return true;
+}
 function partyInfo(pt) {
-  return { id: pt.id, mode: pt.mode, map: pt.map, members: pt.members.map((c) => ({ cid: c, name: nameOfCid(c) || '(접속 끊김)', leader: c === pt.leader, on: !!sidOfCid(c), team: pt.teams[c] || 0 })) };
+  const M = MODES[pt.mode];
+  return {
+    id: pt.id, code: pt.code, mode: pt.mode, map: pt.map, shared: SHARED(pt.mode), team: !!M.team, half: M.team ? M.teamSize : 0,
+    members: pt.members.map((c) => ({ cid: c, name: nameOfCid(c) || '(접속 끊김)', leader: c === pt.leader, on: !!sidOfCid(c) })),
+    slots: pt.slots.map((v) => v === 'ai' || v === 'off' ? { k: v } : { k: 'p', cid: v, name: nameOfCid(v) || '(접속 끊김)', leader: v === pt.leader, on: !!sidOfCid(v) }),
+  };
 }
 function partySync(pt) {
   for (const c of pt.members) { const sid = sidOfCid(c); if (sid) io.to(sid).emit('party', partyInfo(pt)); }
+}
+function partyJoin(pt, cid) {
+  if (cidParty.get(cid) === pt.id) return 'ok';
+  if (pt.members.length >= partyMax(pt)) return '팀이 꽉 찼어요';
+  if (slotCount(pt.mode) && !pt.slots.some((v) => v === 'ai' || v === 'off')) return '빈자리가 없어요';
+  partyLeave(cid);
+  pt.members.push(cid); cidParty.set(cid, pt.id); putInSlot(pt, cid);
+  partySync(pt); return 'ok';
 }
 function partyLeave(cid) {
   const pid = cidParty.get(cid); if (!pid) return;
   cidParty.delete(cid);
   const pt = parties.get(pid); if (!pt) return;
   pt.members = pt.members.filter((c) => c !== cid);
+  pt.slots = pt.slots.map((v) => (v === cid ? 'ai' : v));
   const sid = sidOfCid(cid); if (sid) io.to(sid).emit('party', null);
-  if (pt.members.length <= 1) {           // 혼자 남으면 파티 해산
-    for (const c of pt.members) { cidParty.delete(c); const s2 = sidOfCid(c); if (s2) io.to(s2).emit('party', null); }
-    parties.delete(pid); return;
-  }
+  if (!pt.members.length) { parties.delete(pid); return; }
   if (pt.leader === cid) pt.leader = pt.members[0];
   partySync(pt);
 }
@@ -1372,54 +1419,57 @@ io.on('connection', (socket) => {
   });
   socket.on('online', (cb) => { if (typeof cb === 'function') cb(onlineList(socket.id)); });
   // 초대: 내가 게임 중이면 지금 방으로, 로비면 내가 고른 모드·맵으로
+  const meO = () => online.get(socket.id) || {};
+  const myParty = () => { const o = meO(); return o.cid ? parties.get(cidParty.get(o.cid)) : null; };
+  const inLobby = () => !room && meO().status === 'lobby';
+  socket.on('partyCreate', ({ mode, map } = {}) => {      // 친선 전투 팀 만들기
+    const o = meO(); if (!o.cid || !inLobby()) return;
+    if (myParty()) return partySync(myParty());
+    partySync(makeParty(o.cid, mode, map));
+  });
+  socket.on('partyCode', ({ code } = {}, cb) => {         // 팀 코드로 참가
+    const o = meO(), done = (r) => typeof cb === 'function' && cb(r);
+    if (!o.cid || !inLobby()) return done({ ok: false, msg: '로비에서만 참가할 수 있어요' });
+    const pt = [...parties.values()].find((p) => p.code === String(code || '').trim().toUpperCase());
+    if (!pt) return done({ ok: false, msg: '그런 팀 코드는 없어요' });
+    const r = partyJoin(pt, o.cid); done(r === 'ok' ? { ok: true } : { ok: false, msg: r });
+  });
   socket.on('invite', ({ to, mode, map } = {}, cb) => {
-    const me = online.get(socket.id), tgt = online.get(to);
+    const o = meO(), tgt = online.get(to);
     const done = (r) => typeof cb === 'function' && cb(r);
-    if (!me || !tgt || to === socket.id || !me.cid || !tgt.cid) return done({ ok: false, msg: '그 사람은 지금 접속해 있지 않아요' });
-    if (room || me.status !== 'lobby') return done({ ok: false, msg: '로비에서만 초대할 수 있어요' });
+    if (!o.cid || !tgt || to === socket.id || !tgt.cid) return done({ ok: false, msg: '그 사람은 지금 접속해 있지 않아요' });
+    if (!inLobby()) return done({ ok: false, msg: '로비에서만 초대할 수 있어요' });
     if (tgt.status !== 'lobby') return done({ ok: false, msg: '그 사람은 지금 게임 중이에요' });
-    const pt = parties.get(cidParty.get(me.cid));
-    if (pt && pt.leader !== me.cid) return done({ ok: false, msg: '방장만 초대할 수 있어요' });
-    if (pt && pt.members.length >= PARTY_MAX) return done({ ok: false, msg: `파티는 ${PARTY_MAX}명까지예요` });
-    if (pt && pt.members.includes(tgt.cid)) return done({ ok: false, msg: '이미 같은 파티예요' });
-    const m = pt ? pt.mode : (MODES[mode] ? mode : 'ffa'), M = MODES[m], mp = pt ? pt.map : map;
-    io.to(to).emit('invited', { from: me.name, fromCid: me.cid, modeName: M.icon + ' ' + M.name, mapName: MAPS[mp] ? MAPS[mp].name : '랜덤 맵' });
-    if (!pt) me.pendSel = { mode: m, map: mp };
+    let pt = myParty();
+    if (!pt) { pt = makeParty(o.cid, mode, map); partySync(pt); }     // 팀이 없으면 바로 만들어서 초대
+    if (pt.members.includes(tgt.cid)) return done({ ok: false, msg: '이미 같은 팀이에요' });
+    const M = MODES[pt.mode];
+    io.to(to).emit('invited', { from: o.name, pid: pt.id, modeName: M.icon + ' ' + M.name, mapName: MAPS[pt.map] ? MAPS[pt.map].name : '랜덤 맵' });
     done({ ok: true });
   });
-  socket.on('inviteAccept', ({ fromCid } = {}) => {
-    const me = online.get(socket.id); if (!me || !me.cid || room || me.status !== 'lobby') return;
-    const lsid = sidOfCid(fromCid), lo = lsid && online.get(lsid);
-    if (!lo || lo.status !== 'lobby') { socket.emit('partyMsg', '초대한 사람이 이미 게임을 시작했어요'); return; }
-    let pt = parties.get(cidParty.get(fromCid));
-    if (!pt) {
-      pt = { id: 'pt' + ++partySeq, leader: fromCid, members: [fromCid], teams: {}, mode: (lo.pendSel && lo.pendSel.mode) || 'ffa', map: (lo.pendSel && lo.pendSel.map) || 'random' };
-      parties.set(pt.id, pt); cidParty.set(fromCid, pt.id);
-    }
-    if (pt.members.length >= PARTY_MAX) { socket.emit('partyMsg', '파티가 꽉 찼어요'); return; }
-    if (cidParty.get(me.cid) !== pt.id) { partyLeave(me.cid); pt.members.push(me.cid); cidParty.set(me.cid, pt.id); }
+  socket.on('inviteAccept', ({ pid } = {}) => {
+    const o = meO(); if (!o.cid || !inLobby()) return;
+    const pt = parties.get(pid);
+    if (!pt) return socket.emit('partyMsg', '그 팀은 이미 없어졌어요');
+    if (pt.room) { const lo = online.get(sidOfCid(pt.leader)); if (lo && lo.status === 'game') return socket.emit('partyMsg', '이미 게임을 시작했어요. 끝나면 다시 초대받아 주세요'); }
+    const r = partyJoin(pt, o.cid); if (r !== 'ok') socket.emit('partyMsg', r);
+  });
+  socket.on('partySlot', ({ idx, act } = {}) => {        // 자리: move(내가 이 자리로) / off(비활성화) / ai(AI 켜기)
+    const o = meO(), pt = myParty(); if (!pt || !inLobby()) return;
+    const v = pt.slots[idx]; if (v == null) return;
+    if (act === 'move' && (v === 'ai' || v === 'off')) { pt.slots = pt.slots.map((x) => (x === o.cid ? 'ai' : x)); pt.slots[idx] = o.cid; }
+    else if ((act === 'off' || act === 'ai') && pt.leader === o.cid && (v === 'ai' || v === 'off')) pt.slots[idx] = act;
+    else return;
     partySync(pt);
   });
-  socket.on('partyTeam', ({ cid, team } = {}) => {     // 팀 나누기: 본인 또는 방장이 바꿈
-    const me = online.get(socket.id); const pt = me && parties.get(cidParty.get(me.cid));
-    if (!pt || !pt.members.includes(cid) || (cid !== me.cid && pt.leader !== me.cid)) return;
-    const t = team === 1 ? 1 : 0, M = MODES[pt.mode];
-    if (M.teamSize && pt.members.filter((c) => c !== cid && (pt.teams[c] || 0) === t).length >= M.teamSize) { socket.emit('partyMsg', `한 팀은 ${M.teamSize}명까지예요`); return; }
-    pt.teams[cid] = t; partySync(pt);
-  });
-  socket.on('partyLeave', () => { const me = online.get(socket.id); if (me && me.cid) partyLeave(me.cid); });
+  socket.on('partyLeave', () => { const o = meO(); if (o.cid) partyLeave(o.cid); });
   socket.on('partySel', ({ mode, map } = {}) => {      // 방장이 모드·맵 바꾸면 모두에게
-    const me = online.get(socket.id); const pt = me && parties.get(cidParty.get(me.cid));
-    if (!pt || pt.leader !== me.cid || !MODES[mode] || MODES[mode].training) return;
-    pt.mode = mode; pt.map = MODES[mode].maps.includes(map) ? map : 'random'; partySync(pt);
-  });
-  socket.on('players', (cb) => {      // 가입한 전체 플레이어 + 지금 접속 중인지
-    if (typeof cb !== 'function') return;
-    const on = new Map(); for (const o of online.values()) if (o.key) on.set(o.key, o);
-    cb(auth.allUsers().map(({ key, ...u }) => {
-      const o = on.get(key);
-      return { ...u, online: !!o, status: o ? o.status : null, modeName: o && o.mode && MODES[o.mode] ? MODES[o.mode].icon + ' ' + MODES[o.mode].name : null };
-    }).sort((a, b) => b.trophies - a.trophies || b.lastSeen - a.lastSeen));
+    const o = meO(), pt = myParty();
+    if (!pt || pt.leader !== o.cid || !MODES[mode] || MODES[mode].training) return;
+    const changed = pt.mode !== mode;
+    pt.mode = mode; pt.map = MODES[mode].maps.includes(map) ? map : 'random';
+    if (changed) layoutSlots(pt);
+    partySync(pt);
   });
   const me = () => room && room.players.get(socket.id);
   const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : NaN);
@@ -1430,28 +1480,33 @@ io.on('connection', (socket) => {
     const pt = oe.cid && parties.get(cidParty.get(oe.cid));
     if (pt && pt.leader !== oe.cid && !(wantRid && wantRid === pt.room)) return socket.emit('partyMsg', '방장이 시작하면 같이 들어가요');
     let modeId = MODES[mode] ? mode : 'ffa', rid, fixed = null;
-    if (pt && pt.leader === oe.cid) {                          // 방장: 파티 전용 새 방 (처음부터 같이 시작)
+    if (pt && pt.leader === oe.cid && SHARED(pt.mode)) {        // 방장 + 난투/더블 가젯: 모두 쓰는 공용 방으로 같이
+      modeId = pt.mode; rid = modeId; pt.room = rid;
+    } else if (pt && pt.leader === oe.cid) {                    // 방장: 친선 전투 전용 새 방 (처음부터 같이 시작)
       modeId = pt.mode; fixed = MODES[modeId].maps.includes(pt.map) ? pt.map : null;
       rid = ridFor(modeId, fixed) + '#' + pt.id + '_' + Date.now().toString(36);
       pt.room = rid;
     } else if (pt && wantRid === pt.room && rooms.has(wantRid)) {   // 파티원: 방장이 만든 방으로
       rid = wantRid; modeId = rooms.get(rid).mode.id; fixed = rooms.get(rid).fixedMap;
     } else if (MODES[modeId].training) rid = 'training:' + socket.id;                          // 훈련장은 혼자만
+    else if (SHARED(modeId)) rid = modeId;                                                     // 난투·더블 가젯: 맵 상관없이 다 같은 방
     else { fixed = MODES[modeId].maps.includes(map) ? map : null; rid = ridFor(modeId, fixed); }
     const fresh = !rooms.has(rid);
     room = getRoom(modeId, rid, fixed);
-    if (pt) room.party = pt.id;
+    if (pt && rid.includes('#') && fresh) {            // 친선 전투 설정: 자리별 팀 / AI 수
+      const M = room.mode, half = M.team ? M.teamSize : 0, teamOf = {}, ai = [0, 0];
+      pt.slots.forEach((v, i) => { const t = M.team ? (i < half ? 0 : 1) : 0; if (v === 'ai') ai[t]++; else if (v !== 'off') teamOf[v] = t; });
+      room.partyCfg = { teamOf, ai };
+    }
     const bid = BRAWLERS[brawler] && !BRAWLERS[brawler].wip ? brawler : 'jungbo';
     const acc = auth.userFromToken(token);                     // 로그인 안 했으면 게스트
     const p = newPlayer(room, socket.id, acc ? acc.u.name : '게스트' + Math.floor(1000 + Math.random() * 9000), false, bid, loadout);
     if (acc) p.userKey = acc.key;
     if (room.mode.team) {
-      if (pt && room.party === pt.id) {              // 파티: 로비에서 정한 팀으로 (꽉 찼으면 반대 팀)
-        const want = pt.teams[oe.cid] || 0;
-        p.team = humans(room).filter((q) => q.team === want).length < room.mode.teamSize ? want : 1 - want;
-      } else p.team = teamCount(room, 0) <= teamCount(room, 1) ? 0 : 1;
+      if (room.partyCfg) p.team = room.partyCfg.teamOf[oe.cid] || 0;        // 친선 전투: 로비에서 고른 자리의 팀
+      else p.team = teamCount(room, 0) <= teamCount(room, 1) ? 0 : 1;
       p.color = TEAM_COLORS[p.team];
-      const bot = [...room.players.values()].find((q) => q.isBot && !q.struct && q.team === p.team);   // 봇 자리를 대신 차지
+      const bot = !room.partyCfg && [...room.players.values()].find((q) => q.isBot && !q.struct && q.team === p.team);   // 봇 자리를 대신 차지
       if (bot) removeBot(room, bot);
     }
     room.players.set(socket.id, p);
