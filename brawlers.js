@@ -356,7 +356,7 @@ const BRAWLERS = {
     rarity: null,
     wip: true,               // 디자인만 — 스킬 정해지면 wip 빼기
     title: '…',
-    desc: '숱 많은 바가지 머리에 늘 무표정한 학생. 투톤 맨투맨이 트레이드마크.',
+    desc: '숱 많은 곱슬 바가지 머리에 늘 무표정한 학생. 투톤 맨투맨이 트레이드마크.',
     radius: 24, speed: 260, maxHp: 4800,
     attack: { name: '준비 중', ammo: 0, range: 0 }, gadgets: [], starPowers: [], super: null,
   },

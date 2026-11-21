@@ -1639,7 +1639,7 @@ function makeSuho(teamColor) {
 }
 
 // ── 이수훈 3D 모델 ────────────────────────────────
-// 사진 참고: 숱 많은 검은 바가지 머리(눈썹까지 덮는 앞머리 · 귀 위 덮는 옆머리), 가늘고 긴 눈, 동글한 볼, 무표정
+// 사진 참고: 숱 많은 검은 곱슬 바가지 머리(눈썹까지 덮는 앞머리 · 귀 위 덮는 옆머리), 가늘고 긴 눈, 동글한 볼, 무표정
 // 옷: 몸판은 짙은 회녹색, 소매는 밝은 회청색인 라글란 맨투맨 + 검은 조거 + 흰 운동화
 function makeSuhun(teamColor) {
   const m = {
@@ -1701,15 +1701,24 @@ function makeSuhun(teamColor) {
   const cap = new THREE.Mesh(new THREE.SphereGeometry(0.68, 30, 18, 0, Math.PI * 2, 0, Math.PI * 0.5), m.hair); cap.position.set(0, 0.16, -0.03); cap.scale.set(1.06, 1.0, 1.0); head.add(cap);
   const back = new THREE.Mesh(new THREE.SphereGeometry(0.64, 20, 14), m.hair); back.scale.set(1.04, 0.95, 0.85); back.position.set(0, 0.0, -0.2); head.add(back);
   const bang = new THREE.Mesh(new THREE.SphereGeometry(0.69, 30, 10, Math.PI * 0.5 - 1.25 + Math.PI, 2.5, Math.PI * 0.18, Math.PI * 0.27), m.hair); bang.scale.set(1.04, 1, 1.0); bang.position.set(0, 0.12, 0.0); head.add(bang);   // 눈썹까지 오는 앞머리
-  for (let i = -3; i <= 3; i++) {               // 앞머리 끝 갈라진 결
-    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.13, 6), m.hair); const a = i * 0.32;
-    tip.position.set(Math.sin(a) * 0.68, 0.22, Math.cos(a) * 0.68); tip.rotation.set(Math.PI + 0.25, a, 0); head.add(tip);
-  }
   for (const s of [-1, 1]) {                    // 귀 윗부분 덮는 옆머리
     const side = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 10), m.hair); side.scale.set(0.42, 0.9, 1.15); side.position.set(s * 0.61, 0.12, -0.04); head.add(side);
   }
-  for (const [x, z, r] of [[0.15, 0.25, 0.15], [-0.25, 0.1, 0.12], [0.05, -0.2, 0.14]]) {   // 정수리 부스스한 볼륨
-    const tuft = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), m.hairHi); tuft.position.set(x, 0.72, z); tuft.scale.y = 0.7; head.add(tuft);
+  // ★ 곱슬머리: 머리 전체에 작은 곱슬 덩어리를 촘촘히 (골든 앵글로 고르게 뿌림)
+  const curlGeo = new THREE.SphereGeometry(0.13, 9, 7);
+  const N = 120;
+  for (let i = 0; i < N; i++) {
+    const yN = 1 - (i + 0.5) / N * 1.25, r = Math.sqrt(Math.max(0, 1 - yN * yN)), th = i * 2.39996;
+    const dx = Math.cos(th) * r, dz = Math.sin(th) * r;
+    if (yN < -0.05 && dz > -0.1) continue;            // 얼굴 쪽 아래는 비움
+    if (yN < 0.25 && dz > 0.55 && Math.abs(dx) < 0.62) continue;   // 이마·눈 앞은 비움 (앞머리는 따로)
+    const rnd = (Math.sin(i * 12.9898) * 43758.5453) % 1, R = 0.67 + Math.abs(rnd) * 0.03;
+    const c = new THREE.Mesh(curlGeo, i % 3 ? m.hair : m.hairHi);
+    c.position.set(dx * R * 1.04, 0.16 + yN * R, dz * R - 0.03); c.scale.setScalar(0.72 + Math.abs(rnd) * 0.3); head.add(c);
+  }
+  for (let i = -4; i <= 4; i++) {                     // 곱슬 앞머리 (이마 위 동글동글)
+    const a = i * 0.24, c = new THREE.Mesh(curlGeo, i % 2 ? m.hairHi : m.hair);
+    c.position.set(Math.sin(a) * 0.64, 0.22 + Math.abs(i) * 0.01 + (i % 2) * 0.035, Math.cos(a) * 0.6); c.scale.setScalar(0.85); head.add(c);
   }
   const stars = new THREE.Group(); stars.position.y = 4.4; model.add(stars); stars.visible = false;
   for (let i = 0; i < 4; i++) { const st = new THREE.Mesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshBasicMaterial({ color: '#ffe23a' })); st.position.set(Math.cos(i * Math.PI / 2) * 0.8, 0, Math.sin(i * Math.PI / 2) * 0.8); stars.add(st); }
