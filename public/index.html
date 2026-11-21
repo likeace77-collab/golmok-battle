@@ -3550,7 +3550,7 @@ function frame(nowMs) {
   // HUD
   if (MAP) {
     const me = state.players.find((p) => p.id === myId);
-    const board = state.players.filter((p) => !p.mhp).sort((a, b) => b.k - a.k || a.d - b.d);
+    const board = state.players.filter((p) => BR[p.b]).sort((a, b) => b.k - a.k || a.d - b.d);
     $('board').innerHTML = board.slice(0, W <= 720 ? 5 : 10).map((p) => `<div style="color:${p.id === myId ? '#ffd84a' : '#fff'}">${p.name} ${p.k}킬 ${p.d}데스</div>`).join('');
     for (let i = feed.length - 1; i >= 0; i--) { feed[i].t -= dt; if (feed[i].t <= 0) feed.splice(i, 1); }
     $('feed').innerHTML = feed.map((f) => `<div>${f.text}</div>`).join('');
