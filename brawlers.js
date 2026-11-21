@@ -16,7 +16,7 @@ const BRAWLERS = {
       range: 150, dmg: 1000, ammo: 3, reload: 1.5, cd: 0.45,
     },
     gadgets: [
-      { name: 'AI야? 시키지도 않은 걸 하네', icon: '⚡', desc: '주변 적을 2초 동안 기절시키고 피해를 준다.', range: 260, stun: 2, dmg: 300 },
+      { name: 'AI야? 시키지도 않은 걸 하네', icon: '⚡', desc: '주변 적을 1초 동안 기절시키고 피해를 준다.', range: 260, stun: 1, dmg: 300 },
       { name: '마우스 소환', icon: '🖱️', desc: '마우스 2마리를 소환해 8초 동안 적을 쫓아가 딸깍 공격한다.', count: 2, hp: 1200, speed: 320, dmg: 260, biteCd: 0.6, life: 8, radius: 16 },
     ],
     gadgetCd: 9,
@@ -54,7 +54,7 @@ const BRAWLERS = {
     },
     gadgets: [
       { name: '얘들아 덥지 않니?', icon: '❄️', desc: '에어컨을 18도로 틀어 7초 동안 모든 적 브롤러에게 계속 피해를 준다.', dur: 7, tick: 0.5, dmg: 100 },
-      { name: '펜 내려놓고 여기 보자', icon: '✋', desc: '모든 적 브롤러를 2초 동안 기절시킨다.', stun: 2 },
+      { name: '펜 내려놓고 여기 보자', icon: '✋', desc: '모든 적 브롤러를 1초 동안 기절시킨다.', stun: 1 },
     ],
     gadgetCd: 9,
     super: {
@@ -64,7 +64,7 @@ const BRAWLERS = {
     },
     starPowers: [
       { id: 'sasinga', name: '너 사회성 머리는 하나도 없지? 너 진짜 싸가지 없다.', icon: '😤',
-        desc: '궁극기 조종이 끝나면 그 상대가 2초 동안 기절한다.', stun: 2 },
+        desc: '궁극기 조종이 끝나면 그 상대가 1초 동안 기절한다.', stun: 1 },
       { id: 'board', name: '칠판 부수기', icon: '🧱',
         desc: '공격 시 25% 확률로 칠판이 부서지며 맞은 상대에게 800 추가 피해. 바닥에 파편이 흩뿌려져 계속 남고, 밟고 있는 동안 1초에 300 피해.',
         chance: 0.25, dmg: 800, radius: 95, dps: 300, max: 12 },
@@ -87,8 +87,8 @@ const BRAWLERS = {
     radius: 24, speed: 265, maxHp: 4800,
     attack: {
       name: '백초크', aim: 'dir',
-      desc: '앞쪽 범위의 상대를 끌어와서 0.5초 동안 기절시키고 피해를 준다.',
-      range: 210, half: 0.55, dmg: 1300, stun: 0.5, ammo: 3, reload: 1.6, cd: 0.6,
+      desc: '앞쪽 범위의 상대를 끌어와서 0.25초 동안 기절시키고 피해를 준다.',
+      range: 210, half: 0.55, dmg: 1300, stun: 0.25, ammo: 3, reload: 1.6, cd: 0.6,
     },
     gadgets: [
       { name: '간식 털어먹기', icon: '🍪', desc: '친구의 가방을 털어 얻은 간식을 먹고 체력을 2000 회복한다.', heal: 2000 },
@@ -97,8 +97,8 @@ const BRAWLERS = {
     gadgetCd: 9,
     super: {
       name: '태클', aim: 'line',
-      desc: '상대에게 돌진해서 부딪힌 상대에게 피해를 주고 2.5초 동안 기절시킨다.',
-      need: 4700, range: 470, width: 40, dmg: 1000, stun: 2.5, dashTime: 0.32,
+      desc: '상대에게 돌진해서 부딪힌 상대에게 피해를 주고 1.25초 동안 기절시킨다.',
+      need: 4700, range: 470, width: 40, dmg: 1000, stun: 1.25, dashTime: 0.32,
     },
     starPowers: [
       { id: 'sibi', name: '시비걸기준비과정', icon: '😏',
@@ -137,7 +137,7 @@ const BRAWLERS = {
     super: {
       name: '대가리 박치기', aim: 'line',
       desc: '로켓처럼 대가리로 돌진해서 부딪힌 상대에게 1800 피해. 벽은 넘지 못한다.',
-      need: 4200, range: 520, width: 40, dmg: 1800, stun: 0.6, dashTime: 0.38,
+      need: 4200, range: 520, width: 40, dmg: 1800, stun: 0.3, dashTime: 0.38,
     },
     starPowers: [
       { id: 'daedu', name: '대두', icon: '🗿', desc: '대가리 박치기 피해가 2300으로 늘어나고, 벽을 부수면서 돌진한다.', dmg: 2300 },
@@ -205,9 +205,9 @@ const BRAWLERS = {
     gadgetCd: 10,
     super: {
       name: '아재개그', aim: 'line',
-      desc: '조준한 쪽의 상대에게 랜덤한 아재개그 하나: ① 피아노를 던지면? 어떻게 피아노 — 절대 못 피하는 피아노 1800 ② 민수 당긴수 — 밀었다가 끌어옴 (700 + 800) ③ 참기름이 고소해서 — 3초 감옥에 가둠 (가둔 동안 때릴 수 있음)',
+      desc: '조준한 쪽의 상대에게 랜덤한 아재개그 하나: ① 피아노를 던지면? 어떻게 피아노 — 절대 못 피하는 피아노 1800 ② 민수 당긴수 — 밀었다가 끌어옴 (700 + 800) ③ 참기름이 고소해서 — 1.5초 감옥에 가둠 (가둔 동안 때릴 수 있음)',
       need: 4000, range: 560, width: 70,
-      piano: { dmg: 1800, fall: 0.7 }, pushpull: { push: 220, pushDmg: 700, pullDmg: 800, wait: 0.55 }, jail: { dur: 3 },
+      piano: { dmg: 1800, fall: 0.7 }, pushpull: { push: 220, pushDmg: 700, pullDmg: 800, wait: 0.55 }, jail: { dur: 1.5 },
     },
     starPowers: [
       { id: 'preview', name: '아재개그 미리보기', icon: '🔮', desc: '다음 궁극기에 어떤 아재개그가 나올지 미리 볼 수 있다.' },
@@ -250,7 +250,7 @@ const BRAWLERS = {
     },
     starPowers: [
       { id: 'geoji', name: '거지들', icon: '🪙', desc: '머리뜯기로 우리 팀을 잡을 수 있다. 잡고 있는 팀원은 0.15초마다 75 회복.' },
-      { id: 'economy', name: '경제야 살아라', icon: '📈', desc: '사랑을 했다에 맞은 상대는 2초 동안 기절한다.', stun: 2 },
+      { id: 'economy', name: '경제야 살아라', icon: '📈', desc: '사랑을 했다에 맞은 상대는 1초 동안 기절한다.', stun: 1 },
     ],
     lines: {
       atk: ['머리 내놔!', '잡았다~', '안 놔줘'],
@@ -259,6 +259,16 @@ const BRAWLERS = {
       sup: ['🎵 사랑을 했다~', '🎵 노래 한 곡 갑니다'],
       kill: ['머리숱 정리 완료', '한 곡 더?', 'ㅋㅋ 탈모 조심'],
     },
+  },
+  dojun: {
+    id: 'dojun',
+    name: '편도준',
+    rarity: null,
+    wip: true,               // 디자인만 — 스킬 정해지면 wip 빼기
+    title: '운동도 그림도 만렙',
+    desc: '운동이면 운동, 그림이면 그림. 농구 저지에 머리띠, 귀에는 연필, 옆구리엔 늘 스케치북을 끼고 다닌다.',
+    radius: 24, speed: 270, maxHp: 4600,
+    attack: { name: '준비 중', ammo: 0, range: 0 }, gadgets: [], starPowers: [], super: null,
   },
 };
 

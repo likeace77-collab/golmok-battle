@@ -325,7 +325,7 @@ const SKILLS = {
         const d = Math.hypot(q.x - p.x, q.y - p.y) || 1;
         q.x += ((q.x - p.x) / d) * S.knock; q.y += ((q.y - p.y) / d) * S.knock;
         resolveWalls(room.map, q, q.B.radius);
-        q.stunT = Math.max(q.stunT, 0.4);
+        q.stunT = Math.max(q.stunT, 0.2);
         damage(room, p, q, S.dmg, now); reflectHit(room, p, q, now);
       }
       for (const m of room.mice) if (m.owner !== p.id && inCone(p, a, S.range, S.half, m.x, m.y, m.radius)) m.hp = 0;
@@ -517,7 +517,7 @@ SKILLS.jaeyeol = {
         const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1;
         if (d > range + q.B.radius) continue;
         for (let k = 0; k < knock; k += 8) { const nx = q.x + dx / d * 8, ny = q.y + dy / d * 8; if (hitsWall(room.map, nx, ny, q.B.radius)) break; q.x = nx; q.y = ny; }
-        q.stunT = Math.max(q.stunT, 0.3);
+        q.stunT = Math.max(q.stunT, 0.15);
         damage(room, p, q, dmg, now, 'shoulder'); hits.push(q.id);
       }
       room.fx.push({ type: 'shoulder', id: p.id, x: p.x, y: p.y, r: range, hits });
@@ -586,7 +586,7 @@ SKILLS.jinho = {
         if (!inCone(p, a, kr, S.kickHalf, q.x, q.y, q.B.radius)) continue;
         const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1;
         for (let k = 0; k < S.knock; k += 8) { const nx = q.x + dx / d * 8, ny = q.y + dy / d * 8; if (hitsWall(room.map, nx, ny, q.B.radius)) break; q.x = nx; q.y = ny; }
-        q.stunT = Math.max(q.stunT, 0.5);
+        q.stunT = Math.max(q.stunT, 0.25);
         damage(room, p, q, S.dmg, t, 'kick'); hits.push(q.id);
       }
       room.fx.push({ type: 'kick', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: kr, hits });
@@ -662,7 +662,7 @@ SKILLS.hyeonwoo = {
     const tid = target.id;
     const T = () => { const q = room.players.get(tid); return q && !q.dead && !q.out ? q : null; };
     if (joke.id === 'piano') {        // 무조건 맞는 피아노 (따라감)
-      later(room, S.piano.fall, () => { const q = T(); if (!q) return; damage(room, p, q, S.piano.dmg, Date.now() / 1000, 'piano'); q.stunT = Math.max(q.stunT, 0.4); room.fx.push({ type: 'pianoHit', tid, x: q.x, y: q.y }); });
+      later(room, S.piano.fall, () => { const q = T(); if (!q) return; damage(room, p, q, S.piano.dmg, Date.now() / 1000, 'piano'); q.stunT = Math.max(q.stunT, 0.2); room.fx.push({ type: 'pianoHit', tid, x: q.x, y: q.y }); });
     } else if (joke.id === 'pushpull') {   // 밀었다가 → 끌어오기
       const q = target, dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1;
       for (let k = 0; k < S.pushpull.push; k += 8) { const nx = q.x + dx / d * 8, ny = q.y + dy / d * 8; if (hitsWall(room.map, nx, ny, q.B.radius)) break; q.x = nx; q.y = ny; }
