@@ -322,11 +322,11 @@ const BRAWLERS = {
     desc: '키가 작고 동글동글한 학생. 몸을 공처럼 말고 데굴데굴 굴러다니며 앞을 막는 상대를 깔아뭉갠다. 오래 구를수록 빨라지고 더 아프다. 목에 늘 빅맥을 끼고 다닌다.',
     radius: 25, speed: 255, maxHp: 5800,
     // 구르기: 움직이는 동안 속도 게이지(0~1)가 차오름 → 이동 속도·깔아뭉개기 피해 ↑. 벽에 부딪히거나 급하게 꺾거나 멈추면 줄어듦
-    roll: { fill: 1.1, minMul: 0.95, maxMul: 1.9, turnFast: 10, turnSlow: 3.8, wallKeep: 0.3, hitKeep: 0.55, stopLose: 2.2, supFull: 40 },
+    roll: { fill: 1.1, minMul: 0.9, maxMul: 1.7, turnFast: 10, turnSlow: 3.8, wallKeep: 0.3, hitKeep: 0.55, stopLose: 2.2, supFull: 40 },
     attack: {
       name: '깔아뭉개기', aim: 'self',
-      desc: '굴러다니며 부딪힌 상대를 깔아뭉갠다 (빠를수록 700~1600 피해). 버튼을 누르면 탄 1개로 순간 가속 — 1초 동안 최고 속도 + 피해 2배.',
-      range: 80, minDmg: 700, maxDmg: 1600, hitCd: 0.55, push: 40, boost: 1, boostMul: 1.3, ammo: 2, reload: 2.2, cd: 0.3,
+      desc: '굴러다니며 부딪힌 상대를 깔아뭉갠다 (빠를수록 550~1200 피해). 버튼을 누르면 탄 1개로 순간 가속 — 1초 동안 최고 속도 + 피해 2배 (최대 2400).',
+      range: 80, minDmg: 550, maxDmg: 1200, hitCd: 0.55, push: 40, boost: 1, boostMul: 1.3, ammo: 2, reload: 2.2, cd: 0.3,
     },
     super: {
       name: '수학 블래스터', aim: 'dir',
