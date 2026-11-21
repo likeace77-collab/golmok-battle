@@ -299,7 +299,7 @@ const BRAWLERS = {
     gadgetCd: 9,
     starPowers: [
       { id: 'aura', name: '아우라 파밍', icon: '🔮', desc: '시간이 지날수록, 그리고 상대를 처치할 때마다 아우라 게이지가 차오른다. 가득 차면 아우라가 폭발해 주변 적에게 1972 피해를 주고 6초 동안 모아이 상태가 된다.', fill: 50, perKill: 0.25, range: 320, dmg: 1972, moai: 6 },
-      { id: 'slowhit', name: '끈적한 손', icon: '🐌', desc: '수플렉스와 물감 발사에 맞은 상대는 1초 동안 느려진다.', dur: 1, mul: 0.6 },
+      { id: 'slowhit', name: '슬로우', icon: '🐌', desc: '수플렉스와 물감 발사에 맞은 상대는 1초 동안 느려진다.', dur: 1, mul: 0.6 },
     ],
     moai: { dmgMul: 1.8, takeMul: 0.4 },
     lines: {
