@@ -3581,6 +3581,8 @@ function updateLabel(v, p) {
   L.fb.style.display = hasFear ? 'block' : 'none';
   if (hasFear) { const sc = p.scared > 0; L.fb.classList.toggle('scared', sc); L.fear.style.width = (sc ? p.scared / BR[p.b].trait.dur : p.fear) * 100 + '%'; }
   L.hp.style.width = (100 * p.hp / (p.mhp || (BR[p.b] ? BR[p.b].maxHp : p.hp || 1))) + '%';
+  { const n = Math.max(1, ((bOf(p) || {}).attack || {}).ammo || 3), box = L.d.querySelector('.am');      // 탄 칸 수 = 그 브롤러 탄 수 (정수호 2칸 등)
+    if (box && L.am.length !== n) { box.innerHTML = '<i><b></b></i>'.repeat(n); L.am = [...box.querySelectorAll('b')]; } }
   L.am.forEach((b, i) => { const f = Math.max(0, Math.min(1, p.ammo - i)); b.style.width = f * 100 + '%'; b.style.background = f >= 1 ? '#ffb02e' : '#8a6a32'; });
   if (p.say !== L.lastSay) { L.lastSay = p.say; if (p.say) { L.bub.textContent = p.say; L.bub.style.display = 'block'; L.bub.style.animation = 'none'; L.bub.offsetWidth; L.bub.style.animation = ''; } else L.bub.style.display = 'none'; }
 }
