@@ -1040,8 +1040,9 @@ function startRound(room) {
 // 트로피: 로그인한 사람만 계정에 저장
 function giveTrophies(p, n, field) {
   if (!p || p.isBot || !p.userKey) return;
-  const t = auth.addTrophies(p.userKey, n, field);
-  if (t != null) io.to(p.id).emit('trophy', { total: t, add: n });
+  const bid = p.B && p.B.id;
+  const t = auth.addTrophies(p.userKey, n, field, bid);
+  if (t != null) io.to(p.id).emit('trophy', { total: t, add: n, bid, bt: auth.brawlerTrophies(p.userKey) });
 }
 function endRound(room, result) {
   room.phase = 'end'; room.phaseT = 6; room.result = result;

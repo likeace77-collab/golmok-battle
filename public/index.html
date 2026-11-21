@@ -67,6 +67,8 @@
   .bcard .bn { position: absolute; left: 0; right: 0; bottom: 0; padding: 4px 0 5px; background: rgba(0,0,0,.55); text-align: center; font-weight: 900; font-size: 15px; }
   .bcard .rr { position: absolute; left: 6px; top: 5px; font-size: 11px; font-weight: 900; color: #111; background: rgba(255,255,255,.7); padding: 1px 6px; border-radius: 6px; }
   .bcard .wipb { position: absolute; left: 0; right: 0; top: 50%; text-align: center; font-weight: 900; font-size: 12px; background: rgba(0,0,0,.6); padding: 3px 0; }
+  .bcard .btr { position: absolute; right: 6px; top: 34px; font-size: 13px; font-weight: 900; color: #ffd84a; background: rgba(0,0,0,.6); padding: 1px 6px; border-radius: 8px; }
+  #bSort { font-size: 13px; font-weight: 900; padding: 6px 10px; border: 3px solid #000; border-radius: 10px; background: linear-gradient(#ffe36b, #ffb31f); box-shadow: 0 3px 0 #000; cursor: pointer; }
   .bcard.sel { outline: 4px solid #fff; outline-offset: -8px; }
   .bcard .ck { position: absolute; right: 6px; top: 4px; width: 26px; height: 26px; border-radius: 50%; background: #3ce07f; border: 3px solid #000; color: #000; font-weight: 900; display: none; align-items: center; justify-content: center; font-size: 15px; }
   .bcard.sel .ck { display: flex; }
@@ -278,7 +280,7 @@
     <div class="lb panel stroke" id="openPlayers"><span class="ic">👥</span>플레이어</div>
     <div class="lb panel stroke" id="openHelp"><span class="ic">❔</span>조작법</div>
   </div>
-  <div id="showName" class="stroke"><span class="rbadge" id="sRar">전설</span><span class="role" id="sRole" style="display:none"></span><div class="nm2" id="sName">정보쌤</div><div class="tt" id="sTitle"></div><div id="sLoad"></div></div>
+  <div id="showName" class="stroke"><span class="rbadge" id="sRar">전설</span><span class="role" id="sRole" style="display:none"></span><span class="role" id="sTro" style="display:none;background:linear-gradient(#ffe36b,#ffb31f);color:#3a2400"></span><div class="nm2" id="sName">정보쌤</div><div class="tt" id="sTitle"></div><div id="sLoad"></div></div>
   <div id="status" class="stroke"></div>
   <div id="partyBox" class="panel stroke"></div>
   <div id="playWrap">
@@ -287,7 +289,7 @@
   </div>
 </div>
 <div id="bscreen">
-  <header><button class="back" id="bBack">◀</button><h2 class="stroke">브롤러</h2><div class="cnt stroke" id="bCnt"></div></header>
+  <header><button class="back" id="bBack">◀</button><h2 class="stroke">브롤러</h2><div class="cnt stroke" id="bCnt"></div><button id="bSort">희귀도순</button></header>
   <div id="bgrid"></div>
 </div>
 <div id="mscreen">
@@ -2464,6 +2466,7 @@ function refreshLobby() {
   $('sRar').textContent = r.label; $('sRar').style.background = `linear-gradient(${r.c1}, ${r.c2})`;
   $('sRole').style.display = b.role ? 'inline-block' : 'none'; if (b.role) { const r = ROLES[b.role] || ['⭐', '#5aa0ff', '#2a5fd0']; $('sRole').textContent = r[0] + ' ' + b.role; $('sRole').style.background = `linear-gradient(${r[1]}, ${r[2]})`; }
   $('sName').textContent = b.name; $('sTitle').textContent = '"' + b.title + '"';
+  $('sTro').style.display = account ? 'inline-block' : 'none'; $('sTro').textContent = '🏆 ' + btOf(b.id);
   $('sName').style.color = r.c1;
   if (b.starPowers && META.gears.length) {
     const lo = getLO(b.id);
@@ -2476,8 +2479,14 @@ function refreshLobby() {
   setShowcase(b.id);
   $('playBtn').textContent = party && !amLeader() ? '방장 대기' : '플레이';
 }
+// 브롤러별 트로피 (계정 있을 때만)
+const btOf = (id) => (account && account.bt && account.bt[id]) || 0;
+let bSortMode = (() => { try { return localStorage.getItem('bSort') || 'rar'; } catch (e) { return 'rar'; } })();
 function buildGrid() {
-  const ids = Object.keys(BR);
+  let ids = Object.keys(BR);
+  if (bSortMode === 'tro') ids = ids.slice().sort((a, b) => btOf(b) - btOf(a));
+  $('bSort').textContent = bSortMode === 'tro' ? '🏆 최대 트로피순' : '💎 기본순';
+  $('bSort').onclick = () => { bSortMode = bSortMode === 'tro' ? 'rar' : 'tro'; try { localStorage.setItem('bSort', bSortMode); } catch (e) {} buildGrid(); };
   $('bCnt').textContent = `${ids.filter((i) => !BR[i].wip).length} / ${ids.length}`;
   const g = $('bgrid'); g.innerHTML = '';
   for (const id of ids) {
@@ -2485,7 +2494,7 @@ function buildGrid() {
     const c = document.createElement('div');
     c.className = 'bcard' + (id === selected ? ' sel' : '');
     c.style.background = `linear-gradient(${r.c1}, ${r.c2})`;
-    c.innerHTML = `<img src="${portrait(id)}"><span class="rr">${r.label}</span><span class="ck">✓</span><div class="bn stroke">${b.name}</div>` + (b.wip ? '<div class="wipb">스킬 준비 중</div>' : '');
+    c.innerHTML = `<img src="${portrait(id)}"><span class="rr">${r.label}</span><span class="ck">✓</span>${b.wip || !account ? '' : `<span class="btr">🏆${btOf(id)}</span>`}<div class="bn stroke">${b.name}</div>` + (b.wip ? '<div class="wipb">스킬 준비 중</div>' : '');
     c.onclick = () => openDetail(id);
     g.appendChild(c);
   }
@@ -2518,6 +2527,7 @@ function openDetail(id) {
     <div class="info">
       <span class="rbadge" style="background:linear-gradient(${r.c1}, ${r.c2})">${r.label}</span>${roleBadge(b)}
       <div class="dn stroke">${b.name}</div><div class="dq">"${b.title}"</div>
+      ${account ? `<div class="dq" style="color:#ffd84a;font-weight:900">🏆 트로피 ${btOf(id)}</div>` : ''}
       <div class="dd">${b.desc}</div>
       <div class="stats"><div>❤️ 체력 ${b.maxHp}</div><div>👟 속도 ${b.speed}</div><div>🔋 탄 ${b.attack.ammo}</div></div>
       ${b.forms ? Object.values(b.forms).map((f) => `<div class="sec">${f.formName} — 체력 ${f.maxHp}</div>` + sk('💢', '#ffd84a', '기본공격', f.attack.name, `${f.attack.desc} · 피해 ${f.attack.dmg}`) + sk('🔥', '#ff7a2f', '궁극기', f.super.name, f.super.desc)).join('') : `
@@ -2679,7 +2689,7 @@ function connect() {
   });
   socket.on('disconnect', () => addFeed('서버 연결 끊김 — 새로고침 해주세요', 999));
   socket.on('trophy', (t) => {
-    trophies = t.total; if (account) account.trophies = t.total;
+    trophies = t.total; if (account) { account.trophies = t.total; if (t.bt) account.bt = t.bt; }
     const el = $('trPop'); el.textContent = `🏆 +${t.add}`; el.style.transition = 'none'; el.style.top = '34%'; el.style.opacity = 1;
     requestAnimationFrame(() => { el.style.transition = 'opacity .6s 0.6s, top 1.2s'; el.style.top = '26%'; el.style.opacity = 0; });
   });

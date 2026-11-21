@@ -70,16 +70,26 @@ function userFromToken(token) {
   const u = db.users[s.user];
   return u ? { key: s.user, u } : null;
 }
-const publicUser = (u) => ({ name: u.name, trophies: u.trophies, stats: u.stats, prefs: u.prefs || {} });
+const publicUser = (u) => (fixBt(u), { name: u.name, trophies: u.trophies, bt: u.bt, stats: u.stats, prefs: u.prefs || {} });
 
 // ── 트로피 (서버가 직접 지급) ──
-function addTrophies(key, n, field) {
+// 브롤러별 트로피(bt). 총 트로피 = 예전 트로피(legacy) + 브롤러별 합
+function fixBt(u) {
+  if (!u.bt) { u.bt = {}; u.legacy = u.trophies || 0; }
+  return u;
+}
+const totalOf = (u) => (u.legacy || 0) + Object.values(u.bt || {}).reduce((a, v) => a + v, 0);
+function addTrophies(key, n, field, bid) {
   const u = db.users[key]; if (!u) return null;
-  u.trophies = Math.max(0, (u.trophies || 0) + n);
+  fixBt(u);
+  if (bid) u.bt[bid] = Math.max(0, (u.bt[bid] || 0) + n);
+  else u.legacy = Math.max(0, (u.legacy || 0) + n);
+  u.trophies = totalOf(u);
   if (field) u.stats[field] = (u.stats[field] || 0) + 1;
   save();
   return u.trophies;
 }
+const brawlerTrophies = (key) => (db.users[key] ? fixBt(db.users[key]).bt : {});
 function addStat(key, field) { const u = db.users[key]; if (u) { u.stats[field] = (u.stats[field] || 0) + 1; save(); } }
 
 // ── 로그인 시도 제한 (IP당 1분에 10번) ──
@@ -144,4 +154,4 @@ function allUsers() {
   }));
 }
 
-module.exports = { load, routes, userFromToken, addTrophies, addStat, trophiesOf, allUsers, flush };
+module.exports = { load, routes, userFromToken, addTrophies, brawlerTrophies, addStat, trophiesOf, allUsers, flush };
