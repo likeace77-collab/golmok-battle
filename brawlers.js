@@ -294,14 +294,14 @@ const BRAWLERS = {
     },
     gadgets: [
       { name: '은밀하게', icon: '🥷', desc: '폼을 바꾼다. 미술폼이 되면 5초 동안 은신, 운동폼이 되면 4초 동안 이동 속도 50% 증가.', invis: 5, fast: 4, mul: 1.5 },
-      { name: '모아이🗿🗿', icon: '🗿', desc: '폼을 바꾸면서 3초 동안 모아이 상태: 주는 피해 1.8배, 받는 피해 60% 감소.', dur: 3 },
+      { name: '모아이🗿🗿', icon: '🗿', desc: '폼을 바꾸면서 3초 동안 모아이 상태: 주는 피해 1.4배, 받는 피해 35% 감소.', dur: 3 },
     ],
     gadgetCd: 9,
     starPowers: [
       { id: 'aura', name: '아우라 파밍', icon: '🔮', desc: '시간이 지날수록, 그리고 상대를 처치할 때마다 아우라 게이지가 차오른다. 가득 차면 아우라가 폭발해 주변 적에게 1972 피해를 주고 6초 동안 모아이 상태가 된다.', fill: 50, perKill: 0.25, range: 320, dmg: 1972, moai: 6 },
       { id: 'slowhit', name: '슬로우', icon: '🐌', desc: '수플렉스와 물감 발사에 맞은 상대는 1초 동안 느려진다.', dur: 1, mul: 0.6 },
     ],
-    moai: { dmgMul: 1.8, takeMul: 0.4 },
+    moai: { dmgMul: 1.4, takeMul: 0.65 },
     lines: {
       atk: ['넘어간다!', '수플렉스~', '한 판 붙자'],
       atkArt: ['물감 받아라', '작품 완성~', '색칠 공부 시간'],

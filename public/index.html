@@ -2489,7 +2489,7 @@ function openDetail(id) {
       ${sk('💢', '#ffd84a', '기본공격', b.attack.name, `${b.attack.desc} · 피해 ${b.attack.dmg}`)}
       ${b.super ? sk('🔥', '#ff7a2f', '궁극기', b.super.name, b.super.desc + (b.super.dmg ? ` · 피해 ${b.super.dmg}` : '')) : ''}`}
       ${b.trait ? sk(b.trait.icon, '#8fd3ff', '특성', b.trait.name, b.trait.desc) : ''}
-      <div class="sec">🔧 가젯 — 1개 선택 (더블 가젯 모드에선 둘 다)</div>
+      <div class="sec">🔧 가젯 — 1개 선택 (더블 가젯 모드에선 둘 다) · ⏱️ 쿨타임 ${b.gadgetCd}초</div>
       ${b.gadgets.map((g, i) => g.wip ? sk(g.icon, '#888', '가젯', g.name, g.desc) : sk(g.icon, '#4fd2ff', '가젯', g.name, g.desc, { k: 'g', v: i, on: lo.g === i })).join('')}
       <div class="sec">⭐ 스타파워 — 1개 선택</div>
       ${(b.starPowers || []).map((x) => x.wip ? sk(x.icon, '#888', '스타파워', x.name, x.desc) : sk(x.icon, '#ffd84a', '스타파워', x.name, x.desc, { k: 'sp', v: x.id, on: lo.sp === x.id })).join('')}
