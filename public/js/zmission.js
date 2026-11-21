@@ -38,7 +38,7 @@ const ZMission = (() => {
     const dirs = Object.keys(ARROWS);
     const seq = Array.from({ length: 4 }, () => dirs[Math.floor(Math.random() * 4)]);
     let at = 0;
-    const LIMIT = 6000, t0 = performance.now();
+    const LIMIT = 8000, t0 = performance.now();
     stage.innerHTML = `<p class="zm-help">화살표 방향으로 화면을 밀어라</p>
       <div class="zm-seq">${seq.map((d, i) => `<span data-i="${i}">${ARROWS[d]}</span>`).join('')}</div>
       <div class="zm-pad">${['up', 'left', 'right', 'down'].map((d) => `<button data-dir="${d}" aria-label="${d}">${ARROWS[d]}</button>`).join('')}</div>`;
@@ -49,29 +49,36 @@ const ZMission = (() => {
       if (at === seq.length) finish(true);
     };
     mark();
-    let sx = 0, sy = 0, down = false;
-    const pd = (e) => { if (e.target.closest('button')) return; down = true; sx = e.clientX; sy = e.clientY; };
-    const pu = (e) => {
+    // 태블릿·폰마다 터치 이벤트가 달라서: 포인터 + 터치 둘 다 받고, 취소(pointercancel)돼도 마지막 위치로 판정
+    let sx = 0, sy = 0, lx = 0, ly = 0, down = false, lastSwipe = 0;
+    const start = (x, y, t) => { if (t?.closest?.('button')) return; down = true; sx = lx = x; sy = ly = y; };
+    const move = (x, y) => { if (down) { lx = x; ly = y; } };
+    const end = () => {
       if (!down) return; down = false;
-      const dx = e.clientX - sx, dy = e.clientY - sy;
-      if (Math.max(Math.abs(dx), Math.abs(dy)) < 30) return;
+      const dx = lx - sx, dy = ly - sy;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+      const now = performance.now(); if (now - lastSwipe < 120) return; lastSwipe = now; // 포인터·터치가 같이 와도 한 번만
       input(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
     };
+    const pd = (e) => start(e.clientX, e.clientY, e.target), pm = (e) => move(e.clientX, e.clientY), pu = (e) => { move(e.clientX, e.clientY); end(); };
+    const ts = (e) => { const t = e.changedTouches[0]; if (t) start(t.clientX, t.clientY, e.target); }, tm = (e) => { const t = e.changedTouches[0]; if (t) move(t.clientX, t.clientY); if (down) e.preventDefault(); }, te = (e) => { const t = e.changedTouches[0]; if (t) move(t.clientX, t.clientY); end(); };
     const kd = (e) => { if (KEYS[e.key]) { e.preventDefault(); input(KEYS[e.key]); } };
     const box = stage.closest('.zm');
-    box.addEventListener('pointerdown', pd); box.addEventListener('pointerup', pu); addEventListener('keydown', kd);
+    const L = [['pointerdown', pd], ['pointermove', pm], ['pointerup', pu], ['pointercancel', end], ['touchstart', ts], ['touchmove', tm], ['touchend', te], ['touchcancel', end]];
+    L.forEach(([ev, f]) => box.addEventListener(ev, f, { passive: ev !== 'touchmove' }));
+    addEventListener('keydown', kd);
     stage.querySelectorAll('[data-dir]').forEach((b) => { b.onclick = () => input(b.dataset.dir); });
     const timer = setInterval(() => {
       const p = (performance.now() - t0) / LIMIT;
       bar.style.width = `${Math.max(0, 1 - p) * 100}%`;
       if (p >= 1) finish(false);
     }, 50);
-    cleanups.push(() => { clearInterval(timer); box.removeEventListener('pointerdown', pd); box.removeEventListener('pointerup', pu); removeEventListener('keydown', kd); });
+    cleanups.push(() => { clearInterval(timer); L.forEach(([ev, f]) => box.removeEventListener(ev, f)); removeEventListener('keydown', kd); });
   }
 
   // 줄어드는 고리가 가운데 원에 겹칠 때 눌러라. 4번 중 3번 성공
   function rhythm(stage, bar, finish, cleanups) {
-    const BEATS = 4, GAP = 1050, SHRINK = 900, WINDOW = 150;
+    const BEATS = 4, GAP = 1100, SHRINK = 900, WINDOW = 220; // 태블릿 터치 지연까지 봐서 넉넉하게
     const t0 = performance.now() + 500;
     let hits = 0, judged = 0;
     const hitTimes = Array.from({ length: BEATS }, (_, i) => t0 + i * GAP + SHRINK);
@@ -92,13 +99,16 @@ const ZMission = (() => {
       if (judged - hits > 1) return finish(false);
       if (judged === BEATS) finish(hits >= 3);
     };
-    const tap = () => {
-      const now = performance.now();
+    let lastTap = 0;
+    const tap = (e) => {
+      const now = e && e.timeStamp > 1 && e.timeStamp <= performance.now() + 5 ? e.timeStamp : performance.now(); // 실제로 누른 순간 (화면이 늦게 처리해도)
+      if (now - lastTap < 90) return; lastTap = now;
       const i = hitTimes.findIndex((t, j) => !used.has(j) && Math.abs(now - t) < GAP / 2);
       if (i >= 0) judge(i, Math.abs(now - hitTimes[i]) <= WINDOW);
     };
-    drum.addEventListener('pointerdown', (e) => { e.preventDefault(); tap(); });
-    const kd = (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); tap(); } };
+    drum.addEventListener('pointerdown', (e) => { e.preventDefault(); tap(e); });
+    drum.addEventListener('touchstart', (e) => { e.preventDefault(); tap(e); }, { passive: false }); // 포인터 이벤트가 늦거나 안 오는 기기
+    const kd = (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); tap(e); } };
     addEventListener('keydown', kd);
     let raf = 0;
     const loop = (now) => {
