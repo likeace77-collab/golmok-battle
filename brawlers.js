@@ -48,8 +48,8 @@ const BRAWLERS = {
     desc: '핑크색 옷에 털가죽 잠바, 큰 나무주걱을 든 수학 선생님. 교실 전체를 얼려버리고 학생을 마음대로 조종한다.',
     radius: 28, speed: 240, maxHp: 5400,
     attack: {
-      name: '주걱 스매쉬', aim: 'dir',
-      desc: '큰 나무주걱을 조금 느리게 휘둘러 앞쪽 부채꼴 범위에 강한 피해를 준다.',
+      name: '너 등신이냐?', aim: 'dir',
+      desc: '"너 등신이냐?" 큰 나무주걱을 조금 느리게 휘둘러 앞쪽 부채꼴 범위에 강한 피해를 준다.',
       range: 190, half: 1.0, dmg: 1700, ammo: 3, reload: 1.8, cd: 0.6, windup: 0.18, knock: 40,
     },
     gadgets: [
@@ -58,7 +58,7 @@ const BRAWLERS = {
     ],
     gadgetCd: 9,
     super: {
-      name: '너 등신이냐?', aim: 'line',
+      name: '난 너네 생각을 다 읽을 수 있어', aim: 'line',
       desc: '조준한 방향의 첫 번째 상대를 5초 동안 조종한다. 조종하는 동안 그 상대의 공격·가젯·궁극기를 대신 쓸 수 있다.',
       need: 4800, range: 460, width: 45, dur: 5,
     },
@@ -70,10 +70,10 @@ const BRAWLERS = {
         chance: 0.25, dmg: 800, radius: 95, dps: 300, max: 12 },
     ],
     lines: {
-      atk: ['주걱 맛 좀 볼래?', '조용히 해!', '집중 안 하지?'],
+      atk: ['너 등신이냐?', '너 등신이냐??', '너… 등신이냐?'],
       g1: ['얘들아 덥지 않니?', '에어컨 18도~'],
       g2: ['펜 내려놓고 여기 보자!'],
-      sup: ['너 등신이냐?', '너 등신이냐??'],
+      sup: ['난 너네 생각을 다 읽을 수 있어', '다 보여~ 너네 생각'],
       kill: ['숙제 두 배!', '나가서 손 들고 있어', '이것도 못 풀어?'],
     },
   },
@@ -264,11 +264,53 @@ const BRAWLERS = {
     id: 'dojun',
     name: '편도준',
     rarity: null,
-    wip: true,               // 디자인만 — 스킬 정해지면 wip 빼기
+    role: '데미지딜러',
     title: '운동도 그림도 만렙',
-    desc: '운동이면 운동, 그림이면 그림. 농구 저지에 머리띠, 귀에는 연필, 옆구리엔 늘 스케치북을 끼고 다닌다.',
-    radius: 24, speed: 270, maxHp: 4600,
-    attack: { name: '준비 중', ammo: 0, range: 0 }, gadgets: [], starPowers: [], super: null,
+    desc: '운동이면 운동, 그림이면 그림. 카제처럼 폼이 두 개! 🏀 운동폼은 튼튼한 근접 레슬러, 🎨 미술폼은 약하지만 아픈 원거리 화가. 가젯으로 폼을 바꾼다.',
+    radius: 24, speed: 270,
+    // 기본값 = 운동폼. forms[폼]이 덮어씀 (서버·클라 모두 같은 규칙)
+    maxHp: 5800,
+    attack: {
+      name: '수플렉스', aim: 'dir',
+      desc: '앞의 상대를 업어 쳐서 뒤로 넘기며 1200 피해.',
+      range: 150, half: 0.7, dmg: 1200, ammo: 3, reload: 1.4, cd: 0.55,
+    },
+    super: {
+      name: '동기부여', aim: 'self',
+      desc: '10초 동안 주변 팀원과 나의 이동 속도 50% 증가, 주변 상대는 25% 감소.',
+      need: 3800, range: 560, dur: 10, up: 1.5, down: 0.75,
+    },
+    forms: {
+      sport: {
+        form: 'sport', formName: '🏀 운동폼', maxHp: 5800,
+        attack: { name: '수플렉스', aim: 'dir', desc: '앞의 상대를 업어 쳐서 뒤로 넘기며 1200 피해.', range: 150, half: 0.7, dmg: 1200, ammo: 3, reload: 1.4, cd: 0.55 },
+        super: { name: '동기부여', aim: 'self', desc: '10초 동안 주변 팀원과 나의 이동 속도 50% 증가, 주변 상대는 25% 감소.', need: 3800, range: 560, dur: 10, up: 1.5, down: 0.75 },
+      },
+      art: {
+        form: 'art', formName: '🎨 미술폼', maxHp: 3400,
+        attack: { name: '물감 발사', aim: 'lob', desc: '물감을 멀리 던져 넓은 범위에 1300 피해, 맞은 상대는 화면 일부가 물감으로 가려진다.', range: 620, lobR: 120, dmg: 1300, blind: 2.5, ammo: 3, reload: 1.9, cd: 0.6 },
+        super: { name: '종이 감옥', aim: 'line', desc: '조준한 쪽 첫 상대를 종이로 3초 동안 틀어막는다. 종이가 점점 조여 오며 누르고 찔러 총 1100 피해.', need: 3800, range: 600, width: 45, dur: 3, dmg: 1100, ticks: 4 },
+      },
+    },
+    gadgets: [
+      { name: '은밀하게', icon: '🥷', desc: '폼을 바꾼다. 미술폼이 되면 5초 동안 은신, 운동폼이 되면 4초 동안 이동 속도 50% 증가.', invis: 5, fast: 4, mul: 1.5 },
+      { name: '모아이🗿🗿', icon: '🗿', desc: '폼을 바꾸면서 3초 동안 모아이 상태: 주는 피해 1.8배, 받는 피해 60% 감소.', dur: 3 },
+    ],
+    gadgetCd: 9,
+    starPowers: [
+      { id: 'aura', name: '아우라 파밍', icon: '🔮', desc: '시간이 지날수록, 그리고 상대를 처치할 때마다 아우라 게이지가 차오른다. 가득 차면 아우라가 폭발해 주변 적에게 1972 피해를 주고 6초 동안 모아이 상태가 된다.', fill: 50, perKill: 0.25, range: 320, dmg: 1972, moai: 6 },
+      { id: 'slowhit', name: '끈적한 손', icon: '🐌', desc: '수플렉스와 물감 발사에 맞은 상대는 1초 동안 느려진다.', dur: 1, mul: 0.6 },
+    ],
+    moai: { dmgMul: 1.8, takeMul: 0.4 },
+    lines: {
+      atk: ['넘어간다!', '수플렉스~', '한 판 붙자'],
+      atkArt: ['물감 받아라', '작품 완성~', '색칠 공부 시간'],
+      g1: ['쉿…', '폼 체인지!'],
+      g2: ['🗿🗿🗿', '모아이 모드'],
+      sup: ['가자!!! 할 수 있어!', '달려!! 동기부여!'],
+      supArt: ['종이 감옥!', '갇혀라~'],
+      kill: ['그림 같은 승리', 'GG', '🗿'],
+    },
   },
 };
 

@@ -149,12 +149,21 @@ const hasSP = (p, sp) => p.lo.sp === sp;
 const SP = (p, id) => p.B.starPowers.find((s) => s.id === id);
 const jjang = (p) => hasSP(p, 'jjang') && p.hp >= p.B.maxHp;     // 김준후 스파2: 풀피 버프
 const SPEED_MUL = 0.85;   // 전체 이동속도 (느리게)
-const speedOf = (p) => p.B.speed * SPEED_MUL * (has(p, 'speed') ? 1.1 : 1) * (jjang(p) ? SP(p, 'jjang').speedMul : 1) * (p.flailT > 0 ? 1.5 : 1) * (p.sprintT > 0 ? p.B.gadgets[0].mul : 1) * (p.isBot && !p.home ? BOT.speed : 1);
+// 편도준처럼 폼이 있는 브롤러: p.B = 기본 + 폼 덮어쓰기
+const FORM_CACHE = {};
+function formB(id, f) { const k = id + ':' + f; return FORM_CACHE[k] || (FORM_CACHE[k] = { ...BRAWLERS[id], ...BRAWLERS[id].forms[f] }); }
+function setForm(p, f) {
+  const ratio = p.hp / p.B.maxHp;
+  p.form = f; p.B = formB(p.B.id, f);
+  p.hp = Math.max(1, Math.round(ratio * p.B.maxHp)); p.ammo = Math.min(p.ammo, p.B.attack.ammo);
+}
+const speedOf = (p) => (p.spdUpT > 0 ? p.spdUpMul || 1.5 : 1) * (p.slowT > 0 ? p.slowMul || 0.6 : 1) * p.B.speed * SPEED_MUL * (has(p, 'speed') ? 1.1 : 1) * (jjang(p) ? SP(p, 'jjang').speedMul : 1) * (p.flailT > 0 ? 1.5 : 1) * (p.sprintT > 0 ? p.B.gadgets[0].mul : 1) * (p.isBot && !p.home ? BOT.speed : 1);
 function resetBody(room, p, slot) {
+  if (BRAWLERS[p.B.id] && BRAWLERS[p.B.id].forms) { p.form = 'sport'; p.B = formB(p.B.id, 'sport'); }   // 부활하면 운동폼
   const s = spawnPoint(room, p, slot);
   Object.assign(p, {
     x: s.x, y: s.y, hp: p.B.maxHp, dead: false, ammo: p.B.attack.ammo, stunT: 0, frozenT: 0, acT: 0,
-    rf: 0, gems: 0, shield: 0, fullT: 0, respawnT: 0, input: { mx: 0, my: 0 }, aw: false, dash: null, noAtkT: 0, flailT: 0, jailT: 0, teths: [], sprintT: 0,   // 쫄 게이지는 부활해도 유지
+    rf: 0, gems: 0, shield: 0, fullT: 0, respawnT: 0, input: { mx: 0, my: 0 }, aw: false, dash: null, noAtkT: 0, flailT: 0, jailT: 0, teths: [], sprintT: 0, spdUpT: 0, slowT: 0, invT: 0, moaiT: 0,   // 쫄 게이지는 부활해도 유지
   });
   releaseCtrl(room, p, false);
 }
@@ -186,6 +195,9 @@ function damage(room, attacker, target, dmg, now, kind) {
   if (attacker && attacker !== target && !isEnemy(room, attacker, target)) return;
   if (attacker && has(attacker, 'dmg') && attacker.hp <= attacker.B.maxHp * 0.5) dmg = Math.round(dmg * 1.15);
   if (attacker && attacker !== target && jjang(attacker)) dmg = Math.round(dmg * SP(attacker, 'jjang').dmgMul);
+  if (attacker && attacker !== target && attacker.moaiT > 0) dmg = Math.round(dmg * attacker.B.moai.dmgMul);      // 🗿 모아이: 피해 ↑
+  if (target.moaiT > 0 && kind !== 'gas') dmg = Math.round(dmg * target.B.moai.takeMul);                         // 🗿 모아이: 받는 피해 ↓
+  if (target.invT > 0) { target.invT = 0; room.fx.push({ type: 'reveal', id: target.id, x: target.x, y: target.y }); }   // 맞으면 은신 풀림
   // 김준후 특성 '쫄': 맞을 때마다 쫄 게이지 ↑ → 다 차면 10초 공격 불능
   if (target.B.trait && target.scaredT <= 0 && kind !== 'gas') {
     target.fear = Math.min(1, target.fear + target.B.trait.perHit);
@@ -213,6 +225,7 @@ function kill(room, attacker, target, kind) {
   target.respawnT = target.home ? 1.5 : G.respawn;
   if (attacker && attacker.id !== target.id) {
     attacker.kills++; if (Math.random() < 0.5) say(attacker, 'kill');
+    if (hasSP(attacker, 'aura')) attacker.aura = Math.min(1, (attacker.aura || 0) + SP(attacker, 'aura').perKill);   // 아우라 파밍
     if (!room.mode.training) giveTrophies(attacker, 1, 'kills');      // 처치 +1 트로피 (훈련장 제외)
   }
   room.fx.push({ type: 'kill', a: attacker ? attacker.name : '독가스', b: target.name, aid: attacker ? attacker.id : null, bid: target.id, k: kind });
@@ -685,6 +698,92 @@ SKILLS.hyeonwoo = {
 };
 const later = (room, t, fn) => room.pending.push({ t, fn });
 
+// ── 편도준: 운동폼 / 미술폼 ──
+const moaiOn = (room, p, dur) => { p.moaiT = Math.max(p.moaiT || 0, dur); room.fx.push({ type: 'moai', id: p.id, x: p.x, y: p.y, dur }); };
+function slowHit(p, q) { if (hasSP(p, 'slowhit')) { const sp = SP(p, 'slowhit'); q.slowT = Math.max(q.slowT || 0, sp.dur); q.slowMul = sp.mul; } }
+SKILLS.dojun = {
+  attack(room, p, a, now, dist = 1) {
+    const A = p.B.attack;
+    p.ammo -= 1; p.atkCd = A.cd; p.facing = a;
+    if (p.invT > 0) { p.invT = 0; room.fx.push({ type: 'reveal', id: p.id, x: p.x, y: p.y }); }    // 공격하면 은신 풀림
+    if (Math.random() < 0.3) say(p, p.form === 'art' ? 'atkArt' : 'atk', 1);
+    if (p.form !== 'art') {                // 🏀 수플렉스: 앞의 상대를 업어서 뒤로 넘김
+      let tg = null, bd = Infinity;
+      for (const q of enemies(room, p)) {
+        if (q.struct) { if (inCone(p, a, A.range, A.half, q.x, q.y, q.B.radius)) { damage(room, p, q, A.dmg, now, 'suplex'); chargeSuper(p, A.dmg); } continue; }
+        if (!inCone(p, a, A.range, A.half, q.x, q.y, q.B.radius) || !sees(room, p, q)) continue;
+        const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < bd) { bd = d; tg = q; }
+      }
+      let fx = { type: 'suplex', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), tid: tg ? tg.id : null };
+      if (tg) {
+        const bx = p.x - Math.cos(a) * (p.B.radius + tg.B.radius + 18), by = p.y - Math.sin(a) * (p.B.radius + tg.B.radius + 18);
+        fx.fx0 = tg.x; fx.fy0 = tg.y;
+        if (!hitsWall(room.map, bx, by, tg.B.radius) && !tg.struct) { tg.x = bx; tg.y = by; }     // 뒤로 넘김
+        fx.tx = tg.x; fx.ty = tg.y;
+        tg.stunT = Math.max(tg.stunT, 0.2);
+        damage(room, p, tg, A.dmg, now, 'suplex'); chargeSuper(p, A.dmg); slowHit(p, tg);
+      }
+      room.fx.push(fx);
+    } else {                               // 🎨 물감 발사: 멀리 던져 넓은 범위 + 시야 가림
+      const r = A.range * Math.max(0.2, Math.min(1, dist));
+      const lx = Math.max(20, Math.min(room.map.w - 20, p.x + Math.cos(a) * r)), ly = Math.max(20, Math.min(room.map.h - 20, p.y + Math.sin(a) * r));
+      const t = 0.25 + r / 1400, col = pick(['#ff4ab0', '#3ad1ff', '#ffd23a', '#7dff6a', '#b06aff']);
+      room.fx.push({ type: 'paintShot', id: p.id, x: p.x, y: p.y, lx, ly, t: +t.toFixed(2), r: A.lobR, c: col });
+      later(room, t, () => {
+        if (!room.players.has(p.id)) return;
+        const tt = Date.now() / 1000, hits = [];
+        for (const q of enemies(room, p)) {
+          if (Math.hypot(q.x - lx, q.y - ly) > A.lobR + q.B.radius) continue;
+          damage(room, p, q, A.dmg, tt, 'paint'); chargeSuper(p, A.dmg); slowHit(p, q); hits.push(q.id);
+          if (!q.isBot) q.blindT = A.blind;
+        }
+        room.fx.push({ type: 'paintHit', id: p.id, x: lx, y: ly, r: A.lobR, c: col, hits, blind: A.blind });
+      });
+    }
+  },
+  gadget(room, p, idx, now) {             // 두 가젯 모두 폼을 바꿈
+    const g = p.B.gadgets[idx], to = p.form === 'art' ? 'sport' : 'art';
+    setForm(p, to);
+    room.fx.push({ type: 'form', id: p.id, x: p.x, y: p.y, to });
+    if (idx === 0) {                       // 은밀하게
+      say(p, 'g1', 1.2);
+      if (to === 'art') { p.invT = g.invis; room.fx.push({ type: 'invis', id: p.id, x: p.x, y: p.y, dur: g.invis }); }
+      else { p.spdUpT = Math.max(p.spdUpT || 0, g.fast); p.spdUpMul = g.mul; }
+    } else { say(p, 'g2', 1.2); moaiOn(room, p, g.dur); }   // 모아이🗿🗿
+  },
+  super(room, p, a, now) {
+    const S = p.B.super;
+    if (p.invT > 0) { p.invT = 0; room.fx.push({ type: 'reveal', id: p.id, x: p.x, y: p.y }); }
+    say(p, p.form === 'art' ? 'supArt' : 'sup', 1.6);
+    if (p.form !== 'art') {                // 📣 동기부여
+      const ups = [p.id], downs = [];
+      p.spdUpT = Math.max(p.spdUpT || 0, S.dur); p.spdUpMul = S.up;
+      for (const q of allies(room, p)) if (Math.hypot(q.x - p.x, q.y - p.y) <= S.range) { q.spdUpT = Math.max(q.spdUpT || 0, S.dur); q.spdUpMul = S.up; ups.push(q.id); }
+      for (const q of enemies(room, p)) if (!q.struct && Math.hypot(q.x - p.x, q.y - p.y) <= S.range) { q.slowT = Math.max(q.slowT || 0, S.dur); q.slowMul = S.down; downs.push(q.id); }
+      room.fx.push({ type: 'motivate', id: p.id, x: p.x, y: p.y, r: S.range, ups, downs });
+    } else {                               // 📄 종이 감옥
+      let target = null, best = Infinity;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      for (const q of enemies(room, p)) {
+        if (q.struct) continue;
+        const dx = q.x - p.x, dy = q.y - p.y, along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca);
+        if (along < -q.B.radius || along > S.range + q.B.radius || perp > S.width + q.B.radius || !sees(room, p, q)) continue;
+        if (along < best) { best = along; target = q; }
+      }
+      room.fx.push({ type: 'paperJail', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3), r: S.range, tid: target ? target.id : null, dur: S.dur });
+      if (target) {
+        const tid = target.id;
+        target.rootT = Math.max(target.rootT || 0, S.dur); target.dash = null;
+        for (let i = 1; i <= S.ticks; i++) later(room, S.dur * i / S.ticks, () => {
+          const q = room.players.get(tid); if (!q || q.dead || !room.players.has(p.id)) return;
+          damage(room, p, q, Math.round(S.dmg / S.ticks), Date.now() / 1000, 'paper');
+          room.fx.push({ type: 'paperStab', x: q.x, y: q.y, i });
+        });
+      }
+    }
+  },
+};
+
 SKILLS.yedam = {
   // 머리뜯기: 손을 날려 맞은 상대(스파1이면 팀원도)와 연결 → 0.3초마다 피해/회복
   attack(room, p, a, now) {
@@ -807,7 +906,7 @@ function botThink(room, p, now) {
     return;
   }
   let target = null, best = Infinity;
-  for (const q of enemies(room, p)) { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < best) { best = d; target = q; } }
+  for (const q of enemies(room, p)) { if (q.invT > 0) continue; const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < best) { best = d; target = q; } }   // 은신한 적은 못 봄
   b.wanderT -= DT;
   // 봇 난이도 (패치: 조금 약하게) — 조준이 살짝 빗나가고, 상대를 처음 보면 반응이 늦고, 공격·스킬을 덜 자주 씀
   const aimErr = () => (Math.random() + Math.random() - 1) * BOT.aimErr;
@@ -1167,6 +1266,21 @@ function step(room) {
     if (p.noAtkT > 0) p.noAtkT = Math.max(0, p.noAtkT - DT);
     if (p.jailT > 0) p.jailT = Math.max(0, p.jailT - DT);
     if (p.sprintT > 0) p.sprintT = Math.max(0, p.sprintT - DT);
+    if (p.spdUpT > 0) p.spdUpT = Math.max(0, p.spdUpT - DT);
+    if (p.slowT > 0) p.slowT = Math.max(0, p.slowT - DT);
+    if (p.invT > 0) p.invT = Math.max(0, p.invT - DT);
+    if (p.moaiT > 0) p.moaiT = Math.max(0, p.moaiT - DT);
+    if (p.blindT > 0) p.blindT = Math.max(0, p.blindT - DT);
+    if (hasSP(p, 'aura')) {                       // 아우라 파밍: 시간이 지나면 조금씩 → 가득 차면 폭발 + 모아이
+      const sp = SP(p, 'aura');
+      p.aura = Math.min(1, (p.aura || 0) + DT / sp.fill);
+      if (p.aura >= 1) {
+        p.aura = 0; const hits = [];
+        for (const q of enemies(room, p)) if (Math.hypot(q.x - p.x, q.y - p.y) <= sp.range + q.B.radius) { damage(room, p, q, sp.dmg, now, 'aura'); hits.push(q.id); }
+        room.fx.push({ type: 'aura', id: p.id, x: p.x, y: p.y, r: sp.range, hits });
+        moaiOn(room, p, sp.moai);
+      }
+    }
     if (p.teths && p.teths.length) {              // 머리뜯기 연결 유지 (최대 2명)
       const A = B.attack;
       p.teths = p.teths.filter((T) => {
@@ -1303,13 +1417,15 @@ function step(room) {
     broken: room.map.walls.reduce((a, w, i) => (w.broken && a.push(i), a), []),
     players: [...room.players.values()].map((p) => ({
       id: p.id, name: p.name, b: p.B.id, color: p.color, bot: p.isBot, team: p.team,
-      x: r1(p.x), y: r1(p.y), hp: r1(p.hp), mhp: p.home ? p.B.maxHp : undefined, dead: p.dead, out: p.out, rank: p.rank, respawn: Math.ceil(p.respawnT),
+      x: r1(p.x), y: r1(p.y), hp: r1(p.hp), mhp: p.home || p.form ? p.B.maxHp : undefined, dead: p.dead, out: p.out, rank: p.rank, respawn: Math.ceil(p.respawnT),
       ammo: p.ammo + p.reloadT / p.B.attack.reload, stun: p.stunT > 0, fz: p.frozenT > 0,
       gCd: +p.gCd.toFixed(2), sup: +p.sup.toFixed(3), f: +p.facing.toFixed(2),
       k: p.kills, d: p.deaths, say: p.speech ? p.speech.text : null,
       ctl: p.ctrlBy, ctrl: p.ctrlId, ctrlT: +(p.ctrlT || 0).toFixed(1), ac: +p.acT.toFixed(1),
       g: p.lo.g, sp: p.lo.sp, gear: p.lo.gears, sh: r1(p.shield), rf: +p.rf.toFixed(3), aj: Math.ceil(p.ajT), gems: p.gems,
       aw: p.aw, fear: +p.fear.toFixed(2), scared: +p.scaredT.toFixed(1), dash: !!p.dash, jj: jjang(p), na: +p.noAtkT.toFixed(1), fl: +p.flailT.toFixed(1), jail: +p.jailT.toFixed(1), s9: p.st9, nj: p.nextJoke, th: p.teths && p.teths.length ? p.teths.map((T) => T.tid) : undefined, spr: p.sprintT > 0 ? +p.sprintT.toFixed(1) : undefined, bty: room.mode.id === 'bounty' ? p.bounty : undefined, st: p.struct || undefined,
+      fm: p.form, mo: p.moaiT > 0 ? +p.moaiT.toFixed(1) : undefined, inv: p.invT > 0 || undefined, up: p.spdUpT > 0 || undefined, sl: p.slowT > 0 || undefined,
+      bl: p.blindT > 0 ? +p.blindT.toFixed(1) : undefined, au: p.aura != null && hasSP(p, 'aura') ? +p.aura.toFixed(2) : undefined,
     })),
     mice: room.mice.map((m) => ({ id: m.id, x: r1(m.x), y: r1(m.y), a: +m.ang.toFixed(2), c: m.color, hp: m.hp / m.maxHp })),
     fx: room.fx,

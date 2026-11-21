@@ -203,6 +203,9 @@
   .bub:after { content: ''; position: absolute; left: 50%; bottom: -9px; margin-left: -7px; border: 7px solid transparent; border-top-color: #000; border-bottom: 0; }
   @keyframes pop { from { transform: scale(.3); } to { transform: scale(1); } }
   #fps { position: fixed; left: 8px; bottom: 6px; z-index: 50; font: 700 11px sans-serif; color: rgba(255,255,255,.55); pointer-events: none; text-shadow: 0 1px 2px #000; }
+  .paintBlind { position: fixed; inset: 0; pointer-events: none; z-index: 40; }
+  .paintBlind i { position: absolute; display: block; opacity: .92; filter: blur(1px); box-shadow: inset 0 -10px 20px rgba(0,0,0,.15); }
+  @keyframes paintFade { 0% { opacity: 1; } 70% { opacity: .9; } 100% { opacity: 0; } }
   .pp { position: absolute; transform: translate(-50%, -50%); font-weight: 900; white-space: nowrap; }
   .bigcap { position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%); font-size: min(11vw, 76px); font-weight: 900; white-space: nowrap; pointer-events: none; z-index: 30;
     -webkit-text-stroke: 4px #000; paint-order: stroke fill; text-shadow: 0 6px 0 #000, 0 0 30px rgba(255,200,40,.7); animation: capIn 1.7s ease-out forwards; }
@@ -1628,8 +1631,33 @@ function makeDojun(teamColor) {
   const earPen = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.5, 6), m.pencil); earPen.position.set(0.6, 0.12, 0.05); earPen.rotation.set(0.3, 0, 1.3); head.add(earPen);   // 귀에 꽂은 연필
   const stars = new THREE.Group(); stars.position.y = 4.7; model.add(stars); stars.visible = false;
   for (let i = 0; i < 4; i++) { const st = new THREE.Mesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshBasicMaterial({ color: '#ffe23a' })); st.position.set(Math.cos(i * Math.PI / 2) * 0.8, 0, Math.sin(i * Math.PI / 2) * 0.8); stars.add(st); }
+  // ── 🎨 미술폼 옷: 베레모 + 물감 묻은 앞치마 + 팔레트 + 붓 (운동폼에선 숨김) ──
+  const artG = [];
+  const beret = new THREE.Group(); beret.position.set(-0.08, 0.62, -0.02); beret.rotation.z = 0.35; head.add(beret); artG.push(beret);
+  const bm = std('#c0303a', { roughness: 0.8 });
+  const bt = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.66, 0.18, 24), bm); beret.add(bt);
+  const bk = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.14, 8), bm); bk.position.y = 0.15; beret.add(bk);
+  const apron = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.62, 1.2, 18, 1, true, -1.3, 2.6), std('#f2efe6', { roughness: 0.9, side: THREE.DoubleSide })); apron.position.y = 0.5; torso.add(apron); artG.push(apron);
+  for (const [x, y, c] of [[-0.3, 0.7, '#ff4ab0'], [0.2, 0.3, '#3ad1ff'], [0.35, 0.8, '#ffd23a'], [-0.1, 0.1, '#7dff6a'], [0.05, 0.55, '#b06aff']]) { const sp = new THREE.Mesh(new THREE.CircleGeometry(0.1, 10), new THREE.MeshBasicMaterial({ color: c })); sp.position.set(x, y, 0.69); torso.add(sp); artG.push(sp); }
+  const pal = new THREE.Group(); pal.position.set(0.05, -1.05, 0.25); pal.rotation.set(-1.2, 0, 0.3); arms[0].add(pal); artG.push(pal);
+  const pd = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.05, 20), std('#c99a62', { roughness: 0.7 })); pd.scale.z = 0.75; pal.add(pd);
+  ['#ff4ab0', '#3ad1ff', '#ffd23a', '#7dff6a', '#ffffff'].forEach((c, i) => { const d = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshBasicMaterial({ color: c })); d.scale.y = 0.4; const a = -1.2 + i * 0.6; d.position.set(Math.cos(a) * 0.28, 0.04, Math.sin(a) * 0.2); pal.add(d); });
+  const brush = new THREE.Group(); brush.position.set(0, -1.15, 0.1); brush.rotation.x = 0.7; arms[1].add(brush); artG.push(brush);
+  const bh = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 0.7, 6), std('#7a4a26')); brush.add(bh);
+  const btip = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.18, 8), new THREE.MeshBasicMaterial({ color: '#ff4ab0' })); btip.position.y = -0.42; btip.rotation.x = Math.PI; brush.add(btip);
+  for (const g of artG) g.visible = false;
+  const sportG = [band, tail, numM, sk, pen];
+  // ── 🗿 모아이 상태: 머리가 거대한 돌 석상으로 ──
+  const moai = new THREE.Group(); moai.position.y = 2.25; moai.visible = false; torso.add(moai);
+  const stone = std('#8a8f86', { roughness: 0.95 }), stoneD = std('#5e6359', { roughness: 0.95 });
+  const mh = new THREE.Mesh(new THREE.BoxGeometry(1.25, 2.0, 1.0), stone); mh.position.y = 0.4; moai.add(mh);
+  const mbrow = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.28, 0.45), stone); mbrow.position.set(0, 0.85, 0.42); moai.add(mbrow);
+  const mnose = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.9, 0.45), stone); mnose.position.set(0, 0.25, 0.62); moai.add(mnose);
+  const mlip = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.16, 0.25), stoneD); mlip.position.set(0, -0.32, 0.55); moai.add(mlip);
+  const mchin = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.45, 0.75), stone); mchin.position.set(0, -0.6, 0.2); moai.add(mchin);
+  for (const sx of [-1, 1]) { const eye = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.16, 0.06), stoneD); eye.position.set(sx * 0.32, 0.6, 0.65); moai.add(eye); const ear = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.9, 0.3), stone); ear.position.set(sx * 0.68, 0.3, 0); moai.add(ear); }
   shadowAll(model);
-  return { root, model, body, torso, head, legs, arms, stars, flashMats: [m.skin, m.jersey, m.shorts] };
+  return { root, model, body, torso, head, legs, arms, stars, artG, sportG, moai, flashMats: [m.skin, m.jersey, m.shorts] };
 }
 
 // ── 마우스(소환수) 3D ──────────────────────────────
@@ -2042,6 +2070,77 @@ function fxKick(f) {
   if (isNear(x, z, 22)) shake = Math.max(shake, 1.2);
 }
 
+// ── 편도준 이펙트 ──
+function fxSuplex(f) {
+  const v = views[f.id]; if (v) { v.atkT = 0; v.facing = Math.atan2(Math.cos(f.a), Math.sin(f.a)); }
+  const x = f.x * S, z = f.y * S;
+  if (!f.tid) { burst(x + Math.cos(f.a) * 2, 1, z + Math.sin(f.a) * 2, 6, ['#d8c8a8'], { speed: 3, size: 0.15, up: 2, life: 0.3 }); return; }
+  const tv = views[f.tid];
+  if (tv) {   // 상대를 머리 위로 들어 올려 뒤로 꽂음 (실제 위치는 서버가 옮김)
+    const sx = f.fx0 * S, sz = f.fy0 * S, ex = f.tx * S, ez = f.ty * S;
+    tv.flyT = 0; tv.fly = { sx, sz, ex, ez, dur: 0.35 };
+  }
+  later(0.3, () => {
+    const ex = f.tx * S, ez = f.ty * S;
+    flash(ex, 1, ez, '#ffd84a', 2.2, 0.25); ringFx(ex, ez, 4, '#ffd84a', 0.45);
+    burst(ex, 0.6, ez, 30, ['#d8c8a8', '#ffffff', '#ffd84a'], { speed: 8, size: 0.25, up: 5, life: 0.7 });
+    popup('수플렉스!! 1200', { x: ex, z: ez }, 5.2, '#ffd84a', 30, 1);
+    if (isNear(ex, ez, 22)) shake = Math.max(shake, 0.7);
+  });
+}
+function fxPaintShot(f) {
+  const v = views[f.id]; if (v) { v.atkT = 0; v.facing = Math.atan2(f.lx - f.x, f.ly - f.y); }
+  const x = f.x * S, z = f.y * S, lx = f.lx * S, lz = f.ly * S, T = f.t;
+  const blob = new THREE.Mesh(new THREE.SphereGeometry(0.7, 14, 10), new THREE.MeshStandardMaterial({ color: f.c, emissive: f.c, emissiveIntensity: 0.4, roughness: 0.2 }));
+  addFx(T, blob, (k) => { blob.position.set(x + (lx - x) * k, 2.4 + Math.sin(k * Math.PI) * 6, z + (lz - z) * k); blob.scale.set(1 + Math.sin(k * 20) * 0.15, 1 - Math.sin(k * 20) * 0.15, 1); });
+  const mark = new THREE.Mesh(new THREE.RingGeometry(f.r * S * 0.9, f.r * S, 40), addMat(f.c, 0.5)); mark.rotation.x = -Math.PI / 2; mark.position.set(lx, 0.12, lz);
+  addFx(T, mark, (k) => { mark.material.opacity = 0.2 + k * 0.5; });
+}
+function fxPaintHit(f) {
+  const x = f.x * S, z = f.y * S, r = f.r * S;
+  // 바닥에 물감 얼룩 (몇 초 남았다 사라짐)
+  const g = new THREE.Group(); g.position.set(x, 0.07, z);
+  for (let i = 0; i < 7; i++) { const d = new THREE.Mesh(new THREE.CircleGeometry(r * (i ? 0.25 + Math.random() * 0.25 : 0.8), 18), new THREE.MeshBasicMaterial({ color: f.c, transparent: true, opacity: 0.85, depthWrite: false })); d.rotation.x = -Math.PI / 2; const a = Math.random() * 6.28, rr = i ? r * (0.5 + Math.random() * 0.6) : 0; d.position.set(Math.cos(a) * rr, i * 0.002, Math.sin(a) * rr); g.add(d); }
+  addFx(3.5, g, (k) => { for (const d of g.children) d.material.opacity = 0.85 * (k > 0.7 ? (1 - k) / 0.3 : 1); });
+  burst(x, 1.5, z, 30, [f.c, '#ffffff'], { speed: 9, size: 0.3, up: 6, life: 0.8 });
+  if (f.hits && f.hits.length) popup('🎨 1300', { x, z }, 5, f.c, 28, 0.9);
+  if (f.hits && f.hits.includes(myId)) paintScreen(f.c, f.blind || 2.5);
+}
+// 물감에 맞으면 내 화면 일부를 가림
+function paintScreen(c, dur) {
+  const el = document.createElement('div'); el.className = 'paintBlind';
+  for (let i = 0; i < 5; i++) { const b = document.createElement('i'); const sz = 22 + Math.random() * 22; b.style.cssText = `left:${10 + Math.random() * 70}%;top:${10 + Math.random() * 60}%;width:${sz}vmin;height:${sz * (0.7 + Math.random() * 0.5)}vmin;background:${c};border-radius:${40 + Math.random() * 20}% ${50 + Math.random() * 20}% ${45 + Math.random() * 20}% ${55 + Math.random() * 20}%`; el.appendChild(b); }
+  el.style.animation = `paintFade ${dur}s ease-in forwards`;
+  document.body.appendChild(el); setTimeout(() => el.remove(), dur * 1000);
+}
+function fxPaperJail(f) {
+  const v = views[f.id]; if (v) { v.superT = 0; v.facing = Math.atan2(Math.cos(f.a), Math.sin(f.a)); }
+  const x = f.x * S, z = f.y * S;
+  // 종이 비행기처럼 종이가 날아감
+  const end = f.tid && views[f.tid] ? views[f.tid].model.root.position : { x: x + Math.cos(f.a) * f.r * S, z: z + Math.sin(f.a) * f.r * S };
+  const plane = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.4, 3), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.6 })); plane.rotation.z = -Math.PI / 2;
+  const pg = new THREE.Group(); pg.add(plane); pg.rotation.y = -f.a;
+  addFx(0.25, pg, (k) => { pg.position.set(x + (end.x - x) * k, 2.4, z + (end.z - z) * k); });
+  popup('📄 종이 감옥!', { x, z }, 6.4, '#ffffff', 28, 1.1);
+  const tv = f.tid && views[f.tid]; if (!tv) return;
+  // 종이 벽 4장이 상대를 둘러싸고 점점 조여 옴
+  const walls = new THREE.Group(), paper = new THREE.MeshStandardMaterial({ color: '#fbfaf4', roughness: 0.85, side: THREE.DoubleSide });
+  for (let i = 0; i < 6; i++) { const w = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 4), paper); const a = i / 6 * Math.PI * 2; w.userData.a = a; w.rotation.y = -a + Math.PI / 2; walls.add(w);
+    const ln = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.05), new THREE.MeshBasicMaterial({ color: '#8ab4ff' })); ln.position.set(0, 0.6, 0.01); w.add(ln); const ln2 = ln.clone(); ln2.position.y = -0.4; w.add(ln2); }
+  addFx(f.dur, walls, (k) => {
+    const t = tv.model.root.position, rr = 3.2 - 1.9 * k;
+    walls.position.set(t.x, 2, t.z);
+    for (const w of walls.children) { w.position.set(Math.cos(w.userData.a) * rr, 0, Math.sin(w.userData.a) * rr); w.rotation.x = Math.sin(k * 30 + w.userData.a) * 0.06; }
+  });
+}
+// 🗿 모아이 / 폼 변경 / 동기부여 / 아우라
+function fxForm(f) {
+  const x = f.x * S, z = f.y * S, art = f.to === 'art';
+  burst(x, 2, z, 26, art ? ['#ff4ab0', '#3ad1ff', '#ffd23a', '#7dff6a'] : ['#ff7a1a', '#2f6fe0', '#ffffff'], { speed: 6, size: 0.25, up: 5, life: 0.7 });
+  ringFx(x, z, 3, art ? '#ff4ab0' : '#ff7a1a', 0.4);
+  popup(art ? '🎨 미술폼!' : '🏀 운동폼!', { x, z }, 5.6, art ? '#ff9ad8' : '#ffb04a', 28, 1);
+}
+
 // ── 방예담 이펙트 ──
 function fxSong(f) {
   const v = views[f.id]; if (v) v.superT = 0;
@@ -2213,7 +2312,7 @@ function fxCtrl(x, z, a, r, hitId, near) {
     const w = new THREE.Group(); w.position.set(x, 2.6, z); w.rotation.y = -a; ring.rotation.y = Math.PI / 2; w.add(ring);
     addFx(0.5, w, (k) => { ring.position.x = len * k; ring.material.opacity = 1 - k; ring.scale.setScalar(1 + k); }, i * 0.08);
   }
-  popup('너 등신이냐?!', { x: x + Math.cos(a) * 2, z: z + Math.sin(a) * 2 }, 6.2, '#ff8af0', 36, 1.3);
+  popup('난 너네 생각을 다 읽을 수 있어', { x: x + Math.cos(a) * 2, z: z + Math.sin(a) * 2 }, 6.2, '#ff8af0', 28, 1.5);
   if (tv) {
     const tp = tv.model.root.position;
     burst(tp.x, 3, tp.z, 30, ['#d36bff', '#ff8af0', '#ffffff'], { speed: 6, size: 0.18, up: 6, life: 0.8 });
@@ -2278,6 +2377,9 @@ const RAR = {
   mythic: { label: '신화', c1: '#ff8a8a', c2: '#e02f3f' },
   legendary: { label: '전설', c1: '#fff07a', c2: '#f0a400' },
 };
+// 폼이 있는 브롤러(편도준): 지금 폼의 스킬로
+const FORMC = {};
+function bOf(p) { const b = p && BR[p.b]; if (!b || !b.forms || !p.fm) return b; const k = p.b + p.fm; return FORMC[k] || (FORMC[k] = { ...b, ...b.forms[p.fm] }); }
 // 역할 배지 (아이콘 + 색)
 const ROLES = { '탱커': ['🛡️', '#e0a030', '#9a6410'], '데미지딜러': ['💥', '#ff6a5a', '#c0302a'], '어쌔신': ['🗡️', '#b06aff', '#6a2ac0'], '컨트롤러': ['🎛️', '#5aa0ff', '#2a5fd0'], '힐러': ['💚', '#4ade80', '#16a34a'] };
 const roleBadge = (b) => { if (!b.role) return ''; const r = ROLES[b.role] || ['⭐', '#5aa0ff', '#2a5fd0']; return `<span class="role" style="background:linear-gradient(${r[1]}, ${r[2]})">${r[0]} ${b.role}</span>`; };
@@ -2383,8 +2485,9 @@ function openDetail(id) {
       <div class="dn stroke">${b.name}</div><div class="dq">"${b.title}"</div>
       <div class="dd">${b.desc}</div>
       <div class="stats"><div>❤️ 체력 ${b.maxHp}</div><div>👟 속도 ${b.speed}</div><div>🔋 탄 ${b.attack.ammo}</div></div>
+      ${b.forms ? Object.values(b.forms).map((f) => `<div class="sec">${f.formName} — 체력 ${f.maxHp}</div>` + sk('💢', '#ffd84a', '기본공격', f.attack.name, `${f.attack.desc} · 피해 ${f.attack.dmg}`) + sk('🔥', '#ff7a2f', '궁극기', f.super.name, f.super.desc)).join('') : `
       ${sk('💢', '#ffd84a', '기본공격', b.attack.name, `${b.attack.desc} · 피해 ${b.attack.dmg}`)}
-      ${b.super ? sk('🔥', '#ff7a2f', '궁극기', b.super.name, b.super.desc + (b.super.dmg ? ` · 피해 ${b.super.dmg}` : '')) : ''}
+      ${b.super ? sk('🔥', '#ff7a2f', '궁극기', b.super.name, b.super.desc + (b.super.dmg ? ` · 피해 ${b.super.dmg}` : '')) : ''}`}
       ${b.trait ? sk(b.trait.icon, '#8fd3ff', '특성', b.trait.name, b.trait.desc) : ''}
       <div class="sec">🔧 가젯 — 1개 선택 (더블 가젯 모드에선 둘 다)</div>
       ${b.gadgets.map((g, i) => g.wip ? sk(g.icon, '#888', '가젯', g.name, g.desc) : sk(g.icon, '#4fd2ff', '가젯', g.name, g.desc, { k: 'g', v: i, on: lo.g === i })).join('')}
@@ -2711,6 +2814,19 @@ function handleFx(list) {
     else if (f.type === 'choke') fxChoke(f);
     else if (f.type === 'tri') fxTri(f);
     else if (f.type === 'spit') fxSpit(f);
+    else if (f.type === 'suplex') fxSuplex(f);
+    else if (f.type === 'paintShot') fxPaintShot(f);
+    else if (f.type === 'paintHit') fxPaintHit(f);
+    else if (f.type === 'paperJail') fxPaperJail(f);
+    else if (f.type === 'paperStab') { burst(x, 2, z, 10, ['#ffffff', '#cfd8e8'], { speed: 4, size: 0.18, up: 2, life: 0.4 }); popup('콕! 275', { x, z }, 4.6, '#ffffff', 20, 0.6); }
+    else if (f.type === 'form') fxForm(f);
+    else if (f.type === 'invis') { burst(x, 2, z, 30, ['#555', '#888', '#bbb'], { speed: 4, size: 0.4, up: 3, life: 0.8 }); popup('🥷 은신', { x, z }, 5, '#cfd4dc', 24, 0.9); }
+    else if (f.type === 'reveal') { burst(x, 2, z, 12, ['#bbb', '#fff'], { speed: 3, size: 0.2, up: 2, life: 0.4 }); }
+    else if (f.type === 'moai') { const v = views[f.id]; if (v) v.g2T = 0; flash(x, 3, z, '#c8ccc0', 3, 0.4); ringFx(x, z, 5, '#9a9f94', 0.6); burst(x, 2, z, 40, ['#8a8f86', '#5e6359', '#c8ccc0'], { speed: 9, size: 0.35, up: 7, life: 1 }); popup('🗿🗿🗿', { x, z }, 7, '#ffffff', 40, 1.2); if (isNear(x, z, 24)) shake = Math.max(shake, 0.8); }
+    else if (f.type === 'motivate') { const v = views[f.id]; if (v) v.superT = 0; ringFx(x, z, f.r * S, '#ffd84a', 0.8); ringFx(x, z, f.r * S * 0.6, '#ff7a1a', 0.6); popup('📣 동기부여!! 가자!!!', { x, z }, 7, '#ffd84a', 32, 1.5);
+      for (const id of f.ups || []) { const t = views[id]; if (t) { const q = t.model.root.position; burst(q.x, 2, q.z, 10, ['#ffd84a', '#7cffb0'], { speed: 4, size: 0.2, up: 6, life: 0.7 }); } }
+      for (const id of f.downs || []) { const t = views[id]; if (t) { const q = t.model.root.position; popup('🐌', { x: q.x, z: q.z }, 5, '#9ad0ff', 26, 1); } } }
+    else if (f.type === 'aura') { flash(x, 2, z, '#b06aff', 5, 0.5); ringFx(x, z, f.r * S, '#b06aff', 0.7); ringFx(x, z, f.r * S * 0.6, '#ffffff', 0.5); burst(x, 2, z, 70, ['#b06aff', '#ff6ad5', '#ffffff'], { speed: 14, size: 0.35, up: 10, life: 1.3 }); popup('🔮 아우라 폭발 1972', { x, z }, 7, '#d8a8ff', 36, 1.4); if (isNear(x, z, 30)) shake = Math.max(shake, 1.2); }
     else if (f.type === 'kick') { const v = views[f.id]; if (v) { v.atkT = 0; v.facing = Math.atan2(Math.cos(f.a), Math.sin(f.a)); } burst(x, 1, z, 10, ['#ffffff', '#d8d8d8'], { speed: 6, size: 0.15, up: 2, life: 0.4 }); flash(x, 1, z, '#ffffff', 1.2, 0.15); }
     else if (f.type === 'grabBall') { ringFx(x, z, 2, '#ffffff', 0.3); }
     else if (f.type === 'goal') { const me = state.players.find((p) => p.id === myId), mine = me && me.team === f.team; bigCaption(mine ? '골!!!' : '실점...', '⚽', mine ? '#7cffb0' : '#ff8a8a'); burst(x, 2, z, 60, f.team === 0 ? ['#3a8dff', '#ffffff', '#ffd84a'] : ['#ff4a4a', '#ffffff', '#ffd84a'], { speed: 12, size: 0.3, up: 10, life: 1.4 }); ringFx(x, z, 8, '#ffffff', 0.7); if (f.by) popup('⚽ ' + f.by, { x, z }, 6, '#ffffff', 26, 1.5); }
@@ -2824,7 +2940,7 @@ function autoTarget(range, src) {
   const team = meP && meP.team;
   let best = null, bs = Infinity;
   for (const q of state.players) {
-    if (q.id === myId || q.id === me.id || q.dead || q.out) continue;
+    if (q.id === myId || q.id === me.id || q.dead || q.out || q.inv) continue;
     if (team != null && q.team === team) continue;
     const d = Math.hypot(q.x - me.x, q.y - me.y);
     const score = d + (d > range ? 2000 : 0) + (clearPath(me.x, me.y, q.x, q.y) ? 0 : 1000);
@@ -2834,13 +2950,13 @@ function autoTarget(range, src) {
 }
 function autoAim(range, src) {
   const me = src || state.players.find((p) => p.id === myId); if (!me) return null;
-  const t = autoTarget(range || (BR[me.b].super ? BR[me.b].super.range : 300), me);
+  const t = autoTarget(range || (bOf(me).super ? bOf(me).super.range : 300), me);
   return t ? Math.atan2(t.y - me.y, t.x - me.x) : me.f;
 }
 function aimAngle(kind = 'sup') {   // 서버 좌표 기준 각도
   const me = atkSrc(), v = me && views[me.id];     // 조종 중이면 꼭두각시 기준
   if (!me || !v) return null;
-  const B = BR[me.b], A = aims[kind], range = kind === 'atk' ? B.attack.range : (B.super ? B.super.range : 300);
+  const B = bOf(me), A = aims[kind], range = kind === 'atk' ? B.attack.range : (B.super ? B.super.range : 300);
   if (A.id !== null) return A.ang ?? autoAim(range, me);
   if (!isTouch && mouse.on) {
     ray.setFromCamera({ x: mouse.x / W * 2 - 1, y: -(mouse.y / H) * 2 + 1 }, camera);
@@ -2859,7 +2975,7 @@ function autoDist(range, src) {
 }
 function aimDist() {
   const me = atkSrc(), v = me && views[me.id]; if (!me || !v) return 1;
-  const range = BR[me.b].attack.range * (me.b === 'jaeyeol' && me.sp === 'gao' ? 1.15 : 1), A = aims.atk;
+  const range = bOf(me).attack.range * (me.b === 'jaeyeol' && me.sp === 'gao' ? 1.15 : 1), A = aims.atk;
   let d;
   if (A.id !== null) d = A.drag > 20 ? A.drag / 48 : autoDist(range, me);
   else if (!isTouch && mouse.on) {
@@ -2868,7 +2984,7 @@ function aimDist() {
   } else d = autoDist(range, me);
   return Math.max(0.15, Math.min(1, d));
 }
-const atkPayload = (a) => { const me = atkSrc(); return me && BR[me.b].attack.aim === 'tri' ? { a, d: aimDist() } : a; };
+const atkPayload = (a) => { const me = atkSrc(); const k = me && bOf(me).attack.aim; return k === 'tri' || k === 'lob' ? { a, d: aimDist() } : a; };
 function doAttack() { if (!socket) return; const a = aimAngle('atk'); socket.emit('attack', a == null ? undefined : atkPayload(a)); }
 renderer.domElement.addEventListener('contextmenu', (e) => { e.preventDefault(); if (mode === 'game') doSuper(); });
 addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
@@ -2903,10 +3019,10 @@ function aimButton(el, kind, fire) {
     A.id = null; aimJoy.style.display = 'none';
     if (e.type === 'pointercancel' || !socket || A.cancel) return;
     const me = atkSrc(); if (!me) return;
-    const B = BR[me.b]; if (kind === 'sup' && !B.super) return;
+    const B = bOf(me); if (kind === 'sup' && !B.super) return;
     const range = kind === 'atk' ? B.attack.range : B.super.range;
     const a = ang ?? autoAim(range, me);
-    if (kind === 'atk' && B.attack.aim === 'tri') { const d = A.drag > 20 ? Math.max(0.15, Math.min(1, A.drag / 48)) : Math.max(0.15, Math.min(1, autoDist(range, me))); socket.emit(fire, a == null ? undefined : { a, d }); return; }
+    if (kind === 'atk' && (B.attack.aim === 'tri' || B.attack.aim === 'lob')) { const d = A.drag > 20 ? Math.max(0.15, Math.min(1, A.drag / 48)) : Math.max(0.15, Math.min(1, autoDist(range, me))); socket.emit(fire, a == null ? undefined : { a, d }); return; }
     socket.emit(fire, a == null ? undefined : a);
   };
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
@@ -2976,6 +3092,12 @@ function animateTeacher(v, p, dt, now) {
   const tx = ix * S, tz = iy * S;
   const ox = root.position.x, oz = root.position.z;
   root.position.x = tx; root.position.z = tz;
+  if (v.fly) {            // 수플렉스 당하는 중: 포물선으로 넘어가며 한 바퀴
+    v.flyT += dt; const F = v.fly, k = Math.min(1, v.flyT / F.dur);
+    root.position.x = F.sx + (F.ex - F.sx) * k; root.position.z = F.sz + (F.ez - F.sz) * k;
+    root.position.y = Math.sin(k * Math.PI) * 3.5; v.model.model.rotation.x = -k * Math.PI * 2;
+    if (k >= 1) { v.fly = null; root.position.y = 0; v.model.model.rotation.x = 0; }
+  }
   const mdx = root.position.x - ox, mdz = root.position.z - oz;
   const sp = Math.hypot(mdx, mdz) / Math.max(dt, 1e-3);
   v.speed += (sp - v.speed) * Math.min(1, dt * 10);
@@ -2987,6 +3109,14 @@ function animateTeacher(v, p, dt, now) {
   if (p.hp < v.lastHp - 1 && !p.dead) v.hitT = 0;
   v.lastHp = p.hp;
   root.visible = !(p.out && p.dead && v.deadT > 1.2);
+  const meQ = state.players.find((q) => q.id === myId);
+  const enemyInv = p.inv && p.id !== myId && !(meQ && meQ.team != null && meQ.team === p.team);
+  if (enemyInv) root.visible = false;
+  if (!!p.inv !== !!v.invOn) {          // 은신: 나와 우리 편에게는 반투명
+    v.invOn = !!p.inv;
+    root.traverse((o) => { if (o.material && !o.material.userData.sharedFx) { if (o.material.userData.op0 == null) o.material.userData.op0 = o.material.opacity; o.material.transparent = v.invOn || o.material.userData.op0 < 1; o.material.opacity = v.invOn ? 0.3 : o.material.userData.op0; } });
+  }
+  v.hiddenInv = enemyInv;
   if (p.dead && !v.dead) { v.deadT = 0; burst(root.position.x, 2, root.position.z, 40, ['#111', '#8fd3ff', '#ffcf3a', '#f1c39c', '#777'], { speed: 9, size: 0.3, up: 10, life: 1.1 }); if (p.id === myId) shake = 0.6; }
   if (!p.dead && v.dead) fxSpawn(root.position.x, root.position.z);
   v.dead = p.dead;
@@ -3004,8 +3134,21 @@ function animateTeacher(v, p, dt, now) {
   M.torso.rotation.z = Math.sin(v.phase) * 0.07 * walk;
   M.head.rotation.y = 0;
 
-  const H = v.kind === 'hyeonsil', K = v.kind === 'junhoo', JY = v.kind === 'jaeyeol', JH = v.kind === 'jinho', HW = v.kind === 'hyeonwoo', YD = v.kind === 'yedam', RB = v.kind === 'robot' || v.kind === 'bigrobot' || v.kind === 'safe', J = !H && !K && !JY && !JH && !HW && !RB && !YD;
+  const H = v.kind === 'hyeonsil', K = v.kind === 'junhoo', JY = v.kind === 'jaeyeol', JH = v.kind === 'jinho', HW = v.kind === 'hyeonwoo', YD = v.kind === 'yedam', RB = v.kind === 'robot' || v.kind === 'bigrobot' || v.kind === 'safe', DJ = v.kind === 'dojun', J = !H && !K && !JY && !JH && !HW && !RB && !YD && !DJ;
   if (RB && M.bulb) M.bulb.visible = Math.sin(now * 5) > 0 || v.hitT < 0.4;   // 맞으면 경고등
+  // 편도준: 폼별 옷 / 모아이 / 수플렉스(뒤로 젖히기) / 물감 던지기 / 동기부여(주먹 번쩍)
+  if (DJ) {
+    const art = p.fm === 'art';
+    if (v.djForm !== p.fm) { v.djForm = p.fm; for (const g of M.artG) g.visible = art; for (const g of M.sportG) g.visible = !art; }
+    const mo = p.mo > 0; M.moai.visible = mo; M.head.visible = !mo;
+    const ms = mo ? 1.25 : 1; M.model.scale.setScalar(0.82 * (M.model.userData.ms = (M.model.userData.ms || 1) + (ms - (M.model.userData.ms || 1)) * Math.min(1, dt * 8)));
+    if (v.atkT < 0.4) {
+      const q = v.atkT < 0.12 ? v.atkT / 0.12 : 1 - (v.atkT - 0.12) / 0.28;
+      if (!art) { armX = [-2.8 * q, -2.8 * q]; armZ = [0.3 * q, -0.3 * q]; M.torso.rotation.x = -0.7 * q; bodyY += 0.3 * q; }   // 업어서 뒤로 넘기기
+      else { armX[1] = -2.6 * q + 1.2 * (1 - q) * (v.atkT > 0.12 ? 1 : 0); M.torso.rotation.x = 0.15 * q; }   // 물감 휙
+    } else M.torso.rotation.x = 0;
+    if (v.superT < 0.9) { const q = 1 - v.superT / 0.9; if (!art) { armX = [-3 * q, -3 * q]; bodyY += Math.abs(Math.sin(v.superT * 14)) * 0.35 * q; } else { armX = [-2.2 * q, -2.2 * q]; armZ = [0.9 * q, -0.9 * q]; } }
+  }
   // 방예담: 머리 잡고 있으면 오른팔 쭉 / 노래할 땐 마이크 들고 흔들흔들 / 전력질주는 확 숙이고 뜀
   if (YD) {
     const singing = v.superT < 3.1;
@@ -3223,9 +3366,9 @@ function animateTeacher(v, p, dt, now) {
 function updateLabel(v, p) {
   const L = v.label, pos = v.model.root.position;
   const [x, y, vis] = toScreen(pos.x, 5.0 + v.model.body.position.y * 0.5, pos.z);
-  L.d.style.display = p.dead || p.out || !vis ? 'none' : 'block';
+  L.d.style.display = p.dead || p.out || !vis || v.hiddenInv ? 'none' : 'block';
   L.d.style.left = x + 'px'; L.d.style.top = y + 'px';
-  L.nm.textContent = `${p.jail > 0 ? '⛓️ ' : ''}${p.na > 0 ? '💔 ' : ''}${p.scared > 0 ? '😰 ' : ''}${p.aw ? '🔥 ' : ''}${p.ctl ? '🎮 ' : ''}${p.gems ? '💎' + p.gems + ' ' : ''}${p.bty ? '⭐' + p.bty + ' ' : ''}${state.ball && state.ball[2] === p.id ? '⚽ ' : ''}${p.name}  ${p.hp}${p.sh > 0 ? ' 🛡' + p.sh : ''}`;
+  L.nm.textContent = `${p.jail > 0 ? '⛓️ ' : ''}${p.na > 0 ? '💔 ' : ''}${p.scared > 0 ? '😰 ' : ''}${p.aw ? '🔥 ' : ''}${p.ctl ? '🎮 ' : ''}${p.gems ? '💎' + p.gems + ' ' : ''}${p.bty ? '⭐' + p.bty + ' ' : ''}${state.ball && state.ball[2] === p.id ? '⚽ ' : ''}${p.mo ? '🗿 ' : ''}${p.up ? '⚡ ' : ''}${p.sl ? '🐌 ' : ''}${p.fm ? (p.fm === 'art' ? '🎨 ' : '🏀 ') : ''}${p.au != null && p.id === myId ? `🔮${Math.round(p.au * 100)}% ` : ''}${p.name}  ${p.hp}${p.sh > 0 ? ' 🛡' + p.sh : ''}`;
   const meP = state.players.find((q) => q.id === myId);
   L.d.classList.toggle('ally', p.id !== myId && p.team != null && meP && meP.team === p.team);
   L.rfb.style.display = p.rf > 0 ? 'block' : 'none'; L.rf.style.width = p.rf * 100 + '%';
@@ -3233,7 +3376,7 @@ function updateLabel(v, p) {
   const hasFear = BR[p.b] && BR[p.b].trait;
   L.fb.style.display = hasFear ? 'block' : 'none';
   if (hasFear) { const sc = p.scared > 0; L.fb.classList.toggle('scared', sc); L.fear.style.width = (sc ? p.scared / BR[p.b].trait.dur : p.fear) * 100 + '%'; }
-  L.hp.style.width = (100 * p.hp / (BR[p.b] ? BR[p.b].maxHp : p.mhp || p.hp || 1)) + '%';
+  L.hp.style.width = (100 * p.hp / (p.mhp || (BR[p.b] ? BR[p.b].maxHp : p.hp || 1))) + '%';
   L.am.forEach((b, i) => { const f = Math.max(0, Math.min(1, p.ammo - i)); b.style.width = f * 100 + '%'; b.style.background = f >= 1 ? '#ffb02e' : '#8a6a32'; });
   if (p.say !== L.lastSay) { L.lastSay = p.say; if (p.say) { L.bub.textContent = p.say; L.bub.style.display = 'block'; L.bub.style.animation = 'none'; L.bub.offsetWidth; L.bub.style.animation = ''; } else L.bub.style.display = 'none'; }
 }
@@ -3424,7 +3567,7 @@ function frame(nowMs) {
         $(id).classList.toggle('puppet', src !== me);
       }
       $('bAtk').classList.toggle('puppet', src !== me);
-      const B = BR[src.b];
+      const B = bOf(src);
       const sb = $('bSup'), pct = Math.round(src.sup * 100);
       const jk = src.b === 'hyeonwoo' && src.sp === 'preview' && src.nj && BR.hyeonwoo.jokes.find((j) => j.id === src.nj);
       const sbHTML = jk ? `${jk.icon}<small>다음 개그</small>` : '궁극기<small>드래그</small>';
@@ -3435,9 +3578,10 @@ function frame(nowMs) {
       sb.style.background = src.sup >= 1 ? 'radial-gradient(circle at 40% 35%, #ffe98a, #ff5a1f)' : `conic-gradient(#ff8a1f ${pct}%, #3a2a6a 0)`; }
       // 조준 표시
       const v = views[src.id];
-      if (aimInd.userData.b !== src.b) { if (aimMesh) aimInd.remove(aimMesh); aimMesh = null; aimInd.userData.b = src.b; }
+      if (aimInd.userData.b !== src.b + (src.fm || '')) { if (aimMesh) aimInd.remove(aimMesh); aimMesh = null; aimInd.userData.b = src.b + (src.fm || ''); }
       const atkN = src.b === 'hyeonwoo' ? (src.s9 ? 9 : src.sp === 'fullsix' && src.ammo >= B.attack.ammo - 0.01 ? 6 : 5) : 0;   // 지금 쏘면 나갈 심 개수
-      if (atkInd.userData.b !== src.b + atkN) { if (atkMesh) atkInd.remove(atkMesh); atkMesh = null; atkInd.userData.b = src.b + atkN; }
+      const atkKey = src.b + atkN + (src.fm || '');
+      if (atkInd.userData.b !== atkKey) { if (atkMesh) atkInd.remove(atkMesh); atkMesh = null; atkInd.userData.b = atkKey; }
       aimInd.visible = !!B.super && src.sup >= 1 && !src.dead && !!v && (aims.sup.id !== null ? !aims.sup.cancel : !isTouch);
       if (aimInd.visible) {
         if (!aimMesh) {
@@ -3450,7 +3594,7 @@ function frame(nowMs) {
         const a = aimAngle('sup'); if (a != null) aimInd.rotation.y = -a;
       }
       // 기본공격 조준: 범위 고정(정보쌤) → 주변 원 / 방향 공격(현실쌤) → 부채꼴
-      const dirAtk = B.attack.aim === 'dir' || B.attack.aim === 'tri' || B.attack.aim === 'line';
+      const dirAtk = B.attack.aim === 'dir' || B.attack.aim === 'tri' || B.attack.aim === 'line' || B.attack.aim === 'lob';
       atkInd.visible = !src.dead && !!v && (aims.atk.id !== null ? !aims.atk.cancel : (dirAtk && !isTouch));
       if (atkInd.visible) {
         if (!atkMesh) {
@@ -3458,7 +3602,10 @@ function frame(nowMs) {
           atkMesh = new THREE.Group();
           let shape;
           if (B.attack.aim === 'line') shape = aimShape({ type: 'rect', r, w: B.attack.width * S, color: '#ffb800', edge: '#ffd21a' });
-          else if (B.attack.aim === 'tri') {
+          else if (B.attack.aim === 'lob') {        // 편도준 물감: 떨어질 자리만 크게
+            shape = aimShape({ type: 'rect', r, w: 0.25, color: '#ffffff', edge: '#ffffff' });
+            const land = aimShape({ type: 'circle', r: B.attack.lobR * S, color: '#ff4ab0', edge: '#ffd23a' }); land.position.set(r, 0.02, 0); atkMesh.add(land); atkMesh.userData.land = land; atkMesh.userData.r = r;
+          } else if (B.attack.aim === 'tri') {
             shape = aimShape({ type: 'rect', r, w: B.attack.width * S, color: '#00b4ff', edge: '#3cd8ff' });
             const land = aimShape({ type: 'circle', r: B.attack.lobR * S, color: '#ff2ab8', edge: '#ff6ad5' }); land.position.set(r, 0.02, 0); atkMesh.add(land); atkMesh.userData.land = land; atkMesh.userData.r = r;
           } else if (dirAtk) {
