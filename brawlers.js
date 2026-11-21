@@ -166,7 +166,7 @@ const BRAWLERS = {
     },
     gadgets: [
       { name: '훠이훠이', icon: '🙌', desc: '4초 동안 긴 팔을 신명나게 휘저어 주위의 적을 모두 밀쳐내며 600 피해를 주고, 이동 속도가 150%가 된다.', dur: 4, range: 170, dmg: 600, push: 26 },
-      { name: '준비 중', icon: '🔒', desc: '두 번째 가젯은 아직 준비 중이에요.', wip: true },
+      { name: '나도 이제 내가 뭔짓을 할지 몰라', icon: '🌀', desc: '목을 엄청나게 뻗고 휘어서 빙글 한 바퀴 휘두른다. 벽 너머까지 닿아 주위 650 안의 상대 모두에게 1500 피해.', range: 650, dmg: 1500, dur: 0.9 },
     ],
     gadgetCd: 11,
     super: {
@@ -176,11 +176,12 @@ const BRAWLERS = {
     },
     starPowers: [
       { id: 'tall', name: '큰 키', icon: '🦒', desc: '모든 공격의 사정거리가 25% 늘어난다.', mul: 1.25 },
-      { id: 'wip2', name: '준비 중', icon: '🔒', desc: '두 번째 스타파워는 아직 준비 중이에요.', wip: true },
+      { id: 'disc', name: '목디스크', icon: '🦴', desc: '목 길게 뻗기가 휘어진다. 조준한 쪽 좁은 부채꼴 안의 상대를 모두 맞추고, 벽에 막히지 않고 휘어서 피해 간다.', half: 0.38 },
     ],
     lines: {
       atk: ['목 들어간다~', '닿았다!', '173의 위엄'],
       g1: ['훠이훠이~!!', '저리 가 저리 가!'],
+      g2: ['나도 이제 내가 뭔짓을 할지 몰라', '목 간다아아~'],
       sup: ['기린 뒷발차기!!!', '뒤 조심해라~'],
       kill: ['키 차이 봐라', '173은 다르다', '목 길이 승'],
     },
@@ -296,7 +297,7 @@ const BRAWLERS = {
       { name: '은밀하게', icon: '🥷', desc: '폼을 바꾼다. 미술폼이 되면 5초 동안 은신, 운동폼이 되면 4초 동안 이동 속도 50% 증가.', invis: 5, fast: 4, mul: 1.5 },
       { name: '모아이🗿🗿', icon: '🗿', desc: '폼을 바꾸면서 3초 동안 모아이 상태: 주는 피해 1.4배, 받는 피해 35% 감소.', dur: 3 },
     ],
-    gadgetCd: 9,
+    gadgetCd: 13,
     starPowers: [
       { id: 'aura', name: '아우라 파밍', icon: '🔮', desc: '시간이 지날수록, 그리고 상대를 처치할 때마다 아우라 게이지가 차오른다. 가득 차면 아우라가 폭발해 주변 적에게 1972 피해를 주고 6초 동안 모아이 상태가 된다.', fill: 50, perKill: 0.25, range: 320, dmg: 1972, moai: 6 },
       { id: 'slowhit', name: '슬로우', icon: '🐌', desc: '수플렉스와 물감 발사에 맞은 상대는 1초 동안 느려진다.', dur: 1, mul: 0.6 },
@@ -312,19 +313,42 @@ const BRAWLERS = {
       kill: ['그림 같은 승리', 'GG', '🗿'],
     },
   },
-};
-
-// 보관 중인 브롤러 (목록에서 뺌 — 다시 넣으려면 BRAWLERS 안으로 옮기면 됨. 3D 모델 makeSuho는 index.html에 그대로 있음)
-const SHELVED = {
   suho: {
     id: 'suho',
     name: '정수호',
-    rarity: null,
-    wip: true,               // 디자인만 — 스킬 정해지면 wip 빼기
-    title: '목주름 빅맥',
-    desc: '키가 작고 살짝 통통한 귀염둥이. 체육복 지퍼를 끝까지 못 올리는 이유는 목에 빅맥처럼 겹겹이 쌓인 주름 때문이다.',
-    radius: 25, speed: 255, maxHp: 4800,
-    attack: { name: '준비 중', ammo: 0, range: 0 }, gadgets: [], starPowers: [], super: null,
+    rarity: 'epic',
+    role: '탱커',
+    title: '데굴데굴 굴러간다~',
+    desc: '키가 작고 동글동글한 학생. 몸을 공처럼 말고 데굴데굴 굴러다니며 앞을 막는 상대를 깔아뭉갠다. 오래 구를수록 빨라지고 더 아프다. 목에 늘 빅맥을 끼고 다닌다.',
+    radius: 25, speed: 255, maxHp: 5800,
+    // 구르기: 움직이는 동안 속도 게이지(0~1)가 차오름 → 이동 속도·깔아뭉개기 피해 ↑. 벽에 부딪히거나 급하게 꺾거나 멈추면 줄어듦
+    roll: { fill: 1.6, minMul: 0.7, maxMul: 1.45, turnFast: 9, turnSlow: 3.2, wallKeep: 0.3, hitKeep: 0.55, stopLose: 2.2, supFull: 40 },
+    attack: {
+      name: '깔아뭉개기', aim: 'self',
+      desc: '굴러다니며 부딪힌 상대를 깔아뭉갠다 (빠를수록 450~1100 피해). 버튼을 누르면 탄 1개로 순간 가속 — 1초 동안 최고 속도 + 피해 2배.',
+      range: 80, minDmg: 450, maxDmg: 1100, hitCd: 0.55, push: 40, boost: 1, boostMul: 1.3, ammo: 2, reload: 2.2, cd: 0.3,
+    },
+    super: {
+      name: '수학 블래스터', aim: 'dir',
+      desc: '수학 공식 6개를 부채꼴로 발사. 하나당 1600 피해, 맞추면 준 피해의 50%만큼 체력 회복.',
+      need: 5200, range: 620, half: 0.6, count: 6, dmg: 1600, speed: 1050, lifesteal: 0.5,
+    },
+    gadgets: [
+      { name: '빅@맥 발사!', icon: '🍔', desc: '목에 낀 빅맥을 발사한다. 가장 가까운 상대를 따라가는 유도탄으로 1600 피해.', dmg: 1600, speed: 720, range: 1100, turn: 4.5 },
+      { name: '빅맥먹방', icon: '😋', desc: '빅맥을 먹고 3000 보호막을 얻는다. 보호막은 6초에 걸쳐 점점 닳는다.', shield: 3000, dur: 6 },
+    ],
+    gadgetCd: 12,
+    starPowers: [
+      { id: 'bigmacroad', name: '빅맥로드', icon: '🛣️', desc: '맵에 아주 가끔 빅맥이 떨어진다 (최대 2개). 밟고 지나가면 먹고 1000 회복.', every: 15, max: 2, heal: 1000 },
+      { id: 'rollroll', name: '구르고 구르고', icon: '🌀', desc: '최고 속도로 구르는 동안 기절·얼음에 걸리지 않는다.' },
+    ],
+    lines: {
+      atk: ['비켜비켜~', '부릉부릉!', '굴러간다~'],
+      g1: ['빅맥 받아라!', '발사!'],
+      g2: ['냠냠', '먹방 시작~'],
+      sup: ['수학 시간이다!', '공식 받아라!'],
+      kill: ['납작~', 'ㅎㅎ 미안', '데굴데굴 승리'],
+    },
   },
 };
 

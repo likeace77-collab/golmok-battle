@@ -688,6 +688,42 @@ function makePencil() {
   const er = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.2, 8), std('#ff8fa8')); er.rotation.x = Math.PI / 2; er.position.z = -0.8; g.add(er);
   g.scale.setScalar(1.3); return g;
 }
+// 정수호: 빅맥 (유도탄 · 빅맥로드 바닥 아이템)
+const bunMat = std('#e0973c', { roughness: 0.6 }), pattyMat = std('#5a3220', { roughness: 0.8 }), lettMat = std('#5cc04a', { roughness: 0.7 }), cheeseMat = std('#ffcc2a', { roughness: 0.5 }), seedMat = std('#fff4d8');
+function makeBurger() {
+  const g = new THREE.Group();
+  const top = new THREE.Mesh(new THREE.SphereGeometry(0.5, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), bunMat); top.scale.y = 0.75; top.position.y = 0.28; g.add(top);
+  for (let i = 0; i < 7; i++) { const sd = new THREE.Mesh(new THREE.SphereGeometry(0.035, 5, 4), seedMat); const a = i * 0.9, r = 0.18 + (i % 3) * 0.08; sd.position.set(Math.cos(a) * r, 0.28 + Math.sqrt(Math.max(0, 0.25 - r * r)) * 0.75, Math.sin(a) * r); sd.scale.set(1, 0.5, 1.6); g.add(sd); }
+  const lay = (m, y, h, r) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 18), m); c.position.y = y; g.add(c); };
+  lay(lettMat, 0.25, 0.05, 0.54); lay(pattyMat, 0.17, 0.12, 0.5); lay(cheeseMat, 0.09, 0.04, 0.52); lay(bunMat, 0.03, 0.1, 0.48); lay(pattyMat, -0.07, 0.12, 0.5); lay(bunMat, -0.17, 0.12, 0.48);
+  return g;
+}
+// 수학 블래스터: 공식 글자 (canvas 텍스처, 6개 돌려씀)
+const MATH_TEX = ['x²+y²', 'π r²', '∫ f(x)dx', 'a²+b²=c²', '√2', 'e^iπ'].map((t) => {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 96; const x = c.getContext('2d');
+  x.font = 'bold 54px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.lineWidth = 10; x.strokeStyle = '#1a0a40'; x.strokeText(t, 128, 50); x.fillStyle = '#7cf0ff'; x.fillText(t, 128, 50);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return tex;
+});
+function makeMath(id) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: MATH_TEX[id % MATH_TEX.length], depthWrite: false }));
+  sp.scale.set(3.2, 1.2, 1); const g = new THREE.Group(); g.add(sp);
+  const glow = new THREE.Mesh(new THREE.CircleGeometry(0.9, 20), addMat('#3cd8ff', 0.35, true)); glow.rotation.x = -Math.PI / 2; glow.position.y = -1.6; g.add(glow);
+  return g;
+}
+const bigmacMeshes = {};
+function updateBigmacs(now) {
+  const seen = new Set();
+  for (const [id, x, y] of state.bm || []) {
+    seen.add(String(id));
+    let m = bigmacMeshes[id];
+    if (!m) { m = bigmacMeshes[id] = new THREE.Group(); const b = makeBurger(); b.scale.setScalar(1.5); m.add(b); m.userData.b = b;
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.15, 28), addMat('#ffd84a', 0.7, true)); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05; m.add(ring); shadowAll(b); scene.add(m); }
+    m.position.set(x * S, 0, y * S);
+    m.userData.b.position.y = 0.9 + Math.sin(now * 3 + id) * 0.15; m.userData.b.rotation.y = now * 1.5;
+  }
+  for (const id in bigmacMeshes) if (!seen.has(id)) { scene.remove(bigmacMeshes[id]); delete bigmacMeshes[id]; }
+}
 // 늘어나는 팔: 몸 → 손(날아가는 중) 또는 잡힌 상대 머리
 const stretchArms = {};
 function armTo(key, from, x, y, z) {
@@ -712,7 +748,9 @@ function updateBullets(now) {
     seen.add(String(id));
     const [x, y] = ipos('b' + id, sx, sy);
     let m = bulletMeshes[id];
-    if (!m) { m = bulletMeshes[id] = kind === 'pencil' ? makePencil() : kind === 'hand' ? new THREE.Group() : makeStaple(); m.position.set(x * S, 2.0, y * S); scene.add(m); }
+    if (!m) { m = bulletMeshes[id] = kind === 'pencil' ? makePencil() : kind === 'hand' ? new THREE.Group() : kind === 'bigmac' ? (() => { const g = new THREE.Group(), b = makeBurger(); b.scale.setScalar(1.6); g.add(b); g.userData.b = b; return g; })() : kind === 'math' ? makeMath(id) : makeStaple(); m.position.set(x * S, 2.0, y * S); scene.add(m); }
+    if (kind === 'bigmac') { m.position.set(x * S, 2.0, y * S); m.userData.b.rotation.y = now * 8; m.userData.b.rotation.z = Math.sin(now * 10) * 0.3; if (Math.random() < 0.3) burst(x * S, 2, y * S, 1, ['#ffcc2a', '#e0973c'], { speed: 1, size: 0.15, up: 1, life: 0.4 }); continue; }
+    if (kind === 'math') { m.position.set(x * S, 2.6, y * S); continue; }
     if (kind === 'hand' && views[owner]) { const o = views[owner].model.root.position; armTo('f' + id, o, x * S, 2.0, y * S); }
     if (kind === 'pencil') { m.position.set(x * S, 2.2, y * S); m.rotation.y = -a + Math.PI / 2; continue; }
     m.position.x = x * S; m.position.z = y * S;
@@ -747,7 +785,7 @@ function updateBall(now) {
   if (mv > 0.001 && mv < 5) ballMesh.rotateOnWorldAxis(new THREE.Vector3(ballMesh.position.z - pz, 0, -(ballMesh.position.x - px)).normalize(), mv / 0.95);
 }
 function updateWorld(now) {
-  updateBullets(now); updateBall(now);
+  updateBullets(now); updateBigmacs(now); updateBall(now);
   const seen = new Set();
   for (const [id, x, y] of state.gems || []) {
     seen.add(String(id));
@@ -2086,6 +2124,52 @@ function fxNeck(f) {
   }
   later(f.d, () => { ringFx(ex, ez, 2.2, '#f7c84a', 0.35); burst(ex, 3, ez, 12, ['#f7c84a', '#a5652f', '#ffffff'], { speed: 5, size: 0.18, up: 3, life: 0.45 }); });
 }
+// 이진호 휘어지는 목 (월드 좌표 튜브): pathFn(k, base) → 목 밑동~머리 점들
+function bentNeck(f, dur, pathFn) {
+  const v = views[f.id]; if (!v) return;
+  const M = v.model; v.bendUntil = performance.now() / 1000 + dur;
+  const g = new THREE.Group();
+  const head = M.head.clone(); head.visible = true; head.scale.setScalar(0.78); g.add(head);
+  let tube = null;
+  addFx(dur, g, (k) => {
+    const r = M.root.position, base = new THREE.Vector3(r.x, 2.9, r.z);
+    const pts = pathFn(k, base).map((q) => new THREE.Vector3(q[0], q[1], q[2]));
+    if (tube) { g.remove(tube); tube.geometry.dispose(); }
+    tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([base, ...pts]), 28, 0.15, 8), M.neck.material); g.add(tube);
+    const e = pts[pts.length - 1], pe = pts.length > 1 ? pts[pts.length - 2] : base;
+    head.position.copy(e); head.rotation.set(0, Math.atan2(e.x - pe.x, e.z - pe.z), 0);
+    if (k >= 1) { g.remove(tube); tube.geometry.dispose(); }
+  });
+}
+function fxNeckBend(f) {      // 목디스크: 휘어서 부채꼴 쓸기 + 벽 위로 넘어감
+  const v = views[f.id]; if (v) { v.neckA = Math.atan2(Math.cos(f.a), Math.sin(f.a)); v.facing = v.neckA; }
+  const L = f.len * S, T = 0.6;
+  bentNeck(f, T, (k, b) => {
+    const t = k * T, q = t < f.d ? ease(t / f.d) : t < 0.38 ? 1 : 1 - ease((t - 0.38) / 0.22);
+    const sw = -f.half + 2 * f.half * Math.min(1, Math.max(0, (t - 0.05) / 0.3));
+    const out = [];
+    for (let i = 1; i <= 8; i++) { const ti = i / 8, ang = f.a + sw * ti * ti - f.half * 0.6 * Math.sin(ti * Math.PI) * Math.sign(sw || 1), rr = L * q * ti; out.push([b.x + Math.cos(ang) * rr, 2.9 + Math.sin(ti * Math.PI) * 2.2 * q - 0.3 * ti, b.z + Math.sin(ang) * rr]); }
+    return out;
+  });
+  const x = f.x * S, z = f.y * S;
+  later(f.d, () => { for (const s of [-1, 0, 1]) { const a = f.a + s * f.half; burst(x + Math.cos(a) * L, 2.5, z + Math.sin(a) * L, 6, ['#f7c84a', '#ffffff'], { speed: 4, size: 0.18, up: 3, life: 0.4 }); } });
+  popup('🦴 뚝!', { x, z }, 6, '#ffe36b', 24, 0.7);
+}
+function fxWhip(f) {          // 나도 이제 내가 뭔짓을 할지 몰라: 목 휘둘러 한 바퀴
+  const v = views[f.id]; if (v) v.g2T = 0;
+  const x = f.x * S, z = f.y * S, R = f.r * S, D = f.dur, T = D + 0.35;
+  popup('나도 이제 내가 뭔짓을 할지 몰라!!', { x, z }, 7.5, '#ffe36b', 30, 1.6);
+  bentNeck(f, T, (k, b) => {
+    const t = k * T, q = t < 0.15 ? ease(t / 0.15) : t < D ? 1 : 1 - ease((t - D) / 0.35);
+    const cur = f.a + Math.PI * 2 * Math.min(1, t / D) + (t < 0.15 ? 0 : 0);
+    const out = [];
+    for (let i = 1; i <= 10; i++) { const ti = i / 10, ang = cur - 0.9 * ti * ti, rr = R * q * ti; out.push([b.x + Math.cos(ang) * rr, 2.9 + Math.sin(ti * Math.PI) * 1.6 * q, b.z + Math.sin(ang) * rr]); }
+    return out;
+  });
+  ringFx(x, z, R, '#f7c84a', D); ringFx(x, z, R * 0.6, '#ffffff', D * 0.8, 0.1);
+  for (let i = 0; i < 8; i++) later(D * i / 8, () => { const a = f.a + Math.PI * 2 * i / 8; burst(x + Math.cos(a) * R, 2.5, z + Math.sin(a) * R, 5, ['#f7c84a', '#ffffff', '#a5652f'], { speed: 5, size: 0.2, up: 3, life: 0.4 }); });
+  if (isNear(x, z, 26)) shake = Math.max(shake, 0.6);
+}
 function fxFlail(f) {
   const v = views[f.id], pos = v ? v.model.root.position : { x: f.x * S, z: f.y * S };
   if (v) v.g1T = 0;
@@ -2531,7 +2615,7 @@ function openDetail(id) {
       <div class="dd">${b.desc}</div>
       <div class="stats"><div>❤️ 체력 ${b.maxHp}</div><div>👟 속도 ${b.speed}</div><div>🔋 탄 ${b.attack.ammo}</div></div>
       ${b.forms ? Object.values(b.forms).map((f) => `<div class="sec">${f.formName} — 체력 ${f.maxHp}</div>` + sk('💢', '#ffd84a', '기본공격', f.attack.name, `${f.attack.desc} · 피해 ${f.attack.dmg}`) + sk('🔥', '#ff7a2f', '궁극기', f.super.name, f.super.desc)).join('') : `
-      ${sk('💢', '#ffd84a', '기본공격', b.attack.name, `${b.attack.desc} · 피해 ${b.attack.dmg}`)}
+      ${sk('💢', '#ffd84a', '기본공격', b.attack.name, b.attack.dmg != null ? `${b.attack.desc} · 피해 ${b.attack.dmg}` : b.attack.desc)}
       ${b.super ? sk('🔥', '#ff7a2f', '궁극기', b.super.name, b.super.desc + (b.super.dmg ? ` · 피해 ${b.super.dmg}` : '')) : ''}`}
       ${b.trait ? sk(b.trait.icon, '#8fd3ff', '특성', b.trait.name, b.trait.desc) : ''}
       <div class="sec">🔧 가젯 — 1개 선택 (더블 가젯 모드에선 둘 다) · ⏱️ 쿨타임 ${b.gadgetCd}초</div>
@@ -2889,6 +2973,14 @@ function handleFx(list) {
     else if (f.type === 'bulletHit') { flash(x, 2, z, '#ffffff', 0.7, 0.15); burst(x, 2, z, 4, ['#d8dce4', '#ffffff'], { speed: 4, size: 0.08, up: 2, life: 0.25 }); }
     else if (f.type === 'bulletWall') burst(x, 1.8, z, 3, ['#d8dce4'], { speed: 3, size: 0.08, up: 1, life: 0.2 });
     else if (f.type === 'eatStaple') { const v = views[f.id]; if (v) v.g1T = 0; popup('와그작📎 궁 충전!', { x, z }, 5.4, '#ffd84a', 28, 1.2); burst(x, 3, z, 20, ['#d8dce4', '#ffd84a', '#ffffff'], { speed: 4, size: 0.12, up: 5, life: 0.7 }); ringFx(x, z, 3, '#ffd84a', 0.5); }
+    else if (f.type === 'boost') { const v = views[f.id]; if (v) v.atkT = 0; popup('부릉!', { x, z }, 5, '#ff9a1a', 26, 0.6); ringFx(x, z, 2.5, '#ff7a1a', 0.35); }
+    else if (f.type === 'crush') { popup(f.big ? '쾅!!' : '쿵!', { x, z }, 5.4, f.big ? '#ff5a1f' : '#ffd84a', f.big ? 34 : 24, 0.6); burst(x, 1, z, f.big ? 22 : 10, ['#ffffff', '#ffd84a', '#c9a27a'], { speed: f.big ? 9 : 6, size: 0.25, up: 5, life: 0.5 }); const tv = views[f.tid]; if (tv) tv.hitT = 0; if (isNear(x, z)) shake = Math.max(shake, f.big ? 0.5 : 0.25); }
+    else if (f.type === 'rollBump') { popup('쿵…', { x, z }, 4.4, '#cfcfcf', 20, 0.6); burst(x, 1, z, 10, ['#c9a27a', '#ffffff'], { speed: 4, size: 0.2, up: 3, life: 0.4 }); }
+    else if (f.type === 'bigmacShot') { const v = views[f.id]; if (v) v.g1T = 0; popup('빅@맥 발사!', { x, z }, 6, '#ffcc2a', 26, 0.9); }
+    else if (f.type === 'mukbang') { const v = views[f.id]; if (v) v.g2T = 0; popup('😋 냠냠', { x, z }, 6, '#ffd84a', 30, 1.1); burst(x, 3, z, 20, ['#e0973c', '#5cc04a', '#ffcc2a'], { speed: 4, size: 0.2, up: 5, life: 0.8 }); ringFx(x, z, 3.5, '#ffd84a', 0.5); }
+    else if (f.type === 'mathBlast') { const v = views[f.id]; if (v) { v.superT = 0; v.facing = Math.atan2(Math.cos(f.a), Math.sin(f.a)); } popup('수학 블래스터!', { x, z }, 6.6, '#7cf0ff', 30, 1.0); flash(x, 2, z, '#7cf0ff', 3, 0.3); }
+    else if (f.type === 'bigmacDrop') { burst(x, 1, z, 12, ['#ffd84a', '#ffffff'], { speed: 3, size: 0.2, up: 4, life: 0.6 }); }
+    else if (f.type === 'bigmacEat') { popup(f.v > 0 ? `+${f.v} 🍔` : '🍔 냠', { x, z }, 5.2, '#3ce07f', 28, 1.0); burst(x, 2, z, 14, ['#e0973c', '#5cc04a', '#ffcc2a'], { speed: 4, size: 0.2, up: 4, life: 0.6 }); }
     else if (f.type === 'eatPaper') { const v = views[f.id]; if (v) v.g2T = 0; popup(f.v > 0 ? `+${f.v} 📄` : '배불러~', { x, z }, 5.2, '#3ce07f', 32, 1.2); burst(x, 3, z, 16, ['#ffffff', '#3ce07f'], { speed: 3, size: 0.2, up: 5, life: 0.8 }); ringFx(x, z, 3, '#3ce07f', 0.5); }
     else if (f.type === 'joke') fxJoke(f);
     else if (f.type === 'pianoHit') { flash(x, 1.5, z, '#ffffff', 4, 0.3); ringFx(x, z, 7, '#ffffff', 0.5); burst(x, 1, z, 60, ['#111', '#fafafa', '#8a5a2c', '#ffd84a'], { speed: 14, size: 0.3, up: 10, life: 1.1 }); popup('쾅!! 🎹 1800', { x, z }, 5.5, '#ffffff', 46, 1.1); if (isNear(x, z, 22)) shake = Math.max(shake, 1.3); }
@@ -2898,6 +2990,8 @@ function handleFx(list) {
     else if (f.type === 'neck') fxNeck(f);
     else if (f.type === 'neckHit') { flash(x, 2.4, z, '#f7c84a', 1.5, 0.25); popup('목치기!', { x, z }, 4.6, '#ffe36b', 24, 0.6); }
     else if (f.type === 'flail') fxFlail(f);
+    else if (f.type === 'neckBend') fxNeckBend(f);
+    else if (f.type === 'whip') fxWhip(f);
     else if (f.type === 'flailHit') { popup('퍽!', { x, z }, 4.4, '#fff', 26, 0.6); burst(x, 2, z, 10, ['#ffffff', '#f7c84a'], { speed: 6, size: 0.15, up: 3, life: 0.4 }); }
     else if (f.type === 'kickStart') { const v = views[f.id]; if (v) { v.superT = 0; v.facing = Math.atan2(-Math.cos(f.a), -Math.sin(f.a)); } popup('기린 뒷발차기!!!', { x, z }, 7, '#ff9a1f', 40, 1.1); }
     else if (f.type === 'kick') fxKick(f);
@@ -3179,7 +3273,7 @@ function animateTeacher(v, p, dt, now) {
   M.torso.rotation.z = Math.sin(v.phase) * 0.07 * walk;
   M.head.rotation.y = 0;
 
-  const H = v.kind === 'hyeonsil', K = v.kind === 'junhoo', JY = v.kind === 'jaeyeol', JH = v.kind === 'jinho', HW = v.kind === 'hyeonwoo', YD = v.kind === 'yedam', RB = v.kind === 'robot' || v.kind === 'bigrobot' || v.kind === 'safe', DJ = v.kind === 'dojun', J = !H && !K && !JY && !JH && !HW && !RB && !YD && !DJ;
+  const H = v.kind === 'hyeonsil', K = v.kind === 'junhoo', JY = v.kind === 'jaeyeol', JH = v.kind === 'jinho', HW = v.kind === 'hyeonwoo', YD = v.kind === 'yedam', RB = v.kind === 'robot' || v.kind === 'bigrobot' || v.kind === 'safe', DJ = v.kind === 'dojun', SH = v.kind === 'suho', J = !H && !K && !JY && !JH && !HW && !RB && !YD && !DJ && !SH;
   if (RB && M.bulb) M.bulb.visible = Math.sin(now * 5) > 0 || v.hitT < 0.4;   // 맞으면 경고등
   // 편도준: 폼별 옷 / 모아이 / 수플렉스(뒤로 젖히기) / 물감 던지기 / 동기부여(주먹 번쩍)
   if (DJ) {
@@ -3193,6 +3287,28 @@ function animateTeacher(v, p, dt, now) {
       else { armX[1] = -2.6 * q + 1.2 * (1 - q) * (v.atkT > 0.12 ? 1 : 0); M.torso.rotation.x = 0.15 * q; }   // 물감 휙
     } else M.torso.rotation.x = 0;
     if (v.superT < 0.9) { const q = 1 - v.superT / 0.9; if (!art) { armX = [-3 * q, -3 * q]; bodyY += Math.abs(Math.sin(v.superT * 14)) * 0.35 * q; } else { armX = [-2.2 * q, -2.2 * q]; armZ = [0.9 * q, -0.9 * q]; } }
+  }
+  // 정수호: 빠르게 구르면 몸을 공처럼 말고 데굴데굴 / 빅맥먹방 / 빅맥 발사 / 수학 블래스터
+  if (SH) {
+    const ro = p.ro || 0; v.ro = (v.ro || 0) + (ro - (v.ro || 0)) * Math.min(1, dt * 8);
+    const want = !p.dead && (p.bst || (v.ro > 0.18 && v.speed > 1.5)) ? 1 : 0;
+    v.curl = (v.curl || 0) + (want - (v.curl || 0)) * Math.min(1, dt * 9);
+    const c = v.curl;
+    if (want) v.rollAng = (v.rollAng || 0) + dt * Math.max(v.speed, p.bst ? 12 : 0) * 0.85;
+    else if (v.rollAng) { const k = Math.round(v.rollAng / (Math.PI * 2)) * Math.PI * 2; v.rollAng += (k - v.rollAng) * Math.min(1, dt * 10); }
+    if (c > 0.02) {
+      M.legs[0].rotation.x = M.legs[1].rotation.x = -1.7 * c;
+      armX = [-1.3 * c, -1.3 * c]; armZ = [armZ[0] * (1 - c) + 0.6 * c, armZ[1] * (1 - c) - 0.6 * c];
+      M.head.rotation.x = 0.55 * c; lean = lean * (1 - c); bodyY *= 1 - c; sx = 1 + 0.1 * c; sy = 1 - 0.22 * c;
+      if (v.ro > 0.85 && Math.random() < 0.5) burst(root.position.x - Math.sin(v.facing) * 1.2, 0.3, root.position.z - Math.cos(v.facing) * 1.2, 1, ['#d8c7a8', '#ffffff'], { speed: 2, size: 0.28, up: 2, life: 0.5, grav: 3 });
+      if (p.bst && Math.random() < 0.8) burst(root.position.x - Math.sin(v.facing) * 1.3, 1, root.position.z - Math.cos(v.facing) * 1.3, 2, ['#ff7a1a', '#ffd84a', '#ff3b1f'], { speed: 3, size: 0.35, up: 2, life: 0.35, grav: 0 });
+      if (p.sp === 'rollroll' && ro >= 0.95 && Math.random() < 0.4) burst(root.position.x, 1.2, root.position.z, 1, ['#7cf0ff', '#ffffff'], { speed: 4, size: 0.2, up: 2, life: 0.4, grav: 0 });
+    }
+    if (v.g2T < 1.0) { const q = v.g2T < 0.15 ? v.g2T / 0.15 : 1 - Math.max(0, v.g2T - 0.8) / 0.2; armX = [-2.2 * q, -2.2 * q]; armZ = [-0.5 * q, 0.5 * q]; M.head.rotation.x = -0.2 * q + Math.sin(now * 25) * 0.08 * q; }
+    if (v.g1T < 0.5) { const q = v.g1T < 0.1 ? v.g1T / 0.1 : 1 - (v.g1T - 0.1) / 0.4; M.head.rotation.x = -0.4 * q; lean = -0.25 * q; }
+    if (v.superT < 0.6 && c < 0.5) { const q = v.superT < 0.12 ? v.superT / 0.12 : 1 - (v.superT - 0.12) / 0.48; armX = [-1.6 * q, -1.6 * q]; armZ = [-0.6 * q, 0.6 * q]; lean = 0.2 * q; }
+    if (!v.bubble) { v.bubble = new THREE.Mesh(new THREE.SphereGeometry(1.7, 24, 16), addMat('#ffd84a', 0.22, true)); v.bubble.position.y = 1.3; root.add(v.bubble); }
+    v.bubble.visible = !!p.muk && !p.dead; if (p.muk) v.bubble.scale.setScalar(Math.max(0.5, Math.min(1, (p.sh || 0) / 3000)) * (1 + Math.sin(now * 6) * 0.03));
   }
   // 방예담: 머리 잡고 있으면 오른팔 쭉 / 노래할 땐 마이크 들고 흔들흔들 / 전력질주는 확 숙이고 뜀
   if (YD) {
@@ -3224,6 +3340,7 @@ function animateTeacher(v, p, dt, now) {
     } else v.neckHold = false;
     if (v.neckHold) { M.torso.rotation.z = 0; }
     M.neck.scale.y = L; M.head.position.y = L; M.neckPivot.rotation.x = tilt;
+    { const bent = (v.bendUntil || 0) > performance.now() / 1000; M.neck.visible = !bent; M.head.visible = !bent; M.neckSpots.visible = !bent; }
     M.neckSpots.scale.y = L / 1.9;
     M.head.rotation.x = -tilt * 0.9;
     // 훠이훠이: 팔 마구 휘젓기
@@ -3326,6 +3443,10 @@ function animateTeacher(v, p, dt, now) {
   M.body.scale.set(sx, sy, sx);
   M.body.rotation.x = lean;
   M.body.rotation.y = spin;
+  if (SH && !v.fly) {          // 구를 때는 몸 가운데를 축으로 회전
+    const c = v.curl || 0, cy = 1.45;
+    M.body.position.y = bodyY - cy * c; M.model.position.y = (cy + 0.15) * 0.69 * c; M.model.rotation.x = v.rollAng || 0;
+  }
 
   // 피격 반짝
   const fl = v.hitT < 0.2 ? (1 - v.hitT / 0.2) : 0;
@@ -3413,7 +3534,7 @@ function updateLabel(v, p) {
   const [x, y, vis] = toScreen(pos.x, 5.0 + v.model.body.position.y * 0.5, pos.z);
   L.d.style.display = p.dead || p.out || !vis || v.hiddenInv ? 'none' : 'block';
   L.d.style.left = x + 'px'; L.d.style.top = y + 'px';
-  L.nm.textContent = `${p.jail > 0 ? '⛓️ ' : ''}${p.na > 0 ? '💔 ' : ''}${p.scared > 0 ? '😰 ' : ''}${p.aw ? '🔥 ' : ''}${p.ctl ? '🎮 ' : ''}${p.gems ? '💎' + p.gems + ' ' : ''}${p.bty ? '⭐' + p.bty + ' ' : ''}${state.ball && state.ball[2] === p.id ? '⚽ ' : ''}${p.mo ? '🗿 ' : ''}${p.up ? '⚡ ' : ''}${p.sl ? '🐌 ' : ''}${p.fm ? (p.fm === 'art' ? '🎨 ' : '🏀 ') : ''}${p.au != null && p.id === myId ? `🔮${Math.round(p.au * 100)}% ` : ''}${p.name}  ${p.hp}${p.sh > 0 ? ' 🛡' + p.sh : ''}`;
+  L.nm.textContent = `${p.jail > 0 ? '⛓️ ' : ''}${p.na > 0 ? '💔 ' : ''}${p.scared > 0 ? '😰 ' : ''}${p.aw ? '🔥 ' : ''}${p.ctl ? '🎮 ' : ''}${p.gems ? '💎' + p.gems + ' ' : ''}${p.bty ? '⭐' + p.bty + ' ' : ''}${state.ball && state.ball[2] === p.id ? '⚽ ' : ''}${p.mo ? '🗿 ' : ''}${p.up ? '⚡ ' : ''}${p.sl ? '🐌 ' : ''}${p.fm ? (p.fm === 'art' ? '🎨 ' : '🏀 ') : ''}${p.au != null && p.id === myId ? `🔮${Math.round(p.au * 100)}% ` : ''}${p.ro != null && p.id === myId ? `🌀${Math.round(p.ro * 100)}% ` : ''}${p.name}  ${p.hp}${p.sh > 0 ? ' 🛡' + p.sh : ''}`;
   const meP = state.players.find((q) => q.id === myId);
   L.d.classList.toggle('ally', p.id !== myId && p.team != null && meP && meP.team === p.team);
   L.rfb.style.display = p.rf > 0 ? 'block' : 'none'; L.rf.style.width = p.rf * 100 + '%';
@@ -3627,14 +3748,14 @@ function frame(nowMs) {
       const v = views[src.id];
       if (aimInd.userData.b !== src.b + (src.fm || '')) { if (aimMesh) aimInd.remove(aimMesh); aimMesh = null; aimInd.userData.b = src.b + (src.fm || ''); }
       const atkN = src.b === 'hyeonwoo' ? (src.s9 ? 9 : src.sp === 'fullsix' && src.ammo >= B.attack.ammo - 0.01 ? 6 : 5) : 0;   // 지금 쏘면 나갈 심 개수
-      const atkKey = src.b + atkN + (src.fm || '');
+      const atkKey = src.b + atkN + (src.fm || '') + (src.sp || '');
       if (atkInd.userData.b !== atkKey) { if (atkMesh) atkInd.remove(atkMesh); atkMesh = null; atkInd.userData.b = atkKey; }
       aimInd.visible = !!B.super && src.sup >= 1 && !src.dead && !!v && (aims.sup.id !== null ? !aims.sup.cancel : !isTouch);
       if (aimInd.visible) {
         if (!aimMesh) {
           const line = B.super.aim === 'line';
           aimMesh = B.super.aim === 'self' ? aimShape({ type: 'circle', r: B.super.range * S, color: '#ff4ab0', edge: '#ff8ad0' }) : aimShape(line ? { type: 'rect', r: B.super.range * S, w: B.super.width * S, color: '#b44cff', edge: '#d77bff' }
-            : { type: 'sector', r: B.super.range * S, half: B.super.half, color: '#ff6a00', edge: '#ff9a2a' });
+            : { type: 'sector', r: B.super.range * S, half: B.super.half, color: '#ff6a00', edge: '#ff9a2a', rays: B.super.count ? [...Array(B.super.count)].map((_, i) => -B.super.half + 2 * B.super.half * i / (B.super.count - 1)) : undefined });
           aimInd.add(aimMesh);
         }
         aimInd.position.set(v.model.root.position.x, 0.08, v.model.root.position.z); pulseAim(aimMesh, now);
@@ -3648,7 +3769,8 @@ function frame(nowMs) {
           const r = B.attack.range * S;
           atkMesh = new THREE.Group();
           let shape;
-          if (B.attack.aim === 'line') shape = aimShape({ type: 'rect', r, w: B.attack.width * S, color: '#ffb800', edge: '#ffd21a' });
+          if (src.b === 'jinho' && src.sp === 'disc') shape = aimShape({ type: 'sector', r, half: (B.starPowers.find((x) => x.id === 'disc') || {}).half || 0.38, color: '#ffb800', edge: '#ffd21a' });   // 목디스크: 휘는 목 → 부채꼴
+          else if (B.attack.aim === 'line') shape = aimShape({ type: 'rect', r, w: B.attack.width * S, color: '#ffb800', edge: '#ffd21a' });
           else if (B.attack.aim === 'lob') {        // 편도준 물감: 떨어질 자리만 크게
             shape = aimShape({ type: 'rect', r, w: 0.25, color: '#ffffff', edge: '#ffffff' });
             const land = aimShape({ type: 'circle', r: B.attack.lobR * S, color: '#ff4ab0', edge: '#ffd23a' }); land.position.set(r, 0.02, 0); atkMesh.add(land); atkMesh.userData.land = land; atkMesh.userData.r = r;
