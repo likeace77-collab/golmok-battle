@@ -322,11 +322,11 @@ const BRAWLERS = {
     desc: '키가 작고 동글동글한 학생. 몸을 공처럼 말고 데굴데굴 굴러다니며 앞을 막는 상대를 깔아뭉갠다. 오래 구를수록 빨라지고 더 아프다. 목에 늘 빅맥을 끼고 다닌다.',
     radius: 25, speed: 255, maxHp: 5800,
     // 구르기: 움직이는 동안 속도 게이지(0~1)가 차오름 → 이동 속도·깔아뭉개기 피해 ↑. 벽에 부딪히거나 급하게 꺾거나 멈추면 줄어듦
-    roll: { fill: 1.1, minMul: 0.9, maxMul: 1.7, turnFast: 10, turnSlow: 3.8, wallKeep: 0.3, hitKeep: 0.55, stopLose: 2.2, supFull: 40 },
+    roll: { fill: 1.6, minMul: 0.9, maxMul: 1.3, turnFast: 10, turnSlow: 3.8, wallKeep: 0.3, hitKeep: 0.55, stopLose: 2.2, supFull: 40 },
     attack: {
       name: '깔아뭉개기', aim: 'self',
-      desc: '굴러다니며 부딪힌 상대를 깔아뭉갠다 (빠를수록 550~1200 피해). 버튼을 누르면 탄 1개로 순간 가속 — 1초 동안 최고 속도 + 피해 2배 (최대 2400).',
-      range: 80, minDmg: 550, maxDmg: 1200, hitCd: 0.55, push: 40, boost: 1, boostMul: 1.3, ammo: 2, reload: 2.2, cd: 0.3,
+      desc: '굴러다니며 부딪힌 상대를 깔아뭉갠다 (빠를수록 500~1100 피해). 버튼을 누르면 탄 1개로 순간 가속 — 1초 동안 최고 속도 + 피해 2배 (최대 2200).',
+      range: 80, minDmg: 500, maxDmg: 1100, hitCd: 0.55, push: 40, boost: 1, boostMul: 1.2, ammo: 2, reload: 3.2, cd: 0.3,
     },
     super: {
       name: '수학 블래스터', aim: 'dir',
@@ -337,7 +337,7 @@ const BRAWLERS = {
       { name: '빅@맥 발사!', icon: '🍔', desc: '목에 낀 빅맥을 발사한다. 가장 가까운 상대를 따라가는 유도탄으로 1600 피해.', dmg: 1600, speed: 720, range: 1100, turn: 4.5 },
       { name: '빅맥먹방', icon: '😋', desc: '빅맥을 먹고 3000 보호막을 얻는다. 보호막은 6초에 걸쳐 점점 닳는다.', shield: 3000, dur: 6 },
     ],
-    gadgetCd: 12,
+    gadgetCd: 16,
     starPowers: [
       { id: 'bigmacroad', name: '빅맥로드', icon: '🛣️', desc: '맵에 아주 가끔 빅맥이 떨어진다 (최대 2개). 밟고 지나가면 먹고 1000 회복.', every: 15, max: 2, heal: 1000 },
       { id: 'rollroll', name: '구르고 구르고', icon: '🌀', desc: '최고 속도로 구르는 동안 기절·얼음에 걸리지 않는다.' },
