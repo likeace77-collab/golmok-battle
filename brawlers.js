@@ -233,11 +233,11 @@ const BRAWLERS = {
     role: '힐러',
     title: '사랑을 했다~',
     desc: '키 작고 비쩍 마른 학생. 팔을 쭉 늘려 상대 머리채를 잡고 안 놔준다. 노래 한 곡이면 우리 팀은 살아나고 상대는 귀가 아프다.',
-    radius: 22, speed: 268, maxHp: 4800,
+    radius: 22, speed: 268, maxHp: 5200,
     attack: {
       name: '머리뜯기', aim: 'line',
-      desc: '팔을 쭉 늘려 손을 날린다. 손이 상대 머리를 잡으면 연결되어 0.15초마다 100 피해, 준 피해의 30%만큼 회복. 한 번에 2명까지 잡을 수 있다. 너무 멀어지거나 사이에 벽이 생기면 끊긴다.',
-      range: 440, width: 24, handSpeed: 1500, breakRange: 600, tick: 0.15, dmg: 100, heal: 75, maxT: 5, lifesteal: 0.3, maxGrab: 2, ammo: 3, reload: 1.5, cd: 0.45,
+      desc: '팔을 쭉 늘려 손을 날린다. 손이 상대 머리를 잡으면 연결되어 0.15초마다 120 피해, 준 피해의 40%만큼 회복. 한 번에 2명까지 잡을 수 있다. 너무 멀어지거나 사이에 벽이 생기면 끊긴다.',
+      range: 440, width: 24, handSpeed: 1500, breakRange: 600, tick: 0.15, dmg: 120, heal: 75, maxT: 5, lifesteal: 0.4, maxGrab: 2, ammo: 3, reload: 1.5, cd: 0.45,
     },
     gadgets: [
       { name: '전력질주', icon: '🏃', desc: '앞으로 쭉 달려 나간 뒤 4초 동안 이동 속도 300%.', dash: 280, dur: 4, mul: 3 },
@@ -319,10 +319,10 @@ const BRAWLERS = {
     rarity: 'epic',
     role: '탱커',
     title: '데굴데굴 굴러간다~',
-    desc: '키가 작고 동글동글한 학생. 몸을 공처럼 말고 데굴데굴 굴러다니며 앞을 막는 상대를 깔아뭉갠다. 오래 구를수록 빨라지고 더 아프다. 목에 늘 빅맥을 끼고 다닌다.',
+    desc: '키가 작고 동글동글한 학생. 몸을 공처럼 말고 데굴데굴 굴러다니며 앞을 막는 상대를 깔아뭉갠다. 오래 구를수록 빨라지고 더 아프지만, 빠를 때 방향을 틀면 속도가 확 줄어든다. 목에 늘 빅맥을 끼고 다닌다.',
     radius: 25, speed: 255, maxHp: 5800,
     // 구르기: 움직이는 동안 속도 게이지(0~1)가 차오름 → 이동 속도·깔아뭉개기 피해 ↑. 벽에 부딪히거나 급하게 꺾거나 멈추면 줄어듦
-    roll: { fill: 1.6, minMul: 0.9, maxMul: 1.55, turnFast: 10, turnSlow: 3.8, wallKeep: 0.3, hitKeep: 0.55, stopLose: 2.2, supFull: 40 },
+    roll: { fill: 1.6, minMul: 0.9, maxMul: 1.55, turnFast: 10, turnSlow: 3.8, wallKeep: 0.3, turnLose: 1.6, spTurnMul: 0.3, spWallKeep: 0.6, hitKeep: 0.55, stopLose: 2.2, supFull: 40 },
     attack: {
       name: '깔아뭉개기', aim: 'self',
       desc: '굴러다니며 부딪힌 상대를 깔아뭉갠다 (빠를수록 450~1000 피해). 버튼을 누르면 탄 1개로 순간 가속 — 1초 동안 최고 속도 + 피해 2배 (최대 2000).',
@@ -340,7 +340,7 @@ const BRAWLERS = {
     gadgetCd: 16,
     starPowers: [
       { id: 'bigmacroad', name: '빅맥로드', icon: '🛣️', desc: '맵에 아주 가끔 빅맥이 떨어진다 (최대 2개). 밟고 지나가면 먹고 1000 회복.', every: 15, max: 2, heal: 1000 },
-      { id: 'rollroll', name: '구르고 구르고', icon: '🌀', desc: '최고 속도로 구르는 동안 기절·얼음에 걸리지 않는다.' },
+      { id: 'rollroll', name: '구르고 구르고', icon: '🌀', desc: '방향을 틀어도 속도가 훨씬 덜 줄고, 벽에 부딪혀도 속도가 60% 남는다. 최고 속도로 구르는 동안 기절·얼음에 걸리지 않는다.' },
     ],
     lines: {
       atk: ['비켜비켜~', '부릉부릉!', '굴러간다~'],

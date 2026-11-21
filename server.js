@@ -785,9 +785,13 @@ function rollMove(room, p, mx, my, len, now) {
   const d = angDiff(ta, p.rollA);
   if (Math.abs(d) > 1.7 && p.boostT <= 0) p.roll = Math.max(0, p.roll - DT * 3);      // 거의 반대로 꺾으면 감속
   const turn = (R.turnFast + (R.turnSlow - R.turnFast) * p.roll) * DT;
-  p.rollA = angDiff(p.rollA + Math.max(-turn, Math.min(turn, d)), 0);
+  const tw = Math.max(-turn, Math.min(turn, d));
+  p.rollA = angDiff(p.rollA + tw, 0);
   p.facing = p.rollA;
-  p.roll = Math.min(1, p.roll + DT / R.fill);
+  const rr = hasSP(p, 'rollroll');
+  if (Math.abs(tw) > 0.004 && p.boostT <= 0) {      // 빠를 때 방향을 틀면 속도가 확 떨어짐 (스파2 구르고 구르고는 훨씬 덜 떨어짐)
+    p.roll = Math.max(0, p.roll - Math.abs(tw) * R.turnLose * (0.3 + p.roll) * (rr ? R.spTurnMul : 1));
+  } else p.roll = Math.min(1, p.roll + DT / R.fill);
   const v = speedOf(p) * DT, vx = Math.cos(p.rollA) * v, vy = Math.sin(p.rollA) * v;
   const x0 = p.x, y0 = p.y;
   p.x += vx; p.y += vy;
@@ -795,7 +799,7 @@ function rollMove(room, p, mx, my, len, now) {
   const moved = ((p.x - x0) * vx + (p.y - y0) * vy) / (v * v || 1);
   if (moved < 0.5) {                  // 벽에 쿵 → 속도 확 줄어듦
     if (p.roll > 0.4) room.fx.push({ type: 'rollBump', x: p.x, y: p.y });
-    p.roll *= R.wallKeep; p.boostT = 0;
+    p.roll *= rr ? R.spWallKeep : R.wallKeep; p.boostT = 0;
   }
   if (p.B.super && p.sup < 1) p.sup = Math.min(1, p.sup + DT * p.roll / R.supFull);   // 구르는 동안 궁 충전
 }
