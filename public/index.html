@@ -35,7 +35,9 @@
   #profile .av { width: 46px; height: 46px; border-radius: 9px; border: 3px solid #000; background: linear-gradient(#ffe36b, #ffb31f); display: flex; align-items: center; justify-content: center; font-size: 28px; }
   #profile .pn { font-weight: 900; font-size: 16px; }
   #profile .tr { font-weight: 900; font-size: 15px; color: #ffd84a; }
-  #lbtns { position: absolute; left: 10px; top: 80px; display: flex; flex-direction: column; gap: 10px; }
+  #lbtns { position: absolute; left: 10px; top: 80px; display: flex; flex-direction: column; gap: 10px; max-height: calc(100% - 90px); overflow-y: auto; overflow-x: hidden; touch-action: pan-y; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 0 4px 8px 0; z-index: 2; }
+  #lbtns::-webkit-scrollbar { display: none; }
+  #lbtns .lb { flex: 0 0 auto; }   /* 화면이 낮으면 버튼 줄을 아래로 스크롤 */
   .lb { width: 74px; padding: 6px 0 5px; text-align: center; font-weight: 900; font-size: 13px; cursor: pointer; }
   .lb .ic { font-size: 30px; line-height: 1.1; display: block; }
   #showName { position: absolute; left: 50%; top: 4%; transform: translateX(-50%); text-align: center; white-space: nowrap; pointer-events: none; }
@@ -175,6 +177,20 @@
   #auth .go { width: 100%; margin-top: 6px; }
   #auth .guest { margin-top: 12px; font-size: 13px; opacity: .85; text-decoration: underline; cursor: pointer; }
   #onlineBtn { position: absolute; top: 10px; right: 12px; padding: 6px 12px; font-weight: 900; font-size: 15px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  #lrank { position: absolute; top: 104px; right: 12px; width: 200px; padding: 6px 8px 7px; font-weight: 900; cursor: pointer; z-index: 2; }
+  #lrank .bh { text-align: center; color: #ffd84a; font-size: 14px; margin-bottom: 3px; }
+  #lrank .r { display: flex; align-items: center; gap: 5px; font-size: 13px; padding: 2px 4px; border-radius: 7px; }
+  #lrank .r.me { background: rgba(255,216,74,.3); }
+  #lrank .r .no { width: 22px; text-align: center; }
+  #lrank .r .d { width: 7px; height: 7px; border-radius: 50%; background: #777; flex: 0 0 7px; }
+  #lrank .r .d.on { background: #3ce07f; box-shadow: 0 0 5px #3ce07f; }
+  #lrank .r .n { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #fff; }
+  #lrank .r.me .n { color: #ffd84a; }
+  #lrank .r .t { color: #ffd84a; font-size: 12px; white-space: nowrap; }
+  #lrank .more { text-align: center; font-size: 11px; opacity: .75; margin-top: 2px; }
+  @media (max-height: 520px) { #lrank { width: 170px; padding: 4px 6px; } #lrank .r { font-size: 12px; } #lrank .r .t { font-size: 11px; } #lrank .bh { font-size: 12px; } }
+  #openRank { display: none; }
+  @media (orientation: portrait) { #lrank { display: none !important; } #openRank { display: block; } }   /* 세로 폰: 옆 순위표 대신 🏆 순위 버튼 */
   #patchBtn { position: absolute; top: 58px; right: 12px; padding: 5px 11px; font-weight: 900; font-size: 14px; cursor: pointer; }
   #patchBtn b { display: none; margin-left: 5px; background: #ff3b3b; color: #fff; border-radius: 9px; padding: 0 6px; font-size: 12px; -webkit-text-stroke: 0; }
   #pnotes { max-height: 58vh; overflow-y: auto; text-align: left; touch-action: pan-y; }
@@ -196,6 +212,29 @@
   #modal { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; background: rgba(10,6,30,.7); }
   #modal .box { width: min(90vw, 340px); padding: 18px; text-align: center; }
   #modal h3 { margin: 0 0 12px; font-size: 20px; }
+  #modal .box.wide { width: min(94vw, 720px); max-height: 88vh; overflow-y: auto; touch-action: pan-y; }
+  /* 플레이어 프로필 (브롤스타즈 프로필처럼) */
+  #prof .top { display: flex; align-items: center; gap: 12px; text-align: left; }
+  #prof .ic { width: 64px; height: 64px; border-radius: 12px; border: 3px solid #000; background: linear-gradient(#ffe36b, #ffb31f); display: flex; align-items: center; justify-content: center; font-size: 38px; overflow: hidden; flex: 0 0 64px; }
+  #prof .ic img { width: 100%; height: 100%; object-fit: cover; }
+  #prof .pn { font-size: 22px; } #prof .on { font-size: 12px; font-weight: 800; }
+  #prof .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 10px 0; }
+  #prof .stats div { background: rgba(0,0,0,.35); border-radius: 9px; padding: 5px 2px; font-size: 11px; opacity: .95; }
+  #prof .stats b { display: block; font-size: 17px; color: #ffd84a; }
+  #prof .body { display: flex; gap: 10px; align-items: flex-start; }
+  #prof .fav { flex: 0 0 150px; background: linear-gradient(#6a4cff, #2a1a7a); border: 3px solid #000; border-radius: 12px; padding: 6px; }
+  #prof .fav img { width: 100%; display: block; }
+  #prof .fav .t { font-size: 12px; color: #cfc6ff; } #prof .fav .bn { font-size: 18px; } #prof .fav .tr { color: #ffd84a; font-size: 16px; }
+  #prof .grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; }
+  #prof .bc { background: rgba(0,0,0,.35); border: 2px solid #000; border-radius: 10px; padding: 3px; position: relative; }
+  #prof .bc img { width: 100%; display: block; border-radius: 7px; }
+  #prof .bc .n { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #prof .bc .tr { font-size: 13px; color: #ffd84a; }
+  #prof .bc.zero { opacity: .55; }
+  #prof .icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
+  #prof .icons img { width: 100%; border-radius: 10px; border: 3px solid #000; cursor: pointer; background: linear-gradient(#ffe36b, #ffb31f); }
+  #prof .icons img.sel { outline: 3px solid #ffd84a; }
+  @media (max-width: 560px) { #prof .body { flex-direction: column; } #prof .fav { flex: 0 0 auto; width: 100%; display: flex; align-items: center; gap: 8px; } #prof .fav img { width: 90px; } #prof .stats { grid-template-columns: repeat(3, 1fr); } }
   #modal .acts { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
   #help { font-size: 13px; line-height: 1.7; text-align: left; }
   #help b { color: #ffd84a; }
@@ -226,17 +265,7 @@
 
   #top { position: fixed; top: 8px; left: 8px; z-index: 8; display: none; gap: 6px; pointer-events: auto; }   /* 버튼이 항상 맨 위 */
   #top button { padding: 7px 10px; font-size: 13px; font-weight: 800; border: 3px solid #000; border-radius: 9px; background: #fff; cursor: pointer; }
-  #board { position: fixed; top: 60px; right: 10px; z-index: 6; font-weight: 800; font-size: 13px; pointer-events: none; background: rgba(12,10,40,.55); border: 2px solid rgba(0,0,0,.55); border-radius: 12px; padding: 5px 7px; min-width: 165px; display: none; }
-  #board .bh { font-size: 12px; color: #ffd84a; text-align: center; margin-bottom: 2px; letter-spacing: 1px; }
-  #board .rk { display: flex; align-items: center; gap: 5px; padding: 2px 4px; border-radius: 7px; margin: 1px 0; border-left: 4px solid transparent; }
-  #board .rk.me { background: rgba(255,216,74,.28); }
-  #board .rk.dead { opacity: .45; }
-  #board .rk .no { width: 20px; text-align: center; font-size: 13px; }
-  #board .rk img { width: 22px; height: 22px; border-radius: 6px; background: rgba(0,0,0,.35); }
-  #board .rk .n { flex: 1; max-width: 92px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #fff; }
-  #board .rk.me .n { color: #ffd84a; }
-  #board .rk .kd { color: #ffe9a8; font-size: 12px; white-space: nowrap; }
-  #board .sep { text-align: center; color: #aaa; font-size: 10px; line-height: .8; }
+  #board { position: fixed; top: 8px; right: 12px; z-index: 6; text-align: right; font-weight: 800; font-size: 14px; line-height: 1.5; pointer-events: none; }
   #feed { pointer-events: none; }
   /* 세로 폰 화면: 버튼 줄 → 그 아래 모드 정보 → 그 아래 점수판·킬피드 */
   @media (max-width: 720px) {
@@ -244,9 +273,8 @@
     #modeHud { top: 50px; font-size: 13px; }
     #modeHud .gs { font-size: 15px; padding: 2px 10px; }
     #modeHud .gs[style] { font-size: 12px !important; }
-    #board { top: 86px; right: 6px; font-size: 11px; min-width: 128px; padding: 4px 5px; }
-    #board .rk img { width: 17px; height: 17px; } #board .rk .n { max-width: 62px; } #board .rk .no { width: 15px; font-size: 11px; } #board .rk .kd { font-size: 10px; } #board .bh { font-size: 10px; }
-    #feed { top: 150px; font-size: 13px; left: 8px; right: auto; max-width: 58%; text-align: left; }
+    #board { top: 86px; right: 8px; font-size: 11px; line-height: 1.35; }
+    #feed { top: 150px; font-size: 13px; }
   }
   #feed { position: fixed; top: 100px; left: 0; right: 0; z-index: 6; text-align: center; font-weight: 900; font-size: 15px; color: #ff9a9a; line-height: 1.6; }
   #dead { position: fixed; inset: 0; z-index: 7; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.45); font-size: 36px; font-weight: 900; }
@@ -284,10 +312,12 @@
 <div id="lobby">
   <div id="profile" class="panel"><div class="av">😎</div><div><div class="pn stroke" id="pName">플레이어</div><div class="tr stroke">🏆 <span id="pTro">0</span></div></div></div>
   <div id="onlineBtn" class="panel stroke"><i></i>온라인 <span id="oCnt">-</span>명</div>
+  <div id="lrank" class="panel stroke" style="display:none"></div>
   <div id="patchBtn" class="panel stroke">📜 패치노트<b id="patchNew">N</b></div>
   <div id="lbtns">
     <div class="lb panel stroke" id="openB"><span class="ic">🧑‍🏫</span>브롤러</div>
     <div class="lb panel stroke" id="openFriendly"><span class="ic">🤝</span>친선전</div>
+    <div class="lb panel stroke" id="openRank"><span class="ic">🏆</span>순위</div>
     <div class="lb panel stroke" id="openPlayers"><span class="ic">👥</span>플레이어</div>
     <div class="lb panel stroke" id="openHelp"><span class="ic">❔</span>조작법</div>
   </div>
@@ -2691,17 +2721,52 @@ function openDetail(id) {
 }
 function modal(html, onOk) {
   $('mBox').innerHTML = html + `<div class="acts"><button class="btn" id="mOk">확인</button>${onOk ? '<button class="btn gray" id="mNo">취소</button>' : ''}</div>`;
-  $('modal').style.display = 'flex';
+  $('modal').style.display = 'flex'; $('mBox').classList.remove('wide');
   $('mOk').onclick = () => { if (onOk && onOk() === false) return; $('modal').style.display = 'none'; };
   if (onOk) $('mNo').onclick = () => { $('modal').style.display = 'none'; };
 }
-$('profile').onclick = () => {
-  if (!account) { showAuth(); return; }
-  const st = account.stats || {};
-  modal(`<h3 class="stroke">${account.name}</h3><div id="help" style="text-align:center;font-size:16px">🏆 트로피 <b>${trophies}</b><br>⚔️ 처치 ${st.kills || 0} · 👑 승리 ${st.wins || 0} · 🎮 판 수 ${st.games || 0}</div>
-    <div class="acts"><button class="btn gray" id="logout">로그아웃</button></div>`);
-  $('logout').onclick = async () => { try { await api('POST', '/api/logout'); } catch (e) {} token = ''; LS.set('jb_token', ''); account = null; $('modal').style.display = 'none'; refreshLobby(); connect(); showAuth(); };
-};
+$('profile').onclick = () => { if (!account) { showAuth(); return; } openProfile(account.name); };
+// ── 플레이어 프로필 (트로피·최고 트로피·전적 + 브롤러별 트로피) ──
+const escH = (t) => String(t).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c]);
+const iconHTML = (ic) => (ic && BR[ic] ? `<img src="${portrait(ic)}">` : '😎');
+function setMyIcon() { const av = document.querySelector('#profile .av'); if (av) av.innerHTML = account ? iconHTML((account.prefs || {}).icon) : '😎'; if (av) av.style.overflow = 'hidden'; const im = av && av.querySelector('img'); if (im) { im.style.width = '100%'; im.style.height = '100%'; } }
+function openProfile(name) {
+  if (!socket) return;
+  socket.emit('profile', name, (pr) => {
+    if (!pr) { modal('<h3 class="stroke">플레이어를 찾을 수 없어요</h3>'); return; }
+    const mine = account && account.name === pr.name;
+    if (mine && account.prefs && account.prefs.icon) pr.icon = account.prefs.icon;
+    if (mine) { account.bt = pr.bt; account.best = pr.best; }
+    const st = pr.stats || {}, bt = pr.bt || {};
+    const ids = Object.keys(BR).filter((id) => !BR[id].wip).sort((a, b) => (bt[b] || 0) - (bt[a] || 0));
+    const fav = ids[0];
+    const card = (id) => `<div class="bc${bt[id] ? '' : ' zero'}"><img src="${portrait(id)}"><div class="n">${BR[id].name}</div><div class="tr">🏆${bt[id] || 0}</div></div>`;
+    const html = `<div id="prof">
+      <div class="top"><div class="ic">${iconHTML(pr.icon)}</div><div style="flex:1"><div class="pn stroke">${escH(pr.name)}</div>
+        <div class="on">${pr.online ? `<span style="color:#7cffb0">● 접속 중${pr.status === 'game' ? ' (게임 중)' : ''}</span>` : `<span style="opacity:.7">● ${agoText(pr.lastSeen)} 접속</span>`}</div></div>
+        ${mine ? '<button class="btn" id="pfIcon" style="font-size:13px;padding:6px 10px">아이콘 변경</button>' : ''}</div>
+      <div class="stats"><div><b>🏆 ${pr.trophies}</b>트로피</div><div><b>${pr.best}</b>최고 트로피</div><div><b>${st.kills || 0}</b>⚔️ 처치</div><div><b>${st.wins || 0}</b>👑 승리</div><div><b>${st.games || 0}</b>🎮 판 수</div></div>
+      <div class="body">
+        <div class="fav"><img src="${portrait(fav)}"><div><div class="t">대표 브롤러</div><div class="bn stroke">${BR[fav].name}</div><div class="tr stroke">🏆 ${bt[fav] || 0}</div></div></div>
+        <div class="grid">${ids.map(card).join('')}</div>
+      </div></div>`;
+    modal(`<h3 class="stroke">👤 플레이어 프로필</h3>${html}` + (mine ? '<div class="acts" style="margin-top:8px"><button class="btn gray" id="logout">로그아웃</button></div>' : ''));
+    $('mBox').classList.add('wide');
+    if (mine) {
+      $('logout').onclick = async () => { try { await api('POST', '/api/logout'); } catch (e) {} token = ''; LS.set('jb_token', ''); account = null; $('modal').style.display = 'none'; refreshLobby(); setMyIcon(); connect(); showAuth(); };
+      $('pfIcon').onclick = () => {
+        const cur = (account.prefs || {}).icon;
+        modal(`<h3 class="stroke">아이콘 선택</h3><div id="prof"><div class="icons">${Object.keys(BR).filter((id) => !BR[id].wip).map((id) => `<img data-i="${id}" class="${id === cur ? 'sel' : ''}" src="${portrait(id)}" title="${BR[id].name}">`).join('')}</div></div>`);
+        $('mBox').classList.add('wide');
+        document.querySelectorAll('#prof .icons img').forEach((im) => im.onclick = () => {
+          account.prefs = account.prefs || {}; account.prefs.icon = im.dataset.i;
+          api('PUT', '/api/prefs', { icon: im.dataset.i }).catch(() => {});
+          setMyIcon(); openProfile(account.name);
+        });
+      };
+    }
+  });
+}
 // ── 로그인 / 회원가입 ──
 let authMode = 'login';
 function showAuth() { $('auth').style.display = 'flex'; $('aErr').textContent = ''; }
@@ -2716,7 +2781,7 @@ function setAuthMode(m) {
 $('tLogin').onclick = () => setAuthMode('login');
 $('tSignup').onclick = () => setAuthMode('signup');
 function applyAccount(user) {
-  account = user; trophies = user.trophies || 0; myName = user.name;
+  account = user; trophies = user.trophies || 0; myName = user.name; setTimeout(setMyIcon, 0);
   const p = user.prefs || {};
   if (p.loadouts) for (const [id, lo] of Object.entries(p.loadouts)) LS.set('jb_lo_' + id, JSON.stringify(lo));
   if (p.brawler && BR[p.brawler] && !BR[p.brawler].wip) { selected = p.brawler; LS.set('jb_brawler', selected); }
@@ -2795,6 +2860,7 @@ function connect() {
   if (socket) { socket.emit('hello', { token, cid: CID }); return; }
   socket = io();
   socket.on('connect', () => {
+    setTimeout(refreshRank, 500);
     socket.emit('hello', { token, cid: CID });
   });
   socket.on('onlineCount', (n) => { $('oCnt').textContent = n; });
@@ -2931,12 +2997,32 @@ $('openPlayers').onclick = () => {
     const esc = (t) => String(t).replace(/</g, '&lt;');
     const medal = ['🥇', '🥈', '🥉'];
     const nOn = list.filter((u) => u.online).length;
-    const rows = list.map((u, i) => `<div class="or${account && account.name === u.name ? ' me' : ''}"><span class="rk">${medal[i] || i + 1}</span><span class="dot${u.online ? ' on' : ''}"></span>
+    const rows = list.map((u, i) => `<div class="or${account && account.name === u.name ? ' me' : ''}" data-n="${esc(u.name).replace(/"/g, '&quot;')}" style="cursor:pointer"><span class="rk">${medal[i] || i + 1}</span><span class="dot${u.online ? ' on' : ''}"></span>
       <div><b>${esc(u.name)}</b><div class="sub">⚔️ ${u.kills}킬 · 👑 ${u.wins}승 · 🎮 ${u.games}판</div></div>
       <span class="st"><span class="tr">🏆${u.trophies}</span><br>${u.online ? `<span style="color:#7cffb0">${u.status === 'game' ? u.modeName + ' 중' : '로비'}</span>` : `<span style="opacity:.7">${agoText(u.lastSeen)}</span>`}</span></div>`).join('');
-    modal(`<h3 class="stroke">👥 플레이어 ${list.length}명 <span style="font-size:14px;color:#7cffb0">· 접속 ${nOn}</span></h3><div id="olist">${rows || '아직 가입한 사람이 없어요'}</div>`);
+    modal(`<h3 class="stroke">🏆 순위 · 플레이어 ${list.length}명 <span style="font-size:14px;color:#7cffb0">· 접속 ${nOn}</span></h3><div style="font-size:12px;opacity:.75;margin:-6px 0 6px">이름을 누르면 프로필을 볼 수 있어요</div><div id="olist">${rows || '아직 가입한 사람이 없어요'}</div>`);
+    document.querySelectorAll('#olist .or[data-n]').forEach((r) => r.onclick = () => openProfile(r.dataset.n));
   });
 };
+// 로비 순위표 (트로피 순) — 로비에 있을 때 20초마다 새로고침, 누르면 전체 플레이어 목록
+function refreshRank() {
+  if (!socket || mode !== 'lobby') return;
+  socket.emit('players', (list) => {
+    const esc = (t) => String(t).replace(/</g, '&lt;');
+    const n = innerHeight < 430 ? 3 : innerHeight < 560 || innerWidth < 720 ? 5 : 10;
+    const myI = account ? list.findIndex((u) => u.name === account.name) : -1;
+    const row = (u, i) => `<div class="r${i === myI ? ' me' : ''}" data-n="${esc(u.name).replace(/"/g, '&quot;')}"><span class="no">${['🥇', '🥈', '🥉'][i] || i + 1}</span><span class="d${u.online ? ' on' : ''}"></span><span class="n">${esc(u.name)}</span><span class="t">🏆${u.trophies}</span></div>`;
+    let h = `<div class="bh">🏆 순위</div>` + (list.length ? list.slice(0, n).map(row).join('') : '<div class="more">아직 아무도 없어요</div>');
+    if (myI >= n) h += `<div class="more">⋮</div>` + row(list[myI], myI);
+    h += `<div class="more" data-all="1">👥 전체 보기</div>`;
+    $('lrank').innerHTML = h; $('lrank').style.display = 'block';
+    $('lrank').querySelectorAll('.r').forEach((r) => r.onclick = (e) => { e.stopPropagation(); openProfile(r.dataset.n); });
+  });
+}
+$('lrank').onclick = () => $('openPlayers').click();
+$('openRank').onclick = () => $('openPlayers').click();
+setInterval(refreshRank, 20000);
+addEventListener('resize', () => { clearTimeout(refreshRank.t); refreshRank.t = setTimeout(refreshRank, 300); });
 // 패치노트 (안 본 새 버전이 있으면 빨간 N)
 function patchBadge() { const P = META.patch || []; $('patchNew').style.display = P[0] && LS0('jb_patch', '') !== P[0].ver ? 'inline-block' : 'none'; }
 $('patchBtn').onclick = () => {
@@ -3769,13 +3855,8 @@ function frame(nowMs) {
   // HUD
   if (MAP) {
     const me = state.players.find((p) => p.id === myId);
-    // 순위표 (화면 오른쪽): 킬 많은 순 → 데스 적은 순
     const board = state.players.filter((p) => BR[p.b]).sort((a, b) => b.k - a.k || a.d - b.d);
-    const nShow = W <= 720 || innerHeight < 560 ? 5 : 8, myRank = board.findIndex((p) => p.id === myId);
-    const row = (p, i) => `<div class="rk${p.id === myId ? ' me' : ''}${p.dead ? ' dead' : ''}" style="${p.team != null ? `border-left-color:${p.team === 0 ? '#3a8dff' : '#ff4a4a'}` : ''}"><span class="no">${['🥇', '🥈', '🥉'][i] || i + 1}</span><img src="${portrait(p.b)}"><span class="n">${String(p.name).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "\"": "&quot;" })[c])}</span><span class="kd">${p.k}킬 ${p.d}데스</span></div>`;
-    let bh = board.length ? '<div class="bh">🏆 순위</div>' + board.slice(0, nShow).map(row).join('') : '';
-    if (myRank >= nShow) bh += '<div class="sep">⋮</div>' + row(board[myRank], myRank);
-    const bd = $('board'); if (bd.dataset.h !== bh) { bd.dataset.h = bh; bd.innerHTML = bh; } bd.style.display = bh ? 'block' : 'none';
+    $('board').innerHTML = board.slice(0, W <= 720 ? 5 : 10).map((p) => `<div style="color:${p.id === myId ? '#ffd84a' : '#fff'}">${p.name} ${p.k}킬 ${p.d}데스</div>`).join('');
     for (let i = feed.length - 1; i >= 0; i--) { feed[i].t -= dt; if (feed[i].t <= 0) feed.splice(i, 1); }
     $('feed').innerHTML = feed.map((f) => `<div>${f.text}</div>`).join('');
     if (me) {

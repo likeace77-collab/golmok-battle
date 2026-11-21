@@ -70,7 +70,7 @@ function userFromToken(token) {
   const u = db.users[s.user];
   return u ? { key: s.user, u } : null;
 }
-const publicUser = (u) => (fixBt(u), { name: u.name, trophies: u.trophies, bt: u.bt, stats: u.stats, prefs: u.prefs || {} });
+const publicUser = (u) => (fixBt(u), { name: u.name, trophies: u.trophies, best: Math.max(u.best || 0, u.trophies || 0), bt: u.bt, stats: u.stats, prefs: u.prefs || {} });
 
 // ── 트로피 (서버가 직접 지급) ──
 // 브롤러별 트로피(bt). 총 트로피 = 예전 트로피(legacy) + 브롤러별 합
@@ -85,6 +85,7 @@ function addTrophies(key, n, field, bid) {
   if (bid) u.bt[bid] = Math.max(0, (u.bt[bid] || 0) + n);
   else u.legacy = Math.max(0, (u.legacy || 0) + n);
   u.trophies = totalOf(u);
+  u.best = Math.max(u.best || 0, u.trophies);       // 최고 트로피
   if (field) u.stats[field] = (u.stats[field] || 0) + 1;
   save();
   return u.trophies;
@@ -138,6 +139,7 @@ function routes(app) {
     const prefs = a.u.prefs || (a.u.prefs = {});
     if (typeof p.brawler === 'string') prefs.brawler = p.brawler.slice(0, 20);
     if (typeof p.mode === 'string') prefs.mode = p.mode.slice(0, 20);
+    if (typeof p.icon === 'string') prefs.icon = p.icon.slice(0, 20);   // 프로필 아이콘 (브롤러 id)
     if (p.loadouts && typeof p.loadouts === 'object' && JSON.stringify(p.loadouts).length < 4000) prefs.loadouts = p.loadouts;
     save();
     res.json({ ok: true });
@@ -150,8 +152,16 @@ const trophiesOf = (key) => (db.users[key] ? db.users[key].trophies || 0 : 0);
 function allUsers() {
   return Object.entries(db.users).map(([key, u]) => ({
     key, name: u.name, trophies: u.trophies || 0, kills: (u.stats && u.stats.kills) || 0, wins: (u.stats && u.stats.wins) || 0,
-    games: (u.stats && u.stats.games) || 0, lastSeen: u.lastSeen || u.createdAt || 0, createdAt: u.createdAt || 0,
+    games: (u.stats && u.stats.games) || 0, icon: (u.prefs && u.prefs.icon) || null, lastSeen: u.lastSeen || u.createdAt || 0, createdAt: u.createdAt || 0,
   }));
 }
 
-module.exports = { load, routes, userFromToken, addTrophies, brawlerTrophies, addStat, trophiesOf, allUsers, flush };
+// 플레이어 프로필 (공개 정보: 트로피·최고 트로피·브롤러별 트로피·전적·아이콘)
+function profileOf(name) {
+  const key = String(name || '').trim().toLowerCase(), u = db.users[key];
+  if (!u) return null;
+  fixBt(u);
+  return { key, name: u.name, trophies: u.trophies || 0, best: Math.max(u.best || 0, u.trophies || 0), bt: u.bt, stats: u.stats || {}, icon: (u.prefs && u.prefs.icon) || null, createdAt: u.createdAt || 0, lastSeen: u.lastSeen || 0 };
+}
+
+module.exports = { profileOf, load, routes, userFromToken, addTrophies, brawlerTrophies, addStat, trophiesOf, allUsers, flush };

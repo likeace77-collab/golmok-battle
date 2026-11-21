@@ -1695,6 +1695,21 @@ io.on('connection', (socket) => {
     socket.emit('onlineCount', online.size);
   });
   socket.on('online', (cb) => { if (typeof cb === 'function') cb(onlineList(socket.id)); });
+  socket.on('profile', (name, cb) => {      // 플레이어 프로필 보기
+    if (typeof cb !== 'function') return;
+    const pr = auth.profileOf(name); if (!pr) return cb(null);
+    const { key, ...rest } = pr; let on = null;
+    for (const o of online.values()) if (o.key === key) on = o;
+    cb({ ...rest, online: !!on, status: on ? on.status : null });
+  });
+  socket.on('players', (cb) => {      // 가입한 전체 플레이어 (트로피 순) + 지금 접속 중인지 → 로비 순위표·플레이어 목록
+    if (typeof cb !== 'function') return;
+    const on = new Map(); for (const o of online.values()) if (o.key) on.set(o.key, o);
+    cb(auth.allUsers().map(({ key, ...u }) => {
+      const o = on.get(key);
+      return { ...u, online: !!o, status: o ? o.status : null, modeName: o && o.mode && MODES[o.mode] ? MODES[o.mode].icon + ' ' + MODES[o.mode].name : null };
+    }).sort((a, b) => b.trophies - a.trophies || b.lastSeen - a.lastSeen));
+  });
   // 초대: 내가 게임 중이면 지금 방으로, 로비면 내가 고른 모드·맵으로
   const meO = () => online.get(socket.id) || {};
   const myParty = () => { const o = meO(); return o.cid ? parties.get(cidParty.get(o.cid)) : null; };
