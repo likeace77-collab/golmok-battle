@@ -123,11 +123,11 @@ const BRAWLERS = {
     role: '컨트롤러',
     title: '후… 왔냐.',
     desc: '큰 대가리에 두꺼운 뿔테안경. 반창고는 패션이고, 멍은 이긴 거다. 세모를 던지고, 대가리로 박고, "나랑 사귈..레?"로 상대를 굳혀버리는 컨트롤러.',
-    radius: 28, speed: 250, maxHp: 5800,
+    radius: 28, speed: 250, maxHp: 5300,
     attack: {
       name: '세모 던지기 빔', aim: 'tri',
-      desc: '세모 빔(직선)과 던진 세모(사거리 끝에 착지)가 같이 나간다. 각각 700, 한 명에게 둘 다 맞히면 보너스 100으로 총 1500.',
-      range: 500, width: 30, dmg: 700, lobDmg: 700, bothBonus: 100, lobR: 100, lobTime: 0.55, ammo: 3, reload: 1.35, cd: 0.45,
+      desc: '세모 빔(직선)과 던진 세모(사거리 끝에 착지)가 같이 나간다. 각각 600, 한 명에게 둘 다 맞히면 보너스 100으로 총 1300.',
+      range: 500, width: 30, dmg: 600, lobDmg: 600, bothBonus: 100, lobR: 100, lobTime: 0.55, ammo: 3, reload: 1.5, cd: 0.45,
     },
     gadgets: [
       { name: '어깨빵', icon: '💥', desc: '주위의 적에게 700 피해를 주고 날려버린다.', range: 170, dmg: 700, knock: 190 },
@@ -136,11 +136,11 @@ const BRAWLERS = {
     gadgetCd: 14,
     super: {
       name: '대가리 박치기', aim: 'line',
-      desc: '로켓처럼 대가리로 돌진해서 부딪힌 상대에게 1800 피해. 벽은 넘지 못한다.',
-      need: 4200, range: 520, width: 40, dmg: 1800, stun: 0.3, dashTime: 0.38,
+      desc: '로켓처럼 대가리로 돌진해서 부딪힌 상대에게 1600 피해. 벽은 넘지 못한다.',
+      need: 4200, range: 520, width: 40, dmg: 1600, stun: 0.3, dashTime: 0.38,
     },
     starPowers: [
-      { id: 'daedu', name: '대두', icon: '🗿', desc: '대가리 박치기 피해가 2300으로 늘어나고, 벽을 부수면서 돌진한다.', dmg: 2300 },
+      { id: 'daedu', name: '대두', icon: '🗿', desc: '대가리 박치기 피해가 2000으로 늘어나고, 벽을 부수면서 돌진한다.', dmg: 2000 },
       { id: 'gao', name: '가오업', icon: '😎', desc: '일반공격 범위·피해가 조금 늘어나고, 어깨빵 피해가 900이 되며 날리는 범위가 늘어난다.', atkMul: 1.15, g1Dmg: 900, g1Range: 210, g1Knock: 250 },
     ],
     lines: {
