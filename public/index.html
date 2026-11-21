@@ -1597,6 +1597,41 @@ function makeSuho(teamColor) {
   return { root, model, body, torso, head, legs, arms, stars, flashMats: [m.skin, m.sweater, m.pants] };
 }
 
+// 정수호 구르기 공: 체육복 공 (위아래로 흰 줄, 한쪽엔 얼굴, 반대쪽엔 머리) → 굴러가면 얼굴·머리가 번갈아 보임
+let suhoBallTex = null;
+function makeSuhoBall() {
+  if (!suhoBallTex) {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 256; const x = c.getContext('2d');
+    x.fillStyle = '#5aa8e6'; x.fillRect(0, 0, 512, 256);
+    x.fillStyle = '#ffffff'; for (const u of [0, 256]) { x.fillRect(u + 118, 0, 8, 256); x.fillRect(u + 132, 0, 8, 256); }   // 흰 줄 두 개 (굴러가는 방향)
+    // 얼굴 (u≈0.25 앞쪽) — 피부 원 + 눈 + 볼 + 웃는 입
+    const fx = 128, fy = 128;
+    x.fillStyle = '#f5cfae'; x.beginPath(); x.ellipse(fx, fy, 70, 62, 0, 0, Math.PI * 2); x.fill();
+    x.fillStyle = '#1f1612'; x.beginPath(); x.ellipse(fx, fy - 52, 74, 30, 0, Math.PI, Math.PI * 2); x.fill(); x.fillRect(fx - 74, fy - 56, 148, 18);   // 앞머리
+    for (const s of [-1, 1]) {
+      x.fillStyle = '#120a06'; x.beginPath(); x.ellipse(fx + s * 24, fy - 6, 8, 10, 0, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#ffffff'; x.beginPath(); x.arc(fx + s * 24 + 3, fy - 10, 3, 0, Math.PI * 2); x.fill();
+      x.fillStyle = 'rgba(255,140,140,.55)'; x.beginPath(); x.ellipse(fx + s * 40, fy + 14, 12, 8, 0, 0, Math.PI * 2); x.fill();
+    }
+    x.strokeStyle = '#b8605c'; x.lineWidth = 5; x.beginPath(); x.arc(fx, fy + 16, 16, 0.15 * Math.PI, 0.85 * Math.PI); x.stroke();
+    // 뒤통수 (u≈0.75) 머리카락
+    x.fillStyle = '#1f1612'; x.beginPath(); x.ellipse(384, 128, 80, 70, 0, 0, Math.PI * 2); x.fill();
+    x.fillStyle = '#3a2a20'; for (let i = 0; i < 6; i++) { x.beginPath(); x.ellipse(350 + i * 14, 110 + (i % 2) * 20, 5, 18, 0.3, 0, Math.PI * 2); x.fill(); }
+    // 손·발 (공 옆에 붙은 듯)
+    x.fillStyle = '#f5cfae'; for (const [u, v] of [[60, 60], [196, 60]]) { x.beginPath(); x.arc(u, v, 14, 0, Math.PI * 2); x.fill(); }
+    x.fillStyle = '#f2f2f2'; for (const [u, v] of [[60, 205], [196, 205]]) { x.beginPath(); x.ellipse(u, v, 20, 13, 0, 0, Math.PI * 2); x.fill(); }
+    suhoBallTex = new THREE.CanvasTexture(c); suhoBallTex.colorSpace = THREE.SRGBColorSpace;
+  }
+  const g = new THREE.Group(), spin = new THREE.Group(); g.add(spin);
+  const mat = std('#ffffff', { roughness: 0.55 }); mat.map = suhoBallTex;
+  // 텍스처 세로축(v)을 굴러가는 방향 둘레로: 구를 x축에 맞춰 눕힘
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(1.3, 32, 24), mat); ball.rotation.z = Math.PI / 2; spin.add(ball);
+  ball.castShadow = true;
+  const trail = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 0.2, 3.5, 16, 1, true), addMat('#bff6ff', 0.35, true)); trail.rotation.x = Math.PI / 2; trail.position.z = -2.4; trail.visible = false; g.add(trail);
+  g.userData = { spin, mat, trail }; g.visible = false;
+  return g;
+}
+
 // ── 하이스트 금고 3D ──────────────────────────────
 function makeSafe(teamColor) {
   const root = new THREE.Group();
@@ -3291,18 +3326,25 @@ function animateTeacher(v, p, dt, now) {
   // 정수호: 빠르게 구르면 몸을 공처럼 말고 데굴데굴 / 빅맥먹방 / 빅맥 발사 / 수학 블래스터
   if (SH) {
     const ro = p.ro || 0; v.ro = (v.ro || 0) + (ro - (v.ro || 0)) * Math.min(1, dt * 8);
-    const want = !p.dead && (p.bst || (v.ro > 0.18 && v.speed > 1.5)) ? 1 : 0;
-    v.curl = (v.curl || 0) + (want - (v.curl || 0)) * Math.min(1, dt * 9);
+    // 움직이면 몸을 공처럼 말아 진짜로 데굴데굴 (공 텍스처: 체육복·흰 줄·얼굴·머리가 돌아감)
+    const want = !p.dead && (p.bst || v.speed > 1.2) ? 1 : 0;
+    v.curl = (v.curl || 0) + (want - (v.curl || 0)) * Math.min(1, dt * 12);
     const c = v.curl;
-    if (want) v.rollAng = (v.rollAng || 0) + dt * Math.max(v.speed, p.bst ? 12 : 0) * 0.85;
-    else if (v.rollAng) { const k = Math.round(v.rollAng / (Math.PI * 2)) * Math.PI * 2; v.rollAng += (k - v.rollAng) * Math.min(1, dt * 10); }
-    if (c > 0.02) {
-      M.legs[0].rotation.x = M.legs[1].rotation.x = -1.7 * c;
-      armX = [-1.3 * c, -1.3 * c]; armZ = [armZ[0] * (1 - c) + 0.6 * c, armZ[1] * (1 - c) - 0.6 * c];
-      M.head.rotation.x = 0.55 * c; lean = lean * (1 - c); bodyY *= 1 - c; sx = 1 + 0.1 * c; sy = 1 - 0.22 * c;
-      if (v.ro > 0.85 && Math.random() < 0.5) burst(root.position.x - Math.sin(v.facing) * 1.2, 0.3, root.position.z - Math.cos(v.facing) * 1.2, 1, ['#d8c7a8', '#ffffff'], { speed: 2, size: 0.28, up: 2, life: 0.5, grav: 3 });
-      if (p.bst && Math.random() < 0.8) burst(root.position.x - Math.sin(v.facing) * 1.3, 1, root.position.z - Math.cos(v.facing) * 1.3, 2, ['#ff7a1a', '#ffd84a', '#ff3b1f'], { speed: 3, size: 0.35, up: 2, life: 0.35, grav: 0 });
-      if (p.sp === 'rollroll' && ro >= 0.95 && Math.random() < 0.4) burst(root.position.x, 1.2, root.position.z, 1, ['#7cf0ff', '#ffffff'], { speed: 4, size: 0.2, up: 2, life: 0.4, grav: 0 });
+    if (!v.ball) { v.ball = makeSuhoBall(); root.add(v.ball); }
+    const BR = 1.3;
+    v.rollAng = (v.rollAng || 0) + dt * Math.max(v.speed, p.bst ? 14 : 0) / BR * c;
+    const showBall = c > 0.35;
+    v.ball.visible = showBall; M.model.visible = !showBall;
+    if (showBall) {
+      const sq = 1 + Math.sin(now * 20) * 0.03 * v.ro;                 // 살짝 통통 튀는 느낌
+      v.ball.position.y = BR + Math.abs(Math.sin(v.rollAng * 0.5)) * 0.15 * v.ro;
+      v.ball.userData.spin.rotation.x = v.rollAng;
+      v.ball.scale.set(sq, 2 - sq, sq).multiplyScalar(Math.min(1, 0.6 + c * 0.5));
+      if (Math.random() < 0.35 + v.ro * 0.5) burst(root.position.x - Math.sin(v.facing) * 1.3, 0.3, root.position.z - Math.cos(v.facing) * 1.3, 1, ['#d8c7a8', '#ffffff'], { speed: 2 + v.ro * 3, size: 0.25 + v.ro * 0.15, up: 2, life: 0.5, grav: 3 });
+      if (v.ro > 0.9) { const tr = v.ball.userData.trail; tr.visible = true; tr.material.opacity = 0.16 + Math.sin(now * 30) * 0.05; } else v.ball.userData.trail.visible = false;
+      if (p.bst && Math.random() < 0.9) burst(root.position.x - Math.sin(v.facing) * 1.5, 1.2, root.position.z - Math.cos(v.facing) * 1.5, 3, ['#ff7a1a', '#ffd84a', '#ff3b1f'], { speed: 3, size: 0.4, up: 2, life: 0.35, grav: 0 });
+      if (p.sp === 'rollroll' && ro >= 0.95 && Math.random() < 0.5) burst(root.position.x, 1.3, root.position.z, 1, ['#7cf0ff', '#ffffff'], { speed: 4, size: 0.2, up: 2, life: 0.4, grav: 0 });
+      if (v.hitT < 0.2) v.ball.userData.mat.emissive.setRGB(1 - v.hitT / 0.2, 0.2, 0.2); else v.ball.userData.mat.emissive.setRGB(0, 0, 0);
     }
     if (v.g2T < 1.0) { const q = v.g2T < 0.15 ? v.g2T / 0.15 : 1 - Math.max(0, v.g2T - 0.8) / 0.2; armX = [-2.2 * q, -2.2 * q]; armZ = [-0.5 * q, 0.5 * q]; M.head.rotation.x = -0.2 * q + Math.sin(now * 25) * 0.08 * q; }
     if (v.g1T < 0.5) { const q = v.g1T < 0.1 ? v.g1T / 0.1 : 1 - (v.g1T - 0.1) / 0.4; M.head.rotation.x = -0.4 * q; lean = -0.25 * q; }
@@ -3443,10 +3485,6 @@ function animateTeacher(v, p, dt, now) {
   M.body.scale.set(sx, sy, sx);
   M.body.rotation.x = lean;
   M.body.rotation.y = spin;
-  if (SH && !v.fly) {          // 구를 때는 몸 가운데를 축으로 회전
-    const c = v.curl || 0, cy = 1.45;
-    M.body.position.y = bodyY - cy * c; M.model.position.y = (cy + 0.15) * 0.69 * c; M.model.rotation.x = v.rollAng || 0;
-  }
 
   // 피격 반짝
   const fl = v.hitT < 0.2 ? (1 - v.hitT / 0.2) : 0;
