@@ -373,6 +373,8 @@ function migrate() {
       apply: (u) => sendMail(u, { from: '골목대전 운영팀', title: '선생님을 만들어 주셔서 감사합니다', body: '신캐 공모전 출시작 "선생님"을 만들어 주셔서 감사합니다. 오늘도 교실을 지키는 모든 선생님께 경의를 표하며, 신화 등급 칭호 "이놈의 아이들"을 드립니다!', reward: ['titles:kids'] }) },
     { id: 'kkaak-title', user: '티키티키펑크', why: '까모 제작', notice: '우편함에 신화 등급 칭호가 도착했습니다!',
       apply: (u) => sendMail(u, { from: '골목대전 운영팀', title: '까모를 만들어 주셔서 감사합니다', body: '신캐 공모전 출시작 "까모"를 만들어 주셔서 감사합니다. 골목길 전선 위에서 세상을 내려다보는 까마귀처럼, 신화 등급 칭호 "까악까악"을 드립니다!', reward: ['titles:kkaak'] }) },
+    { id: 'sub1000-title', user: 'jackson13051', why: '이잭슨 kid 제작', notice: '🎉 내 신캐 「이잭슨 kid」가 출시됐어요! 이로치 이잭슨 kid와 신화 칭호가 도착했어요.',
+      apply: (u) => { P.grant(u, { mon: 'jackson', shiny: true }); sendMail(u, { from: '골목대전 운영팀', title: '이잭슨 kid를 만들어 주셔서 감사합니다', body: '신캐 공모전 출시작 "이잭슨 kid"가 실제 골목에 나왔어요! 이로치 이잭슨 kid를 내 골목몬에 넣어 드렸고, 구독자 1000명의 꿈을 응원하며 신화 등급 칭호 "구독자 1000명"을 드립니다!', reward: ['titles:sub1000'] }); } },
     // 2026-11-15 운영 선물: 이로치 등신·까모, 50000GP
     { id: 'gift-1115-shiny', user: 'pshrocket', why: '이로치 등신·까모 선물', notice: '운영팀 선물: 이로치 등신과 이로치 까모가 내 골목몬에 들어왔어요! 우편함을 확인해 보세요.',
       apply: (u) => { P.grant(u, { mon: 'deungsin', shiny: true }); P.grant(u, { mon: 'kkamo', shiny: true }); sendMail(u, { from: '골목대전 운영팀', title: '이로치 선물이 도착했어요', body: '운영팀이 이로치 등신과 이로치 까모를 보내 드렸어요. 내 골목몬에서 확인해 보세요!' }); } },
@@ -850,16 +852,16 @@ const SUNFISH_GOAL = 300; // 개복치 키우기: 300cm까지 키우면 등신
 
 /* ---------- 신캐 만들기 공모전 ---------- */
 // 출시된 공모전 골목몬 그림: 출품작에 올린 그림을 그대로 내보냄 (메가 그림이 없으면 기본 그림)
-function contestArt(res, info, mega, dl = false) {
+function contestArt(res, info, mega, dl = false) { // mega: true(메가) / 'gmax'(거다이맥스)
   const e = contest.entries.find((x) => x.name === info.name && x.user === info.by) || contest.entries.find((x) => x.name === info.name);
-  const src = (mega && e?.mega?.image) || e?.image;
+  const src = (mega === 'gmax' ? e?.gmax?.image : mega && e?.mega?.image) || e?.image;
   const m = /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/.exec(src || '');
   if (!m) { // 출품작을 못 찾으면 물음표 그림
     res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-cache' });
     return res.end(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect x="30" y="30" width="140" height="140" rx="24" fill="#FFF3B0" stroke="#1a1433" stroke-width="6"/><text x="100" y="128" font-size="90" text-anchor="middle" font-family="sans-serif" fill="#1a1433">?</text></svg>`);
   }
   const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }[m[1]];
-  res.writeHead(200, { 'Content-Type': m[1], 'Cache-Control': 'public, max-age=3600', ...(dl ? { 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(`${info.name}${mega ? '-메가' : ''}.${ext}`)}` } : {}) }); // ?dl=1이면 내려받기
+  res.writeHead(200, { 'Content-Type': m[1], 'Cache-Control': 'public, max-age=3600', ...(dl ? { 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(`${info.name}${mega === 'gmax' ? '-거다이맥스' : mega ? '-메가' : ''}.${ext}`)}` } : {}) }); // ?dl=1이면 내려받기
   res.end(Buffer.from(m[2], 'base64'));
 }
 // 2회부터는 상시: 마감 없이 언제든 내고, 개발자가 괜찮은 작품을 그때그때 「출시 결정」 (여러 개 가능). 1회 출품작은 round가 없어요 (= 1회)
@@ -1053,9 +1055,9 @@ const server = http.createServer(async (req, res) => {
     try { return await api(req, res, url); }
     catch { return json(res, 400, { error: '요청이 올바르지 않습니다.' }); }
   }
-  const cm = /^img\/mon\/([a-z]+)(-mega)?\.webp$/.exec(rel);
+  const cm = /^img\/mon\/([a-z]+)(-mega|-gmax)?\.webp$/.exec(rel);
   if (cm && Data.MONSTERS[cm[1]]?.contest && !fs.existsSync(path.join(PUBLIC, rel))) return contestArt( // 새로 그린 그림 파일이 있으면 그 파일을 씀
-    res, Data.MONSTERS[cm[1]].contest, !!cm[2], url.searchParams.has('dl'));
+    res, Data.MONSTERS[cm[1]].contest, cm[2] === '-gmax' ? 'gmax' : !!cm[2], url.searchParams.has('dl'));
   const file = path.resolve(PUBLIC, rel);
   if (!file.startsWith(PUBLIC + path.sep) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     res.writeHead(404); return res.end('Not found');

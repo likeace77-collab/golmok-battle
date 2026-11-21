@@ -1294,7 +1294,7 @@ function gmaxBox(id, shiny = false) {
     ${sp.gmaxTypes ? `<p class="gmax-rule" style="color:#ff6a8a;font-weight:800">⚠ 거다이맥스하면 타입이 바뀌어요: ${sp.types.map(typeChip).join('')} → ${sp.gmaxTypes.map(typeChip).join('')}</p>` : ''}
     ${sp.gmaxBuff ? `<p class="gmax-rule" style="color:#ffd84a;font-weight:800">💀 특별 강화: ${esc(sp.gmaxBuff.d)}</p>` : ''}
     <p class="gmax-rule">한 판에 한 번, ${X.turns}턴 동안 거대한 괴수가 돼요. 체력 ${X.hp}배, 기술은 거다이기술 1개와 다이기술 3개만 쓸 수 있어요.</p>
-    <div class="gmax-g">${typeChip(gt)}<b>★ ${esc(X.names[id] || `거다이 ${sp.n}`)}</b><small>거다이기술 · 위력 ${sp.gmaxBuff?.gpow || X.gpow}, 반드시 명중. ${X.gfx[gt] || ''}</small></div>
+    <div class="gmax-g">${typeChip(sp.gmaxG?.type || gt)}<b>★ ${esc(X.names[id] || `거다이 ${sp.n}`)}</b><small>거다이기술 · 위력 ${sp.gmaxBuff?.gpow || X.gpow}, 반드시 명중. ${sp.gmaxG ? `${esc(sp.gmaxG.fx.d)}, 막기를 뚫음` : X.gfx[gt] || ''}</small></div>
     <p class="muted" style="margin:8px 0 4px;font-size:13px">다이기술 (위력 ${X.dpow}) — 이 골목몬 기술의 타입에 따라 3개가 정해져요. 될 수 있는 것:</p>
     <div class="gmax-dai">${types.map((t) => `<div>${typeChip(t)}<b>다이${G.data.TYPES[t].n}</b><small>${X.fx[t] || ''}</small></div>`).join('')}</div>
   </section>`;

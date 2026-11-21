@@ -114,6 +114,12 @@ const MOVES = {
   swish:     M('살랑살랑', 'fairy', 'x', 0, 100, 10, { sway: true, sig: true, d: '살랑살랑 꼬리를 흔든다. 50% 확률로 상대를 재우고, 아니면 상대 명중률을 2단계 떨어뜨린다' }),
   foxscratch:M('여우 할퀴기', 'normal', 'p', 25, 100, 15, { hits: [2, 5], sig: true, d: '상대를 마구 할퀸다 (2~5번 연속 공격)' }),
   finish:    M('피니쉬', 'elec', 'p', 40, 100, 5, { finisher: 30, sig: true, d: '체력이 30% 이하로 남은 상대를 타입·도구와 상관없이 그 자리에서 쓰러뜨린다. 그보다 많이 남았으면 그냥 가볍게 친다' }),
+  // 이잭슨 kid (공모전 출시작 · jackson13051)
+  ytlike:    M('좋아요', 'water', 'p', 100, 100, 10, { foe: { acc: -1 }, sc: 30, sig: true, d: '엄지 척! 30% 확률로 상대 명중률 하락' }),
+  ytbell:    M('알림설정', 'elec', 'p', 70, 100, 40, { st: { s: 'brn', ch: 60 }, sig: true, d: '알림 폭탄이 쏟아진다. 60% 확률로 화상' }),
+  ytsub:     M('구독', 'fire', 'p', 120, 80, 10, { st: { s: 'brn', ch: 70 }, sig: true, d: '빨간 구독 버튼을 누른다. 70% 확률로 화상' }),
+  ytviews:   M('조회수 폭탄', 'fire', 'p', 90, 100, 10, { st: { s: 'brn', ch: 10 }, d: '조회수가 폭발한다. 10% 확률로 화상' }),
+  ironmini:  M('아이언맨 미니카', 'steel', 'p', 80, 90, 10, { d: '아이언맨 미니카를 들이받게 한다' }),
   sideattack:M('사이드 어택', 'earth', 'p', 70, 100, 10, { side: true, sig: true, d: '상대 골목몬을 차고, 대기 중인 상대 골목몬 하나를 골라 발차기를 날린다 (둘 다 같은 피해)' }),
   jabrush:   M('잽 러쉬', 'elec', 'p', 20, 100, 15, { hits: [3, 6], rush: true, sig: true, d: '빛처럼 질주하며 상대를 3~6번 연속으로 때린다' }),
   thtackle:  M('태클', 'earth', 'p', 100, 95, 10, { fl: 30, sig: true, d: '상대를 강하게 들이받는다. 30% 확률로 넘어뜨려 이번 턴에 공격하지 못하게 한다 (풀죽음)' }),
@@ -427,6 +433,9 @@ const MONSTERS = {
   thunder: X('썬더', ['elec', 'earth'], 70, 115, 65, 55, 65, 150,
     ['finish', 'sideattack', 'jabrush', 'thtackle', 'shortfist', 'quake', 'rockthrow', 'highvolt', 'guard', 'tackle'],
     '눈으로 쫓을 수 없는 속도로 골목을 가로지르는 소년. 지나간 자리엔 노란 불빛만 남는다.'),
+  jackson: X('이잭슨 kid', ['fire', 'water'], 225, 60, 60, 80, 80, 90,
+    ['ytlike', 'ytbell', 'ytsub', 'ytviews', 'ironmini', 'coalhead', 'paddle', 'spirit_up', 'guard', 'nap'],
+    '유튜버이다. 구독자 1000명이 평생의 꿈이다. 그래서 그런지 구독자 수에 집착이 심하다.'),
 };
 
 // 캐릭터별 전용기와 메가진화: [전용기, 메가 이름, 소개, [체력, 공격, 방어, 특공, 특방, 스피드 상승값]]
@@ -493,6 +502,7 @@ Object.assign(SIGNATURE, {
   seonsaeng: ['factorize', '1타강사', '선생님이 부업으로 인강을 하셨는데 대박이 났다! 이제부터 선생님이 주시는 가르침의 깊이가 늘어났다.', [0, 100, 0, 0, 0, 0]],
   deungsin: ['glasscannon', '바다의 왕', '수많은 죽음을 넘어 바다의 왕이 되었다. 왕관과 삼지창, 망토를 둘렀다. 갈증 게이지가 사라지고, 돌연사와 다른 모든 죽을 확률이 절반이 된다.', [10, 20, 20, 20, 20, 10]],
   thunder: ['finish', '라이트닝 썬더', '무지갯빛 번개를 두르고 수리검을 휘감은 채 빛보다 빠르게 질주한다. 발이 닿는 곳마다 불꽃이 터진다.', [0, 35, 10, 0, 10, 45]],
+  jackson: ['ytlike', '이잭슨 1000SUB', '구독자 1000명 달성!', [34, 0, 0, 33, 33, 0]], // 메가 보너스 합계 100 (출품작 체력·특공·특방 +50씩을 같은 비율로)
   yeoubi: ['foxrain', '아홉꼬리 무지개 여우비', '꼬리가 아홉 개로 늘어 무지개빛으로 물들었다. 눈동자에 별이 뜨고 방울 노리개가 딸랑인다.', [0, 0, 10, 40, 20, 30]],
   hwangsari: ['yellowgust', '대황사 황사리', '방독면과 고글을 쓴 거대 모래폭풍. 아래는 토네이도가 되었고 주변에 돌덩이가 돈다.', [10, 40, 25, 0, 15, 10]],
 });
@@ -568,6 +578,7 @@ const ZMOVES = {
   hwangsari: ['누런 하늘', 'earth', 180, '하늘이 누렇게 덮인다. 상대 명중률 하락', { foe: { acc: -1 } }],
   kkamo: ['종말을 부르는 칠흑의 날갯짓', 'spirit', 200, '반드시 명중. 상대를 교체 불가 상태로 만들고 자신은 모든 능력치가 1단계씩 오른다', { cage: true, self: { atk: 1, def: 1, spa: 1, spd: 1, spe: 1 }, selfAfter: true }],
   thunder: ['분노의 질주 러쉬', 'normal', 36, '분노가 폭발해 질주하며 상대가 쓰러질 때까지 눈에 보이지도 않는 속도로 무자비하게 계속 팬다', { untilKO: true }],
+  jackson: ['구독과 좋아요', 'elec', 180, '반드시 명중. 70% 확률로 마비', { cat: 'p', st: { s: 'par', ch: 70 } }],
   yeoubi: ['천년 여우의 무지개', 'water', 180, '무지개 너머에서 여우비가 쏟아진다. 사용 후 자신의 특공 상승', { self: { spa: 1 }, selfAfter: true }],
   seonsaeng: ['생기부 작성', 'normal', 170, '반드시 명중. 생기부를 나쁘게 적어 상대가 Z기술이나 메가진화를 못 쓰게 한다', { cat: 's', record: true }],
 };
@@ -647,6 +658,7 @@ const COSMETICS = {
     C('kids', '이놈의 아이들', ['gift', 'titles:kids'], { tier: 9, icon: '✎' }),
     C('tchamp', '골목 토너먼트 챔피언', ['gift', 'titles:tchamp'], { tier: 5, glow: '#FFD23F' }), C('tfinal', '토너먼트 준우승', ['gift', 'titles:tfinal'], { tier: 4, glow: '#c3ccd8' }), // 선생님을 만든 pshrocket
     C('kkaak', '까악까악', ['gift', 'titles:kkaak'], { tier: 9, icon: '🪶' }),
+    C('sub1000', '구독자 1000명', ['gift', 'titles:sub1000'], { tier: 9, icon: '▶' }), // 이잭슨 kid를 만든 jackson13051
     C('iconmaker', '골목의 얼굴', ['gift', 'titles:iconmaker'], { tier: 9, icon: '📱' }), // 아이콘 공모전 우승
     C('fzstar', '이 주의 합체몬', ['gift', 'titles:fzstar'], { tier: 6, icon: '🧬', glow: '#FF5FA2' }), // 합체몬 갤러리 주간 1등
     C('recruiter', '골목 마당발', ['gift', 'titles:recruiter'], { tier: 5, icon: '🎉' }), // 친구 3명 초대
@@ -777,10 +789,13 @@ MONSTERS.yeoubi.gmaxTypes = ['spirit', 'poison'];
 MONSTERS.thunder.trait = { n: '신속', d: '항상 먼저 움직인다 (상대의 선공기보다도 먼저).' };
 MONSTERS.thunder.swift = true;
 MONSTERS.thunder.img = true;
+MONSTERS.jackson.trait = { n: '댓글의 힘', d: '매 턴이 끝날 때 댓글이 올라온다. 20% 확률로 악플이면 최대 체력의 1/8을 잃고, 80% 확률로 선플이면 1/16을 회복한다.' };
+MONSTERS.jackson.contestGmax = true; // 거다이맥스 그림도 출품작 그림 (img/mon/jackson-gmax.webp)
+MONSTERS.jackson.gmaxG = { type: 'steel', fx: { self: { def: 1 }, selfAfter: true, d: '마스코트 상어와 함께 악플러를 사냥한다. 쓸 때마다 내 방어 1랭크 상승 (거다이맥스 동안 최대 5번)' } };
 MONSTERS.yeoubi.gmaxBuff = { hp: 1.5, gpow: 200, dpow: 1, stat: 1.2, heart: true, d: '공격·방어·특공·특방·스피드 1.2배, 거다이기술 위력 200 (맞은 상대에게 유혹 표식 + 마음의 상처)' }; // 거다이맥스가 매우 강함 // 거다이맥스하면 가면이 벗겨지며 혼·독 타입으로 바뀐다
 MONSTERS.kkamo.trait = { n: '불운', d: '싸움에 나오면 울음소리를 내서 상대의 명중률을 2단계 떨어뜨린다.' };
 MONSTERS.seonsaeng.trait = { n: '수능감독', d: '매 턴 1/365 확률로 수능 감독하러 가서 한 턴 쉰다.' };
-for (const [id, by] of [['kkamo', '티키티키펑크'], ['seonsaeng', 'pshrocket']]) Object.assign(MONSTERS[id], { img: true, contest: { by, name: MONSTERS[id].n } });
+for (const [id, by] of [['kkamo', '티키티키펑크'], ['seonsaeng', 'pshrocket'], ['jackson', 'jackson13051']]) Object.assign(MONSTERS[id], { img: true, contest: { by, name: MONSTERS[id].n } });
 MONSTERS.seonsaeng.contest.own = ['', '-mega']; // 선생님은 새로 받은 그림 파일 (public/img/mon/seonsaeng.webp, -mega.webp). 까모는 공모전 출품작 그림을 서버가 그대로 내보냄
 Object.assign(MONSTERS.deungsin, { trait: { n: '돌연사 · 갈증', d: '돌연사: 턴이 시작될 때, 턴이 끝날 때, 공격할 때, 공격받을 때마다 10% 확률로 즉사한다. 갈증: 체력바 아래 갈증 게이지(100%에서 시작)가 기술을 쓰면 15%, 턴이 끝나면 5%, 공격받으면 5% 줄고, 0%가 되면 즉사한다. 메가진화(바다의 왕)하면 갈증 게이지가 사라지고 모든 죽을 확률이 절반이 된다.' } });
 Object.assign(MONSTERS.basaeng, { trait: { n: '불사신', d: '한 방에 쓰러질 공격을 맞아도 30% 확률로 체력 1을 남기고 버틴다.' } });
@@ -941,6 +956,7 @@ const GMAX_MOVES = {
   seonsaeng: '거다이 전과목 특강',
   yeoubi: '거다이 가면 벗기',
   thunder: '거다이 광속 무한 질주',
+  jackson: '상어 이빨',
 };
 
 
@@ -991,6 +1007,7 @@ const PERKS = {
   seonsaeng: { stat: 'atk' },
   yeoubi: { type: 'water' },
   thunder: { type: 'elec' },
+  jackson: { heal: 1, d: '선플 회복량 +10%' },
 };
 const STAT_KO = { atk: '공격', def: '방어', spa: '특공', spd: '특방', spe: '스피드', hp: '체력' };
 for (const [id, p] of Object.entries(PERKS)) {

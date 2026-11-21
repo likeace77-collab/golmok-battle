@@ -299,6 +299,7 @@ function gmaxMoves(m) {
   const dai = types.slice(0, 3).map((t) => ({ n: `다이${TYPES[t].n}`, type: t, cat, pow: Math.round(DAI_POW * (gb?.dpow || 1)), acc: 100, pp: 1, pri: 0, ...DAI_FX[t], dai: true }));
   const gt = baseT[0];
   const g = { n: GMAX_MOVES[m.species] || sp.gmaxN || `거다이 ${sp.n}`, type: gt, cat, pow: gb?.gpow || G_POW, acc: 100, pp: 1, pri: 0, ...strongFx(DAI_FX[gt] || DAI_FX.normal), breakGuard: true, gmaxMove: true, ...(gb?.heart ? { heart: true } : {}) };
+  if (sp0.gmaxG) { g.type = sp0.gmaxG.type; for (const k of ['st', 'foe', 'drain', 'self', 'selfAfter']) delete g[k]; Object.assign(g, sp0.gmaxG.fx); g.acc = null; } // 거다이기술을 직접 정한 골목몬 (이잭슨 kid: 상어 이빨)
   return [g, ...dai];
 }
 // 도감에 보여 줄 거다이맥스 정보
@@ -1480,6 +1481,11 @@ function endOfTurn(b, ev) {
     if (m.species === 'damjaengjeon' && m.hp < m.maxHp) { // 특성 광합성 충전
       msg(ev, `${josa(m.name, '은/는')} 광합성으로 충전했다!`);
       heal(b, s, m, m.maxHp / 16, ev, m);
+    }
+    if (m.species === 'jackson') { // 이잭슨 kid 특성 댓글의 힘: 악플 20% / 선플 80%
+      if (chance(b, 20)) { ev.push({ t: 'msg', text: `💬 악플이 달렸다! ${josa(m.name, '은/는')} 상처받았다...` }); hurt(b, s, m, m.maxHp / 8, ev); faintCheck(b, s, m, ev); }
+      else if (m.hp < m.maxHp) { msg(ev, `💬 선플이 달렸다! ${josa(m.name, '은/는')} 힘이 난다!`); heal(b, s, m, m.maxHp / 16, ev, m); }
+      if (!alive(m)) continue;
     }
     if (m.species === 'chijeu' && m.status && chance(b, 50 + pv(m))) { // 치즈냥 그루밍
       m.status = null; m.statusTurns = 0;

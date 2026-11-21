@@ -61,7 +61,7 @@ test('모든 골목몬에게 그림이 있고 스킬이 겹치지 않는다', ()
     assert.match(mega + newArt, new RegExp(`\\b${id}: (L\\(|")|MEGA_ART\\.${id} =`), `메가 ${id}`);
     assert.equal(new Set(m.moves).size, m.moves.length, id);
   }
-  assert.equal(Object.keys(MONSTERS).length, 61);
+  assert.equal(Object.keys(MONSTERS).length, 62);
 });
 
 test('역류는 소나기에서 2배, 뻥 뚫기는 막기를 뚫고 압정을 치운다', () => {
@@ -145,7 +145,7 @@ test('모든 골목몬에게 전용기가 있고 다른 골목몬은 배울 수 
     owner[m.sig] = (owner[m.sig] || 0) + 1;
     assert.equal(Object.values(m.mega.boost).reduce((a, c) => a + c), 100, id);
   }
-  assert.equal(Object.keys(owner).length, 61);
+  assert.equal(Object.keys(owner).length, 62);
   // 전용기는 한 골목몬만 배운다 (단조처럼 전용기가 여럿일 수는 있음)
   const who = {};
   for (const [id, m] of Object.entries(MONSTERS)) for (const mv of m.moves) if (MOVES[mv].sig) (who[mv] ||= new Set()).add(id);
@@ -964,4 +964,18 @@ test('기술 추가 칸: 한 마리에 한 칸, 20000GP, 대전에서 기술 5�
   const b = E.createBattle([{ name: 'x', team: [{ species: 'yeontan', moves: u.mons[0].moves }] }, { name: 'y', team: [{ species: 'yeontan', moves: ['tackle'] }] }], 1);
   assert.ok(E.legalActions(b, 0).some((x) => x.type === 'move' && x.index === 4));
   assert.ok(E.choose(b, 0, { type: 'move', index: 4 }).ok);
+});
+
+test('이잭슨 kid: 메가 합계 +100, 댓글의 힘, Z 구독과 좋아요, 거다이 상어 이빨', () => {
+  const sp = MONSTERS.jackson;
+  assert.equal(Object.values(sp.mega.boost).reduce((a, b) => a + b, 0), 100);
+  const b = E.createBattle([{ name: 'x', team: [{ species: 'jackson', moves: ['ytlike', 'ytsub'] }] }, { name: 'y', team: [{ species: 'kettle', moves: ['tackle'] }] }], 3);
+  const g = E.gmaxMoves(b.sides[0].mons[0])[0];
+  assert.equal(g.n, '상어 이빨'); assert.equal(g.type, 'steel'); assert.equal(g.acc, null); assert.deepEqual(g.self, { def: 1 });
+  let hate = 0, good = 0;
+  for (let i = 0; i < 40 && b.phase !== 'over'; i++) {
+    for (const s of [0, 1]) if (b.needs[s] && !b.pending[s]) E.choose(b, s, s ? { type: 'move', index: 0 } : { type: 'move', index: 0 });
+    for (const e of b.log || []) { if (/악플/.test(e.text || '')) hate++; if (/선플/.test(e.text || '')) good++; }
+  }
+  assert.ok(MOVES.z_jackson.acc === null && MOVES.z_jackson.cat === 'p' && MOVES.z_jackson.st.ch === 70);
 });

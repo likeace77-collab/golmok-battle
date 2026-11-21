@@ -175,9 +175,18 @@ function cleanArtUrl(src, opts) {
 // 데이터를 받은 뒤 한 번: 공모전 출시작 그림을 다듬어 두고, 다 되면 지금 화면을 다시 그림
 async function prepareContestArt(redraw) {
   const list = Object.entries(G.data?.MONSTERS || {}).filter(([, sp]) => sp.contest);
-  await Promise.all(list.flatMap(([id, sp]) => ['', '-mega'].filter((v) => !(sp.contest.own || []).includes(v)).map(async (v) => {
+  await Promise.all(list.flatMap(([id, sp]) => ['', '-mega', ...(sp.contestGmax ? ['-gmax'] : [])].filter((v) => !(sp.contest.own || []).includes(v)).map(async (v) => {
     const url = await cleanArtUrl(`img/mon/${id}${v}.webp`, { watermark: !v && id === 'kkamo', close: ART_CLOSE[id + v] ?? 0.008, allWhite: id === 'kkamo' });
     if (url) { CLEAN_ART[id + v] = url; CLEAN_KEY[url] = id + v; }
+    if (url && v === '-gmax' && typeof GMAX_ART !== 'undefined') GMAX_ART[id] = contestGmaxArt(url); // 출품작 거다이맥스 그림
   })));
   if (list.length && typeof redraw === 'function') redraw();
+}
+
+// 공모전 출시작 거다이맥스: 출품작 그림 + 붉은 거다이 기운
+function contestGmaxArt(url) {
+  return `<defs><radialGradient id="cg-bg" cx="50%" cy="60%" r="60%"><stop offset="0" stop-color="#ff4d6d" stop-opacity=".65"/><stop offset=".6" stop-color="#b0124a" stop-opacity=".3"/><stop offset="1" stop-color="#2a0030" stop-opacity="0"/></radialGradient></defs>
+    <ellipse class="thg-pulse" cx="100" cy="112" rx="110" ry="100" fill="url(#cg-bg)"/>
+    ${[[16, 194, .6], [60, 200, .5], [140, 200, .55], [186, 192, .6]].map(([x, y, s], i) => `<g transform="translate(${x} ${y}) scale(${s})"><g class="thg-cloud" style="animation-delay:${-i * .5}s"><ellipse rx="30" ry="13" fill="#d81b4a"/><ellipse cx="12" cy="-7" rx="18" ry="11" fill="#ff4d6d"/><ellipse cx="-14" cy="-5" rx="14" ry="9" fill="#ff7a8c"/></g></g>`).join('')}
+    <image href="${url}" x="-4" y="-8" width="208" height="208" style="filter:drop-shadow(0 0 6px #ff4d6d)"/>`;
 }

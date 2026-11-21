@@ -101,6 +101,9 @@ const Fx = (() => {
     arrowDown() { ctx.rotate(Math.PI); ctx.beginPath(); [[0, -11], [9, 0], [3.5, 0], [3.5, 10], [-3.5, 10], [-3.5, 0], [-9, 0]].forEach(([x, y]) => ctx.lineTo(x, y)); ctx.closePath(); paint('#2F7DE1'); },
     plate() { ctx.beginPath(); ctx.rect(-10, -7, 20, 14); paint('#D7DDE5'); ctx.beginPath(); ctx.moveTo(-6, -3); ctx.lineTo(0, -3); ctx.strokeStyle = '#fff'; ctx.stroke(); },
     brick() { ctx.beginPath(); ctx.rect(-12, -6, 24, 12); paint('#B5502F'); },
+    thumb() { ctx.beginPath(); ctx.moveTo(-9, -1); ctx.lineTo(-9, 11); ctx.lineTo(-4, 11); ctx.lineTo(-4, -1); ctx.closePath(); paint('#2F7DE1'); ctx.beginPath(); ctx.moveTo(-3, -1); ctx.lineTo(1, -12); ctx.quadraticCurveTo(5, -13, 4, -6); ctx.lineTo(3, -2); ctx.lineTo(10, -2); ctx.quadraticCurveTo(13, 0, 11, 3); ctx.lineTo(9, 10); ctx.quadraticCurveTo(8, 12, 5, 12); ctx.lineTo(-3, 11); ctx.closePath(); paint('#FFD23F'); },
+    bell() { ctx.beginPath(); ctx.moveTo(-10, 7); ctx.quadraticCurveTo(-8, 4, -8, -2); ctx.quadraticCurveTo(-8, -11, 0, -11); ctx.quadraticCurveTo(8, -11, 8, -2); ctx.quadraticCurveTo(8, 4, 10, 7); ctx.closePath(); paint('#FFD23F'); ctx.beginPath(); ctx.arc(0, 9, 3, 0, 7); paint('#FFB800'); },
+    ytbtn() { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-13, -9, 26, 18, 5) : ctx.rect(-13, -9, 26, 18); paint('#FF0033'); ctx.beginPath(); ctx.moveTo(-4, -5); ctx.lineTo(6, 0); ctx.lineTo(-4, 5); ctx.closePath(); ctx.fillStyle = '#fff'; ctx.fill(); },
     heart() { ctx.beginPath(); ctx.moveTo(0, 8); ctx.bezierCurveTo(-13, -2, -6, -11, 0, -4); ctx.bezierCurveTo(6, -11, 13, -2, 0, 8); paint('#7BE08A', .9); },
     /* 큰 소품 */
     hammer() { ctx.fillStyle = '#8B5A2B'; ctx.beginPath(); ctx.rect(-2.5, -2, 5, 20); paint('#8B5A2B'); ctx.beginPath(); ctx.rect(-11, -11, 22, 11); paint('#7C8798'); },
@@ -594,6 +597,12 @@ const Fx = (() => {
     sideattack(A, T, k, t) { thunderPose(k, 1100); act(k, 'dash', 800); zip(A, T, { n: 4, dur: 360 }); slash(T, { delay: 340, angle: -.4, len: 120, color: '#FFE45C', w: 8 }); const side = { ...T, x: T.x + (k === 'me' ? 1 : -1) * 120 * u, y: T.y + 40 * u }; zip(T, side, { n: 3, dur: 300, delay: 460, back: false, spread: 20 }); burst('dust', side, { delay: 700, n: 10, dist: 50 }); bang(side, '💨', { delay: 700, size: 34 }); shake(9, 300, 360); return 1150; },
     jabrush(A, T, k, t) { thunderPose(k, 1500); act(k, 'dash', 1300); zip(A, T, { n: 8, dur: 420, spread: 55 }); flash('#FFE45C', 100, 300, .3); return 420; }, // 이후 한 대마다 rushHit
     thtackle(A, T, k, t) { thunderPose(k, 1000); act(k, 'lunge', 700); zip(A, T, { n: 3, dur: 300, spread: 20 }); comet(A, T, { color: '#FFE45C', size: 22, dur: 320, delay: 240, trail: 14 }); shockwave(T, '#FFE45C', { delay: 540 }); burst('rock', T, { delay: 560, n: 8, dist: 60 }); shake(16, 380, 540); return 1100; },
+    // 이잭슨 kid
+    ytlike(A, T, k, t) { act(k, 'lunge', 600); spray('thumb', A, T, { n: 7, gap: 60, arc: 30, size: 11 }); burst('drop', T, { delay: 520, n: 8, dist: 44 }); bang(above(T, 70), '좋아요 👍', { delay: 520, color: '#9fd0ff', size: 26 }); return 1000; },
+    ytbell(A, T, k, t) { act(k, 'cast', 500); for (let i = 0; i < 3; i++) burst('bell', T, { delay: 150 + i * 160, n: 5, dist: 70, size: 10 }); burst('spark', T, { delay: 300, n: 10, dist: 50 }); bang(above(T, 70), '🔔 알림!', { delay: 350, color: '#FFE45C', size: 26 }); flash('#FFE45C', 90, 400, .25); return 950; },
+    ytsub(A, T, k, t) { act(k, 'lunge', 700); comet(A, T, { color: '#FF0033', size: 22, dur: 380, trail: 12 }); shockwave(T, '#FF0033', { delay: 380 }); burst('ytbtn', T, { delay: 380, n: 6, dist: 60, size: 11 }); burst('flame', T, { delay: 420, n: 10, dist: 50 }); bang(above(T, 76), '구독!!', { delay: 420, color: '#FF3355', size: 34 }); shake(12, 360, 400); return 1150; },
+    ytviews(A, T, k, t) { act(k, 'cast', 500); for (let i = 0; i < 4; i++) bang({ x: T.x + rnd(-60, 60) * u, y: T.y + rnd(-50, 30) * u }, ['999+', '1.2만', '조회수↑', '🔥'][i], { delay: 120 + i * 130, color: '#ffb02e', size: 20, rot: rnd(-.3, .3) }); burst('flame', T, { delay: 600, n: 14, dist: 70 }); shockwave(T, '#ff7a1c', { delay: 620 }); shake(10, 300, 620); return 1150; },
+    ironmini(A, T, k, t) { act(k, 'lunge', 600); comet(A, T, { color: '#d62839', size: 16, dur: 300, trail: 18 }); burst('spark', T, { delay: 300, n: 12, dist: 50 }); burst('plate', T, { delay: 320, n: 5, dist: 44 }); shake(9, 260, 300); return 850; },
     // 불
     ember: (A, T, k, t) => { act(k, 'cast', 420); spray('flame', A, T, { n: 6, gap: 70, arc: 24, size: 8 }); burst('flame', T, { delay: 500, n: 6, dist: 34 }); return 850; },
     flame: (A, T, k, t) => { act(k, 'cast', 800); spray('flame', A, T, { n: 24, gap: 26, dur: 340, size: 10, grow: .7, spread: 18 }); tint(t, 'burn', 600, 350); return 1050; },
@@ -1531,6 +1540,16 @@ const Fx = (() => {
     const foe = target || (key === 'me' ? 'opp' : 'me');
     const A = { ...spot(key), key }, T = { ...spot(foe), key: foe };
     if (species === 'lumina' || species === 'silvia') return zFinish(species, A, T) + 200;
+    if (species === 'jackson') { // 구독과 좋아요: 화면 가득 👍🔔 구독 버튼
+      act(key, 'charge', 900);
+      add(2200, (p) => { ctx.globalAlpha = .55 * Math.min(1, p * 5) * (1 - Math.max(0, p - .85) * 6); ctx.fillStyle = '#0b0b10'; ctx.fillRect(0, 0, W, H); });
+      for (let i = 0; i < 6; i++) { burst('thumb', { x: rnd(.1, .9) * W, y: rnd(.15, .8) * H }, { delay: 150 + i * 160, n: 4, dist: 50, size: 12 }); burst('bell', { x: rnd(.1, .9) * W, y: rnd(.15, .8) * H }, { delay: 230 + i * 160, n: 3, dist: 40, size: 11 }); }
+      bang({ x: W / 2, y: H * .3 }, '구독과 좋아요', { delay: 300, color: '#FF3355', size: 36, dur: 1200, rot: 0 });
+      bang({ x: W / 2, y: H * .42 }, '알림설정까지!', { delay: 800, color: '#FFE45C', size: 26, dur: 900, rot: 0 });
+      comet(spot(key), T, { color: '#FFE45C', size: 26, dur: 360, delay: 1500, trail: 16 });
+      shockwave(T, '#FFE45C', { delay: 1860 }); burst('spark', T, { delay: 1860, n: 18, dist: 80 }); burst('ytbtn', T, { delay: 1860, n: 8, dist: 90, size: 12 }); flash('#FFE45C', 200, 1860, .6); shake(16, 500, 1860);
+      return 2500;
+    }
     if (species === 'thunder') { // 분노의 질주 러쉬: 화면을 가로지르는 노란 빛이 끝없이
       // 짧게 분노를 모으고 → 바로 타다다닥 (맞는 건 hp 이벤트마다 rushHit이 이어서 그림)
       thunderPose(key, 1600); act(key, 'charge', 600);
