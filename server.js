@@ -783,15 +783,18 @@ function rollMove(room, p, mx, my, len, now) {
   if (!want) { p.roll = Math.max(0, p.roll - DT * R.stopLose); return; }
   if (p.rollA == null) p.rollA = ta;
   const d = angDiff(ta, p.rollA);
-  if (Math.abs(d) > 1.7 && p.boostT <= 0) p.roll = Math.max(0, p.roll - DT * 3);      // 거의 반대로 꺾으면 감속
-  const turn = (R.turnFast + (R.turnSlow - R.turnFast) * p.roll) * DT;
+  const rr = hasSP(p, 'rollroll');
+  const turn = (R.turnFast + (R.turnSlow - R.turnFast) * p.roll) * (rr ? R.spTurn : 1) * DT;   // 빠를수록 방향 전환 둔함 (스파2는 더 잘 꺾임)
   const tw = Math.max(-turn, Math.min(turn, d));
   p.rollA = angDiff(p.rollA + tw, 0);
   p.facing = p.rollA;
-  const rr = hasSP(p, 'rollroll');
-  if (Math.abs(tw) > 0.004 && p.boostT <= 0) {      // 빠를 때 방향을 틀면 속도가 확 떨어짐 (스파2 구르고 구르고는 훨씬 덜 떨어짐)
-    p.roll = Math.max(0, p.roll - Math.abs(tw) * R.turnLose * (0.3 + p.roll) * (rr ? R.spTurnMul : 1));
-  } else p.roll = Math.min(1, p.roll + DT / R.fill);
+  if (p.boostT <= 0) {               // 꺾는 만큼 조금 감속, 확 꺾으면(급커브·유턴) 많이 감속. 스파2는 감속이 훨씬 적음
+    let lose = Math.abs(tw) * R.turnLose * p.roll;
+    if (Math.abs(d) > R.sharp) lose += DT * R.sharpLose * (Math.abs(d) - R.sharp) * p.roll;
+    if (rr) lose *= R.spLoseMul;
+    p.roll = Math.max(0, p.roll - lose);
+  }
+  if (Math.abs(d) <= R.sharp || p.boostT > 0) p.roll = Math.min(1, p.roll + DT / R.fill);   // 급커브 중엔 가속 안 됨
   const v = speedOf(p) * DT, vx = Math.cos(p.rollA) * v, vy = Math.sin(p.rollA) * v;
   const x0 = p.x, y0 = p.y;
   p.x += vx; p.y += vy;

@@ -319,10 +319,10 @@ const BRAWLERS = {
     rarity: 'epic',
     role: '탱커',
     title: '데굴데굴 굴러간다~',
-    desc: '키가 작고 동글동글한 학생. 몸을 공처럼 말고 데굴데굴 굴러다니며 앞을 막는 상대를 깔아뭉갠다. 오래 구를수록 빨라지고 더 아프지만, 빠를 때 방향을 틀면 속도가 확 줄어든다. 목에 늘 빅맥을 끼고 다닌다.',
+    desc: '키가 작고 동글동글한 학생. 몸을 공처럼 말고 데굴데굴 굴러다니며 앞을 막는 상대를 깔아뭉갠다. 오래 구를수록 빨라지고 더 아프다. 살살 꺾으면 속도가 유지되지만 확 꺾으면 느려진다. 목에 늘 빅맥을 끼고 다닌다.',
     radius: 25, speed: 255, maxHp: 5800,
     // 구르기: 움직이는 동안 속도 게이지(0~1)가 차오름 → 이동 속도·깔아뭉개기 피해 ↑. 벽에 부딪히거나 급하게 꺾거나 멈추면 줄어듦
-    roll: { fill: 1.6, minMul: 0.9, maxMul: 1.55, turnFast: 10, turnSlow: 3.8, wallKeep: 0.3, turnLose: 1.6, spTurnMul: 0.3, spWallKeep: 0.6, hitKeep: 0.55, stopLose: 2.2, supFull: 40 },
+    roll: { fill: 1.6, minMul: 0.9, maxMul: 1.55, turnFast: 10, turnSlow: 4.2, turnLose: 0.35, sharp: 0.7, sharpLose: 2.5, wallKeep: 0.3, hitKeep: 0.55, stopLose: 2.2, supFull: 40, spTurn: 1.5, spLoseMul: 0.35, spWallKeep: 0.6 },
     attack: {
       name: '깔아뭉개기', aim: 'self',
       desc: '굴러다니며 부딪힌 상대를 깔아뭉갠다 (빠를수록 450~1000 피해). 버튼을 누르면 탄 1개로 순간 가속 — 1초 동안 최고 속도 + 피해 2배 (최대 2000).',
@@ -340,7 +340,7 @@ const BRAWLERS = {
     gadgetCd: 16,
     starPowers: [
       { id: 'bigmacroad', name: '빅맥로드', icon: '🛣️', desc: '맵에 아주 가끔 빅맥이 떨어진다 (최대 2개). 밟고 지나가면 먹고 1000 회복.', every: 15, max: 2, heal: 1000 },
-      { id: 'rollroll', name: '구르고 구르고', icon: '🌀', desc: '방향을 틀어도 속도가 훨씬 덜 줄고, 벽에 부딪혀도 속도가 60% 남는다. 최고 속도로 구르는 동안 기절·얼음에 걸리지 않는다.' },
+      { id: 'rollroll', name: '구르고 구르고', icon: '🌀', desc: '방향을 1.5배 더 잘 꺾고, 꺾을 때 속도가 훨씬 덜 줄어든다. 벽에 부딪혀도 속도 60% 유지. 최고 속도로 구르는 동안 기절·얼음에 걸리지 않는다.' },
     ],
     lines: {
       atk: ['비켜비켜~', '부릉부릉!', '굴러간다~'],
