@@ -263,7 +263,7 @@ const BRAWLERS = {
   dojun: {
     id: 'dojun',
     name: '편도준',
-    rarity: null,
+    rarity: 'mythic',
     role: '데미지딜러',
     title: '운동도 그림도 만렙',
     desc: '운동이면 운동, 그림이면 그림. 카제처럼 폼이 두 개! 🏀 운동폼은 튼튼한 근접 레슬러, 🎨 미술폼은 약하지만 아픈 원거리 화가. 가젯으로 폼을 바꾼다.',
