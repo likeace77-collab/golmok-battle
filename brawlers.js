@@ -334,13 +334,13 @@ const BRAWLERS = {
       need: 5200, range: 620, half: 0.6, count: 6, dmg: 1600, speed: 1050, lifesteal: 0.5,
     },
     gadgets: [
-      { name: '빅@맥 발사!', icon: '🍔', desc: '목에 낀 빅맥을 발사한다. 가장 가까운 상대를 따라가는 유도탄으로 1600 피해.', dmg: 1600, speed: 720, range: 1100, turn: 4.5 },
+      { name: '빅@맥 발사!', icon: '🍔', desc: '목에 낀 빅맥을 발사한다. 가장 가까운 상대를 벽도 넘어 맞을 때까지 끝까지 쫓아가서 1600 피해.', dmg: 1600, speed: 720, range: 1100 },
       { name: '빅맥먹방', icon: '😋', desc: '빅맥을 먹고 3000 보호막을 얻는다. 보호막은 6초에 걸쳐 점점 닳는다.', shield: 3000, dur: 6 },
     ],
     gadgetCd: 16,
     starPowers: [
       { id: 'bigmacroad', name: '빅맥로드', icon: '🛣️', desc: '맵에 아주 가끔 빅맥이 떨어진다 (최대 2개). 밟고 지나가면 먹고 1000 회복.', every: 15, max: 2, heal: 1000 },
-      { id: 'rollroll', name: '구르고 구르고', icon: '🌀', desc: '방향을 1.5배 더 잘 꺾고, 꺾을 때 속도가 훨씬 덜 줄어든다. 벽에 부딪혀도 속도 60% 유지. 최고 속도로 구르는 동안 기절·얼음에 걸리지 않는다.' },
+      { id: 'rollroll', name: '구르고 구르고', icon: '🌀', desc: '방향을 1.5배 더 잘 꺾고, 꺾을 때 속도가 훨씬 덜 줄어든다. 벽에 부딪혀도 속도 60% 유지.' },
     ],
     lines: {
       atk: ['비켜비켜~', '부릉부릉!', '굴러간다~'],

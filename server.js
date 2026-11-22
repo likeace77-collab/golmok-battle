@@ -723,7 +723,7 @@ SKILLS.jinho = {
 
 // ── 투사체 (서현우 스테이플러 심) ──
 function shoot(room, p, a, o) {
-  room.bullets.push({ id: ++room.bulletSeq, owner: p.id, x: p.x + Math.cos(a) * 20, y: p.y + Math.sin(a) * 20, a, v: o.speed, left: o.range, dmg: o.dmg, kind: o.kind, onHit: o.onHit, ally: o.ally, home: o.home, turn: o.turn, wave: o.wave, amp: o.amp, lobes: o.lobes || 1, range: o.range, hitR: o.hitR, ox: p.x, oy: p.y, t: 0 });
+  room.bullets.push({ id: ++room.bulletSeq, owner: p.id, x: p.x + Math.cos(a) * 20, y: p.y + Math.sin(a) * 20, a, v: o.speed, left: o.range, dmg: o.dmg, kind: o.kind, onHit: o.onHit, ally: o.ally, home: o.home, turn: o.turn, wave: o.wave, amp: o.amp, lobes: o.lobes || 1, range: o.range, hitR: o.hitR, ox: p.x, oy: p.y, t: 0, lock: o.lock, tgt: o.tgt, life: o.life });
 }
 const allies = (room, p) => [...room.players.values()].filter((q) => q.id !== p.id && !q.dead && !q.out && !q.struct && (room.mode.team || room.mode.squad) && q.team != null && teamOf(room, q) === teamOf(room, p));
 function heal(room, p, q, v) {
@@ -732,10 +732,22 @@ function heal(room, p, q, v) {
   q.hp += h; room.fx.push({ type: 'heal', x: q.x, y: q.y - 40, v: Math.round(h) });
   return h;
 }
+// 끝까지 쫓아갈 상대: 가장 가까운 사람 (없으면 가장 가까운 상자 등)
+function lockTarget(room, owner, x, y) {
+  let tg = null, bd = Infinity;
+  for (const q of enemies(room, owner)) { const d = Math.hypot(q.x - x, q.y - y) + (q.struct ? 1e6 : 0); if (d < bd) { bd = d; tg = q; } }
+  return tg;
+}
 function stepBullets(room, now) {
   for (const b of room.bullets) {
     const owner = room.players.get(b.owner);
-    if (b.home && owner) {        // 유도탄: 가장 가까운 (보이는) 상대 쪽으로 조금씩 꺾임
+    if (b.lock && owner) {        // 정수호 빅맥: 고른 상대를 맞을 때까지 끝까지 쫓아감 (벽도 넘고, 사거리 없음)
+      let tg = b.tgt && room.players.get(b.tgt);
+      if (!tg || !isEnemy(room, owner, tg)) { tg = lockTarget(room, owner, b.x, b.y); b.tgt = tg ? tg.id : null; }
+      b.life -= DT;
+      if (!tg || b.life <= 0) { b.left = 0; continue; }
+      b.a = Math.atan2(tg.y - b.y, tg.x - b.x); b.left = 1e9;
+    } else if (b.home && owner) {        // 유도탄: 가장 가까운 (보이는) 상대 쪽으로 조금씩 꺾임
       let tg = null, bd = 900;
       for (const q of enemies(room, owner)) { if (q.invT > 0) continue; const d = Math.hypot(q.x - b.x, q.y - b.y); if (d < bd) { bd = d; tg = q; } }
       if (tg) { const d = angDiff(Math.atan2(tg.y - b.y, tg.x - b.x), b.a); b.a += Math.max(-b.turn * DT, Math.min(b.turn * DT, d)); }
@@ -747,8 +759,9 @@ function stepBullets(room, now) {
         b.t += st; const u = Math.min(1, b.t / b.range) * b.lobes, w = b.wave * b.amp * (1 - Math.abs(2 * (u - Math.floor(u)) - 1));
         b.x = b.ox + Math.cos(b.a) * b.t - Math.sin(b.a) * w; b.y = b.oy + Math.sin(b.a) * b.t + Math.cos(b.a) * w;
       } else { b.x += Math.cos(b.a) * st; b.y += Math.sin(b.a) * st; }
-      if (hitsWall(room.map, b.x, b.y, 3)) { b.left = 0; room.fx.push({ type: 'bulletWall', x: b.x, y: b.y }); break; }   // 벽에 막힘
-      const q = owner && [...enemies(room, owner), ...(b.ally ? allies(room, owner) : [])].find((q) => Math.hypot(q.x - b.x, q.y - b.y) < q.B.radius + (b.hitR || 8));
+      if (!b.lock && hitsWall(room.map, b.x, b.y, 3)) { b.left = 0; room.fx.push({ type: 'bulletWall', x: b.x, y: b.y }); break; }   // 벽에 막힘
+      const q = owner && (b.lock ? [room.players.get(b.tgt)].filter((q) => q && Math.hypot(q.x - b.x, q.y - b.y) < q.B.radius + 14)[0]
+        : [...enemies(room, owner), ...(b.ally ? allies(room, owner) : [])].find((q) => Math.hypot(q.x - b.x, q.y - b.y) < q.B.radius + (b.hitR || 8)));
       if (q && b.onHit) { b.onHit(q, now); b.left = 0; break; }
       if (q) { damage(room, owner, q, b.dmg, now, b.kind); chargeSuper(owner, b.dmg); room.fx.push({ type: 'bulletHit', x: q.x, y: q.y, k: b.kind }); b.left = 0; break; }
     }
@@ -941,7 +954,8 @@ SKILLS.suho = {
     const g = p.B.gadgets[idx];
     if (idx === 0) {                 // 빅@맥 발사!: 유도탄
       say(p, 'g1', 1.4);
-      shoot(room, p, p.facing, { speed: g.speed, range: g.range, dmg: g.dmg, kind: 'bigmac', home: true, turn: g.turn });
+      const tg = lockTarget(room, p, p.x, p.y);
+      shoot(room, p, tg ? Math.atan2(tg.y - p.y, tg.x - p.x) : p.facing, { speed: g.speed, range: g.range, dmg: g.dmg, kind: 'bigmac', lock: true, tgt: tg ? tg.id : null, life: 15 });
       room.fx.push({ type: 'bigmacShot', id: p.id, x: p.x, y: p.y });
     } else {                         // 빅맥먹방: 점점 닳는 보호막
       say(p, 'g2', 1.4);
@@ -1734,7 +1748,6 @@ function step(room) {
     if (p.gd) { p.input = { mx: 0, my: 0 }; continue; }   // 지메 세계에 가 있는 동안 현실에선 정지
     if (B.roll) {
       if (p.boostT > 0) p.boostT = Math.max(0, p.boostT - DT);
-      if (hasSP(p, 'rollroll') && p.roll >= 0.95) { p.stunT = 0; p.frozenT = 0; }    // 구르고 구르고: 최고 속도에선 기절 무시
       if (p.stunT > 0 || p.frozenT > 0) { p.roll = 0; p.boostT = 0; }
     }
     if (p.mukT > 0) {                              // 빅맥먹방 보호막: 점점 닳음
