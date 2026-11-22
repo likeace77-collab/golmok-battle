@@ -780,25 +780,12 @@ SKILLS.suhun = {
     room.fx.push({ type: 'throw67', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3) });
     if (Math.random() < 0.3) say(p, 'atk', 1);
   },
-  gadget(room, p, idx, now) {
+  gadget(room, p, idx, now, aim = {}) {
     const g = p.B.gadgets[idx];
-    if (idx === 0) {                 // 지메 비행기: 4초 무적 비행 (벽 위로)
+    if (idx === 0) {                 // 지메 비행기: 최대 4초 무적 비행 (블록 2칸 높이까지 넘음) → 내리면 추락
       say(p, 'g1', 1.4); p.flyT = g.dur;
       room.fx.push({ type: 'gdShip', id: p.id, x: p.x, y: p.y, dur: g.dur });
-    } else {                         // 블록 4칸: 바라보는 쪽 앞에 가로로
-      say(p, 'g2', 1.4);
-      const ca = Math.cos(p.facing), sa = Math.sin(p.facing), cx = p.x + ca * g.dist, cy = p.y + sa * g.dist;
-      const out = [];
-      for (let i = 0; i < g.n; i++) {
-        const off = (i - (g.n - 1) / 2) * g.size, bx = cx - sa * off, by = cy + ca * off;
-        if (bx < g.size / 2 || by < g.size / 2 || bx > room.map.w - g.size / 2 || by > room.map.h - g.size / 2) continue;
-        const w = { x: bx - g.size / 2, y: by - g.size / 2, w: g.size, h: g.size, temp: true };
-        room.map.walls.push(w); out.push(room.map.walls.length - 1);
-        later(room, g.life, () => { if (!w.broken) { w.broken = true; room.fx.push({ type: 'wallBreak', i: room.map.walls.indexOf(w), x: w.x + w.w / 2, y: w.y + w.h / 2, temp: true }); } });
-      }
-      for (const q of room.players.values()) resolveWalls(room.map, q, q.B.radius);   // 블록에 끼인 사람은 밀어냄
-      room.fx.push({ type: 'blocks', id: p.id, x: cx, y: cy });
-    }
+    } else placeBlocks(room, p, g, aim);
   },
   super(room, p, a, now) {           // 지메하세요: 첫 번째 상대와 지메 1:1 — 먼저 탈락하면 쓰러짐
     const S = p.B.super;
@@ -809,6 +796,41 @@ SKILLS.suhun = {
     startGD(room, p, target, now);
   },
 };
+// 지메 비행기 추락: 뛰어내린 자리 근처 상대에게 피해 + 밀치기
+function planeCrash(room, p) {
+  const g = p.B.gadgets[0], cx = p.x + Math.cos(p.facing) * 50, cy = p.y + Math.sin(p.facing) * 50, now = Date.now() / 1000;
+  p.flyT = 0;
+  if (hitsWall(room.map, p.x, p.y, p.B.radius)) { const f = freeSpot(room.map, p.x, p.y, p.B.radius, 80); p.x = f.x; p.y = f.y; }
+  for (const q of enemies(room, p)) {
+    const dx = q.x - cx, dy = q.y - cy, d = Math.hypot(dx, dy);
+    if (d > g.crashR + q.B.radius) continue;
+    damage(room, p, q, g.crashDmg, now, 'crash');
+    if (!q.struct && !q.dead) { const ux = dx / (d || 1), uy = dy / (d || 1); for (let k = 0; k < g.knock; k += 10) { const nx = q.x + ux * 10, ny = q.y + uy * 10; if (hitsWall(room.map, nx, ny, q.B.radius)) break; q.x = nx; q.y = ny; } }
+  }
+  room.fx.push({ type: 'planeCrash', id: p.id, x: cx, y: cy, r: g.crashR });
+}
+// 블록 2칸: 고른 위치에 (격자에 맞춰) 세움. 같은 칸에 또 놓으면 위로 쌓임, 맵 벽 위에 놓으면 3칸 높이. 판 끝날 때까지 유지
+function placeBlocks(room, p, g, aim) {
+  say(p, 'g2', 1.4);
+  const a = Number.isFinite(aim.a) ? aim.a : p.facing, dd = Number.isFinite(aim.d) ? Math.max(0.15, Math.min(1, aim.d)) : 0.35;
+  const tx = p.x + Math.cos(a) * g.range * dd, ty = p.y + Math.sin(a) * g.range * dd, S2 = g.size;
+  const horiz = Math.abs(Math.cos(a)) < Math.abs(Math.sin(a));        // 조준 방향에 가로로 (격자라 가로/세로 중 하나)
+  const gx0 = Math.round(tx / S2 - (horiz ? 0.5 : 0)), gy0 = Math.round(ty / S2 - (horiz ? 0 : 0.5));
+  for (let i = 0; i < g.n; i++) {
+    const gx = gx0 + (horiz ? i : 0), gy = gy0 + (horiz ? 0 : i), x = gx * S2 - S2 / 2, y = gy * S2 - S2 / 2;
+    if (x < 0 || y < 0 || x + S2 > room.map.w || y + S2 > room.map.h) continue;
+    const ex = room.map.walls.find((w) => w.temp && !w.broken && w.gx === gx && w.gy === gy);
+    if (ex) { ex.stack = Math.min(g.max, ex.stack + 1); continue; }
+    const onWall = room.map.walls.some((w) => !w.temp && !w.broken && x + S2 / 2 > w.x && x + S2 / 2 < w.x + w.w && y + S2 / 2 > w.y && y + S2 / 2 < w.y + w.h);
+    room.map.walls.push({ x, y, w: S2, h: S2, temp: true, gx, gy, stack: onWall ? 3 : 1, owner: p.id, base: onWall ? 1 : 0 });
+  }
+  const mine = room.map.walls.filter((w) => w.temp && !w.broken && w.owner === p.id);      // 너무 많으면 오래된 것부터 사라짐
+  for (let i = 0; i < mine.length - g.cap; i++) { mine[i].broken = true; room.fx.push({ type: 'wallBreak', i: room.map.walls.indexOf(mine[i]), x: mine[i].x + S2 / 2, y: mine[i].y + S2 / 2, temp: true }); }
+  for (const q of room.players.values()) if (!(q.flyT > 0)) resolveWalls(room.map, q, q.B.radius);   // 블록에 끼인 사람은 밀어냄
+  room.fx.push({ type: 'blocks', id: p.id, x: tx, y: ty });
+}
+// 지메 비행기가 못 넘는 벽 = 블록이 3칸 이상 쌓인 곳
+const flyMap = (map) => ({ w: map.w, h: map.h, walls: map.walls.filter((w) => w.temp && !w.broken && w.stack >= 3) });
 // 지메 세계: 둘 다 현실에서 사라짐(안 맞음·못 움직임) → 각자 화면에서 지오메트리 대쉬 → 먼저 탈락한 쪽이 쓰러짐
 function startGD(room, a, b, now) {
   const S = a.B.super, id = (room.gdSeq = (room.gdSeq || 0) + 1), seed = Math.floor(Math.random() * 1e9);
@@ -1086,11 +1108,12 @@ function doAttack(room, p, ang, now, dist) {
   p.lastHit = Math.max(p.lastHit, now - G.regenDelay + 1);
   SKILLS[p.B.id].attack(room, p, Number.isFinite(ang) ? ang : p.facing, now, Number.isFinite(dist) ? Math.max(0.15, Math.min(1, dist)) : 1);
 }
-function doGadget(room, p, slot, now) {           // slot: 1 또는 2 (더블 가젯 모드에서만 2)
+function doGadget(room, p, slot, now, aim) {     // slot: 1 또는 2 (더블 가젯 모드에서만 2) · aim: { a: 각도, d: 거리 0~1 } (위치 고르는 가젯)
+  if (p.flyT > 0 && p.B.id === 'suhun' && room.phase === 'play') { planeCrash(room, p); return; }   // 지메 비행기에서 뛰어내림
   if (room.phase !== 'play' || !canAct(p) || p.gCd > 0) return;
   const idx = p.lo.g[slot - 1]; if (idx == null) return;
   p.gCd = p.B.gadgetCd * (has(p, 'gadget') ? 0.8 : 1);
-  SKILLS[p.B.id].gadget(room, p, idx, now);
+  SKILLS[p.B.id].gadget(room, p, idx, now, aim || {});
 }
 function doSuper(room, p, ang, now) {
   if (room.ball && room.ball.holder === p.id) return;    // 공 들고는 궁 못 씀
@@ -1601,7 +1624,7 @@ function step(room) {
     if (p.danceT > 0) p.danceT = Math.max(0, p.danceT - DT);         // L을 가져가 춤 (춤추면서도 움직이고 공격 가능)
     if (p.flyT > 0) {                                  // 지메 비행기 끝 → 벽 안이면 빈 곳으로 착지
       p.flyT = Math.max(0, p.flyT - DT);
-      if (p.flyT <= 0 && hitsWall(room.map, p.x, p.y, B.radius)) { const f = freeSpot(room.map, p.x, p.y, B.radius, 80); p.x = f.x; p.y = f.y; }
+      if (p.flyT <= 0) { p.flyT = 0.001; planeCrash(room, p); }      // 시간 끝 → 뛰어내리고 비행기 추락
     }
     if (p.gd) { p.input = { mx: 0, my: 0 }; continue; }   // 지메 세계에 가 있는 동안 현실에선 정지
     if (B.roll) {
@@ -1723,7 +1746,7 @@ function step(room) {
         if (len > 0.1) { mx /= len; my /= len; p.facing = Math.atan2(my, mx); } else { mx = 0; my = 0; }
         p.x += mx * speedOf(p) * DT;
         p.y += my * speedOf(p) * DT;
-        if (p.flyT > 0) { p.x = Math.max(B.radius, Math.min(room.map.w - B.radius, p.x)); p.y = Math.max(B.radius, Math.min(room.map.h - B.radius, p.y)); }   // 날 때는 벽 위로
+        if (p.flyT > 0) resolveWalls(flyMap(room.map), p, B.radius);     // 날 때는 블록 3칸 이상 쌓인 곳만 막힘
         else resolveWalls(room.map, p, B.radius);
       }
     }
@@ -1781,7 +1804,7 @@ function step(room) {
     shards: room.shards.map((s) => [s.id, r1(s.x), r1(s.y), s.r, 99]),
     bullets: room.bullets.map((b) => [b.id, r1(b.x), r1(b.y), +b.a.toFixed(2), b.kind, b.owner]),
     broken: room.map.walls.reduce((a, w, i) => (w.broken && a.push(i), a), []),
-    blocks: room.map.walls.reduce((a, w, i) => (w.temp && !w.broken && a.push([i, r1(w.x), r1(w.y), w.w, w.h]), a), []),
+    blocks: room.map.walls.reduce((a, w, i) => (w.temp && !w.broken && a.push([i, r1(w.x), r1(w.y), w.w, w.h, w.stack, w.base]), a), []),
     players: [...room.players.values()].map((p) => ({
       id: p.id, name: p.name, b: p.B.id, color: p.color, bot: p.isBot, team: p.team,
       x: r1(p.x), y: r1(p.y), hp: r1(p.hp), mhp: p.home || p.form ? p.B.maxHp : undefined, dead: p.dead, out: p.out, rank: p.rank, respawn: Math.ceil(p.respawnT),
@@ -2045,7 +2068,7 @@ io.on('connection', (socket) => {
     const o = x && typeof x === 'object' ? x : { a: x };
     doAttack(room, puppetOr(p), num(o.a), Date.now() / 1000, num(o.d));
   });
-  socket.on('gadget', (n) => { const p = me(); if (p && !p.ctrlBy) doGadget(room, puppetOr(p), n === 2 ? 2 : 1, Date.now() / 1000); });
+  socket.on('gadget', (x) => { const p = me(); if (!p || p.ctrlBy) return; const o = x && typeof x === 'object' ? x : { n: x }; doGadget(room, puppetOr(p), o.n === 2 ? 2 : 1, Date.now() / 1000, { a: num(o.a), d: num(o.d) }); });
   socket.on('super', (ang) => { const p = me(); if (p && !p.ctrlBy) doSuper(room, puppetOr(p), num(ang), Date.now() / 1000); });
   socket.on('addBot', () => {
     if (!room || (room.mode.rounds && room.mode.id !== 'ffa') || room.mode.training) return;         // 라운드 모드는 자동으로 채움 (난투는 직접 추가)

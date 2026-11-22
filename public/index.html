@@ -783,21 +783,42 @@ function makeNum(kind) {
 }
 // 이수훈 블록 (가젯2): 지메 블록 모양
 const blockMeshes = {};
+const BLOCK_H = 2.2;
+function makeBlock(W, D, lv) {
+  const g = new THREE.Group();
+  for (let k = 0; k < lv.n; k++) {
+    const box = new THREE.Mesh(new THREE.BoxGeometry(W, BLOCK_H, D), std('#1b1040', { roughness: 0.5 })); box.position.y = (lv.base + k) * BLOCK_H + BLOCK_H / 2; g.add(box);
+    const edge = new THREE.LineSegments(new THREE.EdgesGeometry(box.geometry), new THREE.LineBasicMaterial({ color: k ? '#ff4fd8' : '#3cf0ff' })); edge.position.copy(box.position); g.add(edge);
+  }
+  const inner = new THREE.Mesh(new THREE.BoxGeometry(W * 0.55, 0.05, D * 0.55), new THREE.MeshBasicMaterial({ color: '#7c5cff' })); inner.position.y = (lv.base + lv.n) * BLOCK_H + 0.03; g.add(inner);
+  return g;
+}
 function updateBlocks() {
   const seen = new Set();
-  for (const [i, x, y, w, h] of state.blocks || []) {
-    seen.add(String(i));
-    if (!blockMeshes[i]) {
-      const g = new THREE.Group(), W = w * S, D = h * S, HH = 2.2;
-      const box = new THREE.Mesh(new THREE.BoxGeometry(W, HH, D), std('#1b1040', { roughness: 0.5 })); box.position.y = HH / 2; g.add(box);
-      const edge = new THREE.LineSegments(new THREE.EdgesGeometry(box.geometry), new THREE.LineBasicMaterial({ color: '#3cf0ff' })); edge.position.y = HH / 2; g.add(edge);
-      const inner = new THREE.Mesh(new THREE.BoxGeometry(W * 0.55, 0.05, D * 0.55), new THREE.MeshBasicMaterial({ color: '#7c5cff' })); inner.position.y = HH + 0.03; g.add(inner);
-      g.position.set((x + w / 2) * S, 0, (y + h / 2) * S); shadowAll(g); scene.add(g); blockMeshes[i] = g;
-      burst((x + w / 2) * S, 1, (y + h / 2) * S, 8, ['#3cf0ff', '#7c5cff'], { speed: 3, size: 0.2, up: 4, life: 0.5 });
+  for (const [i, x, y, w, h, stack = 1, base = 0] of state.blocks || []) {
+    const key = i + ':' + stack; seen.add(String(i));
+    const m = blockMeshes[i];
+    if (!m || m.userData.key !== key) {
+      if (m) scene.remove(m);
+      const g = makeBlock(w * S, h * S, { base: base ? 2 : 0, n: base ? 1 : stack });   // 맵 벽 위에 놓은 블록은 벽 높이(2칸) 위에
+      g.userData.key = key; g.position.set((x + w / 2) * S, 0, (y + h / 2) * S); shadowAll(g); scene.add(g); blockMeshes[i] = g;
+      burst((x + w / 2) * S, (base ? 2 : stack - 1) * BLOCK_H + 1, (y + h / 2) * S, 8, ['#3cf0ff', '#7c5cff'], { speed: 3, size: 0.2, up: 4, life: 0.5 });
     }
   }
   for (const i in blockMeshes) if (!seen.has(i)) { scene.remove(blockMeshes[i]); delete blockMeshes[i]; }
+  // 블록 놓을 자리 미리보기 (드래그 중 · PC는 가젯 키 누르기 전 마우스 위치)
+  const me = atkSrc(), g = me && (slotGadget(1) && slotGadget(1).aim === 'place' ? slotGadget(1) : slotGadget(2) && slotGadget(2).aim === 'place' ? slotGadget(2) : null);
+  const show = g && (gAim.id !== null || (!isTouch && mouse.on && me && !(me.gCd > 0))) && mode === 'game';
+  if (!blockGhost) { blockGhost = new THREE.Group(); for (let k = 0; k < 2; k++) { const b = new THREE.Mesh(new THREE.BoxGeometry(1, BLOCK_H, 1), new THREE.MeshBasicMaterial({ color: '#3cf0ff', transparent: true, opacity: 0.35, depthWrite: false })); b.position.y = BLOCK_H / 2; blockGhost.add(b); } scene.add(blockGhost); }
+  blockGhost.visible = !!(show && gAim.id !== null);
+  if (blockGhost.visible) {
+    const aim = gadgetAim(); if (!aim) { blockGhost.visible = false; return; }
+    const S2 = g.size, dd = Math.max(0.15, Math.min(1, aim.d)), tx = me.x + Math.cos(aim.a) * g.range * dd, ty = me.y + Math.sin(aim.a) * g.range * dd;
+    const horiz = Math.abs(Math.cos(aim.a)) < Math.abs(Math.sin(aim.a)), gx0 = Math.round(tx / S2 - (horiz ? 0.5 : 0)), gy0 = Math.round(ty / S2 - (horiz ? 0 : 0.5));
+    blockGhost.children.forEach((b, k) => { const gx = gx0 + (horiz ? k : 0), gy = gy0 + (horiz ? 0 : k); b.scale.set(S2 * S, 1, S2 * S); b.position.set((gx * S2) * S, BLOCK_H / 2, (gy * S2) * S); });
+  }
 }
+let blockGhost = null;
 const bigmacMeshes = {};
 function updateBigmacs(now) {
   const seen = new Set();
@@ -3269,6 +3290,12 @@ function handleFx(list) {
     else if (f.type === 'both67') { popup('67!!', { x, z }, 6.2, '#ffd84a', 40, 1.0); burst(x, 2, z, 18, ['#ffb02e', '#3cf0ff', '#ffffff'], { speed: 7, size: 0.3, up: 5, life: 0.6 }); }
     else if (f.type === 'gdShip') { popup('✈️ 지메 비행기', { x, z }, 6, '#ff4fd8', 26, 1.0); burst(x, 1.5, z, 20, ['#ff4fd8', '#3cf0ff'], { speed: 5, size: 0.3, up: 5, life: 0.6 }); }
     else if (f.type === 'blocks') popup('🧱 블록!', { x, z }, 4.5, '#3cf0ff', 24, 0.8);
+    else if (f.type === 'planeCrash') {
+      popup('✈️💥 추락!', { x, z }, 6, '#ff4fd8', 32, 1.0);
+      ringFx(x, z, f.r * S, '#ff4fd8', 0.5); flash(x, 1.5, z, '#ffb02e', 4, 0.35);
+      burst(x, 1.5, z, 50, ['#ff4fd8', '#3cf0ff', '#ffb02e', '#1b1040', '#ffffff'], { speed: 12, size: 0.4, up: 9, life: 1.0 });
+      if (isNear(x, z, 26)) shake = Math.max(shake, 0.8);
+    }
     else if (f.type === 'gdCall') {
       const v = views[f.id]; if (v) { v.superT = 0; v.facing = Math.atan2(Math.cos(f.a), Math.sin(f.a)); }
       const L = f.len * S, beam = new THREE.Mesh(new THREE.BoxGeometry(L, 0.15, 0.9), addMat('#7c5cff', 0.8, true));
@@ -3362,8 +3389,8 @@ addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (keys[k]) return; keys[k] = true;
   if (k === ' ') { doAttack(); e.preventDefault(); }
-  if (k === 'q' || k === 'ㅂ') socket.emit('gadget', 1);
-  if (k === 'e' || k === 'ㄷ') socket.emit('gadget', 2);
+  if (k === 'q' || k === 'ㅂ') fireGadget(1, mouseGadgetAim());
+  if (k === 'e' || k === 'ㄷ') fireGadget(2, mouseGadgetAim());
   if (k === 'r' || k === 'ㄱ') doSuper();
 });
 const mouse = { x: 0, y: 0, on: false };
@@ -3457,14 +3484,14 @@ function gdCourse(seed) {
   const R = gdRand(seed), C = { obs: [], end: 560 };
   C.more = (upTo) => {
     while (C.end < upTo) {
-      let x = C.end; const k = Math.min(1, x / 14000), r = R(), sp = Math.min(640, Math.sqrt(380 * 380 + 18 * x)) / 380;   // sp: 그 지점 속도 배율 → 간격도 같이 늘림
+      let x = C.end; const k = Math.min(1, x / 9000), r = R(), sp = Math.min(640, Math.sqrt(380 * 380 + 18 * x)) / 380;   // sp: 그 지점 속도 배율 → 간격도 같이 늘림
       if (r < 0.38) { const n = 1 + Math.floor(R() * (k > 0.25 ? 3 : 2.4)); C.obs.push({ t: 's', x, w: n * 30 }); x += n * 30; }
       else if (r < 0.62) { const w = 60 + Math.floor(R() * 90), h = 36 + Math.floor(R() * 40); C.obs.push({ t: 'b', x, w, h }); if (R() < 0.55 + k * 0.35) C.obs.push({ t: 's', x: x + w + Math.round((60 + R() * 40) * sp * sp), w: 30 * (1 + (R() < k ? 1 : 0)) }); x += w + Math.round(120 * sp * sp); }
       else if (r < 0.8) { const h = 56 + Math.floor(R() * 22); C.obs.push({ t: 'b', x, w: 36, h }); x += 36; }
       else {                                       // 계단 블록 + 사이 가시
         const h1 = 40 + Math.floor(R() * 15); C.obs.push({ t: 'b', x, w: 70, h: h1 }); const g2 = Math.round(60 * sp); C.obs.push({ t: 'b', x: x + 70 + g2, w: 70, h: h1 + 34 }); C.obs.push({ t: 's', x: x + 70, w: g2 }); x += 140 + g2;
       }
-      C.end = x + Math.round((190 + Math.floor(R() * 190 * (1 - k * 0.55))) * sp);
+      C.end = x + Math.round((175 + Math.floor(R() * 190 * (1 - k * 0.7))) * sp);   // 갈수록 촘촘
     }
   };
   return C;
@@ -3547,8 +3574,46 @@ $('gdBox').addEventListener('pointerdown', gdDown); addEventListener('pointerup'
 addEventListener('keydown', (e) => { if (!gdS) return; if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') { gdS.hold = true; gdJump(); } e.preventDefault(); e.stopImmediatePropagation(); }, true);
 addEventListener('keyup', (e) => { if (gdS && (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W')) gdS.hold = false; }, true);
 $('qStart').onclick = () => { if (socket) socket.emit('startNow'); };
-press('bG1', () => socket.emit('gadget', 1));
-press('bG2', () => socket.emit('gadget', 2));
+// 가젯 버튼: 위치 고르는 가젯(이수훈 블록)이면 드래그해서 위치 조절 · 아니면 탭
+const gAim = { id: null, slot: 1, drag: 0, ang: null, px: 0, py: 0 };
+function slotGadget(slot) { const me = atkSrc(); if (!me || !me.g) return null; const idx = me.g[slot - 1]; return idx == null ? null : bOf(me).gadgets[idx]; }
+function fireGadget(slot, aim) { if (!socket) return; const g = slotGadget(slot); socket.emit('gadget', g && g.aim === 'place' && aim ? { n: slot, a: aim.a, d: aim.d } : slot); }
+function mouseGadgetAim() {          // PC: 마우스가 가리키는 땅 위치
+  const me = atkSrc(), v = me && views[me.id]; if (!me || !v || isTouch || !mouse.on) return null;
+  ray.setFromCamera({ x: mouse.x / W * 2 - 1, y: -(mouse.y / H) * 2 + 1 }, camera);
+  if (!ray.ray.intersectPlane(ground, hitP)) return null;
+  const g = slotGadget(1) && slotGadget(1).aim === 'place' ? slotGadget(1) : slotGadget(2); if (!g || !g.range) return null;
+  const p = v.model.root.position;
+  return { a: Math.atan2(hitP.z - p.z, hitP.x - p.x), d: Math.hypot(hitP.x - p.x, hitP.z - p.z) / (g.range * S) };
+}
+function gadgetAim() {               // 지금 조준 중인 위치 (드래그 / 마우스)
+  if (gAim.id !== null) { const me = atkSrc(); return gAim.drag > 20 ? { a: gAim.ang, d: dragDist(gAim.drag) } : { a: me ? me.f : 0, d: 0.35 }; }
+  return mouseGadgetAim();
+}
+for (const [id, slot] of [['bG1', 1], ['bG2', 2]]) {
+  const el = $(id);
+  el.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); e.stopPropagation(); if (!socket) return;
+    const g = slotGadget(slot);
+    if (!(g && g.aim === 'place') || (atkSrc() && atkSrc().fly)) { socket.emit('gadget', slot); return; }
+    const r = el.getBoundingClientRect();
+    Object.assign(gAim, { id: e.pointerId, slot, drag: 0, ang: null, px: e.clientX, py: e.clientY });
+    try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    aimJoy.className = 'atk'; aimJoy.style.left = (r.left + r.width / 2) + 'px'; aimJoy.style.top = (r.top + r.height / 2) + 'px'; aimJoy.style.display = 'block'; aimKnob.style.transform = '';
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== gAim.id) return;
+    const dx = e.clientX - gAim.px, dy = e.clientY - gAim.py, d = Math.hypot(dx, dy);
+    gAim.drag = d; if (d > 20) gAim.ang = Math.atan2(dy, dx);
+    const k = Math.min(d, 75); aimKnob.style.transform = d ? `translate(${dx / d * k}px,${dy / d * k}px)` : '';
+  });
+  const end = (e) => {
+    if (e.pointerId !== gAim.id) return;
+    const aim = gadgetAim(); gAim.id = null; aimJoy.style.display = 'none';
+    if (e.type !== 'pointercancel') fireGadget(slot, aim);
+  };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+}
 // 조준 조이스틱 (기본공격 · 궁극기 공통)
 // 버튼 누른 채 드래그 → 놓으면 발사 · 그냥 탭하면 자동조준 · 끌었다가 가운데로 되돌리면 취소
 const aimJoy = $('aimJoy'), aimKnob = aimJoy.querySelector('i');
@@ -3720,8 +3785,8 @@ function animateTeacher(v, p, dt, now) {
     }
     v.ship.visible = !!p.fly && !p.dead;
     if (p.fly) {
-      bodyY += 1.6 + Math.sin(now * 6) * 0.15; lean = 0.1; M.legs[0].rotation.x = M.legs[1].rotation.x = -1.2;
-      v.ship.position.y = 1.2 + Math.sin(now * 6) * 0.15; v.ship.rotation.z = Math.sin(now * 3) * 0.12; v.ship.userData.fl.scale.y = 0.8 + Math.random() * 0.5;
+      bodyY += 3.4 + Math.sin(now * 6) * 0.15; lean = 0.1; M.legs[0].rotation.x = M.legs[1].rotation.x = -1.2;
+      v.ship.position.y = 2.5 + Math.sin(now * 6) * 0.15; v.ship.rotation.z = Math.sin(now * 3) * 0.12; v.ship.userData.fl.scale.y = 0.8 + Math.random() * 0.5;
       if (Math.random() < 0.5) burst(root.position.x - Math.sin(v.facing) * 2, 1.4, root.position.z - Math.cos(v.facing) * 2, 1, ['#ff4fd8', '#3cf0ff', '#ffb02e'], { speed: 1.5, size: 0.3, up: 0.5, life: 0.4, grav: 0 });
     }
     if (p.dance) {                 // L을 가져가: 이마에 L + 티배깅 (움직이는 중엔 위아래로만 들썩)
