@@ -417,6 +417,7 @@ function publicBrawlers() {
 const ROBOTS = {
   robot: { id:'robot', name:'훈련 로봇', radius:28, speed:0, maxHp:5000, attack:{ ammo:0, range:0 }, gadgets:[], starPowers:[], super:null },
   bigrobot: { id:'bigrobot', name:'튼튼 로봇', radius:40, speed:0, maxHp:20000, attack:{ ammo:0, range:0 }, gadgets:[], starPowers:[], super:null },
+  pbox: { id:'pbox', name:'큐브 상자', radius:44, speed:0, maxHp:4000, attack:{ ammo:0, range:0 }, gadgets:[], starPowers:[], super:null },   // 쇼다운: 부수면 파워 큐브
   safe: { id:'safe', name:'금고', radius:52, speed:0, maxHp:60000, attack:{ ammo:0, range:0 }, gadgets:[], starPowers:[], super:null },    // 하이스트
 };
 

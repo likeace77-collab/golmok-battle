@@ -205,6 +205,16 @@ const MAPS = {
   },
 };
 
+// 쇼다운(솔로·듀오·트리오) 공통: 넓은 맵 + 독가스
+const SD_MAPS = ['playground', 'gym', 'rooftop', 'hall'];
+const SD_GAS = { start: 15, dur: 110, dps: 600, final: 320 };
+const SD_SCALE = 1.45;       // 쇼다운 맵은 위치 1.45배로 더 넓게 (벽 크기는 1.15배) + 엄폐물 추가
+const SD_EXTRA = [{ x: 180, y: 1250, w: 90, h: 220 }, { x: 1250, y: 180, w: 220, h: 90 }, { x: 760, y: 1120, w: 130, h: 130 }, { x: 1120, y: 760, w: 130, h: 130 }];
+for (const id of SD_MAPS) {
+  const m = MAPS[id], W = Math.round(m.w * SD_SCALE), H = Math.round(m.h * SD_SCALE);
+  const ws = m.walls.map((w) => { const nw = Math.round(w.w * 1.15), nh = Math.round(w.h * 1.15); return { x: Math.round((w.x + w.w / 2) * SD_SCALE - nw / 2), y: Math.round((w.y + w.h / 2) * SD_SCALE - nh / 2), w: nw, h: nh }; });
+  m.w = W; m.h = H; m.walls = uniq([...ws, ...mirror4(W, H, SD_EXTRA)]);
+}
 const MODES = {
   ffa: {
     id: 'ffa', name: '난투', icon: '⚔️', color: '#ff7a3a',
@@ -213,9 +223,21 @@ const MODES = {
   },
   showdown: {
     id: 'showdown', name: '쇼다운', icon: '💀', color: '#7ad94a',
-    desc: '최후의 1인이 승리! 부활 없음. 독가스가 점점 좁혀온다.',
-    team: false, respawn: false, rounds: true, size: 6, maps: ['playground', 'gym', 'rooftop', 'hall'],
-    gas: { start: 12, dur: 75, dps: 600, final: 320 },
+    desc: '10명 개인전! 최후의 1인이 승리. 상자를 부숴 파워 큐브를 모으면 강해진다. 독가스가 점점 좁혀온다.',
+    team: false, respawn: false, rounds: true, size: 10, sd: true, maps: SD_MAPS,
+    gas: SD_GAS,
+  },
+  duo: {
+    id: 'duo', name: '듀오 쇼다운', icon: '👥', color: '#4ad9b0',
+    desc: '2명이 한 팀, 5팀 10명! 팀원이 한 명이라도 살아 있으면 죽어도 15초 뒤 부활. 마지막까지 남은 팀이 승리.',
+    team: false, respawn: false, rounds: true, size: 10, sd: true, squad: 2, squadRespawn: 15, maps: SD_MAPS,
+    gas: SD_GAS,
+  },
+  trio: {
+    id: 'trio', name: '트리오 쇼다운', icon: '🔺', color: '#d9b84a',
+    desc: '3명이 한 팀, 4팀 12명! 팀원이 한 명이라도 살아 있으면 죽어도 15초 뒤 부활. 마지막까지 남은 팀이 승리.',
+    team: false, respawn: false, rounds: true, size: 12, sd: true, squad: 3, squadRespawn: 15, maps: SD_MAPS,
+    gas: SD_GAS,
   },
   gem: {
     id: 'gem', name: '젬 그랩', icon: '💎', color: '#c070ff',

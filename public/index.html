@@ -124,6 +124,7 @@
   #partyBox .code { background: rgba(0,0,0,.4); border-radius: 7px; padding: 1px 7px; letter-spacing: 1px; color: #ffd84a; cursor: pointer; }
   #partyBox button.g { background: #3ce07f; margin-left: auto; }
   #partyBox .srow { display: flex; gap: 5px; align-items: center; margin-top: 5px; padding: 4px; border-radius: 9px; background: rgba(0,0,0,.2); }
+  #partyBox .sqwrap { display: flex; flex-wrap: wrap; gap: 0 6px; } #partyBox .srow.sqg { background: rgba(255,216,74,.18); } #partyBox .srow .tl { font-size: 11px; white-space: nowrap; }
   #partyBox .srow.t0 { background: rgba(58,141,255,.35); } #partyBox .srow.t1 { background: rgba(255,74,74,.35); }
   #partyBox .tl { width: 18px; text-align: center; }
   #partyBox .slot { width: 84px; height: 62px; border: 3px solid #000; border-radius: 9px; text-align: center; cursor: pointer; box-shadow: 0 3px 0 #000; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
@@ -739,7 +740,8 @@ const OBST = {
 };
 
 // ── 젬 / 독가스 / 칠판 파편 렌더 ──────────────────
-const gemMeshes = {}, shardMeshes = {};
+const gemMeshes = {}, shardMeshes = {}, cubeMeshes = {};
+const cubeGeo = new THREE.BoxGeometry(0.7, 0.7, 0.7), cubeMat = std('#5aff7a', { emissive: '#1fd84a', emissiveIntensity: 0.9, roughness: 0.25 });
 const gemGeo = new THREE.OctahedronGeometry(0.42);
 const gemMat = std('#c070ff', { emissive: '#8a2be2', emissiveIntensity: 0.7, roughness: 0.15, metalness: 0.2 });
 const gasGroup = new THREE.Group(); scene.add(gasGroup);
@@ -934,6 +936,15 @@ function updateWorld(now) {
     m.position.y = 0.8 + Math.sin(now * 3 + id) * 0.15; m.rotation.y = now * 2 + id; m.scale.y = 1.4;
   }
   for (const id in gemMeshes) if (!seen.has(id)) { scene.remove(gemMeshes[id]); delete gemMeshes[id]; }
+  const cseen = new Set();              // 쇼다운 파워 큐브
+  for (const [id, x, y] of state.cubes || []) {
+    cseen.add(String(id));
+    let m = cubeMeshes[id];
+    if (!m) { m = cubeMeshes[id] = new THREE.Mesh(cubeGeo, cubeMat); m.castShadow = true; m.position.set(x * S, 0.9, y * S); scene.add(m); }
+    m.position.x += (x * S - m.position.x) * 0.3; m.position.z += (y * S - m.position.z) * 0.3;
+    m.position.y = 0.9 + Math.sin(now * 3 + id) * 0.18; m.rotation.set(0.6, now * 2 + id, 0.4);
+  }
+  for (const id in cubeMeshes) if (!cseen.has(id)) { scene.remove(cubeMeshes[id]); delete cubeMeshes[id]; }
   const sseen = new Set();
   for (const [id, x, y, r, t] of state.shards || []) {
     sseen.add(String(id));
@@ -1884,6 +1895,20 @@ function makeSafe(teamColor) {
   return { root, model, body, torso, head, legs: [new THREE.Group(), new THREE.Group()], arms: [new THREE.Group(), new THREE.Group()], stars, dial, flashMats: [steel, dark] };
 }
 
+// 쇼다운 큐브 상자: 나무 상자 + 초록 파워 큐브 표시
+function makePowerBox() {
+  const root = new THREE.Group(), model = new THREE.Group(); root.add(model);
+  const body = new THREE.Group(); model.add(body);
+  const wood = std('#a8743e', { roughness: 0.8 }), dark = std('#5a3a1c', { roughness: 0.8 }), glow = std('#5aff7a', { emissive: '#1fd84a', emissiveIntensity: 0.9, roughness: 0.3 });
+  const box = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.2, 2.4), wood); box.position.y = 1.1; body.add(box);
+  for (const y of [0.15, 2.05]) for (const [w, d] of [[2.5, 0.25], [0.25, 2.5]]) for (const o of [-1.1, 1.1]) { const b = new THREE.Mesh(new THREE.BoxGeometry(w, 0.25, d), dark); b.position.set(w > 1 ? 0 : o, y, w > 1 ? o : 0); body.add(b); }
+  for (const s of [-1, 1]) { const x = new THREE.Mesh(new THREE.BoxGeometry(0.22, 2.9, 0.08), dark); x.position.set(0, 1.1, s * 1.22); x.rotation.z = s * 0.75; body.add(x); }
+  const em = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), glow); em.position.y = 2.75; em.rotation.set(0.6, 0.7, 0); body.add(em);
+  const torso = new THREE.Group(), head = new THREE.Group(); body.add(torso); torso.add(head);
+  const stars = new THREE.Group(); stars.visible = false; model.add(stars);
+  shadowAll(model);
+  return { root, model, body, torso, head, legs: [new THREE.Group(), new THREE.Group()], arms: [new THREE.Group(), new THREE.Group()], stars, cubeEm: em, flashMats: [wood, dark] };
+}
 // ── 편도준 3D 모델 ────────────────────────────────
 // 운동 잘하는 탄탄한 몸 · 농구 저지(번호 7) + 반바지 · 머리띠 · 귀에 꽂은 연필 · 옆구리에 스케치북 · 옷에 물감 튄 자국
 function makeDojun(teamColor) {
@@ -2015,7 +2040,7 @@ function makeMouse(color) {
 }
 
 // 브롤러 id → 3D 모델 함수 (새 브롤러 추가 시 여기에 등록)
-const MODELS = { jungbo: makeTeacher, hyeonsil: makeHyeonsil, junhoo: makeJunhoo, jaeyeol: makeJaeyeol, jinho: makeJinho, hyeonwoo: makeHyeonwoo, yedam: makeYedam, suho: makeSuho, suhun: makeSuhun, dojun: makeDojun, robot: (c) => makeRobot(c, false), bigrobot: (c) => makeRobot(c, true), safe: makeSafe };
+const MODELS = { jungbo: makeTeacher, hyeonsil: makeHyeonsil, junhoo: makeJunhoo, jaeyeol: makeJaeyeol, jinho: makeJinho, hyeonwoo: makeHyeonwoo, yedam: makeYedam, suho: makeSuho, suhun: makeSuhun, dojun: makeDojun, robot: (c) => makeRobot(c, false), bigrobot: (c) => makeRobot(c, true), safe: makeSafe, pbox: makePowerBox };
 const makeModel = (id, color) => (MODELS[id] || makeTeacher)(color);
 
 // ── 로비 3D 쇼케이스 ──────────────────────────────
@@ -3131,9 +3156,11 @@ function renderParty() {
       ? `<div class="slot p${v.cid === CID ? ' me' : ''}${v.on ? '' : ' offl'}" data-i="${i}"><div class="si">${v.leader ? '👑' : '🙂'}</div><div class="sn">${esc(v.name)}</div><div class="ss">${v.cid === CID ? '나' : '친구'}</div></div>`
       : v.k === 'ai' ? `<div class="slot ai" data-i="${i}"><div class="si">🤖</div><div class="sn">AI</div><div class="ss">초대</div></div>`
       : `<div class="slot off" data-i="${i}"><div class="si">✖</div><div class="sn">비활성</div><div class="ss">빈자리</div></div>`;
-    const rows = party.team ? [party.slots.slice(0, party.half), party.slots.slice(party.half)] : [party.slots.slice(0, 3), party.slots.slice(3)];
-    body = rows.map((r, ri) => `<div class="srow${party.team ? ' t' + ri : ''}">${party.team ? `<b class="tl">${ri ? '🔴' : '🔵'}</b>` : ''}${r.map((v, j) => card(v, ri * (party.team ? party.half : 3) + j)).join('')}</div>`).join('') +
-      `<div class="hint">${party.team ? '자리를 눌러 팀 이동' : '쇼다운: 다 같이 적'}${lead ? ' · AI 자리는 끄고 켤 수 있어요' : ''}</div>`;
+    const ch = party.team ? party.half : party.sq || 5, rows = [];
+    for (let i = 0; i < party.slots.length; i += ch) rows.push(party.slots.slice(i, i + ch));
+    const rowH = (r, ri) => `<div class="srow${party.team ? ' t' + ri : ''}${party.sq ? ' sqg' : ''}">${party.team ? `<b class="tl">${ri ? '🔴' : '🔵'}</b>` : party.sq ? `<b class="tl">${ri + 1}팀</b>` : ''}${r.map((v, j) => card(v, ri * ch + j)).join('')}</div>`;
+    body = (party.sq ? `<div class="sqwrap">${rows.map(rowH).join('')}</div>` : rows.map(rowH).join('')) +
+      `<div class="hint">${party.team ? '자리를 눌러 팀 이동' : party.sq ? '같은 팀 자리에 앉으면 같은 팀 · 자리를 눌러 이동' : '쇼다운: 다 같이 적'}${lead ? ' · AI 자리는 끄고 켤 수 있어요' : ''}</div>`;
   }
   el.innerHTML = head + body;
   $('ptLeave').onclick = () => socket.emit('partyLeave');
@@ -3413,6 +3440,8 @@ function handleFx(list) {
     else if (f.type === 'sasinga') {   // 조종 끝 → 2초 기절
       const v = views[f.tid]; if (v) popup('😵 싸가지!', v.model.root.position, 5.6, '#ff8af0', 30, 1.4);
     }
+    else if (f.type === 'cube') { popup('🟩 파워 큐브 ' + f.n, { x, z }, 3.5, '#7dff8a', 20, 0.8); burst(x, 1, z, 12, ['#5aff7a', '#d8ffd8'], { speed: 4, size: 0.18, up: 5, life: 0.5 }); }
+    else if (f.type === 'boxBoom') { burst(x, 1.5, z, 30, ['#a8743e', '#5a3a1c', '#5aff7a'], { speed: 8, size: 0.32, up: 9, life: 0.9 }); }
     else if (f.type === 'gem') { const v = views[f.id]; popup('💎+1', { x, z }, 3.5, '#d69bff', 20, 0.7); }
     else if (f.type === 'gemspawn') burst(x, 1.2, z, 8, ['#c070ff', '#ffffff'], { speed: 3, size: 0.12, up: 6, life: 0.6 });
     else if (f.type === 'round') { for (const id in views) { scene.remove(views[id].model.root); views[id].label.d.remove(); delete views[id]; } }   // 새 판: 다시 만들기
@@ -3619,16 +3648,16 @@ function showResult(r) {
   const solo = r.type === 'showdown' || r.type === 'ffa';
   const myS = r.stats.find((x) => x.id === myId);
   let title, col;
-  if (solo) { const rk = myS ? myS.rank : 0; title = rk ? `${rk}등` : '관전'; col = rk === 1 ? '#ffd84a' : '#fff'; }
+  if (solo) { const rk = myS ? myS.rank : 0; title = rk ? `${rk}등` : '관전'; col = rk === 1 ? '#ffd84a' : r.type === 'showdown' && rk && rk <= 4 ? '#9dff8a' : r.type === 'showdown' && rk >= 6 ? '#ff8a8a' : '#fff'; }
   else { const w = r.winTeam === me.team; title = r.winTeam < 0 ? '무승부' : w ? '승리' : '패배'; col = r.winTeam < 0 ? '#fff' : w ? '#ffd84a' : '#ff8a8a'; }
   const tro = lastTro && performance.now() - lastTro.at < 15000 ? lastTro.add : null;
   const maxDmg = Math.max(...r.stats.map((x) => x.dmg)), maxK = Math.max(...r.stats.map((x) => x.k));
   const card = (x, lose) => `<div class="pc${x.id === myId ? ' me' : ''}${lose ? ' lose' : ''}">${x.id === r.star ? '<div class="star">⭐ 스타플레이어</div>' : ''}${solo && x.rank ? `<div class="rk">${['🥇', '🥈', '🥉'][x.rank - 1] || x.rank + '등'}</div>` : ''}
-    <canvas class="pz" width="240" height="300" data-id="${x.id}" data-m="${solo ? (x.rank === 1 || (x.rank && !lose) ? 'win' : 'lose') : r.winTeam < 0 ? 'draw' : lose ? 'lose' : 'win'}"></canvas><div class="card"><div class="nm">${esc(x.name)}${x.bot ? ' 🤖' : ''}</div>
+    <canvas class="pz" width="240" height="300" data-id="${x.id}" data-m="${solo ? (x.rank && !lose ? 'win' : 'lose') : r.winTeam < 0 ? 'draw' : lose ? 'lose' : 'win'}"></canvas><div class="card"><div class="nm">${esc(x.name)}${x.bot ? ' 🤖' : ''}</div>
     <div>⚔️ ${x.k} &nbsp; 💀 ${x.d}</div><div>💥 ${x.dmg.toLocaleString()}</div>
     <div class="tag">${x.dmg === maxDmg && maxDmg > 0 ? '최대 피해' : x.k === maxK && maxK > 0 ? '최다 처치' : '&nbsp;'}</div></div></div>`;
   let sides;
-  if (solo) { const L = r.stats.slice().sort((a, b) => (a.rank || 99) - (b.rank || 99)); sides = `<div class="side">${L.map((x) => card(x, x.rank > 3)).join('')}</div>`; }
+  if (solo) { const L = r.stats.slice().sort((a, b) => (a.rank || 99) - (b.rank || 99)); sides = `<div class="side">${L.map((x) => card(x, r.type === 'showdown' ? x.rank > 4 : x.rank > 3)).join('')}</div>`; }
   else {
     const mine = r.stats.filter((x) => x.team === me.team), opp = r.stats.filter((x) => x.team !== me.team);
     const myLose = r.winTeam >= 0 && r.winTeam !== me.team, oppLose = r.winTeam >= 0 && r.winTeam === me.team;
@@ -4209,7 +4238,7 @@ function animateTeacher(v, p, dt, now) {
   M.torso.rotation.z = Math.sin(v.phase) * 0.07 * walk;
   M.head.rotation.y = 0;
 
-  const H = v.kind === 'hyeonsil', K = v.kind === 'junhoo', JY = v.kind === 'jaeyeol', JH = v.kind === 'jinho', HW = v.kind === 'hyeonwoo', YD = v.kind === 'yedam', RB = v.kind === 'robot' || v.kind === 'bigrobot' || v.kind === 'safe', DJ = v.kind === 'dojun', SH = v.kind === 'suho', SU = v.kind === 'suhun', J = !H && !K && !JY && !JH && !HW && !RB && !YD && !DJ && !SH && !SU;
+  const H = v.kind === 'hyeonsil', K = v.kind === 'junhoo', JY = v.kind === 'jaeyeol', JH = v.kind === 'jinho', HW = v.kind === 'hyeonwoo', YD = v.kind === 'yedam', RB = v.kind === 'robot' || v.kind === 'bigrobot' || v.kind === 'safe' || v.kind === 'pbox', DJ = v.kind === 'dojun', SH = v.kind === 'suho', SU = v.kind === 'suhun', J = !H && !K && !JY && !JH && !HW && !RB && !YD && !DJ && !SH && !SU;
   if (RB && M.bulb) M.bulb.visible = Math.sin(now * 5) > 0 || v.hitT < 0.4;   // 맞으면 경고등
   // 편도준: 폼별 옷 / 모아이 / 수플렉스(뒤로 젖히기) / 물감 던지기 / 동기부여(주먹 번쩍)
   if (DJ) {
@@ -4497,7 +4526,7 @@ function updateLabel(v, p) {
   const [x, y, vis] = toScreen(pos.x, 5.0 + v.model.body.position.y * 0.5, pos.z);
   L.d.style.display = p.dead || p.out || p.gd || !vis || v.hiddenInv ? 'none' : 'block';
   L.d.style.left = x + 'px'; L.d.style.top = y + 'px';
-  L.nm.textContent = `${p.jail > 0 ? '⛓️ ' : ''}${p.na > 0 ? '💔 ' : ''}${p.scared > 0 ? '😰 ' : ''}${p.aw ? '🔥 ' : ''}${p.ctl ? '🎮 ' : ''}${p.gems ? '💎' + p.gems + ' ' : ''}${p.bty ? '⭐' + p.bty + ' ' : ''}${state.ball && state.ball[2] === p.id ? '⚽ ' : ''}${p.mo ? '🗿 ' : ''}${p.up ? '⚡ ' : ''}${p.sl ? '🐌 ' : ''}${p.fm ? (p.fm === 'art' ? '🎨 ' : '🏀 ') : ''}${p.au != null && p.id === myId ? `🔮${Math.round(p.au * 100)}% ` : ''}${p.ro != null && p.id === myId ? `🌀${Math.round(p.ro * 100)}% ` : ''}${p.fly ? '✈️ ' : ''}${p.dup ? `💪+${Math.round(p.dup * 100)}% ` : ''}${p.name}  ${p.hp}${p.sh > 0 ? ' 🛡' + p.sh : ''}`;
+  L.nm.textContent = `${p.jail > 0 ? '⛓️ ' : ''}${p.na > 0 ? '💔 ' : ''}${p.scared > 0 ? '😰 ' : ''}${p.aw ? '🔥 ' : ''}${p.ctl ? '🎮 ' : ''}${p.gems ? '💎' + p.gems + ' ' : ''}${p.cb ? '🟩' + p.cb + ' ' : ''}${p.bty ? '⭐' + p.bty + ' ' : ''}${state.ball && state.ball[2] === p.id ? '⚽ ' : ''}${p.mo ? '🗿 ' : ''}${p.up ? '⚡ ' : ''}${p.sl ? '🐌 ' : ''}${p.fm ? (p.fm === 'art' ? '🎨 ' : '🏀 ') : ''}${p.au != null && p.id === myId ? `🔮${Math.round(p.au * 100)}% ` : ''}${p.ro != null && p.id === myId ? `🌀${Math.round(p.ro * 100)}% ` : ''}${p.fly ? '✈️ ' : ''}${p.dup ? `💪+${Math.round(p.dup * 100)}% ` : ''}${p.name}  ${p.hp}${p.sh > 0 ? ' 🛡' + p.sh : ''}`;
   const meP = state.players.find((q) => q.id === myId);
   L.d.classList.toggle('ally', p.id !== myId && p.team != null && meP && meP.team === p.team);
   L.rfb.style.display = p.rf > 0 ? 'block' : 'none'; L.rf.style.width = p.rf * 100 + '%';
@@ -4543,9 +4572,11 @@ function modeHud(me) {
     const tl = M.id === 'knockout' ? Math.max(0, M.roundTime - (state.roundT || 0)) : Math.max(0, M.timeLimit - state.playT);
     const sub = M.id === 'heist' ? '<div style="font-size:12px;opacity:.8">우리 금고 · 상대 금고 체력</div>' : M.id === 'knockout' ? `<div style="font-size:12px;opacity:.8">라운드 승리 (먼저 ${M.roundsToWin}번)</div>` : M.id === 'brawlball' ? `<div style="font-size:12px;opacity:.8">먼저 ${M.goalsToWin}골</div>` : '';
     h.innerHTML = `<div class="gs"><span style="color:#7cc8ff">${ic} ${L}${unit}</span><span style="font-size:14px">${fmtT(tl)}</span><span style="color:#ff7a7a">${Rr}${unit} ${ic}</span></div>${sub}`;
-  } else if (M.id === 'showdown') {
-    const alive = state.players.filter((p) => !p.out).length;
-    h.innerHTML = `<div class="gs">💀 남은 인원 ${alive}</div>` + (me && me.out && state.phase === 'play' ? `<div style="color:#ff9a9a">${me.rank ? me.rank + '등으로 탈락! ' : ''}관전 중...</div>` : '');
+  } else if (M.sd) {
+    const ps = state.players.filter((p) => p.b !== 'pbox' && !p.out), alive = ps.length, teams = new Set(ps.map((p) => p.team)).size;
+    h.innerHTML = `<div class="gs">${M.icon} 남은 ${M.squad ? `팀 ${teams} · ${alive}명` : `인원 ${alive}`}${me && me.cb ? ` · 🟩 ${me.cb}` : ''}</div>`
+      + (me && me.out && state.phase === 'play' ? `<div style="color:#ff9a9a">${me.rank ? me.rank + '등으로 탈락! ' : ''}관전 중...</div>`
+      : me && me.dead && M.squad && state.phase === 'play' ? `<div style="color:#9fe8ff">팀원이 살아 있어요 — ${me.respawn}초 뒤 부활</div>` : '');
   } else if (M.training) {
     h.innerHTML = `<div class="gs" style="font-size:15px">🎯 훈련장 · 로봇은 3초 안 맞으면 다시 풀피</div>`;
   } else {
