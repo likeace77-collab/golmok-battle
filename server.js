@@ -242,10 +242,10 @@ function kill(room, attacker, target, kind) {
     }
     if (hasSP(attacker, 'aura')) attacker.aura = Math.min(1, (attacker.aura || 0) + SP(attacker, 'aura').perKill);   // 아우라 파밍
     if (attacker.userKey) auth.addStat(attacker.userKey, 'kills');
-    // 난투·더블가젯(끝없는 방)만 처치로 트로피: 그 브롤러가 200 미만일 때 +1 / 죽으면 100 이상부터 -1, 300 이상 -2
+    // 난투·더블가젯(끝없는 방)만 처치로 트로피
     if (room.mode.rotate && trophyRoom(room)) {
-      if (btOf(attacker) < 200) giveTrophies(attacker, 1);
-      const tb = btOf(target); if (tb >= 100) giveTrophies(target, tb >= 300 ? -2 : -1);
+      giveTrophies(attacker, 1);                                  // 처치할 때마다 +1
+      const tb = btOf(target); if (tb >= 100) giveTrophies(target, tb >= 500 ? -2 : -1);   // 죽으면 100 이상부터 -1, 500 이상 -2
     }
   }
   room.fx.push({ type: 'kill', a: attacker ? attacker.name : '독가스', b: target.name, aid: attacker ? attacker.id : null, bid: target.id, k: kind });

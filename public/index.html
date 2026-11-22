@@ -4028,10 +4028,6 @@ function modeHud(me) {
   } else if (M.id === 'showdown') {
     const alive = state.players.filter((p) => !p.out).length;
     h.innerHTML = `<div class="gs">💀 남은 인원 ${alive}</div>` + (me && me.out && state.phase === 'play' ? `<div style="color:#ff9a9a">${me.rank ? me.rank + '등으로 탈락! ' : ''}관전 중...</div>` : '');
-  } else if (M.id === 'ffa') {
-    const tl = Math.max(0, M.timeLimit - (state.playT || 0));
-    const ord = state.players.filter((p) => BR[p.b]).sort((a, b) => b.k - a.k || a.d - b.d), myR = ord.findIndex((p) => p.id === myId) + 1;
-    h.innerHTML = `<div class="gs"><span>⚔️ ${MAP ? MAP.name : ''}</span><span style="font-size:16px">⏱ ${fmtT(tl)}</span><span style="color:#ffd84a">${myR ? myR + '등' : ''}</span></div><div style="font-size:12px;opacity:.8">킬 많은 순 · 같으면 데스 적은 순</div>`;
   } else if (M.training) {
     h.innerHTML = `<div class="gs" style="font-size:15px">🎯 훈련장 · 로봇은 3초 안 맞으면 다시 풀피</div>`;
   } else {

@@ -208,8 +208,8 @@ const MAPS = {
 const MODES = {
   ffa: {
     id: 'ffa', name: '난투', icon: '⚔️', color: '#ff7a3a',
-    desc: '모두가 적! 쓰러져도 3초 뒤 부활. 1분 30초 동안 킬·데스로 순위를 정하고 순위대로 트로피. 판마다 맵이 바뀐다.',
-    team: false, respawn: true, rounds: true, timeLimit: 90, maps: ['computer', 'math', 'cafeteria', 'library', 'music', 'science'],
+    desc: '모두가 적! 쓰러져도 3초 뒤 부활. 시간 제한 없이 처치할 때마다 트로피. 4분마다 맵이 바뀐다.',
+    team: false, respawn: true, rounds: false, rotate: 240, maps: ['computer', 'math', 'cafeteria', 'library', 'music', 'science'],
   },
   showdown: {
     id: 'showdown', name: '쇼다운', icon: '💀', color: '#7ad94a',
