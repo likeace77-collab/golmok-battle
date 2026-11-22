@@ -1194,11 +1194,12 @@ function startRound(room) {
 // 그 브롤러 트로피가 높을수록 이기면 덜 오르고, 지면 더 많이 깎임. 친선전·훈련장은 트로피 없음. 무승부 ±0
 const trophyRoom = (room) => !room.mode.training && !room.partyCfg;
 const btOf = (p) => (p && p.userKey && p.B ? auth.brawlerTrophies(p.userKey)[p.B.id] || 0 : 0);
-// 실제 브롤스타즈 트로피 표 (브롤스타즈 위키 Trophies 문서 기준)
+// 실제 브롤스타즈 트로피 표 — 2026년 2월 「트로피 3.0」(프레스티지) 기준
 const TRO_3V3 = [   // [이 트로피 이상, 승리, 패배]
-  [0, 8, 0], [50, 8, -1], [100, 8, -2], [200, 8, -3], [600, 8, -4], [700, 8, -5], [800, 8, -6], [900, 8, -7], [1000, 8, -8],
-  [1100, 7, -11], [1200, 6, -13], [1300, 5, -16], [1400, 4, -19], [1500, 3, -22], [1600, 2, -25], [1700, 1, -28], [1800, 1, -31], [1900, 1, -34], [2000, 1, -50],
+  [0, 10, 0], [50, 10, -1], [300, 10, -2], [600, 10, -3], [800, 10, -4], [1000, 10, -5], [1100, 10, -6], [1200, 10, -7], [1300, 10, -8], [1500, 10, -9], [1800, 10, -10],
+  [2000, 8, -10], [2500, 6, -10], [2800, 4, -10], [3000, 2, -10], [3100, 1, -10], [4000, 1, -15],
 ];
+// 프레스티지(1000 / 2000 / 3000 … 한 번 넘으면 그 아래로 안 떨어짐)는 auth.addTrophies에서 처리
 const TRO_SD = [    // [이 트로피 이상, 1등 … 10등] (솔로 쇼다운)
   [0, 10, 8, 7, 6, 4, 2, 2, 1, 0, 0], [300, 10, 8, 7, 6, 3, 2, 2, 0, -1, -2], [400, 10, 8, 7, 6, 3, 1, 0, -1, -2, -2], [500, 10, 8, 6, 5, 3, 1, 0, -2, -3, -3],
   [600, 10, 8, 6, 5, 2, 0, 0, -3, -4, -4], [700, 10, 8, 6, 5, 2, -1, -2, -3, -5, -5], [800, 10, 8, 6, 4, 2, -1, -2, -5, -6, -6], [900, 10, 8, 6, 4, 1, -2, -2, -5, -7, -8],
@@ -1222,9 +1223,10 @@ function matchTrophies(room, p, outcome, rank) {                      // 한 판
 function giveTrophies(p, n, field, show) {
   if (!p || p.isBot || !p.userKey) return;
   if (!n && !show) { if (field) auth.addStat(p.userKey, field); return; }
-  const bid = p.B && p.B.id;
+  const bid = p.B && p.B.id, before = bid ? auth.brawlerTrophies(p.userKey)[bid] || 0 : 0;
   const t = auth.addTrophies(p.userKey, n, field, bid);
-  if (t != null) io.to(p.id).emit('trophy', { total: t, add: n, bid, bt: auth.brawlerTrophies(p.userKey) });
+  const bt = auth.brawlerTrophies(p.userKey), add = bid ? (bt[bid] || 0) - before : n;   // 프레스티지 바닥에 막히면 실제로 바뀐 만큼만
+  if (t != null) io.to(p.id).emit('trophy', { total: t, add, bid, bt });
 }
 function endRound(room, result) {
   room.phase = 'end'; room.phaseT = 6; room.result = result;

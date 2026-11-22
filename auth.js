@@ -11,7 +11,7 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const GIST_ID = process.env.GIST_ID || '';
 const GIST_TOKEN = process.env.GIST_TOKEN || '';
-const GIST_FILE = process.env.GIST_FILE || 'jungbo-brawl.json';   // 골목대전과 같은 Gist를 써도 파일이 달라서 안 섞임
+const GIST_FILE = process.env.GIST_FILE || 'jungbo-brawl.json';   // 골목대전과 같은 Gist를 써도 파일이 달라서 안 섞임 (게임 이름이 호수중 브롤로 바뀌어도 저장 파일 이름은 그대로 — 바꾸면 계정이 사라짐)
 const SESSION_DAYS = 60;
 
 let db = { users: {}, sessions: {} };
@@ -82,7 +82,13 @@ const totalOf = (u) => (u.legacy || 0) + Object.values(u.bt || {}).reduce((a, v)
 function addTrophies(key, n, field, bid) {
   const u = db.users[key]; if (!u) return null;
   fixBt(u);
-  if (bid) u.bt[bid] = Math.max(0, (u.bt[bid] || 0) + n);
+  if (bid) {
+    // 프레스티지(브롤스타즈 트로피 3.0): 그 브롤러가 한 번 넘은 1000 단위 아래로는 안 떨어짐
+    u.bbest = u.bbest || {};
+    const floor = Math.floor((u.bbest[bid] || 0) / 1000) * 1000;
+    u.bt[bid] = Math.max(0, floor, (u.bt[bid] || 0) + n);
+    u.bbest[bid] = Math.max(u.bbest[bid] || 0, u.bt[bid]);
+  }
   else u.legacy = Math.max(0, (u.legacy || 0) + n);
   u.trophies = totalOf(u);
   u.best = Math.max(u.best || 0, u.trophies);       // 최고 트로피
