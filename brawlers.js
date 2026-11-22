@@ -350,6 +350,17 @@ const BRAWLERS = {
       kill: ['납작~', 'ㅎㅎ 미안', '데굴데굴 승리'],
     },
   },
+  science: {
+    id: 'science',
+    name: '과학쌤',
+    rarity: 'legendary',
+    role: '컨트롤러',
+    wip: true,               // 디자인만 — 스킬 정해지면 wip 빼기
+    title: '…',
+    desc: '머리를 뒤로 질끈 묶은 과학 선생님. 하얀 실험 가운에 이마엔 보안경, 늘 살짝 화나 있다.',
+    radius: 24, speed: 260, maxHp: 5000,
+    attack: { name: '준비 중', ammo: 0, range: 0 }, gadgets: [], starPowers: [], super: null,
+  },
   suhun: {
     id: 'suhun',
     name: '이수훈',
