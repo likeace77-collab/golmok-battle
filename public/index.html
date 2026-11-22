@@ -4224,7 +4224,16 @@ function frame(nowMs) {
           atkMesh = new THREE.Group();
           let shape;
           if (src.b === 'jinho' && src.sp === 'disc') shape = aimShape({ type: 'sector', r, half: (B.starPowers.find((x) => x.id === 'disc') || {}).half || 0.38, color: '#ffb800', edge: '#ffd21a' });   // 목디스크: 휘는 목 → 부채꼴
-          else if (src.b === 'suhun') shape = aimShape({ type: 'rect', r, w: (B.attack.amp * 2 + 30) * S, color: '#ffb800', edge: '#ffd21a' });   // 67!!: 6·7이 휘는 폭
+          else if (src.b === 'suhun') {             // 67!!: 6·7 두 탄의 지그재그 궤도 (마름모 3개) + 끝 동그라미
+            shape = new THREE.Group();
+            const amp = B.attack.amp * S, n = B.attack.lobes || 3, mat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.85, depthWrite: false });
+            for (const sg of [1, -1]) for (let k = 0; k < n * 2; k++) {
+              const x1 = r * k / (n * 2), x2 = r * (k + 1) / (n * 2), z1 = sg * amp * (k % 2), z2 = sg * amp * ((k + 1) % 2);
+              const len = Math.hypot(x2 - x1, z2 - z1), seg = new THREE.Mesh(new THREE.PlaneGeometry(len, 0.22), mat);
+              seg.rotation.x = -Math.PI / 2; seg.rotation.z = -Math.atan2(z2 - z1, x2 - x1); seg.position.set((x1 + x2) / 2, 0.02, (z1 + z2) / 2); shape.add(seg);
+            }
+            const end = aimShape({ type: 'circle', r: 0.9, color: '#ffffff', edge: '#ffffff' }); end.position.set(r, 0.02, 0); shape.add(end);
+          }
           else if (B.attack.aim === 'line') shape = aimShape({ type: 'rect', r, w: B.attack.width * S, color: '#ffb800', edge: '#ffd21a' });
           else if (B.attack.aim === 'lob') {        // 편도준 물감: 떨어질 자리만 크게
             shape = aimShape({ type: 'rect', r, w: 0.25, color: '#ffffff', edge: '#ffffff' });

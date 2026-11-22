@@ -360,8 +360,8 @@ const BRAWLERS = {
     radius: 24, speed: 262, maxHp: 4600,
     attack: {
       name: '67!!', aim: 'dir',
-      desc: '숫자 6과 7 탄환 두 개가 겹쳐서 출발했다가 서로 휘어 벌어지며 앞으로 날아간다. 하나 맞추면 600, 둘 다 맞추면 1400 피해.',
-      range: 640, dmg: 600, bothDmg: 1400, amp: 55, bulletSpeed: 820, ammo: 3, reload: 1.5, cd: 0.4,
+      desc: '숫자 6과 7 탄환 두 개가 지그재그로 서로 엇갈리며(마름모 3개 모양) 앞으로 날아간다. 하나 맞추면 600, 둘 다 맞추면 1400 피해.',
+      range: 640, dmg: 600, bothDmg: 1400, amp: 50, lobes: 3, bulletSpeed: 820, ammo: 3, reload: 1.5, cd: 0.4,
     },
     super: {
       name: '지메하세요', aim: 'line',
