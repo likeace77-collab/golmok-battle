@@ -1,4 +1,4 @@
-// 정보쌤 브롤 - 실시간 온라인 대전 서버 (Node + socket.io, 서버 권한 방식)
+// 호수중 브롤 - 실시간 온라인 대전 서버 (Node + socket.io, 서버 권한 방식)
 // 모드: 난투 · 쇼다운 · 젬 그랩 · 더블 가젯  (modes.js)
 // 브롤러: 정보쌤 · 현실쌤  (brawlers.js)
 const express = require('express');
@@ -1857,4 +1857,4 @@ io.on('connection', (socket) => {
   });
 });
 
-auth.load().then(() => server.listen(PORT, () => console.log(`정보쌤 브롤 서버 실행: http://localhost:${PORT}`)));
+auth.load().then(() => server.listen(PORT, () => console.log(`호수중 브롤 서버 실행: http://localhost:${PORT}`)));
