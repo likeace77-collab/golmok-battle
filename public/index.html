@@ -815,7 +815,7 @@ function updateBlocks() {
     const aim = gadgetAim(); if (!aim) { blockGhost.visible = false; return; }
     const S2 = g.size, dd = Math.max(0.15, Math.min(1, aim.d)), tx = me.x + Math.cos(aim.a) * g.range * dd, ty = me.y + Math.sin(aim.a) * g.range * dd;
     const horiz = Math.abs(Math.cos(aim.a)) < Math.abs(Math.sin(aim.a)), MW = MAP ? MAP.w : 1e9, MH = MAP ? MAP.h : 1e9;
-    const gx0 = Math.max(1, Math.min(Math.floor(MW / S2) - (horiz ? 1 : 0), Math.round(tx / S2 - (horiz ? 0.5 : 0)))), gy0 = Math.max(1, Math.min(Math.floor(MH / S2) - (horiz ? 0 : 1), Math.round(ty / S2 - (horiz ? 0 : 0.5))));
+    const gx0 = Math.max(0, Math.min(Math.ceil(MW / S2) - (horiz ? 1 : 0), Math.round(tx / S2 - (horiz ? 0.5 : 0)))), gy0 = Math.max(0, Math.min(Math.ceil(MH / S2) - (horiz ? 0 : 1), Math.round(ty / S2 - (horiz ? 0 : 0.5))));
     blockGhost.children.forEach((b, k) => { const gx = gx0 + (horiz ? k : 0), gy = gy0 + (horiz ? 0 : k); b.scale.set(S2 * S, 1, S2 * S); b.position.set((gx * S2) * S, BLOCK_H / 2, (gy * S2) * S); });
   }
 }
