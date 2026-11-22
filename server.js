@@ -1462,9 +1462,10 @@ function matchTrophies(room, p, outcome, rank) {                      // 한 판
   p.trophied = true;
   const bt = btOf(p), rk = room.mode.sd || room.mode.id === 'ffa';
   if (room.mode.id === 'ffa' && (room.sdN || 0) < 2) { p.trophied = false; return; }        // 혼자면 트로피 없음
-  let n = room.mode.sd ? sdTro(bt, rank) : rk ? showdownTro(bt, rank, room.sdN || 6) : outcome === 'win' ? winTro(bt) : outcome === 'loss' ? -lossTro(bt) : 0;
+  let n = room.mode.sd ? sdTro(room.mode, rank) : rk ? showdownTro(bt, rank, room.sdN || 6) : outcome === 'win' ? winTro(bt) : outcome === 'loss' ? -lossTro(bt) : 0;
   // 연승: n연승이면 n-1개(최대 10) 추가. 난투·더블가젯은 해당 없음(여기 안 옴), 무승부·쇼다운 중간 순위는 연승 유지
-  const won = room.mode.sd ? rank <= 4 : rk ? rank === 1 : outcome === 'win', lost = room.mode.sd ? rank >= 6 : rk ? n < 0 : outcome === 'loss';   // 쇼다운: 4등까지 승리, 5등 유지
+  const sn = room.mode.sd ? sdTro(room.mode, rank) : 0;
+  const won = room.mode.sd ? sn > 0 : rk ? rank === 1 : outcome === 'win', lost = room.mode.sd ? sn < 0 : rk ? n < 0 : outcome === 'loss';   // 쇼다운: 트로피 + 등수 = 승리(연승), 0 = 유지, - = 패배
   let streak = auth.streakOf(p.userKey), bonus = 0;
   if (room.mode.id !== 'ffa' && room.mode.id !== 'double' && (won || lost)) {
     streak = auth.setStreak(p.userKey, won);
@@ -1473,9 +1474,13 @@ function matchTrophies(room, p, outcome, rank) {                      // 한 판
   p.streakInfo = { streak, bonus };
   giveTrophies(p, n, outcome === 'win' || rank === 1 ? 'wins' : null, true);
 }
-// 쇼다운(솔로·듀오·트리오) 등수 → 트로피: 1등 10 · 2등 7 · 3등 5 · 4등 2 · 5등 0 · 6등부터는 패배(3대3 패배만큼 깎임)
-const SD_TRO = [10, 7, 5, 2, 0];
-const sdTro = (bt, rank) => (rank >= 1 && rank <= 5 ? SD_TRO[rank - 1] : -lossTro(bt));
+// 쇼다운(솔로·듀오·트리오) 등수 → 트로피 (모드별 고정 표)
+const SD_TRO = {
+  showdown: [10, 7, 5, 2, 0, -1, -2, -3, -5, -7],   // 솔로 1~10등
+  duo: [8, 5, 0, -3, -5],                            // 듀오 1~5등 (팀 등수)
+  trio: [6, 3, -2, -4],                              // 트리오 1~4등 (팀 등수)
+};
+const sdTro = (mode, rank) => { const T = SD_TRO[mode.id] || SD_TRO.showdown; return T[Math.max(1, Math.min(T.length, rank || T.length)) - 1]; };
 function giveTrophies(p, n, field, show) {
   if (!p || p.isBot || !p.userKey) return;
   if (!n && !show) { if (field) auth.addStat(p.userKey, field); return; }

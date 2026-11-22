@@ -3646,9 +3646,10 @@ function showResult(r) {
   const me = state.players.find((p) => p.id === myId); if (!r.stats || !me) return;
   const box = $('resBox'), esc = (t) => String(t).replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c]);
   const solo = r.type === 'showdown' || r.type === 'ffa';
+  const sdW = r.squad ? 2 : 4, sdL = r.squad === 3 ? 3 : r.squad ? 4 : 6;     // 쇼다운: 트로피 +인 등수 = 승리 / -인 등수 = 패배
   const myS = r.stats.find((x) => x.id === myId);
   let title, col;
-  if (solo) { const rk = myS ? myS.rank : 0; title = rk ? `${rk}등` : '관전'; col = rk === 1 ? '#ffd84a' : r.type === 'showdown' && rk && rk <= 4 ? '#9dff8a' : r.type === 'showdown' && rk >= 6 ? '#ff8a8a' : '#fff'; }
+  if (solo) { const rk = myS ? myS.rank : 0; title = rk ? `${rk}등` : '관전'; col = rk === 1 ? '#ffd84a' : r.type === 'showdown' && rk && rk <= sdW ? '#9dff8a' : r.type === 'showdown' && rk >= sdL ? '#ff8a8a' : '#fff'; }
   else { const w = r.winTeam === me.team; title = r.winTeam < 0 ? '무승부' : w ? '승리' : '패배'; col = r.winTeam < 0 ? '#fff' : w ? '#ffd84a' : '#ff8a8a'; }
   const tro = lastTro && performance.now() - lastTro.at < 15000 ? lastTro.add : null;
   const maxDmg = Math.max(...r.stats.map((x) => x.dmg)), maxK = Math.max(...r.stats.map((x) => x.k));
@@ -3657,7 +3658,7 @@ function showResult(r) {
     <div>⚔️ ${x.k} &nbsp; 💀 ${x.d}</div><div>💥 ${x.dmg.toLocaleString()}</div>
     <div class="tag">${x.dmg === maxDmg && maxDmg > 0 ? '최대 피해' : x.k === maxK && maxK > 0 ? '최다 처치' : '&nbsp;'}</div></div></div>`;
   let sides;
-  if (solo) { const L = r.stats.slice().sort((a, b) => (a.rank || 99) - (b.rank || 99)); sides = `<div class="side">${L.map((x) => card(x, r.type === 'showdown' ? x.rank > 4 : x.rank > 3)).join('')}</div>`; }
+  if (solo) { const L = r.stats.slice().sort((a, b) => (a.rank || 99) - (b.rank || 99)); sides = `<div class="side">${L.map((x) => card(x, r.type === 'showdown' ? x.rank > sdW : x.rank > 3)).join('')}</div>`; }
   else {
     const mine = r.stats.filter((x) => x.team === me.team), opp = r.stats.filter((x) => x.team !== me.team);
     const myLose = r.winTeam >= 0 && r.winTeam !== me.team, oppLose = r.winTeam >= 0 && r.winTeam === me.team;
