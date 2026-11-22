@@ -179,6 +179,8 @@
   #resBox .side { flex: 1; display: flex; gap: 8px; justify-content: center; align-items: flex-end; flex-wrap: wrap; }
   #resBox .pc { width: 150px; max-width: 30%; text-align: center; position: relative; }
   #resBox .pc img { width: 100%; display: block; filter: drop-shadow(0 6px 4px rgba(0,0,0,.4)); }
+  #resBox .pc canvas.pz { position: static; inset: auto; z-index: auto; width: 100%; height: auto; display: block; aspect-ratio: 4 / 5; }
+  #resBox .rt span.stk { display: block; font-size: 18px; color: #ff9a3a; }
   #resBox .pc.lose img { filter: grayscale(.5) brightness(.7); transform: rotate(-8deg) translateY(10px); }
   #resBox .pc .card { background: rgba(10,10,40,.75); border: 2px solid #000; border-radius: 8px; padding: 3px 4px; font-size: 12px; }
   #resBox .pc.me .card { border-color: #ffd84a; box-shadow: 0 0 10px #ffd84a; }
@@ -3087,7 +3089,7 @@ function connect() {
   socket.on('trophy', (t) => {
     const prevT = t.bid ? btOf(t.bid) : 0;
     trophies = t.total; if (account) { account.trophies = t.total; if (t.bt) account.bt = t.bt; }
-    if (Math.abs(t.add) >= 0) lastTro = { add: t.add, at: performance.now() };   // 결과 화면에 표시
+    if (Math.abs(t.add) >= 0) lastTro = { add: t.add, at: performance.now(), streak: t.streak || 0, bonus: t.bonus || 0 };   // 결과 화면에 표시
     if (t.bid && BR[t.bid] && tierOf(btOf(t.bid)).name !== tierOf(prevT).name && btOf(t.bid) > prevT) {   // 등급 올라감!
       const tr = tierOf(btOf(t.bid)), tu = $('tierUp');
       tu.innerHTML = `${tr.icon}<br><span style="color:${tr.color}">${tr.name}</span><div style="font-size:18px">${BR[t.bid].name} 등급 업!</div>`;
@@ -3622,7 +3624,7 @@ function showResult(r) {
   const tro = lastTro && performance.now() - lastTro.at < 15000 ? lastTro.add : null;
   const maxDmg = Math.max(...r.stats.map((x) => x.dmg)), maxK = Math.max(...r.stats.map((x) => x.k));
   const card = (x, lose) => `<div class="pc${x.id === myId ? ' me' : ''}${lose ? ' lose' : ''}">${x.id === r.star ? '<div class="star">⭐ 스타플레이어</div>' : ''}${solo && x.rank ? `<div class="rk">${['🥇', '🥈', '🥉'][x.rank - 1] || x.rank + '등'}</div>` : ''}
-    <img src="${portrait(x.b)}"><div class="card"><div class="nm">${esc(x.name)}${x.bot ? ' 🤖' : ''}</div>
+    <canvas class="pz" width="240" height="300" data-id="${x.id}" data-m="${solo ? (x.rank === 1 || (x.rank && !lose) ? 'win' : 'lose') : r.winTeam < 0 ? 'draw' : lose ? 'lose' : 'win'}"></canvas><div class="card"><div class="nm">${esc(x.name)}${x.bot ? ' 🤖' : ''}</div>
     <div>⚔️ ${x.k} &nbsp; 💀 ${x.d}</div><div>💥 ${x.dmg.toLocaleString()}</div>
     <div class="tag">${x.dmg === maxDmg && maxDmg > 0 ? '최대 피해' : x.k === maxK && maxK > 0 ? '최다 처치' : '&nbsp;'}</div></div></div>`;
   let sides;
@@ -3633,10 +3635,11 @@ function showResult(r) {
     sides = `<div class="side">${mine.map((x) => card(x, myLose)).join('')}</div><div class="side">${opp.map((x) => card(x, oppLose)).join('')}</div>`;
   }
   box.className = 'stroke' + (solo ? ' sd' : '');
-  box.innerHTML = `<div class="rt"><b style="color:${col}">${title}</b>${tro != null ? `<span>🏆 ${tro > 0 ? '+' : ''}${tro}</span>` : ''}</div>
+  box.innerHTML = `<div class="rt"><b style="color:${col}">${title}</b>${tro != null ? `<span>🏆 ${tro > 0 ? '+' : ''}${tro}</span>` : ''}${lastTro && tro != null && lastTro.streak >= 2 ? `<span class="stk">🔥 ${lastTro.streak}연승${lastTro.bonus ? ` (+${lastTro.bonus})` : ''}</span>` : ''}</div>
     <div class="sides">${sides}</div>
     <div class="btns"><button class="btn" id="resAgain">▶ 다시 플레이</button><button class="btn gray" id="resLobby">로비로</button></div>`;
   box.style.display = 'block';
+  poseStart([...box.querySelectorAll('canvas.pz')].map((c) => ({ canvas: c, b: (r.stats.find((x) => x.id === c.dataset.id) || {}).b || 'jungbo', mode: c.dataset.m })));
   $('resAgain').onclick = () => { box.style.display = 'none'; resClosed = resShownFor; };
   $('resLobby').onclick = () => location.reload();
 }
@@ -3647,6 +3650,382 @@ function updateResult() {
     if (resShownFor !== key && resClosed !== key) { resShownFor = key; setTimeout(() => { if (resShownFor === key && resClosed !== key) showResult(r); }, 1200); }   // 트로피가 먼저 오게 살짝 늦게
   } else if (state && (state.phase === 'wait' || state.phase === 'play')) { $('resBox').style.display = 'none'; resShownFor = null; resClosed = null; }
 }
+// ── 결과 화면 포즈 (브롤러마다 이겼을 때 / 졌을 때 애니메이션) ──────────────
+// 카드마다 작은 3D 장면 하나 · 렌더러 하나를 돌려쓰며 각 카드 <canvas>에 복사, 글자·이모지는 2D로 위에 그림
+const POSE = { r: null, list: [], raf: 0, t0: 0 };
+const pcl = (x) => Math.max(0, Math.min(1, x)), seg = (t, a, b) => pcl((t - a) / (b - a));
+const pV = new THREE.Vector3(), pV2 = new THREE.Vector3();
+function pArm(M, i, x, out = 0, y = 0) { const a = M.arms[i]; if (!a) return; a.rotation.set(x, y, (a.userData.baseZ || 0) + (i ? 1 : -1) * out); }
+function pSit(M, k) { M.body.position.y -= 1.0 * k; for (const l of M.legs) l.rotation.x = -1.5 * k; }
+function pHop(M, t, h = 0.9, w = 7) { const q = Math.abs(Math.sin(t * w)); M.body.position.y += q * h; for (const l of M.legs) l.rotation.x = -0.5 * q; return q; }
+function pReset(P) {
+  const M = P.M;
+  M.body.position.set(0, 0, 0); M.body.rotation.set(0, 0, 0); M.body.scale.set(1, 1, 1);
+  M.model.rotation.set(0, 0, 0); M.model.position.set(0, 0, 0);
+  M.torso.rotation.set(0, 0, 0); M.head.rotation.set(0, 0, 0);
+  for (const l of M.legs) l.rotation.set(0, 0, 0);
+  for (let i = 0; i < M.arms.length; i++) pArm(M, i, 0);
+  M.root.rotation.set(0, 0, 0); M.root.position.set(P.x0 || 0, 0, 0); M.root.visible = true;
+  if (P.mouth) P.mouth.visible = false;
+}
+function pMouth(P, w, h) { if (!P.mouth) return; P.mouth.visible = w > 0.05; P.mouth.scale.set(Math.max(0.01, w), Math.max(0.01, h), 1); }
+// 소품 ─────────────────────────────
+function pTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); draw(g, w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.userData.c = c; return t; }
+function propPC() {      // 책상 + 모니터 + 키보드
+  const g = new THREE.Group(), wood = std('#9a6a3e'), dark = std('#202330', { roughness: 0.4 });
+  const top = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.12, 2.2), wood); top.position.y = 1.55; g.add(top);
+  for (const [x, z] of [[-0.6, -0.95], [0.6, -0.95], [-0.6, 0.95], [0.6, 0.95]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.5, 0.1), wood); l.position.set(x, 0.75, z); g.add(l); }
+  const kb = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.06, 1.2), dark); kb.position.set(-0.35, 1.64, 0); g.add(kb);
+  const mon = new THREE.Group(); mon.position.set(0.35, 1.61, 0); g.add(mon);
+  const st = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.4, 0.1), dark); st.position.y = 0.2; mon.add(st);
+  const fr = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.0, 1.6), dark); fr.position.y = 0.85; mon.add(fr);
+  const tex = pTex(256, 160, (x) => { x.fillStyle = '#0b1a2a'; x.fillRect(0, 0, 256, 160); });
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.45, 0.88), new THREE.MeshBasicMaterial({ map: tex })); scr.rotation.y = -Math.PI / 2; scr.position.set(-0.045, 0.85, 0); mon.add(scr);
+  return { g, mon, kb, tex };
+}
+function pcScreen(P, mode, t) {      // 코드 치는 화면 / 결과 / 박살
+  const c = P.pc.tex.userData.c, x = c.getContext('2d');
+  x.fillStyle = mode === 'broken' ? '#050505' : '#0b1a2a'; x.fillRect(0, 0, 256, 160);
+  if (mode === 'code') { const n = Math.floor(t * 9); for (let i = 0; i < Math.min(9, n); i++) { x.fillStyle = ['#7cf0ff', '#9dff8a', '#ffd84a', '#ff8ac6'][i % 4]; x.fillRect(14 + (i % 3) * 10, 12 + i * 16, 40 + ((i * 53) % 150), 8); } }
+  else if (mode === 'win') { x.fillStyle = '#1e46c8'; x.fillRect(0, 0, 256, 160); x.font = '900 60px sans-serif'; x.textAlign = 'center'; x.fillStyle = '#fff'; x.fillText('WIN', 128, 100); }
+  else if (mode === 'lose') { x.fillStyle = '#5a0b0b'; x.fillRect(0, 0, 256, 160); x.font = '900 54px sans-serif'; x.textAlign = 'center'; x.fillStyle = '#ff8a8a'; x.fillText('LOSE', 128, 100); }
+  else { x.strokeStyle = '#ddd'; x.lineWidth = 3; x.beginPath(); for (const [a, b, cc, d] of [[128, 70, 30, 10], [128, 70, 220, 30], [128, 70, 60, 150], [128, 70, 240, 140], [128, 70, 150, 160]]) { x.moveTo(a, b); x.lineTo(cc, d); } x.stroke(); }
+  P.pc.tex.needsUpdate = true;
+}
+function propFan() {       // 선풍기
+  const g = new THREE.Group(), w = std('#e8f4ff', { roughness: 0.4 }), b = std('#3aa8ff', { roughness: 0.4 });
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.5, 0.12, 20), w); base.position.y = 0.06; g.add(base);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.3, 8), w); pole.position.y = 0.7; g.add(pole);
+  const head = new THREE.Group(); head.position.y = 1.45; g.add(head);
+  const cage = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.04, 6, 28), w); head.add(cage);
+  const hub = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), w); head.add(hub);
+  const blades = new THREE.Group(); head.add(blades);
+  for (let i = 0; i < 3; i++) { const bl = new THREE.Mesh(new THREE.SphereGeometry(0.24, 10, 6), b); bl.scale.set(0.55, 1, 0.12); bl.position.set(Math.cos(i * 2.094) * 0.27, Math.sin(i * 2.094) * 0.27, 0.02); bl.rotation.z = i * 2.094 - Math.PI / 2; blades.add(bl); }
+  return { g, blades };
+}
+function propPhone() {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.66, 0.06), std('#15151c', { roughness: 0.3 })); g.add(body);
+  const tex = pTex(64, 120, (x) => { x.fillStyle = '#16083a'; x.fillRect(0, 0, 64, 120); });
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.31, 0.58), new THREE.MeshBasicMaterial({ map: tex })); scr.position.z = 0.032; g.add(scr);
+  return { g, tex };
+}
+function phoneScreen(P, t) {    // 지메 화면 (분홍·하늘 블록이 흘러감)
+  const c = P.ph.tex.userData.c, x = c.getContext('2d');
+  x.fillStyle = '#16083a'; x.fillRect(0, 0, 64, 120);
+  for (let i = 0; i < 5; i++) { const xx = ((i * 26 - t * 60) % 130 + 130) % 130 - 10; x.fillStyle = i % 2 ? '#ff4fd8' : '#3cf0ff'; x.fillRect(xx, 70 - (i % 3) * 14, 12, 12 + (i % 3) * 14); }
+  x.fillStyle = '#ffd84a'; x.fillRect(18, 58 - Math.abs(Math.sin(t * 6)) * 20, 10, 10);
+  P.ph.tex.needsUpdate = true;
+}
+function propScale() {    // 체중계
+  const g = new THREE.Group();
+  const b = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.16, 1.3), std('#f2f2f6', { roughness: 0.3 })); b.position.y = 0.08; g.add(b);
+  const d = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.02, 0.26), std('#1c2a1c', { roughness: 0.2 })); d.position.set(0, 0.17, 0.48); g.add(d);
+  return { g, disp: d };
+}
+function propPaper() {
+  const tex = pTex(128, 160, (x) => { x.fillStyle = '#fffdf4'; x.fillRect(0, 0, 128, 160); });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.25), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide })); m.userData.tex = tex; return m;
+}
+function paperDraw(P, k) {     // 그림이 조금씩 그려짐
+  const c = P.paper.userData.tex.userData.c, x = c.getContext('2d');
+  x.fillStyle = '#fffdf4'; x.fillRect(0, 0, 128, 160);
+  const L = [['#ff4ab0', [[20, 120], [40, 60], [64, 30], [88, 60], [108, 120]]], ['#3ad1ff', [[30, 130], [100, 130]]], ['#ffd23a', [[64, 74], [56, 92], [72, 92], [64, 74]]], ['#7dff6a', [[18, 30], [36, 22], [50, 34]]]];
+  const n = k * L.length;
+  L.forEach(([col, pts], i) => { if (i > n) return; const q = Math.min(1, n - i); x.strokeStyle = col; x.lineWidth = 6; x.lineCap = 'round'; x.beginPath(); const m = Math.max(2, Math.ceil(pts.length * q)); pts.slice(0, m).forEach(([a, b], j) => j ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); });
+  P.paper.userData.tex.needsUpdate = true;
+}
+function propBits(sc, n, mat, size) { const a = []; for (let i = 0; i < n; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), mat); m.visible = false; sc.add(m); a.push(m); } return a; }
+function flyBits(bits, from, t, spread, seed = 1) {   // 포물선으로 튀어 바닥에 떨어짐
+  bits.forEach((m, i) => {
+    if (t < 0) { m.visible = false; return; }
+    m.visible = true;
+    const a = i * 2.4 + seed, vx = Math.cos(a) * spread[0] + spread[2], vz = Math.sin(a) * spread[0] * 0.6 + spread[3], vy = spread[1] * (0.6 + ((i * 37) % 10) / 20);
+    const tt = Math.min(t, (vy + Math.sqrt(vy * vy + 2 * 18 * Math.max(0, from.y - 0.05))) / 18);
+    m.position.set(from.x + vx * tt, Math.max(0.05, from.y + vy * tt - 9 * tt * tt), from.z + vz * tt);
+    m.rotation.set(tt * 9 + i, tt * 7, tt * 5);
+  });
+}
+function front(P, obj, d, ry, side = 0) {   // 캐릭터(ry 방향) 앞 d 거리에 소품
+  const x = (P.x0 || 0) + Math.sin(ry) * d + Math.cos(ry) * side, z = Math.cos(ry) * d - Math.sin(ry) * side;
+  obj.position.set(x, obj.position.y, z); obj.rotation.y = ry;
+}
+// 브롤러별 동작 ─────────────────────────────
+const PANIM = {
+  jungbo: {
+    setup(P) { P.x0 = -0.8; P.pc = propPC(); P.sc.add(P.pc.g); front(P, P.pc.g, 1.8, 1.25); P.pc.g.rotation.y = 1.25 + Math.PI; },
+    type(P, t) { const M = P.M; M.root.rotation.y = 1.25; pArm(M, 0, -1.3, -0.2 + Math.sin(t * 31) * 0.08); pArm(M, 1, -1.3, -0.2 + Math.sin(t * 27 + 1) * 0.08); M.head.rotation.x = 0.12; pcScreen(P, 'code', t); },
+    win(P, t, o) {
+      const M = P.M; if (t < 1.5) return this.type(P, t);
+      pcScreen(P, 'win', t);
+      const k = ease(seg(t, 1.5, 1.8)); M.root.rotation.y = 1.25 * (1 - k);
+      if (t > 1.65) { const q = pHop(M, t - 1.65, 0.9, 7); pArm(M, 0, -2.7 - q * 0.3, 0.35); pArm(M, 1, -2.7 - q * 0.3, 0.35); pMouth(P, 1.1, 0.9); }
+      o.txt = ['win!', '#3aa0ff', seg(t, 1.5, 1.7)]; o.emo = '😆';
+    },
+    lose(P, t, o) {
+      const M = P.M; this.type(P, Math.min(t, 1.5)); if (t < 1.5) return;
+      o.txt = ['lose', '#ff5a5a', seg(t, 1.5, 1.7)];
+      if (t < 2.0) { pcScreen(P, 'lose', t); M.body.rotation.z = Math.sin(t * 55) * 0.05; pArm(M, 0, -0.5, 0.3); pArm(M, 1, -0.5, 0.3); o.emo = '😠'; return; }
+      const ph = ((t - 2.0) % 0.55) / 0.55, up = ph < 0.6 ? ease(ph / 0.6) : 1 - ease((ph - 0.6) / 0.4);
+      const ax = -1.1 - 1.9 * up; pArm(M, 0, ax, -0.15); pArm(M, 1, ax, -0.15); M.body.rotation.x = 0.25 * (1 - up);
+      const hit = seg(t, 2.3, 2.5); P.pc.mon.rotation.z = -1.35 * ease(hit); if (hit > 0) pcScreen(P, 'broken', t);
+      P.pc.kb.position.y = 1.64 + (ph > 0.6 && ph < 0.8 ? 0.15 : 0);
+      o.emo = '🤬';
+    },
+  },
+  hyeonsil: {
+    setup(P) { P.x0 = -0.6; P.sp = P.M.arms[1].children.find((c) => c.isGroup && c.children.some((m) => m.geometry && m.geometry.type === 'ExtrudeGeometry')); P.fan = propFan(); P.fan.g.visible = false; P.sc.add(P.fan.g); P.fan.g.position.set(1.7, 0, 1.2); P.fan.g.rotation.y = Math.atan2(-2.3, -1.2); },
+    win(P, t, o) {
+      const M = P.M, k = ease(seg(t, 0, 0.4));
+      M.root.rotation.y = -0.1; pArm(M, 1, -2.55 * k, 0.55 * k); if (P.sp) { P.spQ = P.spQ || P.sp.quaternion.clone(); M.root.updateMatrixWorld(true); const tq = P.sp.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0.15, 0, -0.3))); P.sp.quaternion.slerpQuaternions(P.spQ, tq, k); }   // 주걱을 하늘로 pArm(M, 0, 0.35 * k, 0.6 * k);
+      M.body.rotation.x = -0.1 * k; M.head.rotation.x = -0.25 * k; M.body.position.y = Math.sin(t * 3) * 0.05;
+      o.emo = '😎';
+    },
+    lose(P, t, o) {
+      const M = P.M, sp = P.sp;
+      if (t < 0.45) { pArm(M, 1, -3.0 * ease(t / 0.45), 0); M.body.rotation.z = Math.sin(t * 50) * 0.04; o.emo = '😠'; }
+      else if (t < 0.7) { pArm(M, 1, -3.0 + 3.5 * ease((t - 0.45) / 0.25), 0); M.body.rotation.x = 0.25; o.emo = '😠'; }
+      else if (t < 1.6) { pArm(M, 0, 0.2, 0.3); pArm(M, 1, 0.2, 0.3); M.legs[(Math.floor(t * 5) % 2)].rotation.x = -0.4; M.body.rotation.z = Math.sin(t * 40) * 0.04; o.emo = '💢'; }
+      if (sp && t > 0.58 && !P.spDrop) { P.sc.attach(sp); P.spDrop = { y: sp.position.y, rx: sp.rotation.x, t }; }
+      if (P.spDrop) { const q = seg(t, P.spDrop.t, P.spDrop.t + 0.3); sp.position.y = P.spDrop.y + (0.08 - P.spDrop.y) * q * q + (q >= 1 ? Math.abs(Math.sin((t - P.spDrop.t - 0.3) * 18)) * 0.15 * Math.max(0, 1 - (t - P.spDrop.t - 0.3) * 4) : 0); sp.rotation.x = P.spDrop.rx + (-Math.PI / 2 - P.spDrop.rx) * q; sp.rotation.z = 0; }
+      if (t >= 1.6) {
+        P.fan.g.visible = true; P.fan.blades.rotation.z = t * 25;
+        const k = ease(seg(t, 1.6, 1.95)); M.root.rotation.y = 1.08 * k; pSit(M, k);
+        pArm(M, 0, -1.1 * k, -0.1); pArm(M, 1, -1.1 * k, -0.1); M.head.rotation.x = 0.3 * k + Math.sin(t * 2) * 0.04;
+        M.body.rotation.z = Math.sin(t * 8) * 0.015; o.emo = '😫';
+      }
+    },
+  },
+  jaeyeol: {
+    pockets(M, t) { pArm(M, 0, 0.25, -0.2); pArm(M, 1, 0.25, -0.2); M.body.rotation.x = -0.08; M.head.rotation.set(-0.05, 0.25, 0.12); M.body.rotation.z = Math.sin(t * 1.5) * 0.03; M.root.rotation.y = -0.35; },
+    win(P, t, o) { const M = P.M; this.pockets(M, t); if (M.gum) { const g = (t * 0.45) % 1; M.gum.scale.setScalar(g < 0.6 ? 0.1 + g : 0.01); } o.emo = '😎'; },
+    lose(P, t, o) {
+      const M = P.M; this.pockets(M, t); const gum = M.gum; if (!gum) return;
+      if (t < 1.4) { gum.position.set(-0.12, -0.42, 1.0); gum.scale.setScalar(0.15 + 1.75 * ease(t / 1.4)); return; }
+      gum.position.set(0, -0.08, P.faceZ - 0.15); gum.scale.set(2.9, 2.7, 1.3);     // 펑! 얼굴 전체를 덮음
+      const k = ease(seg(t, 1.45, 1.7)); pArm(M, 0, -2.4 * k + Math.sin(t * 20) * 0.1 * k, -0.55 * k); pArm(M, 1, -2.4 * k + Math.sin(t * 23) * 0.1 * k, -0.55 * k);
+      M.body.rotation.z = Math.sin(t * 30) * 0.03;
+      if (t < 1.6) o.boom = seg(t, 1.4, 1.6);
+      if (t > 1.7) o.bubble = '가오 상한다...';
+    },
+  },
+  junhoo: {
+    win(P, t, o) {
+      const M = P.M; M.root.rotation.y = -0.3;
+      if (t < 3) {
+        const j = Math.floor(t / 0.35) % 2, ph = (t % 0.35) / 0.35, q = ph < 0.4 ? ph / 0.4 : 1 - (ph - 0.4) / 0.6;
+        pArm(M, 0, -1.35 - (j === 0 ? 0.25 * q : 0), -0.6 + (j === 0 ? 0.45 * q : 0)); pArm(M, 1, -1.35 - (j === 1 ? 0.25 * q : 0), -0.6 + (j === 1 ? 0.45 * q : 0));
+        M.body.position.y = Math.abs(Math.sin(t * 9)) * 0.1; M.legs[0].rotation.x = -0.3; M.legs[1].rotation.x = 0.3; M.torso.rotation.y = (j ? 0.2 : -0.2) * q; o.emo = '😤';
+      } else { const q = pHop(M, t - 3, 1.0, 6.5); pArm(M, 0, -2.9, 0.4 + q * 0.2); pArm(M, 1, -2.9, 0.4 + q * 0.2); pMouth(P, 1, 0.9); o.emo = '😆'; }
+    },
+    lose(P, t, o) {
+      const M = P.M; M.root.rotation.y = -0.2;
+      if (t < 0.8) { pArm(M, 0, 0.15, 0.3); pArm(M, 1, 0.15, 0.3); M.legs[Math.floor(t * 6) % 2].rotation.x = -0.5; M.body.rotation.z = Math.sin(t * 45) * 0.05; o.emo = '😠'; return; }
+      const k = ease(seg(t, 0.8, 1.0)); pSit(M, k); M.body.position.y += (t > 1.0 ? Math.max(0, Math.sin((t - 1.0) * 14)) * 0.12 * Math.max(0, 1 - (t - 1.0) * 3) : 0);
+      pArm(M, 0, -1.25 * k, -1.05 * k); pArm(M, 1, -1.15 * k, -1.0 * k);       // 팔짱
+      M.head.rotation.set(0.12, 0.55 * k, 0); o.emo = '😤';
+    },
+  },
+  jinho: {
+    setup(P) { if (P.mode === 'lose') P.x0 = -1.0; },
+    neck(M, L) { if (!M.neck) return; M.neck.scale.y = L; M.head.position.y = L; M.neckSpots.scale.y = L / 1.9; },
+    win(P, t, o) {
+      const M = P.M; this.neck(M, 1.9 + Math.sin(t * 2) * 0.15); M.root.rotation.y = -0.2;
+      if (M.neckPivot) { M.neckPivot.rotation.set(Math.cos(t * 5) * 0.3, 0, Math.sin(t * 5) * 0.35); M.head.rotation.z = -M.neckPivot.rotation.z * 0.5; }
+      pArm(M, 0, Math.sin(t * 5) * 0.2, 0.15); pArm(M, 1, -Math.sin(t * 5) * 0.2, 0.15); M.body.position.y = Math.abs(Math.sin(t * 5)) * 0.08; o.emo = '😄';
+    },
+    lose(P, t, o) {
+      const M = P.M; M.root.rotation.y = -0.2 * (1 - seg(t, 1.4, 1.7));
+      const ph = t * 5 + t * t * 3, amp = 0.3 + 0.4 * seg(t, 0, 1.4);
+      this.neck(M, 1.9 + 0.8 * seg(t, 0.6, 1.4) - 1.2 * seg(t, 1.6, 2.0));
+      if (M.neckPivot) M.neckPivot.rotation.set(Math.cos(ph) * amp, 0, Math.sin(ph) * amp);
+      if (t > 1.2) { M.head.rotation.y = (t - 1.2) * 14; o.emo = '😵'; } else o.emo = '😄';
+      if (t > 1.6) {
+        const k = ease(seg(t, 1.6, 2.0)); M.model.rotation.z = -1.5 * k; M.model.position.y = 0.3 * k;
+        if (M.neckPivot && t > 2.0) { M.neckPivot.rotation.set(0.4, 0, 0.9); M.head.rotation.set(0, 0.9, 0.6); }
+        pArm(M, 0, -0.3 * k, 0.25 * k); pArm(M, 1, 0.2 * k, 0.1 * k); M.legs[0].rotation.x = -0.4 * k;
+        if (t > 2.1) o.emo = '😢';
+      }
+    },
+  },
+  hyeonwoo: {
+    setup(P) { P.stp = new THREE.Group(); const sm = std('#d8dce4', { metalness: 0.8, roughness: 0.3 }); const a = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.06, 0.06), sm); P.stp.add(a); for (const s of [-1, 1]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.16), sm); l.position.set(s * 0.15, 0, 0.08); P.stp.add(l); } P.M.arms[1].add(P.stp); P.stp.position.set(0, -1.25, 0.2); P.stp.visible = false; P.bits = propBits(P.sc, 4, sm, [0.3, 0.06, 0.12]); },
+    chew(P, t) { pMouth(P, 0.8, 0.25 + Math.abs(Math.sin(t * 9)) * 0.5); P.M.head.rotation.x = Math.sin(t * 9) * 0.04; },
+    win(P, t, o) {
+      const M = P.M; M.root.rotation.y = -0.2;
+      if (t < 2) { const j = Math.floor(t / 0.22) % 2, q = Math.sin(((t % 0.22) / 0.22) * Math.PI); pArm(M, j, -1.15 - 0.3 * q, -1.1 + 0.6 * (1 - q)); pArm(M, 1 - j, -1.3, -0.4); M.head.rotation.x = -0.3; pMouth(P, 1.2, 1.1); M.body.scale.set(1 + q * 0.05, 1, 1 + q * 0.05); o.emo = '😤'; return; }
+      const k = seg(t, 2.0, 2.4), back = seg(t, 2.7, 3.0);
+      P.stp.visible = t < 2.6; pArm(M, 1, -2.5 * ease(k) * (1 - back), -0.75 * (1 - back)); pArm(M, 0, 0, 0);
+      if (t > 2.5) { this.chew(P, t); o.emo = '😋'; } else { pMouth(P, 0.9, 0.9); o.emo = '😏'; }
+    },
+    lose(P, t, o) {
+      const M = P.M; M.root.rotation.y = -0.2;
+      if (t < 1.0) { this.chew(P, t); o.emo = '😋'; return; }
+      if (t < 2.0) { pArm(M, 0, -2.0, -1.15); pArm(M, 1, -2.0, -1.15); M.body.rotation.z = Math.sin(t * 45) * 0.06; M.head.rotation.x = -0.2; pMouth(P, 0.5, 0.5); o.emo = '😖'; return; }
+      const sp = seg(t, 2.0, 2.15), back = seg(t, 2.2, 2.4); M.body.rotation.x = 0.5 * sp * (1 - back); pMouth(P, 1.1, 1.2);
+      if (!P.mouthW) { P.mouth.getWorldPosition(pV); P.mouthW = pV.clone(); }
+      flyBits(P.bits, P.mouthW, t - 2.05, [1.2, 3, 0.4, 3.2], 2);
+      const k = ease(seg(t, 2.5, 2.8)); pSit(M, k); pArm(M, 0, -1.6 + 0.6 * k, 0.5); pArm(M, 1, -1.6 + 0.6 * k, 0.5); M.body.rotation.x -= 0.15 * k;
+      o.emo = '😱';
+    },
+  },
+  yedam: {
+    win(P, t, o) { const M = P.M; M.root.rotation.y = -0.15; const k = ease(seg(t, 0, 0.3)); pArm(M, 0, -2.5 * k, 0.6 * k + Math.sin(t * 8) * 0.1); pArm(M, 1, -2.5 * k, 0.6 * k - Math.sin(t * 8) * 0.1); M.head.rotation.x = -0.22 * k; pMouth(P, 1.5 * k, 1.5 * k); pHop(M, t, 0.25, 5); o.emo = '😃'; },
+    lose(P, t, o) {
+      const M = P.M; M.root.rotation.y = -0.1; const k = ease(seg(t, 0, 0.25));
+      pArm(M, 0, 0.3 * k, 0.4 * k); pArm(M, 1, 0.3 * k, 0.4 * k); M.body.rotation.x = 0.2 * k; M.head.rotation.x = -0.15 * k;
+      M.body.rotation.z = Math.sin(t * 70) * 0.05 * k; M.body.position.x = Math.sin(t * 90) * 0.05 * k;
+      pMouth(P, 1.7 * k + Math.sin(t * 60) * 0.1, 2.3 * k + Math.sin(t * 50) * 0.15);
+      if (t > 0.2) { o.scream = t; o.txt = ['으아아아악!!!', '#ff3a3a', 1, 26, true]; }
+      o.emo = '😡';
+    },
+  },
+  dojun: {
+    form(M, art) { if (M.artG) for (const g of M.artG) g.visible = art; if (M.sportG) for (const g of M.sportG) g.visible = !art; if (M.moai) M.moai.visible = false; M.head.visible = true; },
+    pushup(P, t, sp, shake) {
+      const M = P.M; this.form(M, false); P.x0 = -1.5; M.root.position.x = -1.5; M.root.rotation.y = Math.PI / 2 - 0.25;
+      const q = (1 - Math.cos(t * sp)) / 2, th = 1.12 + 0.26 * q;
+      M.model.rotation.x = th; pArm(M, 0, -th + Math.sin(t * 40) * shake, 0.1 + 0.6 * q); pArm(M, 1, -th + Math.sin(t * 43) * shake, 0.1 + 0.6 * q);
+      M.head.rotation.x = -0.6; return q;
+    },
+    setup(P) { P.paper = propPaper(); P.sc.add(P.paper); P.paper.position.y = 2.3; },
+    win(P, t, o) {
+      const M = P.M;
+      if (t < 2.4) {
+        this.form(M, true); P.x0 = -0.7; M.root.position.x = -0.7;
+        if (!P.paperThrow) { front(P, P.paper, 1.4, 1.1); P.paper.rotation.y = 1.1 + Math.PI; }
+        if (t < 1.6) { M.root.rotation.y = 1.1; pArm(M, 1, -1.5 + Math.sin(t * 9) * 0.15, Math.sin(t * 7) * 0.15); pArm(M, 0, -0.8, 0.1); paperDraw(P, t / 1.5); }
+        else {
+          const k = ease(seg(t, 1.6, 1.9)); M.root.rotation.y = 1.1 * (1 - k); pArm(M, 1, -1.5 - 1.4 * k, 0.2); pArm(M, 0, -2.6 * k, 0.4 * k);
+          if (!P.paperThrow) P.paperThrow = { p: P.paper.position.clone(), t };
+          const tt = t - P.paperThrow.t; P.paper.position.set(P.paperThrow.p.x + tt * 1.5, P.paperThrow.p.y + tt * 5 - tt * tt * 3, P.paperThrow.p.z - tt * 2); P.paper.rotation.set(tt * 6, tt * 4, tt * 8);
+          if (t > 1.7) { o.txt = ['win!!!', '#ffd84a', seg(t, 1.7, 1.9)]; pMouth(P, 1.3, 1.3); o.emo = '🤩'; }
+        }
+        return;
+      }
+      P.paper.visible = false; this.pushup(P, t - 2.4, 6, 0); o.emo = '💪';
+    },
+    lose(P, t, o) {
+      const M = P.M; P.paper.visible = false;
+      if (t < 2.2) { const sp = 6 - 2.5 * (t / 2.2); this.pushup(P, t, sp, 0.04 + 0.08 * t / 2.2); o.emo = t > 1.2 ? '😣' : '💪'; return; }
+      this.pushup(P, 0, 6, 0); const k = ease(seg(t, 2.2, 2.45));
+      M.model.rotation.x = 1.12 + (1.55 - 1.12) * k; pArm(M, 0, -1.55, 0.1 + 1.3 * k); pArm(M, 1, -1.55, 0.1 + 1.3 * k);
+      M.body.rotation.z = Math.sin(t * 30) * 0.03; M.head.rotation.x = -0.6 * (1 - k) + 0.2; o.emo = '😣'; o.sweat = true;
+    },
+  },
+  suho: {
+    setup(P) { P.ball = makeSuhoBall(); P.ball.visible = false; P.sc.add(P.ball); P.burger = makeBurger(); P.burger.scale.setScalar(0.75); P.M.arms[1].add(P.burger); P.burger.position.set(0, -1.35, 0.25); P.burger.visible = false; P.scl = propScale(); P.scl.g.visible = false; P.sc.add(P.scl.g); },
+    win(P, t, o) {
+      const M = P.M;
+      if (t < 0.9) { M.root.visible = false; P.ball.visible = true; const x = -4 + 4 * ease(t / 0.9); P.ball.position.set(x, 1.3, 0); P.ball.rotation.set(0, 0, -(x + 4) / 1.3 * 1.6); o.emo = null; return; }
+      P.ball.visible = false; M.root.rotation.y = -0.2;
+      const pop = seg(t, 0.9, 1.15); M.body.scale.set(1 + 0.2 * (1 - pop), 0.7 + 0.3 * ease(pop), 1 + 0.2 * (1 - pop));
+      if (t < 1.4) { pArm(M, 0, -1.6 * pop, 0.8 * pop); pArm(M, 1, -1.6 * pop, 0.8 * pop); o.emo = '😄'; return; }
+      P.burger.visible = true; const ph = ((t - 1.4) % 1.0) / 1.0, q = ph < 0.35 ? ease(ph / 0.35) : ph < 0.55 ? 1 : 1 - ease((ph - 0.55) / 0.45);
+      pArm(M, 1, -1.2 - 1.25 * q, -0.65 * q); pArm(M, 0, -0.3, 0.15); pMouth(P, 1.0, 0.25 + 0.9 * q);
+      const bites = Math.floor((t - 1.4) / 1.0); P.burger.scale.setScalar(0.75 * Math.max(0.45, 1 - bites * 0.12));
+      o.emo = '😋';
+    },
+    lose(P, t, o) {
+      const M = P.M; P.scl.g.visible = true; P.scl.g.position.set(0, 0, 1.3);
+      const w = seg(t, 0.3, 0.9), wk = t > 0.3 && t < 0.9; M.root.position.z = 1.3 * ease(w); M.root.position.y = 0.17 * seg(t, 0.75, 0.9);
+      if (wk) { const s = Math.sin(t * 14); M.legs[0].rotation.x = s * 0.6; M.legs[1].rotation.x = -s * 0.6; }
+      if (t < 1.7) { M.head.rotation.x = 0.45 * seg(t, 0.9, 1.1); o.emo = t > 1 ? '🤔' : null; }
+      if (t > 0.95) {
+        const v = Math.min(1, (t - 0.95) / 0.9), kg = 40 + 110 * v * v;
+        P.scl.disp.getWorldPosition(pV); o.num = [v < 1 ? kg.toFixed(1) + 'kg' : (Math.floor(t * 4) % 2 ? 'ERROR' : '???kg'), pV.clone(), v < 1 ? '#9dff8a' : '#ff5a5a'];
+      }
+      if (t >= 1.85) { const k = ease(seg(t, 1.85, 2.05)); M.body.position.y += 0.35 * Math.sin(k * Math.PI); pArm(M, 0, -2.3 * k, -0.6 * k); pArm(M, 1, -2.3 * k, -0.6 * k); M.body.rotation.x = -0.18 * k; M.head.rotation.x = 0.25 - 0.3 * k; pMouth(P, 0.9, 1.4); o.emo = '😱'; }
+    },
+  },
+  suhun: {
+    setup(P) { P.ph = propPhone(); P.M.arms[0].add(P.ph.g); P.ph.g.position.set(0.1, -1.3, 0.25); P.ph.g.rotation.set(-1.1, 0, 0); P.bits = propBits(P.sc, 6, std('#15151c', { roughness: 0.3 }), [0.14, 0.03, 0.2]); P.glass = propBits(P.sc, 4, new THREE.MeshBasicMaterial({ color: '#7fe8ff' }), [0.12, 0.02, 0.1]); },
+    play(P, t) { const M = P.M; M.root.rotation.y = -0.25; pArm(M, 0, -1.05, -0.4); pArm(M, 1, -1.05 + Math.sin(t * 24) * 0.05, -0.55); M.head.rotation.x = 0.38; phoneScreen(P, t); },
+    win(P, t, o) {
+      const M = P.M; this.play(P, Math.min(t, 2)); if (t < 2) return;
+      const k = ease(seg(t, 2.0, 2.3)); pArm(M, 1, -1.05 - 1.95 * k, -0.55 + 0.65 * k); M.head.rotation.x = 0.38 - 0.55 * k; pHop(M, t - 2.2, 0.35 * k, 6); pMouth(P, 0.9 * k, 0.8 * k);
+      o.txt = ['win', '#3aa0ff', seg(t, 2.0, 2.2)]; o.emo = '😄';
+    },
+    lose(P, t, o) {
+      const M = P.M; this.play(P, Math.min(t, 2)); if (t < 2) return;
+      o.txt = ['game over', '#ff5a5a', seg(t, 2.0, 2.2), 28];
+      if (t < 2.35) { pArm(M, 0, -1.05 - 1.6 * ease((t - 2) / 0.35), -0.2); o.emo = '😠'; }
+      else if (t < 2.5) pArm(M, 0, -2.65 + 3.0 * ease((t - 2.35) / 0.15), -0.2);
+      if (t > 2.4 && !P.thrown) { P.sc.attach(P.ph.g); P.thrown = { p: P.ph.g.position.clone(), t }; }
+      if (P.thrown) {
+        const tt = t - P.thrown.t, land = 0.2;
+        if (tt < land) { const q = tt / land; P.ph.g.position.set(P.thrown.p.x + 0.6 * q, P.thrown.p.y + (0.05 - P.thrown.p.y) * q, P.thrown.p.z + 1.0 * q); P.ph.g.rotation.x += 0.4; }
+        else { P.ph.g.visible = false; if (!P.brk) { P.brk = P.ph.g.position.clone(); P.brk.y = 0.1; } flyBits(P.bits, P.brk, tt - land, [2.2, 3.2, 0, 0.3], 1); flyBits(P.glass, P.brk, tt - land, [2.8, 4, 0, 0.3], 3); if (tt - land < 0.15) o.boom = (tt - land) / 0.15; }
+      }
+      if (t >= 2.5 && t < 3.7) { pArm(M, 0, 0.2, 0.35); pArm(M, 1, 0.2, 0.35); M.legs[Math.floor(t * 6) % 2].rotation.x = -0.45; M.body.rotation.z = Math.sin(t * 45) * 0.05; M.head.rotation.x = 0.1; o.emo = '😡'; }
+      if (t >= 3.7) { const k = ease(seg(t, 3.7, 4.0)); M.head.rotation.x = 0.5 * k; pArm(M, 0, -2.7 * k, -0.85 * k); pArm(M, 1, -2.7 * k, -0.85 * k); M.body.rotation.x = 0.15 * k; o.emo = '😢'; }
+    },
+  },
+};
+const PDEF = {
+  win(P, t, o) { pHop(P.M, t, 0.6, 6); pArm(P.M, 0, -2.7, 0.4); pArm(P.M, 1, -2.7, 0.4); o.emo = '😄'; },
+  lose(P, t, o) { P.M.head.rotation.x = 0.4; P.M.body.rotation.x = 0.15; o.emo = '😢'; },
+};
+function poseMake(b, mode) {
+  const sc = new THREE.Scene();
+  sc.add(new THREE.HemisphereLight('#ffffff', '#806090', 1.6));
+  const dl = new THREE.DirectionalLight('#ffffff', 2.2); dl.position.set(3, 6, 8); sc.add(dl);
+  const M = makeModel(b, '#ffd84a');
+  M.root.children.forEach((c) => { if (c.geometry && c.geometry.type === 'RingGeometry') c.visible = false; });
+  if (M.stars) M.stars.visible = false;
+  sc.add(M.root);
+  const cam = new THREE.PerspectiveCamera(32, 0.8, 0.1, 60); cam.position.set(0, 2.9, 11); cam.lookAt(0, 2.3, 0);
+  const P = { b, mode, sc, cam, M, x0: 0, A: PANIM[b] || {} };
+  // 입 (크게 벌리기용): 머리 앞면을 레이로 찾아 붙임
+  sc.updateMatrixWorld(true);
+  const rc = new THREE.Raycaster(), hits = (y) => { M.head.localToWorld(pV.set(0, y, 6)); M.head.localToWorld(pV2.set(0, y, -6)); rc.set(pV, pV2.sub(pV).normalize()); return rc.intersectObject(M.head, true).filter((h) => h.object.visible && h.object.geometry.type !== 'CircleGeometry')[0]; };
+  const hm = hits(-0.22), hf = hits(0);
+  P.faceZ = hf ? M.head.worldToLocal(hf.point.clone()).z : 0.7;
+  const mz = hm ? M.head.worldToLocal(hm.point.clone()).z + 0.03 : 0.72;
+  P.mouth = new THREE.Mesh(new THREE.CircleGeometry(0.13, 20), new THREE.MeshBasicMaterial({ color: '#4a0e14' })); P.mouth.position.set(0, -0.22, mz); P.mouth.visible = false; M.head.add(P.mouth);
+  if (P.A.setup) P.A.setup(P);
+  return P;
+}
+function poseDraw2D(g, P, o, W, H) {
+  const M = P.M; M.head.getWorldPosition(pV).project(P.cam);
+  let hx = (pV.x + 1) / 2 * W, hy = (1 - pV.y) / 2 * H;
+  if (!M.root.visible && P.ball) { P.ball.getWorldPosition(pV).project(P.cam); hx = (pV.x + 1) / 2 * W; hy = (1 - pV.y) / 2 * H; }
+  const out = (s, x, y, size, col, sh) => { g.font = `900 ${size}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = size / 5; g.strokeStyle = '#000'; const dx = sh ? (Math.random() - 0.5) * 6 : 0, dy = sh ? (Math.random() - 0.5) * 6 : 0; g.strokeText(s, x + dx, y + dy); g.fillStyle = col; g.fillText(s, x + dx, y + dy); };
+  if (o.scream) { g.save(); g.strokeStyle = 'rgba(255,90,90,.75)'; g.lineWidth = 4; for (let i = 0; i < 3; i++) { const r = ((o.scream * 160 + i * 40) % 120) + 10; g.globalAlpha = 1 - r / 130; g.beginPath(); g.arc(hx, hy + 10, r, -2.4, -0.7); g.stroke(); g.beginPath(); g.arc(hx, hy + 10, r, 0.7 - Math.PI, 2.4 - Math.PI); g.stroke(); } g.restore(); }
+  if (o.boom) { g.save(); g.globalAlpha = 1 - o.boom; g.fillStyle = '#fff'; g.beginPath(); for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2, r = (i % 2 ? 18 : 40) * (0.6 + o.boom); g.lineTo(hx + Math.cos(a) * r, hy + Math.sin(a) * r); } g.fill(); g.restore(); }
+  if (o.txt) { const [s, col, k = 1, size = 40, sh] = o.txt; if (k > 0) { const z = k < 1 ? 0.5 + 0.7 * k : 1; out(s, W / 2, Math.max(26, hy - 70), size * z * W / 240, col, sh); } }
+  if (o.emo) { const ex = Math.min(W - 26, hx + 44), ey = Math.max(24, hy - 30); g.fillStyle = 'rgba(255,255,255,.92)'; g.strokeStyle = '#000'; g.lineWidth = 3; g.beginPath(); g.arc(ex, ey, 22, 0, Math.PI * 2); g.fill(); g.stroke(); g.beginPath(); g.moveTo(ex - 12, ey + 16); g.lineTo(ex - 22, ey + 30); g.lineTo(ex - 2, ey + 20); g.fill(); g.font = '28px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#000'; g.fillText(o.emo, ex, ey + 2); }
+  if (o.bubble) { g.font = '900 20px sans-serif'; const tw = g.measureText(o.bubble).width + 22, bx = Math.max(4, Math.min(W - tw - 4, hx - tw / 2)), by = Math.max(4, hy - 92); g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 3; g.beginPath(); g.roundRect ? g.roundRect(bx, by, tw, 36, 12) : g.rect(bx, by, tw, 36); g.fill(); g.stroke(); g.beginPath(); g.moveTo(hx - 8, by + 35); g.lineTo(hx, by + 50); g.lineTo(hx + 8, by + 35); g.fill(); g.fillStyle = '#111'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(o.bubble, bx + tw / 2, by + 19); }
+  if (o.num) { const [s, p, col] = o.num; p.project(P.cam); const x = (p.x + 1) / 2 * W, y = (1 - p.y) / 2 * H; g.fillStyle = '#0d1a0d'; g.strokeStyle = '#000'; g.lineWidth = 2; g.fillRect(x - 46, y - 40, 92, 28); g.strokeRect(x - 46, y - 40, 92, 28); g.font = '900 18px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = col; g.fillText(s, x, y - 26); }
+  if (o.sweat) { g.font = '22px sans-serif'; g.fillText('💦', hx - 30, hy - 20 + Math.sin(performance.now() / 120) * 3); }
+}
+function poseStart(items) {          // items: [{canvas, b, mode:'win'|'lose'|'draw'}]
+  poseStop();
+  try {
+    if (!POSE.r) { POSE.r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); POSE.r.setPixelRatio(1); POSE.r.setSize(240, 300); POSE.r.outputColorSpace = THREE.SRGBColorSpace; POSE.r.toneMapping = THREE.ACESFilmicToneMapping; POSE.r.setClearColor(0x000000, 0); }
+    POSE.list = items.map((it) => ({ ...it, g: it.canvas.getContext('2d'), P: poseMake(it.b, it.mode) }));
+  } catch (e) {          // WebGL 안 되면 예전 정지 사진
+    for (const it of items) { const im = new Image(); im.onload = () => it.canvas.getContext('2d').drawImage(im, 0, 30, 240, 240); im.src = portrait(it.b); }
+    return;
+  }
+  POSE.t0 = performance.now();
+  const loop = () => {
+    if ($('resBox').style.display === 'none') return poseStop();
+    POSE.raf = requestAnimationFrame(loop);
+    const now = performance.now(); if (now - (POSE.last || 0) < 30) return; POSE.last = now;     // 30fps면 충분
+    const t = (now - POSE.t0) / 1000;
+    for (const it of POSE.list) {
+      const P = it.P, o = {}; pReset(P);
+      const fn = it.mode === 'draw' ? null : (P.A[it.mode] || PDEF[it.mode]);
+      if (fn) fn.call(P.A[it.mode] ? P.A : PDEF, P, t, o); else { P.M.body.scale.y = 1 + Math.sin(t * 2.2) * 0.025; P.M.root.rotation.y = -0.3; }
+      POSE.r.clear(); POSE.r.render(P.sc, P.cam);
+      it.g.clearRect(0, 0, 240, 300); it.g.drawImage(POSE.r.domElement, 0, 0);
+      poseDraw2D(it.g, P, o, 240, 300);
+    }
+  };
+  loop();
+}
+function poseStop() { cancelAnimationFrame(POSE.raf); POSE.raf = 0; POSE.list = []; }
 $('qStart').onclick = () => { if (socket) socket.emit('startNow'); };
 // 가젯 버튼: 위치 고르는 가젯(이수훈 블록)이면 드래그해서 위치 조절 · 아니면 탭
 const gAim = { id: null, slot: 1, drag: 0, ang: null, px: 0, py: 0 };

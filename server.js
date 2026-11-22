@@ -1372,7 +1372,15 @@ function matchTrophies(room, p, outcome, rank) {                      // 한 판
   p.trophied = true;
   const bt = btOf(p), rk = room.mode.id === 'showdown' || room.mode.id === 'ffa';
   if (room.mode.id === 'ffa' && (room.sdN || 0) < 2) { p.trophied = false; return; }        // 혼자면 트로피 없음
-  const n = rk ? showdownTro(bt, rank, room.sdN || 6) : outcome === 'win' ? winTro(bt) : outcome === 'loss' ? -lossTro(bt) : 0;
+  let n = rk ? showdownTro(bt, rank, room.sdN || 6) : outcome === 'win' ? winTro(bt) : outcome === 'loss' ? -lossTro(bt) : 0;
+  // 연승: n연승이면 n-1개(최대 10) 추가. 난투·더블가젯은 해당 없음(여기 안 옴), 무승부·쇼다운 중간 순위는 연승 유지
+  const won = rk ? rank === 1 : outcome === 'win', lost = rk ? n < 0 : outcome === 'loss';
+  let streak = auth.streakOf(p.userKey), bonus = 0;
+  if (room.mode.id !== 'ffa' && room.mode.id !== 'double' && (won || lost)) {
+    streak = auth.setStreak(p.userKey, won);
+    if (won) { bonus = Math.min(10, streak - 1); n += bonus; }
+  }
+  p.streakInfo = { streak, bonus };
   giveTrophies(p, n, outcome === 'win' || rank === 1 ? 'wins' : null, true);
 }
 function giveTrophies(p, n, field, show) {
@@ -1381,7 +1389,8 @@ function giveTrophies(p, n, field, show) {
   const bid = p.B && p.B.id, before = bid ? auth.brawlerTrophies(p.userKey)[bid] || 0 : 0;
   const t = auth.addTrophies(p.userKey, n, field, bid);
   const bt = auth.brawlerTrophies(p.userKey), add = bid ? (bt[bid] || 0) - before : n;   // 프레스티지 바닥에 막히면 실제로 바뀐 만큼만
-  if (t != null) io.to(p.id).emit('trophy', { total: t, add, bid, bt });
+  const si = p.streakInfo || {}; p.streakInfo = null;
+  if (t != null) io.to(p.id).emit('trophy', { total: t, add, bid, bt, streak: si.streak || 0, bonus: si.bonus || 0 });
 }
 function endRound(room, result) {
   room.phase = 'end'; room.phaseT = 8; room.result = result;

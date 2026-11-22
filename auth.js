@@ -97,6 +97,9 @@ function addTrophies(key, n, field, bid) {
   return u.trophies;
 }
 const brawlerTrophies = (key) => (db.users[key] ? fixBt(db.users[key]).bt : {});
+// 연승: 이기면 +1, 지면 0 (계정당). 반환값 = 새 연승 수
+function setStreak(key, win) { const u = db.users[key]; if (!u) return 0; u.streak = win ? (u.streak || 0) + 1 : 0; u.bestStreak = Math.max(u.bestStreak || 0, u.streak); save(); return u.streak; }
+const streakOf = (key) => (db.users[key] ? db.users[key].streak || 0 : 0);
 function addStat(key, field) { const u = db.users[key]; if (u) { u.stats[field] = (u.stats[field] || 0) + 1; save(); } }
 
 // ── 로그인 시도 제한 (IP당 1분에 10번) ──
@@ -170,4 +173,4 @@ function profileOf(name) {
   return { key, name: u.name, trophies: u.trophies || 0, best: Math.max(u.best || 0, u.trophies || 0), bt: u.bt, stats: u.stats || {}, icon: (u.prefs && u.prefs.icon) || null, createdAt: u.createdAt || 0, lastSeen: u.lastSeen || 0 };
 }
 
-module.exports = { profileOf, load, routes, userFromToken, addTrophies, brawlerTrophies, addStat, trophiesOf, allUsers, flush };
+module.exports = { setStreak, streakOf, profileOf, load, routes, userFromToken, addTrophies, brawlerTrophies, addStat, trophiesOf, allUsers, flush };
