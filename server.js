@@ -243,7 +243,7 @@ function kill(room, attacker, target, kind) {
     if (hasSP(attacker, 'aura')) attacker.aura = Math.min(1, (attacker.aura || 0) + SP(attacker, 'aura').perKill);   // 아우라 파밍
     if (attacker.userKey) auth.addStat(attacker.userKey, 'kills');
     // 난투·더블가젯(끝없는 방)만 처치로 트로피
-    if (room.mode.rotate && trophyRoom(room)) {
+    if (room.mode.rotate && trophyRoom(room) && !attacker.isBot && !target.isBot) {      // 봇(AI)을 잡거나 봇한테 죽은 건 트로피 변화 없음
       giveTrophies(attacker, 1);                                  // 처치할 때마다 +1
       const tb = btOf(target); if (tb >= 100) giveTrophies(target, tb >= 500 ? -2 : -1);   // 죽으면 100 이상부터 -1, 500 이상 -2
     }
