@@ -2110,7 +2110,7 @@ function makeScience(teamColor) {
   const head = new THREE.Group(); head.position.y = 2.12; torso.add(head);
   // 날렵한 얼굴: 폭 좁게 + 아래로 갸름한 턱
   const face = new THREE.Mesh(new THREE.SphereGeometry(0.6, 28, 22), m.skin); face.scale.set(0.86, 1.1, 0.92); face.position.y = -0.02; head.add(face);
-  const chin = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.42, 20), m.skin); chin.rotation.x = Math.PI; chin.scale.set(1, 1, 0.72); chin.position.set(0, -0.5, 0.17); head.add(chin);
+  const chin = new THREE.Mesh(new THREE.ConeGeometry(0.33, 0.52, 24), m.skin); chin.rotation.x = Math.PI + 0.12; chin.scale.set(1, 1, 0.75); chin.position.set(0, -0.55, 0.2); head.add(chin);   // 살짝 뾰족한 턱
   for (const s of [-1, 1]) {
     const w = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10), m.white); w.scale.set(1.15, 0.6, 0.4); w.position.set(s * 0.2, 0.0, 0.51); head.add(w);
     const pu = new THREE.Mesh(new THREE.SphereGeometry(0.068, 12, 10), m.eye); pu.scale.set(1, 1, 0.4); pu.position.set(s * 0.185, -0.01, 0.555); head.add(pu);
