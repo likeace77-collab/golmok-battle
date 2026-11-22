@@ -180,6 +180,8 @@
   #resBox .side { flex: 1; display: flex; gap: 8px; justify-content: center; align-items: flex-end; flex-wrap: wrap; }
   #resBox .pc { width: 150px; max-width: 30%; text-align: center; position: relative; }
   #resBox .pc img { width: 100%; display: block; filter: drop-shadow(0 6px 4px rgba(0,0,0,.4)); }
+  #specBar { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 12; display: none; align-items: center; gap: 10px; background: rgba(10,10,40,.8); border: 3px solid #000; border-radius: 14px; padding: 6px 10px; color: #fff; font-weight: 900; font-size: 16px; white-space: nowrap; }
+  #specBar button { font-size: 20px; font-weight: 900; width: 44px; height: 40px; border: 3px solid #000; border-radius: 10px; background: #ffd84a; cursor: pointer; }
   #resBox .pc canvas.pz { position: static; inset: auto; z-index: auto; width: 100%; height: auto; display: block; aspect-ratio: 4 / 5; }
   #resBox .rt span.stk { display: block; font-size: 18px; color: #ff9a3a; }
   #resBox .pc.lose img { filter: grayscale(.5) brightness(.7); transform: rotate(-8deg) translateY(10px); }
@@ -404,6 +406,7 @@
 <div id="dead" class="stroke"></div>
 <div id="frost"></div><div id="lookFlash"></div><div id="ctrlFlash"></div><div id="ctrlMsg" class="stroke"></div>
 <div id="aimJoy"><b class="stroke">취소</b><i></i></div>
+<div id="specBar"><button id="specPrev">◀</button><span id="specName"></span><button id="specNext">▶</button></div>
 <div id="ctrl">
   <div class="cb" id="bAtk">공격<small>드래그</small></div>
   <div class="cb" id="bSup">궁극기<small>드래그</small></div>
@@ -421,7 +424,7 @@ const $ = (id) => document.getElementById(id);
 
 // ── 렌더러 / 씬 ───────────────────────────────────
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, isTouch ? 1.5 : 2));      // 폰은 1.5배까지만 (렉 줄이기)
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -437,7 +440,7 @@ const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 400);
 scene.add(new THREE.HemisphereLight('#ffffff', '#7a5aa8', 1.15));
 const sun = new THREE.DirectionalLight('#fff1d6', 2.6);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(isTouch ? 1024 : 2048, isTouch ? 1024 : 2048);
 Object.assign(sun.shadow.camera, { left: -28, right: 28, top: 28, bottom: -28, near: 1, far: 90 });
 sun.shadow.bias = -0.0005;
 scene.add(sun, sun.target);
@@ -2041,7 +2044,44 @@ function makeMouse(color) {
 
 // 브롤러 id → 3D 모델 함수 (새 브롤러 추가 시 여기에 등록)
 const MODELS = { jungbo: makeTeacher, hyeonsil: makeHyeonsil, junhoo: makeJunhoo, jaeyeol: makeJaeyeol, jinho: makeJinho, hyeonwoo: makeHyeonwoo, yedam: makeYedam, suho: makeSuho, suhun: makeSuhun, dojun: makeDojun, robot: (c) => makeRobot(c, false), bigrobot: (c) => makeRobot(c, true), safe: makeSafe, pbox: makePowerBox };
-const makeModel = (id, color) => (MODELS[id] || makeTeacher)(color);
+// 렉 줄이기: 모델 안에서 같은 재질·같은 부모의 작은 조각들을 한 덩어리로 합침 (그리는 횟수 대폭 감소)
+// 애니메이션에서 따로 쓰는 조각(M.gum, M.neck, 배열 속 조각 등)이나 자식 달린 조각, 숨겨진 조각은 그대로 둠
+function mergeModel(M) {
+  const keep = new Set();
+  for (const v of Object.values(M)) {
+    if (v && v.isObject3D) keep.add(v);
+    else if (Array.isArray(v)) for (const x of v) if (x && x.isObject3D) keep.add(x);
+  }
+  const groups = [];
+  M.model.traverse((o) => { if (o.isGroup || o.type === 'Object3D' || o.isMesh) groups.push(o); });
+  for (const g of groups) {
+    const buckets = new Map();
+    for (const c of g.children) {
+      if (!c.isMesh || c.isSkinnedMesh || keep.has(c) || c.children.length || !c.visible || c.renderOrder || Object.keys(c.userData).length || Array.isArray(c.material) || !c.geometry.attributes.normal) continue;
+      c.updateMatrix(); if (c.matrix.determinant() <= 0) continue;
+      const key = c.material.uuid + (c.geometry.attributes.uv ? '|uv' : '') + (c.castShadow ? '|s' : '');
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push(c);
+    }
+    for (const list of buckets.values()) {
+      if (list.length < 2) continue;
+      const geos = list.map((c) => { const gg = c.geometry.index ? c.geometry.toNonIndexed() : c.geometry.clone(); gg.applyMatrix4(c.matrix); return gg; });
+      const uv = geos.every((x) => x.attributes.uv), names = uv ? ['position', 'normal', 'uv'] : ['position', 'normal'];
+      const out = new THREE.BufferGeometry();
+      for (const n of names) {
+        const sz = geos[0].attributes[n].itemSize, arr = new Float32Array(geos.reduce((t, x) => t + x.attributes[n].count * sz, 0));
+        let o = 0; for (const x of geos) { arr.set(x.attributes[n].array, o); o += x.attributes[n].array.length; }
+        out.setAttribute(n, new THREE.BufferAttribute(arr, sz));
+      }
+      out.computeBoundingSphere();
+      const mesh = new THREE.Mesh(out, list[0].material); mesh.castShadow = list[0].castShadow; mesh.receiveShadow = list[0].receiveShadow;
+      for (const c of list) g.remove(c);
+      g.add(mesh);
+    }
+  }
+  return M;
+}
+const makeModel = (id, color) => mergeModel((MODELS[id] || makeTeacher)(color));
 
 // ── 로비 3D 쇼케이스 ──────────────────────────────
 const lobbyScene = new THREE.Scene();
@@ -3092,7 +3132,8 @@ function connect() {
   socket.on('partyGo', ({ rid }) => { if (mode === 'game' || joined) return; doJoin(rid); });
   socket.on('partyMsg', (t) => toast(t));
   socket.on('joined', (d) => {
-    myId = d.id; mode = 'game';
+    myId = d.id || '__spec'; mode = 'game'; specOnly = !!d.spec; specId = d.follow || null;
+    if (specOnly) setTimeout(() => { $('ctrl').style.display = 'none'; $('botBtn').style.display = $('clearBtn').style.display = 'none'; }, 0);
     $('lobby').style.display = 'none'; $('lobbyBg').style.display = 'none';
     $('top').style.display = 'flex';
     $('ctrl').style.display = 'block';
@@ -3100,6 +3141,7 @@ function connect() {
     $('botBtn').style.display = $('clearBtn').style.display = rounds ? 'none' : '';
   });
   socket.on('state', (s) => {
+    for (const p of s.players) for (const k of P_NUM) if (p[k] === undefined) p[k] = 0;    // 서버가 0인 값은 빼고 보냄
     state = s; onSnap(s);
     updateResult();
     if (gdS && !gdS.result) { const m = s.players.find((q) => q.id === myId); if (m && !m.gd) { gdS.noT = (gdS.noT || 0) + 1; if (gdS.noT > 60) gdClose(); } else gdS.noT = 0; }   // 판이 끝나 지메가 취소되면 닫기
@@ -3109,6 +3151,7 @@ function connect() {
     handleFx(s.fx);
   });
   socket.on('disconnect', () => addFeed('서버 연결 끊김 — 새로고침 해주세요', 999));
+  socket.on('specEnd', () => { if (specOnly) { toast('게임이 끝났어요 — 로비로 돌아가요'); setTimeout(() => location.reload(), 1500); } });
   socket.on('gdStart', (d) => gdOpen(d));
   socket.on('gdEnd', (d) => { if (!gdS) return; gdS.win = d.win; gdS.result = d.win ? '승리! 상대 탈락' : '패배… 탈락'; gdS.msgT = 1.6; });
   socket.on('trophy', (t) => {
@@ -3208,8 +3251,11 @@ function openOnline() {
     const esc = (t) => String(t).replace(/</g, '&lt;');
     const rows = list.map((o) => `<div class="or"><div style="flex:1"><b>${esc(o.name)}${o.me ? ' (나)' : ''}</b> ${o.guest ? '<span style="font-size:11px;opacity:.7">게스트</span>' : `<span class="tr">🏆${o.trophies}</span>`}
       <div class="sub">${o.status === 'game' ? `<span style="color:#7cffb0">${o.modeName}${o.mapName ? ' · ' + esc(o.mapName) : ''} 중</span> ${o.brawler || ''}` : '로비'}</div></div>
-      ${o.me ? '' : o.status === 'lobby' ? `<button class="ib inv" data-s="${o.sid}">초대</button>` : ''}</div>`).join('');
+      ${o.me ? '' : o.status === 'lobby' ? `<button class="ib inv" data-s="${o.sid}">초대</button>` : o.status === 'game' ? `<button class="ib spec" data-s="${o.sid}">👀 관전</button>` : ''}</div>`).join('');
     modal(`<h3 class="stroke">🟢 지금 온라인 ${list.length}명</h3><div id="olist">${rows || '아무도 없어요'}</div>`);
+    for (const b of document.querySelectorAll('#olist .ib.spec')) b.onclick = () => {
+      socket.emit('spectate', { sid: b.dataset.s }, (r) => { if (!r.ok) toast(r.msg); else $('modal').style.display = 'none'; });
+    };
     for (const b of document.querySelectorAll('#olist .ib.inv')) b.onclick = () => {
       b.disabled = true; b.textContent = '보냄';
       socket.emit('invite', { to: b.dataset.s, mode: selMode, map: selMapOf(selMode) }, (r) => { if (!r.ok) { b.textContent = '실패'; toast(r.msg); } });
@@ -3641,6 +3687,7 @@ $('gdBox').addEventListener('pointerdown', gdDown); addEventListener('pointerup'
 addEventListener('keydown', (e) => { if (!gdS) return; if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') { gdS.hold = true; gdJump(); } e.preventDefault(); e.stopImmediatePropagation(); }, true);
 addEventListener('keyup', (e) => { if (gdS && (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W')) gdS.hold = false; }, true);
 // ── 결과 화면: 승리/패배 + 트로피, 우리 팀(파랑) vs 상대 팀(빨강), 처치·데스·준 피해, 스타플레이어 ──
+const P_NUM = ['respawn', 'ammo', 'gCd', 'sup', 'f', 'k', 'd', 'ctrlT', 'ac', 'sh', 'rf', 'aj', 'gems', 'fear', 'scared', 'na', 'fl', 'jail', 'rank'];
 let lastTro = null, resShownFor = null, resClosed = null;
 function showResult(r) {
   const me = state.players.find((p) => p.id === myId); if (!r.stats || !me) return;
@@ -4526,7 +4573,7 @@ function updateLabel(v, p) {
   const [x, y, vis] = toScreen(pos.x, 5.0 + v.model.body.position.y * 0.5, pos.z);
   L.d.style.display = p.dead || p.out || p.gd || !vis || v.hiddenInv ? 'none' : 'block';
   L.d.style.left = x + 'px'; L.d.style.top = y + 'px';
-  L.nm.textContent = `${p.jail > 0 ? '⛓️ ' : ''}${p.na > 0 ? '💔 ' : ''}${p.scared > 0 ? '😰 ' : ''}${p.aw ? '🔥 ' : ''}${p.ctl ? '🎮 ' : ''}${p.gems ? '💎' + p.gems + ' ' : ''}${p.cb ? '🟩' + p.cb + ' ' : ''}${p.bty ? '⭐' + p.bty + ' ' : ''}${state.ball && state.ball[2] === p.id ? '⚽ ' : ''}${p.mo ? '🗿 ' : ''}${p.up ? '⚡ ' : ''}${p.sl ? '🐌 ' : ''}${p.fm ? (p.fm === 'art' ? '🎨 ' : '🏀 ') : ''}${p.au != null && p.id === myId ? `🔮${Math.round(p.au * 100)}% ` : ''}${p.ro != null && p.id === myId ? `🌀${Math.round(p.ro * 100)}% ` : ''}${p.fly ? '✈️ ' : ''}${p.dup ? `💪+${Math.round(p.dup * 100)}% ` : ''}${p.name}  ${p.hp}${p.sh > 0 ? ' 🛡' + p.sh : ''}`;
+  { const t = `${p.jail > 0 ? '⛓️ ' : ''}${p.na > 0 ? '💔 ' : ''}${p.scared > 0 ? '😰 ' : ''}${p.aw ? '🔥 ' : ''}${p.ctl ? '🎮 ' : ''}${p.gems ? '💎' + p.gems + ' ' : ''}${p.cb ? '🟩' + p.cb + ' ' : ''}${p.bty ? '⭐' + p.bty + ' ' : ''}${state.ball && state.ball[2] === p.id ? '⚽ ' : ''}${p.mo ? '🗿 ' : ''}${p.up ? '⚡ ' : ''}${p.sl ? '🐌 ' : ''}${p.fm ? (p.fm === 'art' ? '🎨 ' : '🏀 ') : ''}${p.au != null && p.id === myId ? `🔮${Math.round(p.au * 100)}% ` : ''}${p.ro != null && p.id === myId ? `🌀${Math.round(p.ro * 100)}% ` : ''}${p.fly ? '✈️ ' : ''}${p.dup ? `💪+${Math.round(p.dup * 100)}% ` : ''}${p.name}  ${p.hp}${p.sh > 0 ? ' 🛡' + p.sh : ''}`; if (L.nmT !== t) { L.nmT = t; L.nm.textContent = t; } }   // 바뀔 때만 (DOM 갱신 줄이기)
   const meP = state.players.find((q) => q.id === myId);
   L.d.classList.toggle('ally', p.id !== myId && p.team != null && meP && meP.team === p.team);
   L.rfb.style.display = p.rf > 0 ? 'block' : 'none'; L.rf.style.width = p.rf * 100 + '%';
@@ -4608,7 +4655,7 @@ function modeHud(me) {
 
 // ── 부드러운 움직임: 서버 스냅샷 보간 ──────────────
 // 서버는 초당 30번 위치를 보냄 → 받은 위치 두 개 사이를 매 프레임 이어서 그림 (약간 과거를 보여줘서 끊김 없음)
-const INTERP_DELAY = 60;            // ms
+const INTERP_DELAY = 100;           // ms (서버가 20Hz로 보냄)
 let tOff = null;
 const hist = new Map();             // id → [{t, x, y}]
 function onSnap(s) {
@@ -4644,7 +4691,7 @@ function ipos(k, fx, fy) {
 
 // ── 프레임 측정 + 자동 화질 (느리면 해상도·그림자 낮춤) ──
 const fpsEl = document.createElement('div'); fpsEl.id = 'fps'; document.body.appendChild(fpsEl);
-let fpsN = 0, fpsT = 0, fpsLow = 0, pr = Math.min(devicePixelRatio || 1, 2);
+let fpsN = 0, fpsT = 0, fpsLow = 0, pr = Math.min(devicePixelRatio || 1, isTouch ? 1.5 : 2);
 function fpsTick(dtMs) {
   fpsN++; fpsT += dtMs;
   if (fpsT < 1000) return;
@@ -4654,13 +4701,39 @@ function fpsTick(dtMs) {
     if (++fpsLow >= 2) {
       fpsLow = 0;
       // 그림자부터 낮추고, 그래도 느리면 해상도를 조금만 (너무 낮추면 화질이 깨져 보여서 최저 1.25배)
-      const prMin = Math.min(1.25, devicePixelRatio || 1);
+      // 그림자 1024 → 그림자 끔 → 해상도 1배까지
+      const prMin = Math.min(1, devicePixelRatio || 1);
       if (sun.shadow.mapSize.x > 1024) { sun.shadow.mapSize.set(1024, 1024); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } renderer.shadowMap.type = THREE.PCFShadowMap; }
+      else if (sun.castShadow) { sun.castShadow = false; renderer.shadowMap.enabled = false; scene.traverse((o) => { if (o.material) o.material.needsUpdate = true; }); }
       else if (pr > prMin) { pr = Math.max(prMin, pr - 0.25); renderer.setPixelRatio(pr); resize(); }
     }
   } else fpsLow = 0;
 }
 
+// ── 관전: 죽어서 탈락했거나(쇼다운·녹아웃), 듀오·트리오 부활 대기 중이거나, 로비에서 「👀 관전」으로 들어오면 ──
+let specOnly = false, specId = null;
+const specCands = (meS) => {
+  const L = state.players.filter((p) => !p.out && !p.dead && p.b !== 'pbox' && p.b !== 'safe' && p.id !== myId && views[p.id]);
+  return meS && meS.team != null ? L.sort((a, b) => (b.team === meS.team) - (a.team === meS.team)) : L;   // 우리 팀 먼저
+};
+function specTarget(meS) {
+  const on = specOnly || (meS && (meS.out || (meS.dead && state.sq)));
+  if (!on || !state.players) return null;
+  const L = specCands(meS); if (!L.length) return null;
+  let t = L.find((p) => p.id === specId);
+  if (!t) { t = L[0]; specId = t.id; }
+  return t;
+}
+function specMove(d) { const meS = state.players.find((p) => p.id === myId), L = specCands(meS); if (!L.length) return; const i = L.findIndex((p) => p.id === specId); specId = L[((i < 0 ? 0 : i) + d + L.length) % L.length].id; }
+function updateSpecBar(meS, t) {
+  const el = $('specBar'), show = !!t && state.phase !== 'end';
+  el.style.display = show ? 'flex' : 'none';
+  if (!show) return;
+  const txt = `👀 ${specOnly ? '관전 중' : '관전'} · ${t.name}${BR[t.b] ? ' (' + BR[t.b].name + ')' : ''}`;
+  if (el.dataset.t !== txt) { el.dataset.t = txt; $('specName').textContent = txt; }
+}
+$('specPrev').onclick = () => specMove(-1);
+$('specNext').onclick = () => specMove(1);
 // ── 메인 루프 ────────────────────────────────────
 const camTarget = new THREE.Vector3(40, 0, 30);
 let last = performance.now();
@@ -4684,7 +4757,8 @@ function frame(nowMs) {
     // 카메라 (브롤스타즈처럼 비스듬히 위에서) — 조종 중이면 꼭두각시를 따라감
     const meS = state.players.find((p) => p.id === myId);
     let mp = meS && meS.ctrl && views[meS.ctrl] ? views[meS.ctrl].model.root.position : myPos();
-    if (meS && meS.out) { const al = state.players.find((p) => !p.out && !p.dead && views[p.id]); if (al) mp = views[al.id].model.root.position; }
+    const sp = specTarget(meS); if (sp && views[sp.id]) mp = views[sp.id].model.root.position;
+    updateSpecBar(meS, sp);
     updateWorld(now);
     if (mp) camTarget.lerp(mp, Math.min(1, dt * 6));
     const far = camera.aspect < 1 ? 1.75 : 1;

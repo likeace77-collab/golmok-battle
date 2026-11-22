@@ -1920,6 +1920,9 @@ function step(room) {
   stepGD(room, now);
   if (room.ball && room.phase === 'play') stepBall(room);
 
+  // 렉 줄이기: 시뮬레이션은 30Hz 그대로, 화면 상태는 20Hz로만 보냄 (fx는 쌓였다가 같이 감)
+  room.sendN = (room.sendN || 0) + 1;
+  if (room.sendN % 3 === 1 && room.phase !== 'queue') return;
   const r1 = (v) => Math.round(v);
   io.to(room.id).emit('state', {
     ts: Date.now(),          // 클라이언트 보간용 서버 시각
@@ -1936,10 +1939,10 @@ function step(room) {
     bullets: room.bullets.map((b) => [b.id, r1(b.x), r1(b.y), +b.a.toFixed(2), b.kind, b.owner]),
     broken: room.map.walls.reduce((a, w, i) => (w.broken && a.push(i), a), []),
     blocks: room.map.walls.reduce((a, w, i) => (w.temp && !w.broken && a.push([i, r1(w.x), r1(w.y), w.w, w.h, w.stack, w.base]), a), []),
-    players: [...room.players.values()].map((p) => ({
+    players: [...room.players.values()].map((p) => slimP({
       id: p.id, name: p.name, b: p.B.id, color: p.color, bot: p.isBot, team: p.team,
       x: r1(p.x), y: r1(p.y), hp: r1(p.hp), mhp: p.home || p.form || p.cubeHp ? mhp(p) : undefined, cb: p.cubes || undefined, dead: p.dead, out: p.out, rank: p.rank, respawn: Math.ceil(p.respawnT),
-      ammo: p.ammo + p.reloadT / p.B.attack.reload, stun: p.stunT > 0, fz: p.frozenT > 0,
+      ammo: +(p.ammo + p.reloadT / p.B.attack.reload).toFixed(2), stun: p.stunT > 0, fz: p.frozenT > 0,
       gCd: +p.gCd.toFixed(2), sup: +p.sup.toFixed(3), f: +p.facing.toFixed(2),
       k: p.kills, d: p.deaths, say: p.speech ? p.speech.text : null,
       ctl: p.ctrlBy, ctrl: p.ctrlId, ctrlT: +(p.ctrlT || 0).toFixed(1), ac: +p.acT.toFixed(1),
@@ -1949,13 +1952,19 @@ function step(room) {
       bl: p.blindT > 0 ? +p.blindT.toFixed(1) : undefined, ro: p.B.roll ? +(p.roll || 0).toFixed(2) : undefined, fly: p.flyT > 0 || undefined, gd: p.gd ? 1 : undefined, dance: p.danceT > 0 || undefined, dup: p.dmgUp > 0 ? +p.dmgUp.toFixed(2) : undefined, bst: p.boostT > 0 || undefined, muk: p.mukT > 0 || undefined, au: p.aura != null && hasSP(p, 'aura') ? +p.aura.toFixed(2) : undefined,
     })),
     bm: room.bigmacs.length ? room.bigmacs.map((m) => [m.id, r1(m.x), r1(m.y)]) : undefined,
-    mice: room.mice.map((m) => ({ id: m.id, x: r1(m.x), y: r1(m.y), a: +m.ang.toFixed(2), c: m.color, hp: m.hp / m.maxHp })),
+    mice: room.mice.map((m) => ({ id: m.id, x: r1(m.x), y: r1(m.y), a: +m.ang.toFixed(2), c: m.color, hp: +(m.hp / m.maxHp).toFixed(2) })),
     fx: room.fx,
   });
   room.fx = [];
 }
 
 setInterval(() => { for (const room of rooms.values()) step(room); }, 1000 / TICK);
+// 보낼 때 0·false·null·빈 배열은 빼서 크기 줄임 (클라가 숫자 필드는 0으로 다시 채움)
+const P_KEEP = new Set(['id', 'name', 'b', 'team', 'x', 'y', 'hp', 'dead', 'out', 'color']);
+function slimP(o) {
+  for (const k in o) { const v = o[k]; if (P_KEEP.has(k)) continue; if (v === undefined || v === null || v === false || v === 0 || (Array.isArray(v) && !v.length)) delete o[k]; }
+  return o;
+}
 
 // ── 접속자 목록 (로비에 있는 사람 + 플레이 중인 사람) ──
 const online = new Map();   // socket.id → { name, key, status, mode, brawler }
@@ -2056,6 +2065,19 @@ io.on('connection', (socket) => {
     online.set(socket.id, o); onlineDirty = true;
     socket.emit('onlineCount', online.size);
   });
+  // 관전: 로비에서 게임 중인 사람 방을 구경 (플레이어로는 안 들어감)
+  let specRid = null;
+  socket.on('spectate', ({ sid } = {}, cb) => {
+    const done = typeof cb === 'function' ? cb : () => {};
+    if (room) return done({ ok: false, msg: '게임 중엔 관전할 수 없어요' });
+    const t = online.get(sid), r = t && t.rid && rooms.get(t.rid);
+    if (!r || !r.players.has(sid)) return done({ ok: false, msg: '그 사람은 지금 게임 중이 아니에요' });
+    if (specRid) socket.leave(specRid);
+    specRid = r.id; socket.join(r.id);
+    const oe = online.get(socket.id); if (oe) { oe.status = 'spec'; onlineDirty = true; }
+    done({ ok: true });
+    socket.emit('joined', { id: null, mode: r.mode.id, spec: true, follow: sid });
+  });
   socket.on('online', (cb) => { if (typeof cb === 'function') cb(onlineList(socket.id)); });
   socket.on('profile', (name, cb) => {      // 플레이어 프로필 보기
     if (typeof cb !== 'function') return;
@@ -2130,6 +2152,7 @@ io.on('connection', (socket) => {
   const puppetOr = (p) => (p.ctrlId && room.players.get(p.ctrlId)) || p;   // 조종 중이면 꼭두각시가 행동
   socket.on('join', ({ token, brawler, mode, map, rid: wantRid, loadout } = {}) => {
     if (room) return;
+    if (specRid) { socket.leave(specRid); specRid = null; }
     const oe = online.get(socket.id) || {};
     const pt = oe.cid && parties.get(cidParty.get(oe.cid));
     if (pt && pt.leader !== oe.cid && !(wantRid && wantRid === pt.room)) return socket.emit('partyMsg', '방장이 시작하면 같이 들어가요');
@@ -2226,7 +2249,7 @@ io.on('connection', (socket) => {
       else matchTrophies(room, p, 'loss');
     }
     room.players.delete(socket.id);
-    if (!humans(room).length) rooms.delete(room.id);
+    if (!humans(room).length) { io.to(room.id).emit('specEnd'); rooms.delete(room.id); }
     else if (room.mode.id === 'gem' && room.phase === 'play' && p) addBot(room, p.team) && resetBody(room, [...room.players.values()].pop());
   });
 });

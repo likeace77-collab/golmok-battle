@@ -152,6 +152,11 @@ PC: WASD 이동, Space/클릭 공격, Q·E 가젯 · 폰: 왼쪽 조이스틱 + 
   - `GIST_ID`, `GIST_TOKEN` — 골목대전 서비스에 있는 값 그대로 복사해도 됨 (저장 파일 이름이 `jungbo-brawl.json`이라 안 섞임)
   - 설정 안 하면 `data/db.json`에만 저장 (재시작 시 초기화)
 
+## 렉 / 관전
+- 상태 전송: 30Hz 시뮬, `state`는 20Hz (`room.sendN`). `slimP`가 0·false·null·빈 배열 필드를 빼고, 클라가 `P_NUM` 숫자 필드를 0으로 채움. 클라 보간 `INTERP_DELAY` 100ms.
+- `mergeModel`: 모델 안 같은 부모·같은 재질 메시를 하나로 합침 (M에 직접 들어 있는 조각·배열 조각·숨김·자식 있는 조각은 제외). 새 모델에서 따로 움직일 조각은 반환 객체에 넣어 둘 것.
+- 관전: `spectate {sid}` → 그 방 소켓 룸에만 join (플레이어 아님), `joined {spec, follow}`. 방이 없어지면 `specEnd`. 클라 `specTarget`/`#specBar`.
+
 ## 패치노트
 `patchnotes.js`에 버전별로 적어두면 로비 오른쪽 위 📜 패치노트에 나온다 (새 버전이면 빨간 N).
 
