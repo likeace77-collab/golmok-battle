@@ -3428,11 +3428,13 @@ function autoDist(range, src) {
   const t = autoTarget(range, src);
   return t ? Math.hypot(t.x - src.x, t.y - src.y) / range : 1;
 }
+// 드래그 길이 → 거리 비율: 20px(조준 시작)~110px 사이를 0.15~1로 고르게 (전엔 48px만 넘으면 바로 최대라 조절이 안 됐음)
+const dragDist = (px) => Math.max(0.15, Math.min(1, 0.15 + (px - 20) / 90 * 0.85));
 function aimDist() {
   const me = atkSrc(), v = me && views[me.id]; if (!me || !v) return 1;
   const range = bOf(me).attack.range * (me.b === 'jaeyeol' && me.sp === 'gao' ? 1.15 : 1), A = aims.atk;
   let d;
-  if (A.id !== null) d = A.drag > 20 ? A.drag / 48 : autoDist(range, me);
+  if (A.id !== null) d = A.drag > 20 ? dragDist(A.drag) : autoDist(range, me);
   else if (!isTouch && mouse.on) {
     ray.setFromCamera({ x: mouse.x / W * 2 - 1, y: -(mouse.y / H) * 2 + 1 }, camera);
     d = ray.ray.intersectPlane(ground, hitP) ? Math.hypot(hitP.x - v.model.root.position.x, hitP.z - v.model.root.position.z) / (range * S) : 1;
@@ -3561,7 +3563,7 @@ function aimButton(el, kind, fire) {
     if (d > 20) A.ang = Math.atan2(dy, dx);
     A.cancel = d <= 20 && A.maxDrag > 34;
     aimJoy.classList.toggle('cancel', A.cancel);
-    const k = Math.min(d, 48); aimKnob.style.transform = d ? `translate(${dx / d * k}px,${dy / d * k}px)` : '';
+    const k = Math.min(d, kind === 'atk' && atkSrc() && ['tri', 'lob', 'zig'].includes(bOf(atkSrc()).attack.aim) ? 75 : 48); aimKnob.style.transform = d ? `translate(${dx / d * k}px,${dy / d * k}px)` : '';
   });
   const end = (e) => {
     if (e.pointerId !== A.id) return;
@@ -3572,7 +3574,7 @@ function aimButton(el, kind, fire) {
     const B = bOf(me); if (kind === 'sup' && !B.super) return;
     const range = kind === 'atk' ? B.attack.range : B.super.range;
     const a = ang ?? autoAim(range, me);
-    if (kind === 'atk' && (B.attack.aim === 'tri' || B.attack.aim === 'lob' || B.attack.aim === 'zig')) { const d = A.drag > 20 ? Math.max(0.15, Math.min(1, A.drag / 48)) : Math.max(0.15, Math.min(1, autoDist(range, me))); socket.emit(fire, a == null ? undefined : { a, d }); return; }
+    if (kind === 'atk' && (B.attack.aim === 'tri' || B.attack.aim === 'lob' || B.attack.aim === 'zig')) { const d = A.drag > 20 ? dragDist(A.drag) : Math.max(0.15, Math.min(1, autoDist(range, me))); socket.emit(fire, a == null ? undefined : { a, d }); return; }
     socket.emit(fire, a == null ? undefined : a);
   };
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
