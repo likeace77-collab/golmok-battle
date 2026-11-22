@@ -214,6 +214,7 @@ function damage(room, attacker, target, dmg, now, kind) {
   let left = dmg;
   if (target.shield > 0) { const s = Math.min(target.shield, left); target.shield -= s; left -= s; }
   target.hp -= left;
+  if (attacker && attacker !== target && !target.struct) attacker.dealt = (attacker.dealt || 0) + dmg;   // 결과 화면용 준 피해
   target.lastHit = now; target.fullT = 0;
   room.fx.push({ type: 'dmg', x: target.x, y: target.y - 40, v: dmg, k: kind });
   if (target.hp <= 0) kill(room, attacker, target, kind);
@@ -1310,7 +1311,7 @@ function toQueue(room) {
   let i = 0, slot = 0;
   for (const p of humans(room)) {
     if (room.mode.team) { p.team = i++ % 2; p.color = TEAM_COLORS[p.team]; }
-    p.out = false; p.rank = 0; p.kills = 0; p.deaths = 0; resetBody(room, p, slot++);
+    p.out = false; p.rank = 0; p.kills = 0; p.deaths = 0; p.dealt = 0; resetBody(room, p, slot++);
   }
 }
 
@@ -1333,7 +1334,7 @@ function startRound(room) {
   let slot = Math.floor(Math.random() * 8);
   for (const p of room.players.values()) {
     if (p.struct) continue;
-    p.out = false; p.rank = 0; p.sup = 0; p.gCd = 0; p.kills = 0; p.deaths = 0; p.ajT = 30; p.fear = 0; p.scaredT = 0; p.bounty = mode.bountyStart || 0; p.trophied = false;
+    p.out = false; p.rank = 0; p.sup = 0; p.gCd = 0; p.kills = 0; p.deaths = 0; p.dealt = 0; p.ajT = 30; p.fear = 0; p.scaredT = 0; p.bounty = mode.bountyStart || 0; p.trophied = false;
     resetBody(room, p, slot++);
   }
   room.sdN = [...room.players.values()].filter((q) => !q.struct).length;   // 쇼다운 인원 (등수 → 트로피)
@@ -1382,7 +1383,14 @@ function giveTrophies(p, n, field, show) {
   if (t != null) io.to(p.id).emit('trophy', { total: t, add, bid, bt });
 }
 function endRound(room, result) {
-  room.phase = 'end'; room.phaseT = 6; room.result = result;
+  room.phase = 'end'; room.phaseT = 8; room.result = result;
+  // 결과 화면 (브롤스타즈처럼): 모두의 처치·데스·준 피해 + 스타플레이어
+  const ps = [...room.players.values()].filter((q) => !q.struct);
+  result.stats = ps.map((q) => ({ id: q.id, name: q.name, b: q.B.id, team: q.team, k: q.kills || 0, d: q.deaths || 0, dmg: Math.round(q.dealt || 0), bot: !!q.isBot, rank: q.rank || 0 }));
+  const winners = result.type === 'showdown' || result.type === 'ffa' ? ps.filter((q) => q.rank === 1) : result.winTeam >= 0 ? ps.filter((q) => q.team === result.winTeam) : ps;
+  const score = (q) => (q.kills || 0) * 3 + (q.dealt || 0) / 1500 - (q.deaths || 0) * 1.5;
+  const star = winners.sort((a, b) => score(b) - score(a))[0];
+  result.star = star ? star.id : null;
   for (const p of humans(room)) {
     if (p.userKey) auth.addStat(p.userKey, 'games');
     if (result.type === 'showdown' || result.type === 'ffa') matchTrophies(room, p, null, p.rank || 1);

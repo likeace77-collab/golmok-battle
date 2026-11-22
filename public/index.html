@@ -164,6 +164,27 @@
   #modeHud .gs { display: inline-flex; gap: 10px; align-items: center; background: rgba(0,0,0,.45); padding: 3px 12px; border-radius: 10px; font-size: 20px; }
   #gdBox { position: fixed; inset: 0; z-index: 50; display: none; background: rgba(10,6,30,.92); touch-action: none; }
   #gdBox canvas { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(96vw, 980px); aspect-ratio: 2 / 1; max-height: 88vh; border: 4px solid #000; border-radius: 14px; box-shadow: 0 0 40px #7c5cff; }
+  /* 결과 화면 (브롤스타즈처럼) */
+  #resBox { position: fixed; inset: 0; z-index: 30; display: none; background: linear-gradient(100deg, #1e46c8 0 50%, #be1e1e 50% 100%); font-weight: 900; color: #fff; overflow: auto; touch-action: pan-y; }
+  #resBox.sd { background: linear-gradient(160deg, #281478, #6e1e8c); }
+  #resBox .star, #resBox .star * { text-shadow: none !important; -webkit-text-stroke: 0 !important; paint-order: normal !important; }
+  #resBox .rt { position: absolute; left: 18px; top: 10px; text-align: left; }
+  #resBox .rt b { font-size: 46px; display: block; line-height: 1; }
+  #resBox .rt span { font-size: 22px; color: #ffd84a; }
+  #resBox .sides { display: flex; gap: 2%; justify-content: center; align-items: flex-end; padding: 92px 2% 0; min-height: calc(100% - 90px); box-sizing: border-box; }
+  #resBox .side { flex: 1; display: flex; gap: 8px; justify-content: center; align-items: flex-end; flex-wrap: wrap; }
+  #resBox .pc { width: 150px; max-width: 30%; text-align: center; position: relative; }
+  #resBox .pc img { width: 100%; display: block; filter: drop-shadow(0 6px 4px rgba(0,0,0,.4)); }
+  #resBox .pc.lose img { filter: grayscale(.5) brightness(.7); transform: rotate(-8deg) translateY(10px); }
+  #resBox .pc .card { background: rgba(10,10,40,.75); border: 2px solid #000; border-radius: 8px; padding: 3px 4px; font-size: 12px; }
+  #resBox .pc.me .card { border-color: #ffd84a; box-shadow: 0 0 10px #ffd84a; }
+  #resBox .pc .nm { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #ffd84a; }
+  #resBox .pc .tag { font-size: 11px; color: #9fe8ff; }
+  #resBox .pc .star { position: absolute; left: 50%; top: -6px; transform: translateX(-50%); background: linear-gradient(#ffe36b, #ffb31f); color: #3a2400; border: 2px solid #000; border-radius: 10px; font-size: 12px; padding: 1px 8px; white-space: nowrap; z-index: 2; }
+  #resBox .pc .rk { position: absolute; left: 4px; top: 4px; font-size: 20px; }
+  #resBox .btns { position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: 10px; padding: 10px 16px 14px; }
+  #resBox .btns .btn { font-size: 18px; padding: 10px 22px; }
+  @media (max-height: 520px) { #resBox .pc { width: 112px; } #resBox .rt b { font-size: 34px; } #resBox .sides { padding-top: 64px; } }
   #queueBox { position: fixed; left: 50%; top: 30%; transform: translateX(-50%); z-index: 10; display: none; text-align: center; padding: 14px 22px; min-width: 260px; font-weight: 900; }
   #queueBox .qt { font-size: 22px; } #queueBox .qs { font-size: 14px; opacity: .9; margin: 6px 0 10px; }
   #queueBox .dots i { display: inline-block; width: 22px; height: 22px; margin: 0 3px; border-radius: 50%; border: 2px solid #000; background: rgba(0,0,0,.35); }
@@ -369,6 +390,7 @@
 <div id="modeHud" class="stroke"></div>
 <div id="phaseMsg" class="stroke"></div>
 <div id="gdBox"><canvas id="gdCv" width="960" height="480"></canvas></div>
+<div id="resBox" class="stroke"></div>
 <div id="queueBox" class="panel stroke"><div class="qt">👥 상대 기다리는 중…</div><div class="dots" id="qDots"></div><div class="qs" id="qSub"></div><button class="btn" id="qStart">▶ 바로 시작</button><div style="font-size:11px;opacity:.75;margin-top:6px">빈자리는 봇이 채워요 · 친구는 같은 모드를 고르고 플레이를 누르면 여기로 와요</div></div>
 <div id="feed" class="stroke"></div>
 <div id="dead" class="stroke"></div>
@@ -3047,6 +3069,7 @@ function connect() {
   });
   socket.on('state', (s) => {
     state = s; onSnap(s);
+    updateResult();
     if (gdS && !gdS.result) { const m = s.players.find((q) => q.id === myId); if (m && !m.gd) { gdS.noT = (gdS.noT || 0) + 1; if (gdS.noT > 60) gdClose(); } else gdS.noT = 0; }   // 판이 끝나 지메가 취소되면 닫기
     if (s.map !== curMapId && META.maps[s.map]) { MAP = META.maps[s.map]; buildMap(MAP); }
     else if (s.broken && s.broken.length < brokenSeen.size) buildMap(MAP);      // 새 판: 벽 복구
@@ -3059,6 +3082,7 @@ function connect() {
   socket.on('trophy', (t) => {
     const prevT = t.bid ? btOf(t.bid) : 0;
     trophies = t.total; if (account) { account.trophies = t.total; if (t.bt) account.bt = t.bt; }
+    if (Math.abs(t.add) >= 0) lastTro = { add: t.add, at: performance.now() };   // 결과 화면에 표시
     if (t.bid && BR[t.bid] && tierOf(btOf(t.bid)).name !== tierOf(prevT).name && btOf(t.bid) > prevT) {   // 등급 올라감!
       const tr = tierOf(btOf(t.bid)), tu = $('tierUp');
       tu.innerHTML = `${tr.icon}<br><span style="color:${tr.color}">${tr.name}</span><div style="font-size:18px">${BR[t.bid].name} 등급 업!</div>`;
@@ -3574,6 +3598,44 @@ const gdUp = () => { if (gdS) gdS.hold = false; };
 $('gdBox').addEventListener('pointerdown', gdDown); addEventListener('pointerup', gdUp);
 addEventListener('keydown', (e) => { if (!gdS) return; if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') { gdS.hold = true; gdJump(); } e.preventDefault(); e.stopImmediatePropagation(); }, true);
 addEventListener('keyup', (e) => { if (gdS && (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W')) gdS.hold = false; }, true);
+// ── 결과 화면: 승리/패배 + 트로피, 우리 팀(파랑) vs 상대 팀(빨강), 처치·데스·준 피해, 스타플레이어 ──
+let lastTro = null, resShownFor = null, resClosed = null;
+function showResult(r) {
+  const me = state.players.find((p) => p.id === myId); if (!r.stats || !me) return;
+  const box = $('resBox'), esc = (t) => String(t).replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c]);
+  const solo = r.type === 'showdown' || r.type === 'ffa';
+  const myS = r.stats.find((x) => x.id === myId);
+  let title, col;
+  if (solo) { const rk = myS ? myS.rank : 0; title = rk ? `${rk}등` : '관전'; col = rk === 1 ? '#ffd84a' : '#fff'; }
+  else { const w = r.winTeam === me.team; title = r.winTeam < 0 ? '무승부' : w ? '승리' : '패배'; col = r.winTeam < 0 ? '#fff' : w ? '#ffd84a' : '#ff8a8a'; }
+  const tro = lastTro && performance.now() - lastTro.at < 15000 ? lastTro.add : null;
+  const maxDmg = Math.max(...r.stats.map((x) => x.dmg)), maxK = Math.max(...r.stats.map((x) => x.k));
+  const card = (x, lose) => `<div class="pc${x.id === myId ? ' me' : ''}${lose ? ' lose' : ''}">${x.id === r.star ? '<div class="star">⭐ 스타플레이어</div>' : ''}${solo && x.rank ? `<div class="rk">${['🥇', '🥈', '🥉'][x.rank - 1] || x.rank + '등'}</div>` : ''}
+    <img src="${portrait(x.b)}"><div class="card"><div class="nm">${esc(x.name)}${x.bot ? ' 🤖' : ''}</div>
+    <div>⚔️ ${x.k} &nbsp; 💀 ${x.d}</div><div>💥 ${x.dmg.toLocaleString()}</div>
+    <div class="tag">${x.dmg === maxDmg && maxDmg > 0 ? '최대 피해' : x.k === maxK && maxK > 0 ? '최다 처치' : '&nbsp;'}</div></div></div>`;
+  let sides;
+  if (solo) { const L = r.stats.slice().sort((a, b) => (a.rank || 99) - (b.rank || 99)); sides = `<div class="side">${L.map((x) => card(x, x.rank > 3)).join('')}</div>`; }
+  else {
+    const mine = r.stats.filter((x) => x.team === me.team), opp = r.stats.filter((x) => x.team !== me.team);
+    const myLose = r.winTeam >= 0 && r.winTeam !== me.team, oppLose = r.winTeam >= 0 && r.winTeam === me.team;
+    sides = `<div class="side">${mine.map((x) => card(x, myLose)).join('')}</div><div class="side">${opp.map((x) => card(x, oppLose)).join('')}</div>`;
+  }
+  box.className = 'stroke' + (solo ? ' sd' : '');
+  box.innerHTML = `<div class="rt"><b style="color:${col}">${title}</b>${tro != null ? `<span>🏆 ${tro > 0 ? '+' : ''}${tro}</span>` : ''}</div>
+    <div class="sides">${sides}</div>
+    <div class="btns"><button class="btn" id="resAgain">▶ 다시 플레이</button><button class="btn gray" id="resLobby">로비로</button></div>`;
+  box.style.display = 'block';
+  $('resAgain').onclick = () => { box.style.display = 'none'; resClosed = resShownFor; };
+  $('resLobby').onclick = () => location.reload();
+}
+function updateResult() {
+  const r = state && state.result;
+  if (state && state.phase === 'end' && r && r.stats) {
+    const key = r.stats.map((x) => x.id + x.k + x.d).join() + r.type;
+    if (resShownFor !== key && resClosed !== key) { resShownFor = key; setTimeout(() => { if (resShownFor === key && resClosed !== key) showResult(r); }, 1200); }   // 트로피가 먼저 오게 살짝 늦게
+  } else if (state && (state.phase === 'wait' || state.phase === 'play')) { $('resBox').style.display = 'none'; resShownFor = null; resClosed = null; }
+}
 $('qStart').onclick = () => { if (socket) socket.emit('startNow'); };
 // 가젯 버튼: 위치 고르는 가젯(이수훈 블록)이면 드래그해서 위치 조절 · 아니면 탭
 const gAim = { id: null, slot: 1, drag: 0, ang: null, px: 0, py: 0 };
