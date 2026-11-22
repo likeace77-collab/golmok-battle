@@ -53,7 +53,7 @@ const BRAWLERS = {
       range: 190, half: 1.0, dmg: 1700, ammo: 3, reload: 1.8, cd: 0.6, windup: 0.18, knock: 40,
     },
     gadgets: [
-      { name: '얘들아 덥지 않니?', icon: '❄️', desc: '에어컨을 18도로 틀어 7초 동안 모든 적 브롤러에게 계속 피해를 준다.', dur: 7, tick: 0.5, dmg: 100 },
+      { name: '얘들아 덥지 않니?', icon: '❄️', desc: '에어컨을 18도로 틀어 6초 동안 모든 적 브롤러에게 계속 피해를 준다.', dur: 6, tick: 0.5, dmg: 100 },
       { name: '펜 내려놓고 여기 보자', icon: '✋', desc: '모든 적 브롤러를 1초 동안 기절시킨다.', stun: 1 },
     ],
     gadgetCd: 13,
