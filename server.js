@@ -181,7 +181,7 @@ function isEnemy(room, p, q) {
   return true;
 }
 const enemies = (room, p) => [...room.players.values()].filter((q) => isEnemy(room, p, q));
-const canAct = (p) => !p.dead && !p.out && !p.gd && p.stunT <= 0 && p.frozenT <= 0 && !(p.danceT > 0);
+const canAct = (p) => !p.dead && !p.out && !p.gd && p.stunT <= 0 && p.frozenT <= 0;
 const angDiff = (a, b) => { const d = a - b; return Math.atan2(Math.sin(d), Math.cos(d)); };
 function inCone(p, a, range, half, x, y, rad) {
   const dx = x - p.x, dy = y - p.y, d = Math.hypot(dx, dy);
@@ -237,7 +237,7 @@ function kill(room, attacker, target, kind) {
     } else if (hasSP(attacker, 'takel')) {                                                                    // L을 가져가: 춤 + 티배깅
       const sp = SP(attacker, 'takel');
       attacker.lUp = Math.min(sp.max, (attacker.lUp || 0) + sp.up); attacker.dmgUp = (attacker.tk || 0) * (attacker.B.starPowers[0].up || 0) + attacker.lUp;
-      attacker.danceT = sp.dance; attacker.input = { mx: 0, my: 0 };
+      attacker.danceT = sp.dance;
       room.fx.push({ type: 'takeL', id: attacker.id, x: target.x, y: target.y, dur: sp.dance });
     }
     if (hasSP(attacker, 'aura')) attacker.aura = Math.min(1, (attacker.aura || 0) + SP(attacker, 'aura').perKill);   // 아우라 파밍
@@ -813,13 +813,13 @@ SKILLS.suhun = {
 function startGD(room, a, b, now) {
   const S = a.B.super, id = (room.gdSeq = (room.gdSeq || 0) + 1), seed = Math.floor(Math.random() * 1e9);
   room.gds = room.gds || {};
-  const g = room.gds[id] = { id, a: a.id, b: b.id, seed, t0: now, dur: S.dur, crash: {}, botT: {} };
+  const g = room.gds[id] = { id, a: a.id, b: b.id, seed, t0: now, crash: {}, botT: {} };
   for (const q of [a, b]) {
     q.gd = id; q.input = { mx: 0, my: 0 }; q.dash = null; releaseCtrl(room, q, false);
     if (q.isBot) {                   // 봇: 트로피 따라 잘하는 정도가 다름 (쉬운 봇은 금방 탈락)
       const d = q.home ? 0.3 : botLv(room).d;
-      g.botT[q.id] = 1.5 + Math.random() * (3 + 16 * d);
-    } else io.to(q.id).emit('gdStart', { id, seed, dur: S.dur, opp: (q === a ? b : a).name, caller: a.name, me: q === a ? 'a' : 'b' });
+      g.botT[q.id] = 2 + Math.random() * (4 + 26 * d);     // 무승부 없음: 봇도 결국 탈락
+    } else io.to(q.id).emit('gdStart', { id, seed, opp: (q === a ? b : a).name, caller: a.name, me: q === a ? 'a' : 'b' });
   }
   room.fx.push({ type: 'gdIn', ids: [a.id, b.id], x: a.x, y: a.y, x2: b.x, y2: b.y });
 }
@@ -837,7 +837,7 @@ function stepGD(room, now) {
     if (ca != null && cb != null) { loser = ca <= cb ? A : B; done = true; }
     else if (ca != null && el > ca + 1.5) { loser = A; done = true; }      // 상대는 아직 살아 있음
     else if (cb != null && el > cb + 1.5) { loser = B; done = true; }
-    else if (el > g.dur + 2.5) done = true;                              // 둘 다 끝까지 버팀 → 무승부
+    else if (el > 150) { loser = Math.random() < 0.5 ? A : B; done = true; }   // (안전장치) 2분 반 넘게 아무도 안 죽으면 랜덤 — 코스가 점점 빨라져서 사실상 안 옴
     if (!done) continue;
     delete room.gds[g.id];
     const winner = loser === A ? B : loser === B ? A : null;
@@ -1598,7 +1598,7 @@ function step(room) {
     if (p.invT > 0) p.invT = Math.max(0, p.invT - DT);
     if (p.moaiT > 0) p.moaiT = Math.max(0, p.moaiT - DT);
     if (p.blindT > 0) p.blindT = Math.max(0, p.blindT - DT);
-    if (p.danceT > 0) { p.danceT = Math.max(0, p.danceT - DT); p.input = { mx: 0, my: 0 }; }
+    if (p.danceT > 0) p.danceT = Math.max(0, p.danceT - DT);         // L을 가져가 춤 (춤추면서도 움직이고 공격 가능)
     if (p.flyT > 0) {                                  // 지메 비행기 끝 → 벽 안이면 빈 곳으로 착지
       p.flyT = Math.max(0, p.flyT - DT);
       if (p.flyT <= 0 && hitsWall(room.map, p.x, p.y, B.radius)) { const f = freeSpot(room.map, p.x, p.y, B.radius, 80); p.x = f.x; p.y = f.y; }

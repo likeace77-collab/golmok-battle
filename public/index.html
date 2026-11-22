@@ -3033,7 +3033,7 @@ function connect() {
   });
   socket.on('disconnect', () => addFeed('서버 연결 끊김 — 새로고침 해주세요', 999));
   socket.on('gdStart', (d) => gdOpen(d));
-  socket.on('gdEnd', (d) => { if (!gdS) return; gdS.win = d.win; gdS.result = d.draw ? '무승부! 둘 다 살아남음' : d.win ? '승리! 상대 탈락' : '패배… 탈락'; gdS.msgT = 1.6; });
+  socket.on('gdEnd', (d) => { if (!gdS) return; gdS.win = d.win; gdS.result = d.win ? '승리! 상대 탈락' : '패배… 탈락'; gdS.msgT = 1.6; });
   socket.on('trophy', (t) => {
     const prevT = t.bid ? btOf(t.bid) : 0;
     trophies = t.total; if (account) { account.trophies = t.total; if (t.bt) account.bt = t.bt; }
@@ -3452,27 +3452,35 @@ const press = (id, fn) => $(id).addEventListener('pointerdown', (e) => { e.preve
 // 서버가 같은 시드를 둘에게 줌 → 똑같은 코스. 먼저 가시·블록 옆면에 부딪힌 쪽이 탈락
 let gdS = null;
 function gdRand(seed) { return () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-function gdCourse(seed, dur) {
-  const R = gdRand(seed), speed = 330, L = dur * speed + 300, obs = [];
-  let x = 620;
-  while (x < L - 200) {
-    const k = x / L, r = R();                      // 뒤로 갈수록 장애물이 촘촘해짐
-    if (r < 0.42) { const n = 1 + Math.floor(R() * (k > 0.4 ? 3 : 2)); obs.push({ t: 's', x, w: n * 30 }); x += n * 30; }
-    else if (r < 0.72) { const w = 60 + Math.floor(R() * 100), h = 36 + Math.floor(R() * 36); obs.push({ t: 'b', x, w, h }); if (R() < 0.5 + k * 0.3) obs.push({ t: 's', x: x + w + 70 + Math.floor(R() * 40), w: 30 }); x += w + 110; }
-    else { const h = 58 + Math.floor(R() * 20); obs.push({ t: 'b', x, w: 36, h }); x += 36; }
-    x += 230 + Math.floor(R() * 210 * (1 - k * 0.45));
-  }
-  return { obs, speed, L };
+// 끝없는 코스: 같은 시드 → 같은 순서로 장애물을 이어 붙임 (뒤로 갈수록 촘촘·어려움). 속도도 시간에 따라 빨라짐
+function gdCourse(seed) {
+  const R = gdRand(seed), C = { obs: [], end: 560 };
+  C.more = (upTo) => {
+    while (C.end < upTo) {
+      let x = C.end; const k = Math.min(1, x / 14000), r = R(), sp = Math.min(640, Math.sqrt(380 * 380 + 18 * x)) / 380;   // sp: 그 지점 속도 배율 → 간격도 같이 늘림
+      if (r < 0.38) { const n = 1 + Math.floor(R() * (k > 0.25 ? 3 : 2.4)); C.obs.push({ t: 's', x, w: n * 30 }); x += n * 30; }
+      else if (r < 0.62) { const w = 60 + Math.floor(R() * 90), h = 36 + Math.floor(R() * 40); C.obs.push({ t: 'b', x, w, h }); if (R() < 0.55 + k * 0.35) C.obs.push({ t: 's', x: x + w + Math.round((60 + R() * 40) * sp * sp), w: 30 * (1 + (R() < k ? 1 : 0)) }); x += w + Math.round(120 * sp * sp); }
+      else if (r < 0.8) { const h = 56 + Math.floor(R() * 22); C.obs.push({ t: 'b', x, w: 36, h }); x += 36; }
+      else {                                       // 계단 블록 + 사이 가시
+        const h1 = 40 + Math.floor(R() * 15); C.obs.push({ t: 'b', x, w: 70, h: h1 }); const g2 = Math.round(60 * sp); C.obs.push({ t: 'b', x: x + 70 + g2, w: 70, h: h1 + 34 }); C.obs.push({ t: 's', x: x + 70, w: g2 }); x += 140 + g2;
+      }
+      C.end = x + Math.round((190 + Math.floor(R() * 190 * (1 - k * 0.55))) * sp);
+    }
+  };
+  return C;
 }
+const gdSpeed = (t) => Math.min(640, 380 + 9 * t);                 // 갈수록 빨라짐
+const gdPos = (t) => { const tc = Math.min(t, (640 - 380) / 9); return 380 * tc + 4.5 * tc * tc + 640 * Math.max(0, t - tc); };
 function gdOpen(d) {
-  const C = gdCourse(d.seed, d.dur);
+  const C = gdCourse(d.seed);
   gdS = { ...d, C, t: 0, cy: 0, vy: 0, crashed: false, done: false, hold: false, rot: 0, msg: '', msgT: 0, result: null, parts: [] };
   $('gdBox').style.display = 'block';
   let last = performance.now();
   const loop = (tn) => {
     if (!gdS) return;
     const dt = Math.min(0.05, (tn - last) / 1000); last = tn;
-    gdStep(dt); gdDraw();
+    const n = Math.ceil(dt / 0.008); for (let i = 0; i < n; i++) gdStep(dt / n);   // 빨라져도 가시를 뚫고 지나가지 않게 잘게 나눠 계산
+    gdDraw();
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
@@ -3483,7 +3491,7 @@ function gdStep(dt) {
   if (g.result) { g.msgT -= dt; if (g.msgT <= 0) gdClose(); return; }
   if (g.crashed || g.done) { for (const q of g.parts) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy -= 900 * dt; } return; }
   g.t += dt;
-  const C = g.C, cx = g.t * C.speed, W = 30;
+  const C = g.C, cx = gdPos(g.t), W = 30; C.more(cx + 1400);
   const prevY = g.cy;
   g.vy -= 2600 * dt; g.cy += g.vy * dt;
   // 발 밑 바닥: 땅(0) 또는 블록 윗면
@@ -3498,17 +3506,16 @@ function gdStep(dt) {
   const grounded = g.cy <= floor;
   if (grounded) { g.cy = floor; g.vy = 0; g.rot = Math.round(g.rot / (Math.PI / 2)) * (Math.PI / 2); if (g.hold) gdJump(); }
   else g.rot += dt * 7.5;
-  if (cx >= C.L) { g.done = true; g.msg = '완주! 결과 기다리는 중…'; }
 }
 function gdJump() { const g = gdS; if (!g || g.crashed || g.done || g.result) return; if (g.vy === 0) g.vy = 820; }
 function gdCrash() {
   const g = gdS; g.crashed = true; g.msg = '탈락… 결과 기다리는 중';
-  for (let i = 0; i < 24; i++) g.parts.push({ x: g.t * g.C.speed + 15, y: g.cy + 15, vx: (Math.random() - 0.5) * 500, vy: Math.random() * 500, c: ['#ffb02e', '#3cf0ff', '#ff4fd8'][i % 3] });
+  for (let i = 0; i < 24; i++) g.parts.push({ x: gdPos(g.t) + 15, y: g.cy + 15, vx: (Math.random() - 0.5) * 500, vy: Math.random() * 500, c: ['#ffb02e', '#3cf0ff', '#ff4fd8'][i % 3] });
   if (socket) socket.emit('gdCrash', { t: g.t });
 }
 function gdDraw() {
   const g = gdS, cv = $('gdCv'), x = cv.getContext('2d'), Wd = cv.width, Ht = cv.height, GY = Ht - 110, CX = 200;
-  const cam = g.t * g.C.speed;
+  const cam = gdPos(g.t);
   const bg = x.createLinearGradient(0, 0, 0, Ht); bg.addColorStop(0, '#2a1a9a'); bg.addColorStop(1, '#5a2ad0'); x.fillStyle = bg; x.fillRect(0, 0, Wd, Ht);
   x.fillStyle = 'rgba(255,255,255,.06)'; for (let i = 0; i < 12; i++) { const bx = ((i * 140 - cam * 0.3) % (Wd + 140) + Wd + 140) % (Wd + 140) - 140; x.fillRect(bx, 60 + (i % 3) * 70, 90, 90); }
   x.fillStyle = '#1b1040'; x.fillRect(0, GY, Wd, Ht - GY); x.fillStyle = '#3cf0ff'; x.fillRect(0, GY, Wd, 4);
@@ -3517,8 +3524,6 @@ function gdDraw() {
     if (o.t === 'b') { x.fillStyle = '#120a30'; x.fillRect(sx, GY - o.h, o.w, o.h); x.strokeStyle = '#3cf0ff'; x.lineWidth = 3; x.strokeRect(sx + 1.5, GY - o.h + 1.5, o.w - 3, o.h - 3); }
     else for (let k = 0; k < o.w / 30; k++) { const px = sx + k * 30; x.beginPath(); x.moveTo(px, GY); x.lineTo(px + 15, GY - 30); x.lineTo(px + 30, GY); x.closePath(); x.fillStyle = '#000'; x.fill(); x.strokeStyle = '#fff'; x.lineWidth = 2; x.stroke(); }
   }
-  // 결승선
-  const fx = CX + g.C.L - cam; if (fx < Wd + 20) { x.fillStyle = '#3ce07f'; x.fillRect(fx, GY - 200, 8, 200); }
   // 내 큐브
   if (!g.crashed) {
     x.save(); x.translate(CX + 15, GY - g.cy - 15); x.rotate(g.rot);
@@ -3530,8 +3535,8 @@ function gdDraw() {
   x.fillStyle = 'rgba(0,0,0,.45)'; x.fillRect(0, 0, Wd, 54);
   x.font = '900 24px sans-serif'; x.textAlign = 'center'; x.fillStyle = '#fff';
   x.fillText(`🟪 지메하세요! — ${g.me === 'a' ? '나' : g.caller} vs ${g.me === 'a' ? g.opp : '나'}`, Wd / 2, 26);
-  const pr = Math.min(1, cam / g.C.L); x.fillStyle = 'rgba(255,255,255,.25)'; x.fillRect(Wd / 2 - 200, 36, 400, 10); x.fillStyle = '#3ce07f'; x.fillRect(Wd / 2 - 200, 36, 400 * pr, 10);
-  x.font = '800 15px sans-serif'; x.fillText(`${Math.floor(pr * 100)}%  ·  탭 / 스페이스 = 점프 (꾹 누르면 계속 점프)  ·  먼저 부딪히면 탈락`, Wd / 2, Ht - 18);
+  x.font = '800 15px sans-serif'; x.fillStyle = '#ffd84a'; x.fillText(`⏱ ${g.t.toFixed(1)}초 버팀 · 속도 ${Math.round(gdSpeed(g.t) / 3.8)}%`, Wd / 2, 46); x.fillStyle = '#fff';
+  x.fillText('탭 / 스페이스 = 점프 (꾹 누르면 계속 점프)  ·  한 명이 탈락할 때까지 계속 — 먼저 부딪히면 쓰러짐', Wd / 2, Ht - 18);
   if (g.t < 1.2 && !g.crashed) { x.font = '900 56px sans-serif'; x.fillStyle = '#ffd84a'; x.fillText('시작!', Wd / 2, Ht / 2 - 40); }
   const msg = g.result || g.msg;
   if (msg) { x.font = '900 46px sans-serif'; x.lineWidth = 8; x.strokeStyle = '#000'; x.strokeText(msg, Wd / 2, Ht / 2 - 20); x.fillStyle = g.result ? (g.win ? '#ffd84a' : '#ff6a6a') : '#fff'; x.fillText(msg, Wd / 2, Ht / 2 - 20); }
@@ -3719,9 +3724,9 @@ function animateTeacher(v, p, dt, now) {
       v.ship.position.y = 1.2 + Math.sin(now * 6) * 0.15; v.ship.rotation.z = Math.sin(now * 3) * 0.12; v.ship.userData.fl.scale.y = 0.8 + Math.random() * 0.5;
       if (Math.random() < 0.5) burst(root.position.x - Math.sin(v.facing) * 2, 1.4, root.position.z - Math.cos(v.facing) * 2, 1, ['#ff4fd8', '#3cf0ff', '#ffb02e'], { speed: 1.5, size: 0.3, up: 0.5, life: 0.4, grav: 0 });
     }
-    if (p.dance) {                 // L을 가져가: 이마에 L + 티배깅
-      const tb = Math.abs(Math.sin(now * 9));
-      bodyY -= 0.55 * tb; M.legs[0].rotation.x = -1.1 * tb; M.legs[1].rotation.x = -1.1 * tb;
+    if (p.dance) {                 // L을 가져가: 이마에 L + 티배깅 (움직이는 중엔 위아래로만 들썩)
+      const tb = Math.abs(Math.sin(now * 9)), mv = v.speed > 1;
+      bodyY -= (mv ? 0.25 : 0.55) * tb; if (!mv) { M.legs[0].rotation.x = -1.1 * tb; M.legs[1].rotation.x = -1.1 * tb; }
       armX = [0.3 + Math.sin(now * 9) * 0.6, -2.6]; armZ = [armZ[0] - 0.4 * Math.sin(now * 9), -0.55]; spin = Math.sin(now * 4.5) * 0.5;
     }
   }
