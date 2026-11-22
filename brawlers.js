@@ -9,11 +9,11 @@ const BRAWLERS = {
     role: '탱커',
     title: '아~ 이놈의 아이들',
     desc: '컴퓨터실의 지배자. 뚱뚱한 몸으로 내려찍어 주변 아이들을 한꺼번에 혼낸다.',
-    radius: 28, speed: 250, maxHp: 6000,
+    radius: 28, speed: 255, maxHp: 6800,
     attack: {
       name: '아~ 이놈의 아이들', aim: 'self',
       desc: '점프해서 내려찍어 주변 적 모두에게 피해를 준다. (범위 고정)',
-      range: 150, dmg: 1000, ammo: 3, reload: 1.5, cd: 0.45,
+      range: 165, dmg: 1200, ammo: 3, reload: 1.4, cd: 0.45,
     },
     gadgets: [
       { name: 'AI야? 시키지도 않은 걸 하네', icon: '⚡', desc: '주변 적을 1초 동안 기절시키고 피해를 준다.', range: 260, stun: 1, dmg: 300 },
@@ -23,7 +23,7 @@ const BRAWLERS = {
     super: {
       name: '이놈의 아이들', aim: 'dir',
       desc: '부채꼴로 고함을 질러 큰 피해를 주고 적을 밀쳐낸다.',
-      need: 3500, range: 340, half: 0.66, dmg: 2200, knock: 150,
+      need: 3500, range: 360, half: 0.66, dmg: 2600, knock: 150,
     },
     starPowers: [
       { id: 'reflect', name: '너의 성찰을 불찰로 바꿔줄게', icon: '📕',
