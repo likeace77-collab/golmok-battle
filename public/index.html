@@ -162,6 +162,10 @@
   /* 게임 HUD */
   #modeHud { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 6; font-weight: 900; font-size: 16px; text-align: center; white-space: nowrap; pointer-events: none; }
   #modeHud .gs { display: inline-flex; gap: 10px; align-items: center; background: rgba(0,0,0,.45); padding: 3px 12px; border-radius: 10px; font-size: 20px; }
+  #queueBox { position: fixed; left: 50%; top: 30%; transform: translateX(-50%); z-index: 10; display: none; text-align: center; padding: 14px 22px; min-width: 260px; font-weight: 900; }
+  #queueBox .qt { font-size: 22px; } #queueBox .qs { font-size: 14px; opacity: .9; margin: 6px 0 10px; }
+  #queueBox .dots i { display: inline-block; width: 22px; height: 22px; margin: 0 3px; border-radius: 50%; border: 2px solid #000; background: rgba(0,0,0,.35); }
+  #queueBox .dots i.on { background: #3ce07f; box-shadow: 0 0 8px #3ce07f; }
   #phaseMsg { position: fixed; left: 50%; top: 38%; transform: translate(-50%, -50%); z-index: 9; font-size: 54px; font-weight: 900; text-align: center; display: none; pointer-events: none; }
   #phaseMsg small { display: block; font-size: 18px; margin-top: 6px; }
   .lbl .rfb { width: 74px; height: 7px; margin: 2px auto 0; background: #000; border-radius: 4px; padding: 1px; display: none; }
@@ -362,6 +366,7 @@
 <div id="board" class="stroke"></div>
 <div id="modeHud" class="stroke"></div>
 <div id="phaseMsg" class="stroke"></div>
+<div id="queueBox" class="panel stroke"><div class="qt">👥 상대 기다리는 중…</div><div class="dots" id="qDots"></div><div class="qs" id="qSub"></div><button class="btn" id="qStart">▶ 바로 시작</button><div style="font-size:11px;opacity:.75;margin-top:6px">빈자리는 봇이 채워요 · 친구는 같은 모드를 고르고 플레이를 누르면 여기로 와요</div></div>
 <div id="feed" class="stroke"></div>
 <div id="dead" class="stroke"></div>
 <div id="frost"></div><div id="lookFlash"></div><div id="ctrlFlash"></div><div id="ctrlMsg" class="stroke"></div>
@@ -2978,7 +2983,7 @@ function connect() {
     $('lobby').style.display = 'none'; $('lobbyBg').style.display = 'none';
     $('top').style.display = 'flex';
     $('ctrl').style.display = 'block';
-    const rounds = META.modes[d.mode] && (META.modes[d.mode].rounds || META.modes[d.mode].training);   // 라운드 모드는 봇 자동, 훈련장은 로봇 고정
+    const rounds = d.mode !== 'ffa' && META.modes[d.mode] && (META.modes[d.mode].rounds || META.modes[d.mode].training);   // 라운드 모드는 봇 자동, 훈련장은 로봇 고정 (난투는 봇 직접 추가)
     $('botBtn').style.display = $('clearBtn').style.display = rounds ? 'none' : '';
   });
   socket.on('state', (s) => {
@@ -3376,6 +3381,7 @@ renderer.domElement.addEventListener('contextmenu', (e) => { e.preventDefault();
 addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 renderer.domElement.addEventListener('mousedown', (e) => { if (socket && mode === 'game' && !isTouch && e.button === 0) doAttack(); });
 const press = (id, fn) => $(id).addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); socket && fn(); });
+$('qStart').onclick = () => { if (socket) socket.emit('startNow'); };
 press('bG1', () => socket.emit('gadget', 1));
 press('bG2', () => socket.emit('gadget', 2));
 // 조준 조이스틱 (기본공격 · 궁극기 공통)
@@ -3833,20 +3839,34 @@ function modeHud(me) {
   } else if (M.id === 'showdown') {
     const alive = state.players.filter((p) => !p.out).length;
     h.innerHTML = `<div class="gs">💀 남은 인원 ${alive}</div>` + (me && me.out && state.phase === 'play' ? `<div style="color:#ff9a9a">${me.rank ? me.rank + '등으로 탈락! ' : ''}관전 중...</div>` : '');
+  } else if (M.id === 'ffa') {
+    const tl = Math.max(0, M.timeLimit - (state.playT || 0));
+    const ord = state.players.filter((p) => BR[p.b]).sort((a, b) => b.k - a.k || a.d - b.d), myR = ord.findIndex((p) => p.id === myId) + 1;
+    h.innerHTML = `<div class="gs"><span>⚔️ ${MAP ? MAP.name : ''}</span><span style="font-size:16px">⏱ ${fmtT(tl)}</span><span style="color:#ffd84a">${myR ? myR + '등' : ''}</span></div><div style="font-size:12px;opacity:.8">킬 많은 순 · 같으면 데스 적은 순</div>`;
   } else if (M.training) {
     h.innerHTML = `<div class="gs" style="font-size:15px">🎯 훈련장 · 로봇은 3초 안 맞으면 다시 풀피</div>`;
   } else {
     h.innerHTML = `<div class="gs" style="font-size:15px">${M.icon} ${M.name} · ${MAP ? MAP.name : ''} · ${state.fixed ? '맵 고정' : '맵 변경 ' + fmtT(state.mapT || 0)}</div>`;
   }
   // 대기 카운트다운 / 결과
+  const qb = $('queueBox');
+  if (state.phase === 'queue') {
+    qb.style.display = 'block'; pm.style.display = 'none';
+    const cap = state.cap || 6, n = state.nHum || 1;
+    $('qDots').innerHTML = [...Array(cap)].map((_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('');
+    const d = state.botD || 0, dn = d < 0.2 ? '아주 쉬움' : d < 0.4 ? '쉬움' : d < 0.65 ? '보통' : d < 0.85 ? '어려움' : '최강';
+    $('qSub').innerHTML = `${M.icon} ${M.name} · 사람 ${n}/${cap} · ${state.queueT || 0}초 뒤 자동 시작<br><span style="font-size:12px;opacity:.85">🤖 봇 난이도: ${dn} (트로피가 높을수록 어려워져요)</span>`;
+    return;
+  }
+  qb.style.display = 'none';
   if (state.phase === 'wait') { pm.style.display = 'block'; pm.innerHTML = `${Math.ceil(state.phaseT)}<small>${MAP ? MAP.name : ''} · ${M.name}</small>`; pm.style.color = '#ffd84a'; }
   else if (state.phase === 'end' && state.result && me) {
     const r = state.result; let txt = '', col = '#fff', win = false;
     if (r.winTeam !== undefined) { win = r.winTeam === me.team; txt = r.winTeam < 0 ? '무승부' : win ? '승리!' : '패배...'; col = r.winTeam < 0 ? '#fff' : win ? '#ffd84a' : '#ff7a7a'; }
-    else { const mine = r.ranks.find((x) => x.id === myId); const rk = mine ? mine.rank : 0; win = rk === 1; txt = rk ? `${rk}등!` : '관전'; col = rk === 1 ? '#ffd84a' : rk && rk <= 3 ? '#7cffb0' : '#fff'; }
+    else { const mine = r.ranks.find((x) => x.id === myId); const rk = mine ? mine.rank : 0; win = rk === 1; txt = rk ? `${rk}등!` + (r.type === 'ffa' && mine ? `<small>${mine.k}킬 ${mine.d}데스</small>` : '') : '관전'; col = rk === 1 ? '#ffd84a' : rk && rk <= 3 ? '#7cffb0' : '#fff'; }
     pm.style.display = 'block'; pm.style.color = col;
     const sc = r.score && me.team != null ? `${r.score[me.team]}${r.mode === 'heist' ? '%' : ''} : ${r.score[1 - me.team]}${r.mode === 'heist' ? '%' : ''} · ` : '';
-    pm.innerHTML = `${txt}<small>${sc}${r.type === 'showdown' && r.winnerName ? '🏆 ' + r.winnerName + ' 우승 · ' : ''}${win && account ? '트로피 +8 · ' : ''}${Math.ceil(state.phaseT)}초 뒤 다음 판</small>`;
+    pm.innerHTML = `${txt}<small>${sc}${(r.type === 'showdown' || r.type === 'ffa') && r.winnerName ? '🏆 ' + r.winnerName + ' 우승 · ' : ''}${Math.ceil(state.phaseT)}초 뒤 ${state.cap ? '매칭 대기실로' : '다음 판'}</small>`;
     const key = JSON.stringify(r) + state.map;
     lastResultKey = key;
   } else pm.style.display = 'none';

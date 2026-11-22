@@ -159,7 +159,7 @@ function setForm(p, f) {
 }
 // 정수호 구르기: 속도 게이지에 따라 이동 속도 배율 (가속 중엔 최고 속도 × boostMul)
 const rollMul = (p) => { const R = p.B.roll; return p.boostT > 0 ? R.maxMul * p.B.attack.boostMul : R.minMul + (R.maxMul - R.minMul) * (p.roll || 0); };
-const speedOf = (p) => (p.B.roll ? rollMul(p) : 1) * (p.spdUpT > 0 ? p.spdUpMul || 1.5 : 1) * (p.slowT > 0 ? p.slowMul || 0.6 : 1) * p.B.speed * SPEED_MUL * (has(p, 'speed') ? 1.1 : 1) * (jjang(p) ? SP(p, 'jjang').speedMul : 1) * (p.flailT > 0 ? 1.5 : 1) * (p.sprintT > 0 ? p.B.gadgets[0].mul : 1) * (p.isBot && !p.home ? BOT.speed : 1);
+const speedOf = (p) => (p.B.roll ? rollMul(p) : 1) * (p.spdUpT > 0 ? p.spdUpMul || 1.5 : 1) * (p.slowT > 0 ? p.slowMul || 0.6 : 1) * p.B.speed * SPEED_MUL * (has(p, 'speed') ? 1.1 : 1) * (jjang(p) ? SP(p, 'jjang').speedMul : 1) * (p.flailT > 0 ? 1.5 : 1) * (p.sprintT > 0 ? p.B.gadgets[0].mul : 1) * (p.isBot && !p.home && p._room ? botLv(p._room).speed : 1);
 function resetBody(room, p, slot) {
   if (BRAWLERS[p.B.id] && BRAWLERS[p.B.id].forms) { p.form = 'sport'; p.B = formB(p.B.id, 'sport'); }   // 부활하면 운동폼
   const s = spawnPoint(room, p, slot);
@@ -1028,9 +1028,19 @@ function moveToward(p, x, y, jitter = 0.3, now = 0) {
   p.input = { mx: c - s * j, my: s + c * j };
   return d;
 }
-const BOT = { aimErr: 0.22, react: 0.35, atkRate: 0.78, skillRate: 0.65, speed: 0.95 };   // 패치: 게임이 너무 쉽다고 해서 조금 강하게
+// 봇 난이도: 방에 있는 사람들의 (지금 쓰는 브롤러) 트로피 평균에 따라 — 트로피 적으면 거의 안 싸우는 봇, 1500 이상이면 최강
+const BOT_EASY = { aimErr: 0.8, react: 1.2, atkRate: 0.2, skillRate: 0.1, speed: 0.78, chase: 0.45 };
+const BOT_HARD = { aimErr: 0.08, react: 0.18, atkRate: 1.0, skillRate: 1.0, speed: 1.0, chase: 1 };
+function botLv(room) {
+  if (room.botLv && room.botLvT > Date.now()) return room.botLv;
+  const hs = humans(room); const avg = hs.length ? hs.reduce((a, p) => a + btOf(p), 0) / hs.length : 0;
+  const d = Math.max(0, Math.min(1, avg / 1500)), L = {};
+  for (const k in BOT_EASY) L[k] = BOT_EASY[k] + (BOT_HARD[k] - BOT_EASY[k]) * d;
+  L.d = d; room.botLv = L; room.botLvT = Date.now() + 3000;
+  return L;
+}
 function botThink(room, p, now) {
-  const b = p.bot, B = p.B, mode = room.mode;
+  const b = p.bot, B = p.B, mode = room.mode, BOT = botLv(room);
   if (p.ctrlBy) return;
   if (p.ctrlId) {                               // 조종 중: 꼭두각시를 적에게 보내서 공격
     const t = room.players.get(p.ctrlId); if (!t) return;
@@ -1064,6 +1074,8 @@ function botThink(room, p, now) {
   if (b.seeT > 0) b.seeT -= DT;
   const fight = () => {
     const dx = target.x - p.x, dy = target.y - p.y;
+    if (b.lazyT == null || b.lazyT < now) { b.lazyT = now + 2 + Math.random() * 2; b.lazy = Math.random() > BOT.chase; }   // 쉬운 봇: 가끔 싸움을 포기하고 딴짓
+    if (b.lazy && !(mode.id === 'heist' && target.struct)) { if (b.wanderT <= 0) { const a = Math.random() * Math.PI * 2; b.wanderX = Math.cos(a); b.wanderY = Math.sin(a); b.wanderT = 1.5; } p.input = { mx: b.wanderX || 0, my: b.wanderY || 0 }; return; }
     moveToward(p, target.x, target.y, 0.4, now);
     if (b.seeT > 0) return;                       // 아직 반응 전
     if (best < B.attack.range + 10 && Math.random() < (B.attack.aim === 'dir' ? 0.1 : 0.18) * BOT.atkRate) doAttack(room, p, Math.atan2(dy, dx) + aimErr(), now, best / B.attack.range);
@@ -1163,6 +1175,20 @@ function fillBots(room) {
   }
 }
 
+// ── 매칭 대기 (브롤스타즈처럼: 사람 모이길 기다리거나 「바로 시작」 → 빈자리는 봇) ──
+const QUEUE_T = 60;                                  // 이 시간 지나면 자동 시작
+const roomCap = (room) => (room.mode.team ? room.mode.teamSize * 2 : room.mode.size || 6);
+function toQueue(room) {
+  for (const p of [...room.players.values()]) if (p.isBot || p.struct) room.players.delete(p.id);
+  room.mice = []; room.shards = []; room.gems = []; room.pending = []; room.bullets = []; room.bigmacs = []; room.ball = null; room.safe = null;
+  room.phase = 'queue'; room.queueT = QUEUE_T; room.startReq = false; room.result = null; room.playT = 0;
+  let i = 0, slot = 0;
+  for (const p of humans(room)) {
+    if (room.mode.team) { p.team = i++ % 2; p.color = TEAM_COLORS[p.team]; }
+    p.out = false; p.rank = 0; p.kills = 0; p.deaths = 0; resetBody(room, p, slot++);
+  }
+}
+
 // ── 라운드 진행 ────────────────────────────────────
 function startRound(room) {
   const mode = room.mode;
@@ -1217,7 +1243,9 @@ function showdownTro(bt, rank, n) {                                   // 우리 
 function matchTrophies(room, p, outcome, rank) {                      // 한 판 결과 → 트로피 (한 판에 한 번만)
   if (!trophyRoom(room) || !p || p.isBot || !p.userKey || p.trophied) return;
   p.trophied = true;
-  const bt = btOf(p), n = room.mode.id === 'showdown' ? showdownTro(bt, rank, room.sdN || 6) : outcome === 'win' ? winTro(bt) : outcome === 'loss' ? -lossTro(bt) : 0;
+  const bt = btOf(p), rk = room.mode.id === 'showdown' || room.mode.id === 'ffa';
+  if (room.mode.id === 'ffa' && (room.sdN || 0) < 2) { p.trophied = false; return; }        // 혼자면 트로피 없음
+  const n = rk ? showdownTro(bt, rank, room.sdN || 6) : outcome === 'win' ? winTro(bt) : outcome === 'loss' ? -lossTro(bt) : 0;
   giveTrophies(p, n, outcome === 'win' || rank === 1 ? 'wins' : null, true);
 }
 function giveTrophies(p, n, field, show) {
@@ -1232,7 +1260,7 @@ function endRound(room, result) {
   room.phase = 'end'; room.phaseT = 6; room.result = result;
   for (const p of humans(room)) {
     if (p.userKey) auth.addStat(p.userKey, 'games');
-    if (result.type === 'showdown') matchTrophies(room, p, null, p.rank || 1);
+    if (result.type === 'showdown' || result.type === 'ffa') matchTrophies(room, p, null, p.rank || 1);
     else matchTrophies(room, p, result.winTeam === -1 ? 'draw' : result.winTeam === p.team ? 'win' : 'loss');
   }
   room.fx.push({ type: 'end', result });
@@ -1254,9 +1282,24 @@ function roundLogic(room, now) {
     if (room.mapT <= 0) changeMap(room);
     return;
   }
+  if (room.phase === 'queue') {                       // 매칭 대기: 다 차거나, 누가 「바로 시작」 누르거나, 시간 다 되면 시작
+    room.queueT -= DT;
+    if (humans(room).length >= roomCap(room) || room.startReq || room.queueT <= 0) startRound(room);
+    return;
+  }
   if (room.phase === 'wait') { room.phaseT -= DT; if (room.phaseT <= 0) room.phase = 'play'; return; }
-  if (room.phase === 'end') { room.phaseT -= DT; if (room.phaseT <= 0) startRound(room); return; }
+  if (room.phase === 'end') { room.phaseT -= DT; if (room.phaseT <= 0) { if (room.qBase) toQueue(room); else startRound(room); } return; }
   room.playT += DT;
+  if (mode.id === 'ffa') {         // 난투: 1분 30초 → 킬 많은 순, 같으면 데스 적은 순으로 등수
+    if (room.playT >= mode.timeLimit) {
+      const ps = [...room.players.values()].filter((q) => !q.struct).sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
+      ps.forEach((q, i) => { q.rank = i + 1; });
+      room.sdN = ps.length;
+      const w = ps[0];
+      endRound(room, { type: 'ffa', winner: w ? w.id : null, winnerName: w ? w.name : null, ranks: ps.map((q) => ({ id: q.id, name: q.name, rank: q.rank, k: q.kills, d: q.deaths })) });
+    }
+    return;
+  }
   if (mode.id === 'showdown') {
     // 독가스: 시작 후 일정 시간 뒤부터 가운데로 좁혀옴
     const g = mode.gas, m = room.map;
@@ -1438,7 +1481,7 @@ function step(room) {
       if (p.respawnT <= 0) resetBody(room, p);
       continue;
     }
-    if (!playing) { p.input = p.isBot ? { mx: 0, my: 0 } : p.input; continue; }   // 대기/결과 중엔 정지
+    if (!playing && room.phase !== 'queue') { p.input = p.isBot ? { mx: 0, my: 0 } : p.input; continue; }   // 대기/결과 중엔 정지 (매칭 대기 중엔 돌아다닐 수 있음)
     if (p.home) {      // 훈련 로봇: 가만히. 3초 안 맞으면 제자리 + 풀피
       p.input = { mx: 0, my: 0 };
       if (now - p.lastHit > 3 && !p.dash) { p.hp = p.B.maxHp; p.x = p.home.x; p.y = p.home.y; }
@@ -1620,7 +1663,7 @@ function step(room) {
   const r1 = (v) => Math.round(v);
   io.to(room.id).emit('state', {
     ts: Date.now(),          // 클라이언트 보간용 서버 시각
-    mode: room.mode.id, map: room.map.id, phase: room.phase, phaseT: +room.phaseT.toFixed(1),
+    mode: room.mode.id, map: room.map.id, phase: room.phase, phaseT: +room.phaseT.toFixed(1), queueT: room.phase === 'queue' ? Math.ceil(room.queueT) : undefined, cap: room.qBase ? roomCap(room) : undefined, nHum: room.phase === 'queue' ? humans(room).length : undefined, botD: room.phase === 'queue' || room.botLv ? +botLv(room).d.toFixed(2) : undefined,
     mapT: Math.ceil(room.mapT), playT: Math.floor(room.playT), result: room.result, fixed: !!room.fixedMap,
     safe: room.safe ? { x1: r1(room.safe.x1), y1: r1(room.safe.y1), x2: r1(room.safe.x2), y2: r1(room.safe.y2) } : null,
     gems: room.gems.map((g) => [g.id, r1(g.x), r1(g.y)]),
@@ -1661,6 +1704,7 @@ let onlineDirty = false;
 const parties = new Map();        // pid → { id, code, leader, members, mode, map, slots }
 const cidParty = new Map();       // cid → pid
 let partySeq = 0;
+let qSeq = 0;
 const SHARED = (m) => m === 'ffa' || m === 'double';      // 난투·더블 가젯은 모두 같은 방 (초대 없이도)
 const slotCount = (m) => { const M = MODES[m]; return M.team ? M.teamSize * 2 : M.size || 0; };
 const partyMax = (pt) => Math.max(6, slotCount(pt.mode));
@@ -1838,9 +1882,15 @@ io.on('connection', (socket) => {
       rid = wantRid; modeId = rooms.get(rid).mode.id; fixed = rooms.get(rid).fixedMap;
     } else if (MODES[modeId].training) rid = 'training:' + socket.id;                          // 훈련장은 혼자만
     else if (SHARED(modeId)) rid = modeId;                                                     // 난투·더블 가젯: 맵 상관없이 다 같은 방
-    else { fixed = MODES[modeId].maps.includes(map) ? map : null; rid = ridFor(modeId, fixed); }
+    else {                                                                                     // 매칭: 같은 모드(·맵)에서 사람 기다리는 방이 있으면 거기로, 없으면 새 대기방
+      fixed = MODES[modeId].maps.includes(map) ? map : null;
+      const base = ridFor(modeId, fixed);
+      const qr = [...rooms.values()].find((r) => r.qBase === base && r.phase === 'queue' && humans(r).length < roomCap(r));
+      rid = qr ? qr.id : base + '#q' + (++qSeq).toString(36);
+    }
     const fresh = !rooms.has(rid);
     room = getRoom(modeId, rid, fixed);
+    if (fresh && rid.includes('#q')) { room.qBase = ridFor(modeId, fixed); room.phase = 'queue'; room.queueT = QUEUE_T; }
     if (pt && rid.includes('#') && fresh) {            // 친선 전투 설정: 자리별 팀 / AI 수
       const M = room.mode, half = M.team ? M.teamSize : 0, teamOf = {}, ai = [0, 0];
       pt.slots.forEach((v, i) => { const t = M.team ? (i < half ? 0 : 1) : 0; if (v === 'ai') ai[t]++; else if (v !== 'off') teamOf[v] = t; });
@@ -1858,7 +1908,8 @@ io.on('connection', (socket) => {
       if (bot) removeBot(room, bot);
     }
     room.players.set(socket.id, p);
-    if (fresh && room.mode.rounds) startRound(room);
+    if (room.phase === 'queue') resetBody(room, p, humans(room).length - 1);
+    else if (fresh && room.mode.rounds) startRound(room);
     else if (!room.mode.respawn && room.phase !== 'wait') { p.out = true; p.dead = true; p.rank = 0; }   // 쇼다운·녹아웃 진행 중이면 관전
     else resetBody(room, p, Math.floor(Math.random() * 8));
     socket.join(room.id);
@@ -1868,6 +1919,7 @@ io.on('connection', (socket) => {
       if (c === oe.cid) continue; const sid = sidOfCid(c); if (sid) io.to(sid).emit('partyGo', { rid });
     }
   });
+  socket.on('startNow', () => { if (room && room.phase === 'queue') room.startReq = true; });   // 매칭 대기 → 바로 시작 (빈자리는 봇)
   socket.on('input', (inp) => {
     const p = me();
     if (!p || !inp || p.ctrlBy) return;
@@ -1883,13 +1935,13 @@ io.on('connection', (socket) => {
   socket.on('gadget', (n) => { const p = me(); if (p && !p.ctrlBy) doGadget(room, puppetOr(p), n === 2 ? 2 : 1, Date.now() / 1000); });
   socket.on('super', (ang) => { const p = me(); if (p && !p.ctrlBy) doSuper(room, puppetOr(p), num(ang), Date.now() / 1000); });
   socket.on('addBot', () => {
-    if (!room || room.mode.rounds || room.mode.training) return;         // 라운드 모드는 자동으로 채움
+    if (!room || (room.mode.rounds && room.mode.id !== 'ffa') || room.mode.training) return;         // 라운드 모드는 자동으로 채움 (난투는 직접 추가)
     const bots = [...room.players.values()].filter((p) => p.isBot).length;
     if (room.players.size >= G.maxPlayers || bots >= G.maxBots) return;
     resetBody(room, addBot(room));
   });
   socket.on('clearBots', () => {
-    if (!room || room.mode.rounds || room.mode.training) return;
+    if (!room || (room.mode.rounds && room.mode.id !== 'ffa') || room.mode.training) return;
     for (const p of [...room.players.values()]) if (p.isBot) removeBot(room, p);
   });
   socket.on('disconnect', () => {
@@ -1901,7 +1953,7 @@ io.on('connection', (socket) => {
     if (online.delete(socket.id)) onlineDirty = true;
     if (!room) return;
     const p = me(); if (p) { releaseCtrl(room, p, false); if (p.gems) dropGems(room, p); }
-    if (p && room.phase === 'play' && !room.mode.rotate && !p.out) {    // 게임 도중 나가면 패배 처리 (쇼다운은 지금 등수)
+    if (p && room.phase === 'play' && !room.mode.rotate && room.mode.id !== 'ffa' && !p.out) {    // 게임 도중 나가면 패배 처리 (쇼다운은 지금 등수)
       if (room.mode.id === 'showdown') matchTrophies(room, p, null, [...room.players.values()].filter((q) => !q.out).length);
       else matchTrophies(room, p, 'loss');
     }
