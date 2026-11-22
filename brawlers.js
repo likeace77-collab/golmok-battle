@@ -233,10 +233,10 @@ const BRAWLERS = {
     role: '힐러',
     title: '사랑을 했다~',
     desc: '키 작고 비쩍 마른 학생. 팔을 쭉 늘려 상대 머리채를 잡고 안 놔준다. 노래 한 곡이면 우리 팀은 살아나고 상대는 귀가 아프다.',
-    radius: 22, speed: 268, maxHp: 5200,
+    radius: 22, speed: 268, maxHp: 5000,
     attack: {
       name: '머리뜯기', aim: 'line',
-      desc: '팔을 쭉 늘려 손을 날린다. 손이 상대 머리를 잡으면 연결되어 0.15초마다 120 피해, 준 피해의 40%만큼 회복. 한 번에 2명까지 잡을 수 있다. 너무 멀어지거나 사이에 벽이 생기면 끊긴다.',
+      desc: '팔을 쭉 늘려 손을 날린다. 손이 상대 머리를 잡으면 연결되어 0.15초마다 120 피해, 준 피해의 40%만큼 회복. 특성: 우리 팀도 잡을 수 있어서, 잡고 있는 팀원은 0.15초마다 75 회복. 한 번에 2명까지 잡을 수 있다. 너무 멀어지거나 사이에 벽이 생기면 끊긴다.',
       range: 440, width: 24, handSpeed: 1500, breakRange: 600, tick: 0.15, dmg: 120, heal: 75, maxT: 5, lifesteal: 0.4, maxGrab: 2, ammo: 3, reload: 1.5, cd: 0.45,
     },
     gadgets: [
@@ -250,7 +250,7 @@ const BRAWLERS = {
       need: 2600, range: 340, dur: 3, every: 0.75, heal: 700, dmg: 500,
     },
     starPowers: [
-      { id: 'geoji', name: '거지들', icon: '🪙', desc: '머리뜯기로 우리 팀을 잡을 수 있다. 잡고 있는 팀원은 0.15초마다 75 회복.' },
+      { id: 'geoji', name: '거지들', icon: '🪙', desc: '머리뜯기로 상대와 팀원을 동시에 잡고 있으면 주는 피해와 회복이 2배가 된다.' },
       { id: 'economy', name: '경제야 살아라', icon: '📈', desc: '사랑을 했다에 맞은 상대는 1초 동안 기절한다.', stun: 1 },
     ],
     lines: {
