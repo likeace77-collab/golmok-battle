@@ -3190,9 +3190,13 @@ function renderParty() {
   el.style.display = 'block';
   const esc = (t) => String(t).replace(/</g, '&lt;');
   const M = META.modes[party.mode], lead = amLeader();
-  const head = `<div class="ph">🤝 친선 전투 <span class="code" id="ptCode">코드 ${party.code}</span><button id="ptInv" class="g">초대</button><button id="ptLeave">나가기</button></div>`;
+  const fr = party.kind === 'friendly';
+  const head = `<div class="ph">${fr ? '🤝 친선 전투' : '👥 팀 (일반 전투)'} <span class="code" id="ptCode">코드 ${party.code}</span><button id="ptInv" class="g">초대</button><button id="ptLeave">나가기</button></div>`;
   let body;
-  if (party.shared) {
+  const kindBtn = lead ? `<button id="ptKind" class="g" style="margin-top:5px">${fr ? '👥 일반 전투로 (트로피 O)' : '🤝 친선 전투로 (트로피 X · AI 자리 설정)'}</button>` : '';
+  if (!fr && !party.shared) {         // 일반 전투 팀: 같이 매칭 → 같은 팀, 트로피 오름
+    body = `<div class="chips">${party.members.map((m) => `<span class="chip${m.on ? '' : ' off'}">${m.leader ? '👑 ' : ''}${esc(m.name)}${m.cid === CID ? ' (나)' : ''}</span>`).join('')}</div><div class="hint">${M.icon} ${M.name} · 방장이 ▶ 플레이를 누르면 같이 매칭해서 같은 팀으로 들어가요 (트로피 오름)</div>${kindBtn}`;
+  } else if (party.shared) {
     body = `<div class="chips">${party.members.map((m) => `<span class="chip${m.on ? '' : ' off'}">${m.leader ? '👑 ' : ''}${esc(m.name)}${m.cid === CID ? ' (나)' : ''}</span>`).join('')}</div><div class="hint">${M.icon} ${M.name}은 모두 같은 방 · 방장이 시작하면 같이 들어가요</div>`;
   } else {
     const card = (v, i) => v.k === 'p'
@@ -3203,10 +3207,11 @@ function renderParty() {
     for (let i = 0; i < party.slots.length; i += ch) rows.push(party.slots.slice(i, i + ch));
     const rowH = (r, ri) => `<div class="srow${party.team ? ' t' + ri : ''}${party.sq ? ' sqg' : ''}">${party.team ? `<b class="tl">${ri ? '🔴' : '🔵'}</b>` : party.sq ? `<b class="tl">${ri + 1}팀</b>` : ''}${r.map((v, j) => card(v, ri * ch + j)).join('')}</div>`;
     body = (party.sq ? `<div class="sqwrap">${rows.map(rowH).join('')}</div>` : rows.map(rowH).join('')) +
-      `<div class="hint">${party.team ? '자리를 눌러 팀 이동' : party.sq ? '같은 팀 자리에 앉으면 같은 팀 · 자리를 눌러 이동' : '쇼다운: 다 같이 적'}${lead ? ' · AI 자리는 끄고 켤 수 있어요' : ''}</div>`;
+      `<div class="hint">${party.team ? '자리를 눌러 팀 이동' : party.sq ? '같은 팀 자리에 앉으면 같은 팀 · 자리를 눌러 이동' : '쇼다운: 다 같이 적'}${lead ? ' · AI 자리는 끄고 켤 수 있어요' : ''} · 친선 전투는 트로피 없음</div>${kindBtn}`;
   }
   el.innerHTML = head + body;
   $('ptLeave').onclick = () => socket.emit('partyLeave');
+  if ($('ptKind')) $('ptKind').onclick = () => socket.emit('partyKind', { kind: fr ? 'team' : 'friendly' });
   $('ptInv').onclick = () => openOnline();
   $('ptCode').onclick = () => { try { navigator.clipboard.writeText(party.code); toast('팀 코드 복사: ' + party.code); } catch (e) {} };
   for (const c of el.querySelectorAll('.slot')) c.onclick = () => slotMenu(+c.dataset.i);
@@ -3231,6 +3236,7 @@ function slotMenu(i) {
 // 친선 전투 버튼: 팀 만들기 / 코드로 참가
 function openFriendly() {
   if (!socket) return;
+  if (party && party.kind !== 'friendly' && amLeader()) { socket.emit('partyKind', { kind: 'friendly' }); return; }   // 일반 팀 → 친선 전투로
   if (party) { modal(`<h3 class="stroke">🤝 친선 전투</h3><div style="font-size:15px">팀 코드 <b style="font-size:24px;letter-spacing:3px;color:#ffd84a">${party.code}</b><br>친구에게 코드를 알려주거나 초대하세요</div>`); return; }
   modal(`<h3 class="stroke">🤝 친선 전투</h3><div style="font-size:14px;margin-bottom:8px">친구랑 팀을 짜서 처음부터 같이 시작해요</div>
     <button class="btn" id="fCreate" style="width:100%">팀 만들기</button>
@@ -3266,7 +3272,7 @@ let inviteT = null;
 function showInvite(d) {
   const el = $('invite');
   if (mode === 'game' || joined) return;         // 게임 중엔 초대 안 받음
-  el.innerHTML = `📨 <b>${String(d.from).replace(/</g, '&lt;')}</b>님이 친선 전투에 초대했어요!<div style="font-size:14px;margin-top:3px">${d.modeName} · ${d.mapName}</div><div class="acts"><button id="invYes" style="background:#3ce07f">수락</button><button id="invNo" style="background:#ddd">거절</button></div>`;
+  el.innerHTML = `📨 <b>${String(d.from).replace(/</g, '&lt;')}</b>님이 ${d.kind === 'friendly' ? '친선 전투' : '같이 게임하자고'}에 초대했어요!<div style="font-size:14px;margin-top:3px">${d.modeName} · ${d.mapName}</div><div class="acts"><button id="invYes" style="background:#3ce07f">수락</button><button id="invNo" style="background:#ddd">거절</button></div>`;
   el.style.display = 'block';
   clearTimeout(inviteT); inviteT = setTimeout(() => { el.style.display = 'none'; }, 20000);
   $('invYes').onclick = () => { el.style.display = 'none'; socket.emit('inviteAccept', { pid: d.pid }); };
@@ -4225,6 +4231,13 @@ function makeLabel(mine) {
   ui.appendChild(d);
   return { d, bub: d.querySelector('.bub'), nm: d.querySelector('.nm'), hp: d.querySelector('.hpb i'), rfb: d.querySelector('.rfb'), rf: d.querySelector('.rfb i'), fb: d.querySelector('.fb'), fear: d.querySelector('.fb i'), am: [...d.querySelectorAll('.am b')], lastSay: null };
 }
+// 발밑 링 색: 듀오·트리오는 나·우리 팀 파랑 / 다른 팀 빨강 (서버 팀 색 대신)
+function ringColor(v, p, meR) {
+  if (!state.sq || p.team == null || p.b === 'pbox') return;
+  const col = meR && meR.team === p.team ? '#3a8cff' : '#ff4a4a';
+  if (v.ringCol === col) return; v.ringCol = col;
+  for (const c of v.model.root.children) if (c.geometry && c.geometry.type === 'RingGeometry') c.material.color.set(col);
+}
 function getView(p) {
   let v = views[p.id];
   if (!v) {
@@ -4743,7 +4756,8 @@ function frame(nowMs) {
   const now = nowMs / 1000;
   if (MAP) {
     const alive = new Set();
-    for (const p of state.players) { const v = getView(p); alive.add(p.id); animateTeacher(v, p, dt, now); updateLabel(v, p); }
+    const meR = state.players.find((q) => q.id === myId);
+    for (const p of state.players) { const v = getView(p); alive.add(p.id); ringColor(v, p, meR); animateTeacher(v, p, dt, now); updateLabel(v, p); }
     for (const id in views) if (!alive.has(id)) { scene.remove(views[id].model.root); views[id].label.d.remove(); delete views[id]; }
     const malive = new Set();
     for (const m of state.mice) {
