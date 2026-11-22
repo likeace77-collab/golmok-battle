@@ -760,6 +760,7 @@ for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(1, 
 const bulletMeshes = {};
 const stapleGeo = (() => { const g = new THREE.Group(); return g; })();
 const stapleMat = std('#d8dce4', { metalness: 0.9, roughness: 0.25, emissive: '#555', emissiveIntensity: 0.4 });
+const puffGeo = new THREE.SphereGeometry(1, 10, 8);
 function makeBreath() {   // 과학쌤 용가리 숨결: 커지며 날아가는 불꽃 구름
   const g = new THREE.Group();
   const cols = ['#ff5a1a', '#ff9a2a', '#ffd23a', '#ff3a3a', '#ffb02a'];
@@ -3658,7 +3659,24 @@ function handleFx(list) {
     else if (f.type === 'sasinga') {   // 조종 끝 → 2초 기절
       const v = views[f.tid]; if (v) popup('😵 싸가지!', v.model.root.position, 5.6, '#ff8af0', 30, 1.4);
     }
-    else if (f.type === 'breath') { burst(x, 2.6, z, 6, ['#ff5a1a', '#ffd23a'], { speed: 4, size: 0.25, up: 2, life: 0.35 }); }
+    else if (f.type === 'breath') {          // 용가리 숨결: 부채꼴로 퍼져 나가는 연기 구름 (엠즈 느낌)
+      const R0 = (f.r || 430) * S, H = f.h || 0.42, D = f.d || 0.5;
+      burst(x, 2.6, z, 5, ['#ff5a1a', '#ffd23a'], { speed: 4, size: 0.25, up: 2, life: 0.3 });
+      for (let i = 0; i < 16; i++) {
+        const ang = f.a + (Math.random() * 2 - 1) * H * 0.95, far = 0.55 + Math.random() * 0.45, lag = Math.random() * 0.12;
+        const col = ['#e9e4df', '#cfc8c0', '#bdb3aa', '#ffb27a', '#ff8a4a'][i % 5];
+        const m = new THREE.Mesh(puffGeo, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.0, depthWrite: false }));
+        const ca = Math.cos(ang), sa = Math.sin(ang), y0 = 1.6 + Math.random() * 1.4, s0 = 0.5 + Math.random() * 0.4;
+        m.position.set(x, y0, z);
+        addFx(D + 0.55, m, (k, e) => {
+          const t = Math.max(0, e.t - lag), u = Math.min(1, t / D), fade = Math.max(0, (e.t - D) / 0.55);
+          const dist = R0 * far * (1 - (1 - u) * (1 - u));
+          m.position.set(x + ca * dist, y0 + u * 0.6, z + sa * dist);
+          m.scale.setScalar(s0 * (0.6 + u * 1.6 + fade * 0.4));
+          m.material.opacity = t <= 0 ? 0 : 0.62 * (1 - fade);
+        });
+      }
+    }
     else if (f.type === 'sleepy') { popup('💤 무의식!', { x, z }, 4.6, '#c9b4ff', 22, 1.1); burst(x, 3.5, z, 14, ['#e8d8ff', '#c9b4ff', '#fff6a8'], { speed: 3, size: 0.12, up: 3, life: 0.9, grav: 2 }); }
     else if (f.type === 'friction') { popup('🧱 마찰력 체험!', { x, z }, 4.6, '#ffb02e', 22, 1.1); burst(x, 0.4, z, 18, ['#b9a58a', '#8a7a64'], { speed: 6, size: 0.22, up: 2, life: 0.6 }); }
     else if (f.type === 'boa') { const SONG = [['🪐 중력 Gravity', '#b48cff'], ['🔥 불타오르네', '#ff7a2a'], ['🌀 자전은 찐이야', '#5ad8ff']][f.k] || ['🎤', '#fff']; popup('🎤 ' + SONG[0], { x, z }, 5.2, SONG[1], 26, 1.6); burst(x, 3.5, z, 16, ['#ff4ab0', '#ffd84a', '#5ad8ff'], { speed: 5, size: 0.18, up: 6, life: 0.9 }); }
@@ -5083,7 +5101,7 @@ function frame(nowMs) {
         const a = aimAngle('sup'); if (a != null) aimInd.rotation.y = -a;
       }
       // 기본공격 조준: 범위 고정(정보쌤) → 주변 원 / 방향 공격(현실쌤) → 부채꼴
-      const dirAtk = B.attack.aim === 'dir' || B.attack.aim === 'tri' || B.attack.aim === 'line' || B.attack.aim === 'lob' || B.attack.aim === 'zig';
+      const dirAtk = B.attack.aim === 'dir' || B.attack.aim === 'tri' || B.attack.aim === 'line' || B.attack.aim === 'lob' || B.attack.aim === 'zig' || B.attack.aim === 'cone';
       atkInd.visible = !src.dead && !!v && (aims.atk.id !== null ? !aims.atk.cancel : (dirAtk && !isTouch));
       if (atkInd.visible) {
         if (!atkMesh) {
@@ -5102,6 +5120,7 @@ function frame(nowMs) {
             const end = aimShape({ type: 'circle', r: 1.0, color: '#ffffff', edge: '#ffffff' }); end.position.set(r, 0.02, 0); atkMesh.add(end);
             atkMesh.userData.land = end; atkMesh.userData.r = r; atkMesh.userData.zig = shape;      // 드래그 길이 = 6·7이 만나는 거리
           }
+          else if (B.attack.aim === 'cone') shape = aimShape({ type: 'sector', r, half: B.attack.half, color: '#ff8a3a', edge: '#ffd21a' });   // 과학쌤 숨결: 부채꼴
           else if (B.attack.aim === 'line') shape = aimShape({ type: 'rect', r, w: B.attack.width * S, color: '#ffb800', edge: '#ffd21a' });
           else if (B.attack.aim === 'lob') {        // 편도준 물감: 떨어질 자리만 크게
             shape = aimShape({ type: 'rect', r, w: 0.25, color: '#ffffff', edge: '#ffffff' });

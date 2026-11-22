@@ -820,10 +820,24 @@ SKILLS.science = {
   attack(room, p, a, now) {
     const A = p.B.attack, fast = hasSP(p, 'notime') ? SP(p, 'notime').breathMul : 1;
     p.ammo -= 1; p.atkCd = A.cd; p.facing = a;
-    shoot(room, p, a, { speed: A.speed * fast, range: A.range, dmg: A.dmg, kind: 'breath', hitR: A.width, pierce: true, onPierce: (q) => {
-      if (hasSP(p, 'sleep') && !q.struct && Math.random() < SP(p, 'sleep').chance) { q.confT = SP(p, 'sleep').dur; room.fx.push({ type: 'sleepy', id: q.id, x: q.x, y: q.y }); }
-    } });
-    room.fx.push({ type: 'breath', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3) });
+    // 엠즈처럼: 부채꼴 연기 구름이 앞으로 퍼져 나가며 닿는 상대마다 1번 (벽 뒤는 안 맞음)
+    const ox = p.x, oy = p.y, dur = A.range / (A.speed * fast), hit = new Set(), N = 8;
+    for (let i = 1; i <= N; i++) later(room, dur * i / N, () => {
+      if (!room.players.has(p.id) || p.dead) return;
+      const r = A.range * i / N;
+      for (const q of enemies(room, p)) {
+        if (hit.has(q.id)) continue;
+        const d = Math.hypot(q.x - ox, q.y - oy);
+        if (d > r + q.B.radius) continue;
+        if (d > q.B.radius && Math.abs(angDiff(Math.atan2(q.y - oy, q.x - ox), a)) > A.half + Math.atan2(q.B.radius, d)) continue;
+        if (!clearPath(room.map, ox, oy, q.x, q.y)) continue;
+        hit.add(q.id);
+        damage(room, p, q, A.dmg, now, 'breath'); chargeSuper(p, A.dmg);
+        room.fx.push({ type: 'bulletHit', x: q.x, y: q.y, k: 'breath' });
+        if (!q.dead && hasSP(p, 'sleep') && !q.struct && Math.random() < SP(p, 'sleep').chance) { q.confT = SP(p, 'sleep').dur; room.fx.push({ type: 'sleepy', id: q.id, x: q.x, y: q.y }); }
+      }
+    });
+    room.fx.push({ type: 'breath', id: p.id, x: ox, y: oy, a: +a.toFixed(3), r: A.range, h: A.half, d: +dur.toFixed(2) });
     if (Math.random() < 0.3) say(p, 'atk', 1);
   },
   gadget(room, p, idx, now) {
