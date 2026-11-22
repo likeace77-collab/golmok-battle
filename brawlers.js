@@ -354,7 +354,7 @@ const BRAWLERS = {
     id: 'suhun',
     name: '이수훈',
     rarity: 'mythic',
-    role: '데미지딜러',
+    role: '저격수',
     title: '지메 하실?',
     desc: '숱 많은 곱슬 바가지 머리에 늘 무표정한 학생. 지오메트리 대쉬(지메)를 엄청 좋아해서, 궁극기로 상대를 지메 세계로 끌고 가 한 판 붙는다.',
     radius: 24, speed: 262, maxHp: 4600,

@@ -815,13 +815,16 @@ function placeBlocks(room, p, g, aim) {
   const a = Number.isFinite(aim.a) ? aim.a : p.facing, dd = Number.isFinite(aim.d) ? Math.max(0.15, Math.min(1, aim.d)) : 0.35;
   const tx = p.x + Math.cos(a) * g.range * dd, ty = p.y + Math.sin(a) * g.range * dd, S2 = g.size;
   const horiz = Math.abs(Math.cos(a)) < Math.abs(Math.sin(a));        // 조준 방향에 가로로 (격자라 가로/세로 중 하나)
-  const gx0 = Math.round(tx / S2 - (horiz ? 0.5 : 0)), gy0 = Math.round(ty / S2 - (horiz ? 0 : 0.5));
+  // 맵 끝(외벽)에 걸려도 무시하고 안쪽으로 붙여서 설치
+  const maxGX = Math.floor(room.map.w / S2) - (horiz ? g.n - 1 : 0), maxGY = Math.floor(room.map.h / S2) - (horiz ? 0 : g.n - 1);
+  const gx0 = Math.max(1, Math.min(maxGX, Math.round(tx / S2 - (horiz ? 0.5 : 0)))), gy0 = Math.max(1, Math.min(maxGY, Math.round(ty / S2 - (horiz ? 0 : 0.5))));
+  const outer = (w) => w.x <= 1 || w.y <= 1 || w.x + w.w >= room.map.w - 1 || w.y + w.h >= room.map.h - 1;   // 맵 가장자리 외벽
   for (let i = 0; i < g.n; i++) {
     const gx = gx0 + (horiz ? i : 0), gy = gy0 + (horiz ? 0 : i), x = gx * S2 - S2 / 2, y = gy * S2 - S2 / 2;
     if (x < 0 || y < 0 || x + S2 > room.map.w || y + S2 > room.map.h) continue;
     const ex = room.map.walls.find((w) => w.temp && !w.broken && w.gx === gx && w.gy === gy);
     if (ex) { ex.stack = Math.min(g.max, ex.stack + 1); continue; }
-    const onWall = room.map.walls.some((w) => !w.temp && !w.broken && x + S2 / 2 > w.x && x + S2 / 2 < w.x + w.w && y + S2 / 2 > w.y && y + S2 / 2 < w.y + w.h);
+    const onWall = room.map.walls.some((w) => !w.temp && !w.broken && !outer(w) && x + S2 / 2 > w.x && x + S2 / 2 < w.x + w.w && y + S2 / 2 > w.y && y + S2 / 2 < w.y + w.h);
     room.map.walls.push({ x, y, w: S2, h: S2, temp: true, gx, gy, stack: onWall ? 3 : 1, owner: p.id, base: onWall ? 1 : 0 });
   }
   const mine = room.map.walls.filter((w) => w.temp && !w.broken && w.owner === p.id);      // 너무 많으면 오래된 것부터 사라짐
