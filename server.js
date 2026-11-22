@@ -1124,11 +1124,11 @@ SKILLS.dojun = {
 };
 
 SKILLS.yedam = {
-  // 머리뜯기: 손을 날려 맞은 상대(스파1이면 팀원도)와 연결 → 0.3초마다 피해/회복
+  // 머리뜯기: 손을 날려 맞은 상대 / 팀원(특성)과 연결 → 0.15초마다 피해 / 회복
   attack(room, p, a, now) {
     const A = p.B.attack;
     p.ammo -= 1; p.atkCd = A.cd; p.facing = a;
-    shoot(room, p, a, { speed: A.handSpeed, range: A.range, dmg: 0, kind: 'hand', ally: hasSP(p, 'geoji'), onHit: (q, t) => {
+    shoot(room, p, a, { speed: A.handSpeed, range: A.range, dmg: 0, kind: 'hand', ally: true, onHit: (q, t) => {
       if (p.dead || !room.players.has(p.id)) return;
       const ally = !isEnemy(room, p, q);
       // 최대 2명까지 동시에 잡음 (같은 사람이면 다시 잡기, 3번째면 제일 오래된 손 놓기)
@@ -1136,7 +1136,6 @@ SKILLS.yedam = {
       if (p.teths.length >= A.maxGrab) p.teths.shift();
       p.teths.push({ tid: q.id, ally, acc: A.tick, t: 0 });       // 잡자마자 첫 틱
       room.fx.push({ type: 'grab', id: p.id, tid: q.id, x: q.x, y: q.y, ally });
-      if (ally && (!p.geojiT || t - p.geojiT > 6)) { p.geojiT = t; room.fx.push({ type: 'geoji', id: p.id, x: p.x, y: p.y }); }
     } });
     if (Math.random() < 0.3) say(p, 'atk', 1);
   },
@@ -1807,6 +1806,10 @@ function step(room) {
     }
     if (p.teths && p.teths.length) {              // 머리뜯기 연결 유지 (최대 2명)
       const A = B.attack;
+      // 스파1 거지들: 적과 팀원을 동시에 잡고 있으면 피해·회복 2배
+      const both = hasSP(p, 'geoji') && p.teths.some((T) => T.ally) && p.teths.some((T) => !T.ally);
+      const mul = both ? 2 : 1;
+      if (both && (!p.geojiT || now - p.geojiT > 6)) { p.geojiT = now; room.fx.push({ type: 'geoji', id: p.id, x: p.x, y: p.y }); }
       p.teths = p.teths.filter((T) => {
         const q = room.players.get(T.tid);
         T.t += DT; T.acc += DT;
@@ -1816,10 +1819,10 @@ function step(room) {
         if (!ok) { room.fx.push({ type: 'tethBreak', id: p.id, x: q ? q.x : p.x, y: q ? q.y : p.y }); return false; }
         while (T.acc >= A.tick) {
           T.acc -= A.tick;
-          if (T.ally) chargeSuper(p, heal(room, p, q, A.heal) * 0.5);
+          if (T.ally) chargeSuper(p, heal(room, p, q, A.heal * mul) * 0.5);
           else {
             const before = q.hp + (q.shield || 0);
-            damage(room, p, q, A.dmg, now, 'hair'); chargeSuper(p, A.dmg);
+            damage(room, p, q, A.dmg * mul, now, 'hair'); chargeSuper(p, A.dmg * mul);
             const dealt = Math.max(0, before - Math.max(0, q.hp) - (q.shield || 0));
             if (dealt > 0) { const h = Math.min(dealt * A.lifesteal, mhp(p) - p.hp); if (h > 0) p.hp += h; }   // 준 피해의 30% 회복
             if (q.dead) return false;

@@ -2052,8 +2052,10 @@ function mergeModel(M) {
     if (v && v.isObject3D) keep.add(v);
     else if (Array.isArray(v)) for (const x of v) if (x && x.isObject3D) keep.add(x);
   }
+  // 얼굴(머리 아래)은 합치지 않음 — 일부 폰에서 이진호·편도준 얼굴이 줄무늬로 깨져 보였음
+  const skip = new Set(); for (const h of [M.head, M.moai]) if (h && h.isObject3D) h.traverse((o) => skip.add(o));
   const groups = [];
-  M.model.traverse((o) => { if (o.isGroup || o.type === 'Object3D' || o.isMesh) groups.push(o); });
+  M.model.traverse((o) => { if ((o.isGroup || o.type === 'Object3D' || o.isMesh) && !skip.has(o)) groups.push(o); });
   for (const g of groups) {
     const buckets = new Map();
     for (const c of g.children) {
