@@ -359,9 +359,9 @@ const BRAWLERS = {
     desc: '숱 많은 곱슬 바가지 머리에 늘 무표정한 학생. 지오메트리 대쉬(지메)를 엄청 좋아해서, 궁극기로 상대를 지메 세계로 끌고 가 한 판 붙는다.',
     radius: 24, speed: 262, maxHp: 4600,
     attack: {
-      name: '67!!', aim: 'dir',
-      desc: '숫자 6과 7 탄환 두 개가 지그재그로 서로 엇갈리며(마름모 3개 모양) 앞으로 날아간다. 하나 맞추면 600, 둘 다 맞추면 1400 피해.',
-      range: 640, dmg: 600, bothDmg: 1400, amp: 50, lobes: 3, bulletSpeed: 820, ammo: 3, reload: 1.5, cd: 0.4,
+      name: '67!!', aim: 'zig',
+      desc: '숫자 6과 7 탄환 두 개가 지그재그로 서로 엇갈리며(마름모 3개 모양) 날아가 조준한 지점에서 만난다 (나니처럼 거리 조절). 하나 맞추면 600, 둘 다 맞추면 1400 피해.',
+      range: 640, dmg: 600, bothDmg: 1400, amp: 42, lobes: 3, bulletSpeed: 820, ammo: 3, reload: 1.5, cd: 0.4,
     },
     super: {
       name: '지메하세요', aim: 'line',

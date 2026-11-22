@@ -667,7 +667,7 @@ SKILLS.jinho = {
 
 // ── 투사체 (서현우 스테이플러 심) ──
 function shoot(room, p, a, o) {
-  room.bullets.push({ id: ++room.bulletSeq, owner: p.id, x: p.x + Math.cos(a) * 20, y: p.y + Math.sin(a) * 20, a, v: o.speed, left: o.range, dmg: o.dmg, kind: o.kind, onHit: o.onHit, ally: o.ally, home: o.home, turn: o.turn, wave: o.wave, amp: o.amp, lobes: o.lobes || 1, range: o.range, ox: p.x, oy: p.y, t: 0 });
+  room.bullets.push({ id: ++room.bulletSeq, owner: p.id, x: p.x + Math.cos(a) * 20, y: p.y + Math.sin(a) * 20, a, v: o.speed, left: o.range, dmg: o.dmg, kind: o.kind, onHit: o.onHit, ally: o.ally, home: o.home, turn: o.turn, wave: o.wave, amp: o.amp, lobes: o.lobes || 1, range: o.range, hitR: o.hitR, ox: p.x, oy: p.y, t: 0 });
 }
 const allies = (room, p) => [...room.players.values()].filter((q) => q.id !== p.id && !q.dead && !q.out && !q.struct && room.mode.team && teamOf(room, q) === teamOf(room, p));
 function heal(room, p, q, v) {
@@ -692,7 +692,7 @@ function stepBullets(room, now) {
         b.x = b.ox + Math.cos(b.a) * b.t - Math.sin(b.a) * w; b.y = b.oy + Math.sin(b.a) * b.t + Math.cos(b.a) * w;
       } else { b.x += Math.cos(b.a) * st; b.y += Math.sin(b.a) * st; }
       if (hitsWall(room.map, b.x, b.y, 3)) { b.left = 0; room.fx.push({ type: 'bulletWall', x: b.x, y: b.y }); break; }   // 벽에 막힘
-      const q = owner && [...enemies(room, owner), ...(b.ally ? allies(room, owner) : [])].find((q) => Math.hypot(q.x - b.x, q.y - b.y) < q.B.radius + 8);
+      const q = owner && [...enemies(room, owner), ...(b.ally ? allies(room, owner) : [])].find((q) => Math.hypot(q.x - b.x, q.y - b.y) < q.B.radius + (b.hitR || 8));
       if (q && b.onHit) { b.onHit(q, now); b.left = 0; break; }
       if (q) { damage(room, owner, q, b.dmg, now, b.kind); chargeSuper(owner, b.dmg); room.fx.push({ type: 'bulletHit', x: q.x, y: q.y, k: b.kind }); b.left = 0; break; }
     }
@@ -766,12 +766,12 @@ const later = (room, t, fn) => room.pending.push({ t, fn });
 
 // ── 이수훈: 67!! / 지메하세요 / 지메 비행기 / 블록 ──
 SKILLS.suhun = {
-  attack(room, p, a, now) {          // 6과 7 두 발: 겹쳐서 출발 → 좌우로 휘었다가 끝에서 다시 모임
-    const A = p.B.attack;
+  attack(room, p, a, now, dist = 1) {   // 6과 7 두 발: 지그재그로 엇갈리다 조준한 거리에서 만남 (나니처럼 거리 조절)
+    const A = p.B.attack, range = Math.max(120, A.range * dist);
     if (p.flyT > 0) return;
     p.ammo -= 1; p.atkCd = A.cd; p.facing = a;
     const hitBy = new Set();         // 한 번 쏜 6·7 둘 다 같은 상대에 맞으면 합계 1400
-    [1, -1].forEach((w, i) => shoot(room, p, a, { speed: A.bulletSpeed, range: A.range, dmg: A.dmg, kind: i ? 'n7' : 'n6', wave: w, amp: A.amp, lobes: A.lobes, onHit: (q, t) => {
+    [1, -1].forEach((w, i) => shoot(room, p, a, { speed: A.bulletSpeed, range, dmg: A.dmg, hitR: 16, kind: i ? 'n7' : 'n6', wave: w, amp: A.amp, lobes: A.lobes, onHit: (q, t) => {
       const v = hitBy.has(q.id) ? A.bothDmg - A.dmg : A.dmg; hitBy.add(q.id);
       damage(room, p, q, v, t, 'n67'); chargeSuper(p, v);
       room.fx.push({ type: 'bulletHit', x: q.x, y: q.y, k: 'n67' });

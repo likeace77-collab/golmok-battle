@@ -3439,7 +3439,7 @@ function aimDist() {
   } else d = autoDist(range, me);
   return Math.max(0.15, Math.min(1, d));
 }
-const atkPayload = (a) => { const me = atkSrc(); const k = me && bOf(me).attack.aim; return k === 'tri' || k === 'lob' ? { a, d: aimDist() } : a; };
+const atkPayload = (a) => { const me = atkSrc(); const k = me && bOf(me).attack.aim; return k === 'tri' || k === 'lob' || k === 'zig' ? { a, d: aimDist() } : a; };
 function doAttack() { if (!socket) return; const a = aimAngle('atk'); socket.emit('attack', a == null ? undefined : atkPayload(a)); }
 renderer.domElement.addEventListener('contextmenu', (e) => { e.preventDefault(); if (mode === 'game') doSuper(); });
 addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
@@ -3572,7 +3572,7 @@ function aimButton(el, kind, fire) {
     const B = bOf(me); if (kind === 'sup' && !B.super) return;
     const range = kind === 'atk' ? B.attack.range : B.super.range;
     const a = ang ?? autoAim(range, me);
-    if (kind === 'atk' && (B.attack.aim === 'tri' || B.attack.aim === 'lob')) { const d = A.drag > 20 ? Math.max(0.15, Math.min(1, A.drag / 48)) : Math.max(0.15, Math.min(1, autoDist(range, me))); socket.emit(fire, a == null ? undefined : { a, d }); return; }
+    if (kind === 'atk' && (B.attack.aim === 'tri' || B.attack.aim === 'lob' || B.attack.aim === 'zig')) { const d = A.drag > 20 ? Math.max(0.15, Math.min(1, A.drag / 48)) : Math.max(0.15, Math.min(1, autoDist(range, me))); socket.emit(fire, a == null ? undefined : { a, d }); return; }
     socket.emit(fire, a == null ? undefined : a);
   };
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
@@ -4216,7 +4216,7 @@ function frame(nowMs) {
         const a = aimAngle('sup'); if (a != null) aimInd.rotation.y = -a;
       }
       // 기본공격 조준: 범위 고정(정보쌤) → 주변 원 / 방향 공격(현실쌤) → 부채꼴
-      const dirAtk = B.attack.aim === 'dir' || B.attack.aim === 'tri' || B.attack.aim === 'line' || B.attack.aim === 'lob';
+      const dirAtk = B.attack.aim === 'dir' || B.attack.aim === 'tri' || B.attack.aim === 'line' || B.attack.aim === 'lob' || B.attack.aim === 'zig';
       atkInd.visible = !src.dead && !!v && (aims.atk.id !== null ? !aims.atk.cancel : (dirAtk && !isTouch));
       if (atkInd.visible) {
         if (!atkMesh) {
@@ -4232,7 +4232,8 @@ function frame(nowMs) {
               const len = Math.hypot(x2 - x1, z2 - z1), seg = new THREE.Mesh(new THREE.PlaneGeometry(len, 0.22), mat);
               seg.rotation.x = -Math.PI / 2; seg.rotation.z = -Math.atan2(z2 - z1, x2 - x1); seg.position.set((x1 + x2) / 2, 0.02, (z1 + z2) / 2); shape.add(seg);
             }
-            const end = aimShape({ type: 'circle', r: 0.9, color: '#ffffff', edge: '#ffffff' }); end.position.set(r, 0.02, 0); shape.add(end);
+            const end = aimShape({ type: 'circle', r: 1.0, color: '#ffffff', edge: '#ffffff' }); end.position.set(r, 0.02, 0); atkMesh.add(end);
+            atkMesh.userData.land = end; atkMesh.userData.r = r; atkMesh.userData.zig = shape;      // 드래그 길이 = 6·7이 만나는 거리
           }
           else if (B.attack.aim === 'line') shape = aimShape({ type: 'rect', r, w: B.attack.width * S, color: '#ffb800', edge: '#ffd21a' });
           else if (B.attack.aim === 'lob') {        // 편도준 물감: 떨어질 자리만 크게
@@ -4255,6 +4256,7 @@ function frame(nowMs) {
         if (dirAtk) { const a = aimAngle('atk'); if (a != null) atkInd.rotation.y = -a; }
         if (atkMesh.userData.land) {   // 착지 지점이 드래그 길이를 따라 움직임 (이 값을 놓을 때 그대로 보냄)
           atkMesh.userData.land.position.x = atkMesh.userData.r * aimDist();
+          if (atkMesh.userData.zig) atkMesh.userData.zig.scale.x = Math.max(120 / bOf(src).attack.range, aimDist());
         }
       }
       const cm = $('ctrlMsg');
