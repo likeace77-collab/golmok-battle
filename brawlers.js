@@ -355,11 +355,40 @@ const BRAWLERS = {
     name: '과학쌤',
     rarity: 'legendary',
     role: '컨트롤러',
-    wip: true,               // 디자인만 — 스킬 정해지면 wip 빼기
-    title: '…',
-    desc: '머리를 뒤로 질끈 묶은 과학 선생님. 하얀 실험 가운에 이마엔 보안경, 늘 살짝 화나 있다.',
+    title: '보아노래방 🎤',
+    desc: '머리를 뒤로 질끈 묶은 과학 선생님. 하얀 실험 가운에 이마엔 보안경, 늘 살짝 화나 있다. 기분 따라 고르는 노래로 상대를 짓누르고, 태우고, 돌려버린다.',
     radius: 24, speed: 260, maxHp: 5000,
-    attack: { name: '준비 중', ammo: 0, range: 0 }, gadgets: [], starPowers: [], super: null,
+    attack: {
+      name: '용가리 숨결', aim: 'line',
+      desc: '입에서 커다란 불꽃 숨결을 내뿜는다. 숨결은 천천히 퍼져 나가며 지나가는 모든 상대에게 1300 피해 (한 번 쏠 때 상대마다 1번).',
+      range: 430, width: 55, speed: 620, dmg: 1300, ammo: 3, reload: 1.7, cd: 0.45,
+    },
+    gadgets: [
+      { name: '오줌싸개 인형', icon: '⛲', desc: '체력 3000의 오줌싸개 인형을 놓는다. 주위에 상대가 오면 물을 쏴서 초당 150 피해. (한 번에 1개, 새로 놓으면 예전 인형은 사라짐)', hp: 3000, range: 330, dps: 150 },
+      { name: '마찰력 체험', icon: '🧱', desc: '가장 가까운 상대를 무조건 맞혀 근처 벽으로 밀어붙인다. 상대는 4초 동안 벽 쪽으로만 계속 걸어가고 (공격은 가능) 벽은 밀리지 않는다.', range: 700, dur: 4 },
+    ],
+    gadgetCd: 15,
+    super: {
+      name: '보아노래방', aim: 'self', pick: true,
+      desc: '쓰면 노래 3곡 중 하나를 고른다. ① 중력 Gravity: 가장 가까운 상대를 무조건 맞혀 1500 피해 + 0.5초 기절 + 3초 동안 이속 30% ② 불타오르네: 3초 동안 부채꼴로 불 — 맞을 때마다 1000 + 5초 화상(초당 100) ③ 자전은 찐이야: 6초 동안 자전, 이속 150%, 닿는 상대 계속 600',
+      need: 4400, range: 140,
+      songs: [
+        { name: '중력 Gravity', icon: '🪐', desc: '가장 가까운 상대를 무조건 맞혀 강한 중력으로 짓누른다. 바닥에 파인 자국 + 1500 피해, 0.5초 기절 뒤 3초 동안 이동 속도 30%로 제한.', range: 800, dmg: 1500, stun: 0.5, slowDur: 3, slowMul: 0.3 },
+        { name: '불타오르네', icon: '🔥', desc: '3초 동안 앞쪽 부채꼴로 불을 뿜는다. 맞을 때마다 1000 피해 + 5초 화상 (초당 100 피해).', dur: 3, every: 0.5, range: 400, half: 0.55, dmg: 1000, burn: 5, burnDps: 100 },
+        { name: '자전은 찐이야', icon: '🌀', desc: '6초 동안 빠르게 자전하며 이동 속도 150%. 닿는 상대에게 계속해서 600 피해.', dur: 6, mul: 1.5, dmg: 600, hitR: 70, every: 0.45 },
+      ],
+    },
+    starPowers: [
+      { id: 'sleep', name: '수면가루', icon: '💤', desc: '용가리 숨결에 맞은 상대는 15% 확률로 3.5초 동안 무의식 상태 — 이동·공격·가젯·궁극기가 전부 랜덤한 방향으로 나간다.', chance: 0.15, dur: 3.5 },
+      { id: 'notime', name: '시간이 없어 시간이', icon: '⏱️', desc: '이동 속도 15% 증가, 용가리 숨결이 빠르게 나간다.', speedMul: 1.15, breathMul: 1.7 },
+    ],
+    lines: {
+      atk: ['후우우—', '용가리다!', '뜨거울걸?'],
+      g1: ['인형 놔뒀다', '물 조심~'],
+      g2: ['마찰력 실험 시간!', '벽 밀어봐 밀어봐'],
+      sup: ['🎤 보아노래방!', '🎵 한 곡 뽑는다'],
+      kill: ['오늘 수업 끝', '숙제 두 배', '과학은 원래 이래'],
+    },
   },
   suhun: {
     id: 'suhun',
@@ -428,6 +457,7 @@ function publicBrawlers() {
 const ROBOTS = {
   robot: { id:'robot', name:'훈련 로봇', radius:28, speed:0, maxHp:5000, attack:{ ammo:0, range:0 }, gadgets:[], starPowers:[], super:null },
   bigrobot: { id:'bigrobot', name:'튼튼 로봇', radius:40, speed:0, maxHp:20000, attack:{ ammo:0, range:0 }, gadgets:[], starPowers:[], super:null },
+  doll: { id:'doll', name:'오줌싸개 인형', radius:30, speed:0, maxHp:3000, attack:{ ammo:0, range:0 }, gadgets:[], starPowers:[], super:null },   // 과학쌤 가젯1
   pbox: { id:'pbox', name:'큐브 상자', radius:44, speed:0, maxHp:4000, attack:{ ammo:0, range:0 }, gadgets:[], starPowers:[], super:null },   // 쇼다운: 부수면 파워 큐브
   safe: { id:'safe', name:'금고', radius:52, speed:0, maxHp:60000, attack:{ ammo:0, range:0 }, gadgets:[], starPowers:[], super:null },    // 하이스트
 };

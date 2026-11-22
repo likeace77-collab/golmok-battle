@@ -172,13 +172,13 @@ function setForm(p, f) {
 }
 // 정수호 구르기: 속도 게이지에 따라 이동 속도 배율 (가속 중엔 최고 속도 × boostMul)
 const rollMul = (p) => { const R = p.B.roll; return p.boostT > 0 ? R.maxMul * p.B.attack.boostMul : R.minMul + (R.maxMul - R.minMul) * (p.roll || 0); };
-const speedOf = (p) => (p.B.roll ? rollMul(p) : 1) * (p.spdUpT > 0 ? p.spdUpMul || 1.5 : 1) * (p.slowT > 0 ? p.slowMul || 0.6 : 1) * p.B.speed * SPEED_MUL * (has(p, 'speed') ? 1.1 : 1) * (jjang(p) ? SP(p, 'jjang').speedMul : 1) * (p.flailT > 0 ? 1.5 : 1) * (p.sprintT > 0 ? p.B.gadgets[0].mul : 1) * (p.flyT > 0 ? p.B.gadgets[0].mul : 1) * (p.isBot && !p.home && p._room ? botLv(p._room).speed : 1);
+const speedOf = (p) => (p.spinT > 0 ? p.B.super.songs[2].mul : 1) * (hasSP(p, 'notime') ? SP(p, 'notime').speedMul : 1) * (p.B.roll ? rollMul(p) : 1) * (p.spdUpT > 0 ? p.spdUpMul || 1.5 : 1) * (p.slowT > 0 ? p.slowMul || 0.6 : 1) * p.B.speed * SPEED_MUL * (has(p, 'speed') ? 1.1 : 1) * (jjang(p) ? SP(p, 'jjang').speedMul : 1) * (p.flailT > 0 ? 1.5 : 1) * (p.sprintT > 0 ? p.B.gadgets[0].mul : 1) * (p.flyT > 0 ? p.B.gadgets[0].mul : 1) * (p.isBot && !p.home && p._room ? botLv(p._room).speed : 1);
 function resetBody(room, p, slot) {
   if (BRAWLERS[p.B.id] && BRAWLERS[p.B.id].forms) { p.form = 'sport'; p.B = formB(p.B.id, 'sport'); }   // 부활하면 운동폼
   const s = spawnPoint(room, p, slot);
   Object.assign(p, {
     x: s.x, y: s.y, hp: mhp(p), dead: false, ammo: p.B.attack.ammo, stunT: 0, frozenT: 0, acT: 0,
-    rf: 0, gems: 0, shield: 0, fullT: 0, respawnT: 0, input: { mx: 0, my: 0 }, aw: false, dash: null, noAtkT: 0, flailT: 0, jailT: 0, teths: [], sprintT: 0, spdUpT: 0, slowT: 0, invT: 0, moaiT: 0, roll: 0, rollA: null, boostT: 0, mukT: 0, rhit: {}, flyT: 0, danceT: 0, gd: null, dmgUp: 0, tk: 0, lUp: 0,   // 쫄 게이지는 부활해도 유지
+    rf: 0, gems: 0, shield: 0, fullT: 0, respawnT: 0, input: { mx: 0, my: 0 }, aw: false, dash: null, noAtkT: 0, flailT: 0, jailT: 0, teths: [], sprintT: 0, spdUpT: 0, slowT: 0, confT: 0, frictT: 0, burnT: 0, flameT: 0, spinT: 0, invT: 0, moaiT: 0, roll: 0, rollA: null, boostT: 0, mukT: 0, rhit: {}, flyT: 0, danceT: 0, gd: null, dmgUp: 0, tk: 0, lUp: 0,   // 쫄 게이지는 부활해도 유지
   });
   releaseCtrl(room, p, false);
 }
@@ -189,7 +189,8 @@ function say(p, key, t = 1.6) { const l = p.B.lines && p.B.lines[key]; if (l) p.
 const teamOf = (room, p) => (p.ctrlBy && room.players.get(p.ctrlBy) ? room.players.get(p.ctrlBy).team : p.team);
 function isEnemy(room, p, q) {
   if (!q || q.id === p.id || q.dead || q.out || q.id === p.ctrlBy) return false;
-  if (q.flyT > 0 || q.gd) return false;                       // 지메 비행기 · 지메 세계에 간 사람은 안 맞음
+  if (q.flyT > 0 || q.gd) return false;
+  if ((q.owner && (q.owner === p.id || q.owner === p.owner)) || (p.owner && p.owner === q.id)) return false;   // 내 인형                       // 지메 비행기 · 지메 세계에 간 사람은 안 맞음
   if ((room.mode.team || room.mode.squad) && q.team != null && teamOf(room, p) === teamOf(room, q) && !(hasSP(p, 'traitor') && !q.struct)) return false;   // 이수훈 스파1: 팀킬 가능
   return true;
 }
@@ -234,6 +235,12 @@ function damage(room, attacker, target, dmg, now, kind) {
   if (target.hp <= 0) kill(room, attacker, target, kind);
 }
 function kill(room, attacker, target, kind) {
+  if (target.doll) {                       // 오줌싸개 인형 부서짐
+    target.hp = 0; target.dead = true; target.out = true;
+    room.fx.push({ type: 'dollBreak', x: target.x, y: target.y });
+    room.players.delete(target.id);
+    return;
+  }
   if (target.box) {                        // 쇼다운: 큐브 상자 → 파워 큐브 1개
     target.hp = 0; target.dead = true; target.out = true;
     room.fx.push({ type: 'boxBoom', x: target.x, y: target.y });
@@ -730,7 +737,7 @@ SKILLS.jinho = {
 
 // ── 투사체 (서현우 스테이플러 심) ──
 function shoot(room, p, a, o) {
-  room.bullets.push({ id: ++room.bulletSeq, owner: p.id, x: p.x + Math.cos(a) * 20, y: p.y + Math.sin(a) * 20, a, v: o.speed, left: o.range, dmg: o.dmg, kind: o.kind, onHit: o.onHit, ally: o.ally, home: o.home, turn: o.turn, wave: o.wave, amp: o.amp, lobes: o.lobes || 1, range: o.range, hitR: o.hitR, ox: p.x, oy: p.y, t: 0, lock: o.lock, tgt: o.tgt, life: o.life });
+  room.bullets.push({ id: ++room.bulletSeq, owner: p.id, x: p.x + Math.cos(a) * 20, y: p.y + Math.sin(a) * 20, a, v: o.speed, left: o.range, dmg: o.dmg, kind: o.kind, onHit: o.onHit, ally: o.ally, home: o.home, turn: o.turn, wave: o.wave, amp: o.amp, lobes: o.lobes || 1, range: o.range, hitR: o.hitR, ox: p.x, oy: p.y, t: 0, lock: o.lock, tgt: o.tgt, life: o.life, pierce: o.pierce, onPierce: o.onPierce });
 }
 const allies = (room, p) => [...room.players.values()].filter((q) => q.id !== p.id && !q.dead && !q.out && !q.struct && (room.mode.team || room.mode.squad) && q.team != null && teamOf(room, q) === teamOf(room, p));
 function heal(room, p, q, v) {
@@ -769,6 +776,17 @@ function stepBullets(room, now) {
       if (!b.lock && hitsWall(room.map, b.x, b.y, 3)) { b.left = 0; room.fx.push({ type: 'bulletWall', x: b.x, y: b.y }); break; }   // 벽에 막힘
       const q = owner && (b.lock ? [room.players.get(b.tgt)].filter((q) => q && Math.hypot(q.x - b.x, q.y - b.y) < q.B.radius + 14)[0]
         : [...enemies(room, owner), ...(b.ally ? allies(room, owner) : [])].find((q) => Math.hypot(q.x - b.x, q.y - b.y) < q.B.radius + (b.hitR || 8)));
+      if (b.pierce && owner) {           // 과학쌤 숨결: 뚫고 지나가며 상대마다 1번
+        for (const e of enemies(room, owner)) {
+          if (b.hitSet && b.hitSet.has(e.id)) continue;
+          if (Math.hypot(e.x - b.x, e.y - b.y) > e.B.radius + (b.hitR || 8)) continue;
+          (b.hitSet = b.hitSet || new Set()).add(e.id);
+          damage(room, owner, e, b.dmg, now, b.kind); chargeSuper(owner, b.dmg);
+          room.fx.push({ type: 'bulletHit', x: e.x, y: e.y, k: b.kind });
+          if (b.onPierce && !e.dead) b.onPierce(e);
+        }
+        continue;
+      }
       if (q && b.onHit) { b.onHit(q, now); b.left = 0; break; }
       if (q) { damage(room, owner, q, b.dmg, now, b.kind); chargeSuper(owner, b.dmg); room.fx.push({ type: 'bulletHit', x: q.x, y: q.y, k: b.kind }); b.left = 0; break; }
     }
@@ -776,6 +794,76 @@ function stepBullets(room, now) {
   room.bullets = room.bullets.filter((b) => b.left > 0);
 }
 
+// ── 과학쌤 ──
+// 가장 가까운 (보이는 건 상관없이) 상대 사람 (상자·인형 제외)
+function nearestFoe(room, p, range) {
+  let t = null, bd = range;
+  for (const q of enemies(room, p)) { if (q.struct || q.invT > 0) continue; const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < bd) { bd = d; t = q; } }
+  return t;
+}
+// 가장 가까운 벽(맵 끝 포함) 쪽 방향과 거리
+function nearestWall(room, q) {
+  const m = room.map, r = q.B.radius;
+  let best = { d: q.x - r, a: Math.PI }, c;
+  if ((c = m.w - q.x - r) < best.d) best = { d: c, a: 0 };
+  if ((c = q.y - r) < best.d) best = { d: c, a: -Math.PI / 2 };
+  if ((c = m.h - q.y - r) < best.d) best = { d: c, a: Math.PI / 2 };
+  for (const w of m.walls) {
+    if (w.broken) continue;
+    const px = Math.max(w.x, Math.min(q.x, w.x + w.w)), py = Math.max(w.y, Math.min(q.y, w.y + w.h)), d = Math.hypot(px - q.x, py - q.y) - r;
+    if (d < best.d && d > -r) best = { d: Math.max(0, d), a: Math.atan2(py - q.y, px - q.x) };
+  }
+  return best;
+}
+SKILLS.science = {
+  // 용가리 숨결: 엠즈처럼 천천히 퍼져 나가는 큰 숨결 — 지나가는 상대마다 1번씩 1300
+  attack(room, p, a, now) {
+    const A = p.B.attack, fast = hasSP(p, 'notime') ? SP(p, 'notime').breathMul : 1;
+    p.ammo -= 1; p.atkCd = A.cd; p.facing = a;
+    shoot(room, p, a, { speed: A.speed * fast, range: A.range, dmg: A.dmg, kind: 'breath', hitR: A.width, pierce: true, onPierce: (q) => {
+      if (hasSP(p, 'sleep') && !q.struct && Math.random() < SP(p, 'sleep').chance) { q.confT = SP(p, 'sleep').dur; room.fx.push({ type: 'sleepy', id: q.id, x: q.x, y: q.y }); }
+    } });
+    room.fx.push({ type: 'breath', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3) });
+    if (Math.random() < 0.3) say(p, 'atk', 1);
+  },
+  gadget(room, p, idx, now) {
+    const g = p.B.gadgets[idx];
+    if (idx === 0) {                       // 오줌싸개 인형 (한 번에 1개)
+      for (const q of [...room.players.values()]) if (q.doll && q.owner === p.id) room.players.delete(q.id);
+      const s0 = { x: p.x + Math.cos(p.facing) * 60, y: p.y + Math.sin(p.facing) * 60 }; resolveWalls(room.map, s0, 30);
+      const id = 'doll' + ++room.botSeq, d = newPlayer(room, id, '오줌싸개 인형', true, 'doll', p.team);
+      Object.assign(d, { struct: true, doll: true, owner: p.id, home: { x: s0.x, y: s0.y }, color: p.color, team: p.team, peeT: 0 });
+      room.players.set(id, d); resetBody(room, d); d.hp = g.hp;
+      room.fx.push({ type: 'dollDrop', id, x: s0.x, y: s0.y });
+      say(p, 'g1', 1.6);
+    } else {                               // 마찰력 체험: 가까운 상대를 벽으로 밀고 4초 동안 벽 쪽으로만 걷게
+      const q = nearestFoe(room, p, g.range);
+      if (!q) { p.gCd = 0.5; return; }
+      const W = nearestWall(room, q);
+      say(p, 'g2', 1.6);
+      room.fx.push({ type: 'friction', id: p.id, tid: q.id, x: q.x, y: q.y, a: +W.a.toFixed(3) });
+      const start = () => { q.frictT = g.dur; q.frictA = W.a; };
+      if (W.d > 4) { q.dash = { a: W.a, left: W.d + 10, speed: 1600, kind: 'push', pass: true, onEnd: start }; } else start();
+    }
+  },
+  // 보아노래방: 고른 노래 (c = 0 중력 / 1 불타오르네 / 2 자전)
+  super(room, p, a, now, c) {
+    const S = p.B.super, k = [0, 1, 2].includes(c) ? c : 0, song = S.songs[k];
+    room.fx.push({ type: 'boa', id: p.id, x: p.x, y: p.y, k });
+    say(p, 'sup', 2);
+    if (k === 0) {
+      const q = nearestFoe(room, p, song.range);
+      if (!q) { p.sup = 1; room.fx.push({ type: 'boaMiss', id: p.id, x: p.x, y: p.y }); return; }    // 맞힐 상대 없으면 궁 안 씀
+      damage(room, p, q, song.dmg, now, 'gravity');
+      if (!q.dead) { q.stunT = Math.max(q.stunT, song.stun); q.slowT = Math.max(q.slowT || 0, song.stun + song.slowDur); q.slowMul = song.slowMul; q.dash = null; }
+      room.fx.push({ type: 'gravity', id: p.id, tid: q.id, x: q.x, y: q.y });
+    } else if (k === 1) {
+      p.flameT = song.dur; p.flameAcc = song.every;          // 첫 불길은 바로
+    } else {
+      p.spinT = song.dur; p.spinHit = {};
+    }
+  },
+};
 SKILLS.hyeonwoo = {
   // 스테이플러 심: 부채꼴로 5발 (가젯1 뒤엔 9발, 스파2 탄창 꽉 찼을 땐 6발)
   attack(room, p, a, now) {
@@ -1183,8 +1271,9 @@ function doAttack(room, p, ang, now, dist) {
     if (room.phase === 'play' && canAct(p) && p.atkCd <= 0) kickBall(room, p, Number.isFinite(ang) ? ang : p.facing, 1150);
     return;
   }
-  if (room.phase !== 'play' || !canAct(p) || p.ammo < 1 || p.atkCd > 0 || p.scaredT > 0 || p.noAtkT > 0 || p.dash) return;
+  if (room.phase !== 'play' || !canAct(p) || p.ammo < 1 || p.atkCd > 0 || p.scaredT > 0 || p.noAtkT > 0 || p.dash || p.spinT > 0) return;
   p.lastHit = Math.max(p.lastHit, now - G.regenDelay + 1);
+  if (p.confT > 0) ang = Math.random() * Math.PI * 2;        // 수면가루: 무의식 → 아무 데로나
   SKILLS[p.B.id].attack(room, p, Number.isFinite(ang) ? ang : p.facing, now, Number.isFinite(dist) ? Math.max(0.15, Math.min(1, dist)) : 1);
 }
 function doGadget(room, p, slot, now, aim) {     // slot: 1 또는 2 (더블 가젯 모드에서만 2) · aim: { a: 각도, d: 거리 0~1 } (위치 고르는 가젯)
@@ -1192,16 +1281,19 @@ function doGadget(room, p, slot, now, aim) {     // slot: 1 또는 2 (더블 가
   if (room.phase !== 'play' || !canAct(p) || p.gCd > 0) return;
   const idx = p.lo.g[slot - 1]; if (idx == null) return;
   p.gCd = p.B.gadgetCd * (has(p, 'gadget') ? 0.8 : 1);
+  if (p.confT > 0) { p.facing = Math.random() * Math.PI * 2; aim = { a: p.facing, d: Math.random() }; }   // 수면가루
   SKILLS[p.B.id].gadget(room, p, idx, now, aim || {});
 }
-function doSuper(room, p, ang, now) {
+function doSuper(room, p, ang, now, choice) {
   if (room.ball && room.ball.holder === p.id) return;    // 공 들고는 궁 못 씀
   if (room.phase !== 'play' || !p.B.super || !canAct(p) || p.sup < 1 || p.scaredT > 0 || p.noAtkT > 0 || p.dash || p.flyT > 0) return;
   if (p.ctrlBy && p.B.id === 'hyeonsil') return;   // 꼭두각시 현실쌤은 조종 궁극기 못 씀
   p.sup = 0;
-  const a = Number.isFinite(ang) ? ang : p.facing;
+  let a = Number.isFinite(ang) ? ang : p.facing;
+  if (p.confT > 0) a = Math.random() * Math.PI * 2;          // 수면가루: 무의식 → 아무 데로나
   p.facing = a;
-  SKILLS[p.B.id].super(room, p, a, now);
+  if (choice == null && p.B.super.pick) choice = p.isBot ? Math.floor(Math.random() * 3) : 0;   // 봇은 노래 랜덤
+  SKILLS[p.B.id].super(room, p, a, now, choice);
 }
 
 // ── 봇 AI ──────────────────────────────────────────
@@ -1738,6 +1830,18 @@ function step(room) {
     const B = p.B;
     if (p.speech) { p.speech.t -= DT; if (p.speech.t <= 0) p.speech = null; }
     if (p.out) continue;
+    if (p.doll) {                                      // 오줌싸개 인형: 주위 상대에게 물 (초당 150)
+      const own = room.players.get(p.owner);
+      if (!own) { room.players.delete(p.id); continue; }
+      const g = own.B.gadgets[0]; p.peeT += DT;
+      if (p.peeT >= 0.2) {
+        p.peeT = 0;
+        let t = null, bd = g.range;
+        for (const q of enemies(room, own)) { if (q.struct) continue; const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < bd && sees(room, p, q)) { bd = d; t = q; } }
+        p.peeTo = t ? t.id : null;
+        if (t) damage(room, own, t, Math.round(g.dps / 5), now, 'pee');
+      }
+    }
     if (p.struct) { p.x = p.home.x; p.y = p.home.y; p.stunT = 0; p.dash = null; continue; }   // 금고: 꿈쩍도 안 함
     if (p.dead) {
       if (!room.mode.respawn && !room.mode.squad) continue;          // 듀오·트리오는 팀원 살아 있으면 부활
@@ -1760,6 +1864,35 @@ function step(room) {
     if (p.sprintT > 0) p.sprintT = Math.max(0, p.sprintT - DT);
     if (p.spdUpT > 0) p.spdUpT = Math.max(0, p.spdUpT - DT);
     if (p.slowT > 0) p.slowT = Math.max(0, p.slowT - DT);
+    if (p.confT > 0) p.confT = Math.max(0, p.confT - DT);
+    if (p.frictT > 0) p.frictT = Math.max(0, p.frictT - DT);
+    if (p.burnT > 0) {                                 // 화상: 초당 피해
+      p.burnT -= DT; p.burnAcc = (p.burnAcc || 0) + DT;
+      if (p.burnAcc >= 1) { p.burnAcc -= 1; const src = room.players.get(p.burnBy); damage(room, src || null, p, p.burnDps || 100, now, 'burn'); if (p.dead) continue; }
+    }
+    if (p.flameT > 0) {                                // 과학쌤 불타오르네: 앞쪽 부채꼴로 0.5초마다
+      const F = p.B.super.songs[1];
+      p.flameT -= DT; p.flameAcc += DT;
+      if (p.flameAcc >= F.every && canAct(p)) {
+        p.flameAcc -= F.every;
+        for (const q of enemies(room, p)) {
+          const d = Math.hypot(q.x - p.x, q.y - p.y);
+          if (d > F.range + q.B.radius || Math.abs(angDiff(Math.atan2(q.y - p.y, q.x - p.x), p.facing)) > F.half || !sees(room, p, q)) continue;
+          damage(room, p, q, F.dmg, now, 'fire');
+          if (!q.struct && !q.dead) { q.burnT = F.burn; q.burnBy = p.id; q.burnDps = F.burnDps; q.burnAcc = 0; }
+        }
+      }
+    }
+    if (p.spinT > 0) {                                 // 과학쌤 자전은 찐이야: 닿는 상대 계속 600
+      const Sp = p.B.super.songs[2];
+      p.spinT -= DT;
+      for (const q of enemies(room, p)) {
+        if (Math.hypot(q.x - p.x, q.y - p.y) > Sp.hitR + q.B.radius) continue;
+        if ((p.spinHit[q.id] || 0) > now) continue;
+        p.spinHit[q.id] = now + Sp.every;
+        damage(room, p, q, Sp.dmg, now, 'spin'); room.fx.push({ type: 'spinHit', x: q.x, y: q.y });
+      }
+    }
     if (p.invT > 0) p.invT = Math.max(0, p.invT - DT);
     if (p.moaiT > 0) p.moaiT = Math.max(0, p.moaiT - DT);
     if (p.blindT > 0) p.blindT = Math.max(0, p.blindT - DT);
@@ -1885,6 +2018,11 @@ function step(room) {
     if (p.rootT > 0) p.rootT -= DT;
     if (p.stunT <= 0 && p.frozenT <= 0 && !p.ctrlId && !p.dash && !(p.rootT > 0)) {
       let { mx, my } = p.input;
+      if (p.frictT > 0) { mx = Math.cos(p.frictA); my = Math.sin(p.frictA); }     // 마찰력 체험: 벽 쪽으로만 계속 걸어감
+      else if (p.confT > 0 && Math.hypot(mx, my) > 0.1) {                        // 수면가루: 움직이면 아무 데로나
+        if (!(p.confAT > now)) { p.confA = Math.random() * Math.PI * 2; p.confAT = now + 0.6; }
+        mx = Math.cos(p.confA); my = Math.sin(p.confA);
+      }
       const len = Math.hypot(mx, my);
       if (B.roll) rollMove(room, p, mx, my, len, now);
       else {
@@ -1973,6 +2111,7 @@ function step(room) {
       ctl: p.ctrlBy, ctrl: p.ctrlId, ctrlT: +(p.ctrlT || 0).toFixed(1), ac: +p.acT.toFixed(1),
       g: p.lo.g, sp: p.lo.sp, gear: p.lo.gears, sh: r1(p.shield), rf: +p.rf.toFixed(3), aj: Math.ceil(p.ajT), gems: p.gems,
       aw: p.aw, fear: +p.fear.toFixed(2), scared: +p.scaredT.toFixed(1), dash: !!p.dash, jj: jjang(p), na: +p.noAtkT.toFixed(1), fl: +p.flailT.toFixed(1), jail: +p.jailT.toFixed(1), s9: p.st9, nj: p.nextJoke, th: p.teths && p.teths.length ? p.teths.map((T) => T.tid) : undefined, spr: p.sprintT > 0 ? +p.sprintT.toFixed(1) : undefined, bty: room.mode.id === 'bounty' ? p.bounty : undefined, st: p.struct || undefined,
+      cf: p.confT > 0 || undefined, bn: p.burnT > 0 || undefined, fr: p.frictT > 0 || undefined, flm: p.flameT > 0 ? 1 : undefined, spn: p.spinT > 0 ? 1 : undefined, pee: p.peeTo || undefined,
       fm: p.form, mo: p.moaiT > 0 ? +p.moaiT.toFixed(1) : undefined, inv: p.invT > 0 || undefined, up: p.spdUpT > 0 || undefined, sl: p.slowT > 0 || undefined,
       bl: p.blindT > 0 ? +p.blindT.toFixed(1) : undefined, ro: p.B.roll ? +(p.roll || 0).toFixed(2) : undefined, fly: p.flyT > 0 || undefined, gd: p.gd ? 1 : undefined, dance: p.danceT > 0 || undefined, dup: p.dmgUp > 0 ? +p.dmgUp.toFixed(2) : undefined, bst: p.boostT > 0 || undefined, muk: p.mukT > 0 || undefined, au: p.aura != null && hasSP(p, 'aura') ? +p.aura.toFixed(2) : undefined,
     })),
@@ -1984,10 +2123,10 @@ function step(room) {
 }
 
 setInterval(() => { for (const room of rooms.values()) step(room); }, 1000 / TICK);
-// 보낼 때 0·false·null·빈 배열은 빼서 크기 줄임 (클라가 숫자 필드는 0으로 다시 채움)
+// 보낼 때 0·null·빈 배열은 빼서 (false는 남김: three.js visible에 undefined가 들어가면 보여버림) 크기 줄임 (클라가 숫자 필드는 0으로 다시 채움)
 const P_KEEP = new Set(['id', 'name', 'b', 'team', 'x', 'y', 'hp', 'dead', 'out', 'color']);
 function slimP(o) {
-  for (const k in o) { const v = o[k]; if (P_KEEP.has(k)) continue; if (v === undefined || v === null || v === false || v === 0 || (Array.isArray(v) && !v.length)) delete o[k]; }
+  for (const k in o) { const v = o[k]; if (P_KEEP.has(k)) continue; if (v === undefined || v === null || v === 0 || (Array.isArray(v) && !v.length)) delete o[k]; }
   return o;
 }
 
@@ -2263,7 +2402,7 @@ io.on('connection', (socket) => {
     doAttack(room, puppetOr(p), num(o.a), Date.now() / 1000, num(o.d));
   });
   socket.on('gadget', (x) => { const p = me(); if (!p || p.ctrlBy) return; const o = x && typeof x === 'object' ? x : { n: x }; doGadget(room, puppetOr(p), o.n === 2 ? 2 : 1, Date.now() / 1000, { a: num(o.a), d: num(o.d) }); });
-  socket.on('super', (ang) => { const p = me(); if (p && !p.ctrlBy) doSuper(room, puppetOr(p), num(ang), Date.now() / 1000); });
+  socket.on('super', (x) => { const p = me(); if (!p || p.ctrlBy) return; const o = x && typeof x === 'object' ? x : { a: x }; doSuper(room, puppetOr(p), num(o.a), Date.now() / 1000, Number.isInteger(o.c) ? o.c : undefined); });
   socket.on('addBot', () => {
     if (!room || (room.mode.rounds && room.mode.id !== 'ffa') || room.mode.training) return;         // 라운드 모드는 자동으로 채움 (난투는 직접 추가)
     const bots = [...room.players.values()].filter((p) => p.isBot).length;
