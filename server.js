@@ -228,7 +228,12 @@ function kill(room, attacker, target, kind) {
   if (attacker && attacker.id !== target.id) {
     attacker.kills++; if (Math.random() < 0.5) say(attacker, 'kill');
     if (hasSP(attacker, 'aura')) attacker.aura = Math.min(1, (attacker.aura || 0) + SP(attacker, 'aura').perKill);   // 아우라 파밍
-    if (!room.mode.training) giveTrophies(attacker, 1, 'kills');      // 처치 +1 트로피 (훈련장 제외)
+    if (attacker.userKey) auth.addStat(attacker.userKey, 'kills');
+    // 난투·더블가젯(끝없는 방)만 처치로 트로피: 그 브롤러가 200 미만일 때 +1 / 죽으면 100 이상부터 -1, 300 이상 -2
+    if (room.mode.rotate && trophyRoom(room)) {
+      if (btOf(attacker) < 200) giveTrophies(attacker, 1);
+      const tb = btOf(target); if (tb >= 100) giveTrophies(target, tb >= 300 ? -2 : -1);
+    }
   }
   room.fx.push({ type: 'kill', a: attacker ? attacker.name : '독가스', b: target.name, aid: attacker ? attacker.id : null, bid: target.id, k: kind });
   room.mice = room.mice.filter((m) => m.owner !== target.id);
@@ -246,6 +251,7 @@ function kill(room, attacker, target, kind) {
   if (room.mode.id === 'showdown') {
     target.out = true;
     target.rank = [...room.players.values()].filter((q) => !q.out).length + 1;
+    if (room.mode.id === 'showdown') matchTrophies(room, target, null, target.rank);   // 쇼다운: 탈락하는 순간 등수대로
   }
 }
 
@@ -1022,7 +1028,7 @@ function moveToward(p, x, y, jitter = 0.3, now = 0) {
   p.input = { mx: c - s * j, my: s + c * j };
   return d;
 }
-const BOT = { aimErr: 0.3, react: 0.45, atkRate: 0.6, skillRate: 0.5, speed: 0.92 };
+const BOT = { aimErr: 0.22, react: 0.35, atkRate: 0.78, skillRate: 0.65, speed: 0.95 };   // 패치: 게임이 너무 쉽다고 해서 조금 강하게
 function botThink(room, p, now) {
   const b = p.bot, B = p.B, mode = room.mode;
   if (p.ctrlBy) return;
@@ -1040,10 +1046,21 @@ function botThink(room, p, now) {
   }
   let target = null, best = Infinity;
   for (const q of enemies(room, p)) { if (q.invT > 0) continue; const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < best) { best = d; target = q; } }   // 은신한 적은 못 봄
+  // 지금 노리는 상대가 아직 가까이 있으면 계속 노림 (여럿이 엉켜 있을 때 목표가 계속 바뀌어서 공격을 못 하던 버그)
+  const cur = b.tgtId && room.players.get(b.tgtId);
+  if (cur && cur !== target && !cur.dead && !cur.out && !(cur.invT > 0) && enemies(room, p).includes(cur)) {
+    const cd = Math.hypot(cur.x - p.x, cur.y - p.y);
+    if (cd < best * 1.4 + 40) { target = cur; best = cd; }
+  }
   b.wanderT -= DT;
-  // 봇 난이도 (패치: 조금 약하게) — 조준이 살짝 빗나가고, 상대를 처음 보면 반응이 늦고, 공격·스킬을 덜 자주 씀
+  // 봇 난이도 — 조준이 살짝 빗나가고, 처음 보는 상대에겐 반응이 조금 늦음
   const aimErr = () => (Math.random() + Math.random() - 1) * BOT.aimErr;
-  if (target && b.tgtId !== target.id) { b.tgtId = target.id; b.seeT = BOT.react; }
+  b.seen = b.seen || {};
+  if (target && b.tgtId !== target.id) {
+    b.tgtId = target.id;
+    b.seeT = now - (b.seen[target.id] || -99) < 3 ? 0 : BOT.react;     // 방금까지 보던 상대면 반응 지연 없음
+  }
+  if (target) b.seen[target.id] = now;
   if (b.seeT > 0) b.seeT -= DT;
   const fight = () => {
     const dx = target.x - p.x, dy = target.y - p.y;
@@ -1165,15 +1182,34 @@ function startRound(room) {
   let slot = Math.floor(Math.random() * 8);
   for (const p of room.players.values()) {
     if (p.struct) continue;
-    p.out = false; p.rank = 0; p.sup = 0; p.gCd = 0; p.kills = 0; p.deaths = 0; p.ajT = 30; p.fear = 0; p.scaredT = 0; p.bounty = mode.bountyStart || 0;
+    p.out = false; p.rank = 0; p.sup = 0; p.gCd = 0; p.kills = 0; p.deaths = 0; p.ajT = 30; p.fear = 0; p.scaredT = 0; p.bounty = mode.bountyStart || 0; p.trophied = false;
     resetBody(room, p, slot++);
   }
+  room.sdN = [...room.players.values()].filter((q) => !q.struct).length;   // 쇼다운 인원 (등수 → 트로피)
   room.phase = 'wait'; room.phaseT = 4;
   room.fx.push({ type: 'round', map: room.map.id });
 }
 // 트로피: 로그인한 사람만 계정에 저장
-function giveTrophies(p, n, field) {
+// ── 트로피 (브롤스타즈처럼 브롤러별) ──
+// 그 브롤러 트로피가 높을수록 이기면 덜 오르고, 지면 더 많이 깎임. 친선전·훈련장은 트로피 없음
+const trophyRoom = (room) => !room.mode.training && !room.partyCfg;
+const btOf = (p) => (p && p.userKey && p.B ? auth.brawlerTrophies(p.userKey)[p.B.id] || 0 : 0);
+const winTro = (bt) => Math.max(3, 8 - Math.floor(bt / 150));        // 0~149: +8, 150~299: +7 … 최소 +3
+const lossTro = (bt) => Math.min(12, Math.floor(bt / 50));           // 0~49: 0, 50~99: -1 … 최대 -12
+function showdownTro(bt, rank, n) {                                   // 쇼다운: 등수 (6명 기준 1~6등)
+  const i = Math.max(0, Math.min(5, Math.round((Math.max(1, rank) - 1) * 5 / Math.max(1, n - 1))));
+  const w = winTro(bt), l = lossTro(bt);
+  return [w, Math.round(w * 0.6), Math.round(w * 0.25), -Math.ceil(l / 3), -Math.round(l * 0.7), -l][i];
+}
+function matchTrophies(room, p, outcome, rank) {                      // 한 판 결과 → 트로피 (한 판에 한 번만)
+  if (!trophyRoom(room) || !p || p.isBot || !p.userKey || p.trophied) return;
+  p.trophied = true;
+  const bt = btOf(p), n = room.mode.id === 'showdown' ? showdownTro(bt, rank, room.sdN || 6) : outcome === 'win' ? winTro(bt) : outcome === 'loss' ? -lossTro(bt) : 0;
+  giveTrophies(p, n, outcome === 'win' || rank === 1 ? 'wins' : null, true);
+}
+function giveTrophies(p, n, field, show) {
   if (!p || p.isBot || !p.userKey) return;
+  if (!n && !show) { if (field) auth.addStat(p.userKey, field); return; }
   const bid = p.B && p.B.id;
   const t = auth.addTrophies(p.userKey, n, field, bid);
   if (t != null) io.to(p.id).emit('trophy', { total: t, add: n, bid, bt: auth.brawlerTrophies(p.userKey) });
@@ -1182,8 +1218,8 @@ function endRound(room, result) {
   room.phase = 'end'; room.phaseT = 6; room.result = result;
   for (const p of humans(room)) {
     if (p.userKey) auth.addStat(p.userKey, 'games');
-    const win = result.winTeam != null ? result.winTeam === p.team : result.winner === p.id;
-    if (win) giveTrophies(p, 8, 'wins');     // 승리 +8 트로피
+    if (result.type === 'showdown') matchTrophies(room, p, null, p.rank || 1);
+    else matchTrophies(room, p, result.winTeam === -1 ? 'draw' : result.winTeam === p.team ? 'win' : 'loss');
   }
   room.fx.push({ type: 'end', result });
 }
@@ -1851,6 +1887,10 @@ io.on('connection', (socket) => {
     if (online.delete(socket.id)) onlineDirty = true;
     if (!room) return;
     const p = me(); if (p) { releaseCtrl(room, p, false); if (p.gems) dropGems(room, p); }
+    if (p && room.phase === 'play' && !room.mode.rotate && !p.out) {    // 게임 도중 나가면 패배 처리 (쇼다운은 지금 등수)
+      if (room.mode.id === 'showdown') matchTrophies(room, p, null, [...room.players.values()].filter((q) => !q.out).length);
+      else matchTrophies(room, p, 'loss');
+    }
     room.players.delete(socket.id);
     if (!humans(room).length) rooms.delete(room.id);
     else if (room.mode.id === 'gem' && room.phase === 'play' && p) addBot(room, p.team) && resetBody(room, [...room.players.values()].pop());
