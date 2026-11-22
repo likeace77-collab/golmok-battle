@@ -353,12 +353,37 @@ const BRAWLERS = {
   suhun: {
     id: 'suhun',
     name: '이수훈',
-    rarity: null,
-    wip: true,               // 디자인만 — 스킬 정해지면 wip 빼기
-    title: '…',
-    desc: '숱 많은 곱슬 바가지 머리에 늘 무표정한 학생. 투톤 맨투맨이 트레이드마크.',
-    radius: 24, speed: 260, maxHp: 4800,
-    attack: { name: '준비 중', ammo: 0, range: 0 }, gadgets: [], starPowers: [], super: null,
+    rarity: 'mythic',
+    role: '데미지딜러',
+    title: '지메 하실?',
+    desc: '숱 많은 곱슬 바가지 머리에 늘 무표정한 학생. 지오메트리 대쉬(지메)를 엄청 좋아해서, 궁극기로 상대를 지메 세계로 끌고 가 한 판 붙는다.',
+    radius: 24, speed: 262, maxHp: 4600,
+    attack: {
+      name: '67!!', aim: 'dir',
+      desc: '숫자 6과 7 탄환 두 개가 겹쳐서 출발했다가 서로 휘어 벌어지며 앞으로 날아간다. 하나 맞추면 600, 둘 다 맞추면 1400 피해.',
+      range: 640, dmg: 600, bothDmg: 1400, amp: 55, bulletSpeed: 820, ammo: 3, reload: 1.5, cd: 0.4,
+    },
+    super: {
+      name: '지메하세요', aim: 'line',
+      desc: '조준한 방향의 첫 번째 상대를 지메 세계로 끌고 간다. 현실에선 둘 다 잠시 사라지고, 지오메트리 대쉬를 하다가 먼저 탈락하는 쪽이 쓰러진다. (점프: 화면 터치 · 스페이스)',
+      need: 5200, range: 520, width: 45, dur: 20,
+    },
+    gadgets: [
+      { name: '지메 비행기', icon: '✈️', desc: '4초 동안 지메 비행기를 타고 날아다닌다. 공격을 안 받고 벽 위로 날 수 있으며 이동속도 130% (나는 동안 공격 불가).', dur: 4, mul: 1.3 },
+      { name: '블록 4칸 설치', icon: '🧱', desc: '바라보는 쪽 앞에 블록 4칸짜리 벽을 세운다. 10초 뒤 사라진다.', n: 4, size: 50, dist: 140, life: 10 },
+    ],
+    gadgetCd: 20,
+    starPowers: [
+      { id: 'traitor', name: '난 친구를 믿지 않아!', icon: '🔪', desc: '팀원도 공격할 수 있다. 팀원을 처치하면 2000 회복 + 1000 보호막 + 공격력 15% 상승 (최대 3번).', heal: 2000, shield: 1000, up: 0.15, max: 3 },
+      { id: 'takel', name: 'L을 가져가', icon: '🕺', desc: '상대를 처치하면 「L을 가져가」 춤을 추며 티배깅하고 공격력이 10% 상승 (최대 30%). 춤추는 1.2초 동안은 못 움직인다.', up: 0.1, max: 0.3, dance: 1.2 },
+    ],
+    lines: {
+      atk: ['67!!', '육칠!', '6 7'],
+      g1: ['비행 모드 ON', '슝~'],
+      g2: ['블록 설치', '지메 블록이다'],
+      sup: ['지메하세요', '지메 한 판 해'],
+      kill: ['GG', 'ㅋ', 'L을 가져가'],
+    },
   },
 };
 
