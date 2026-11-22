@@ -1338,6 +1338,7 @@ function startRound(room) {
     resetBody(room, p, slot++);
   }
   room.sdN = [...room.players.values()].filter((q) => !q.struct).length;   // 쇼다운 인원 (등수 → 트로피)
+  room.sdFinal = false;
   room.phase = 'wait'; room.phaseT = 4;
   room.fx.push({ type: 'round', map: room.map.id });
 }
@@ -1440,6 +1441,7 @@ function roundLogic(room, now) {
     const half = (Math.max(m.w, m.h) / 2) * (1 - k) + (g.final / 2) * k;
     room.safe = { x1: m.w / 2 - half, y1: m.h / 2 - half, x2: m.w / 2 + half, y2: m.h / 2 + half };
     const alive = [...room.players.values()].filter((p) => !p.out);
+    if (alive.length === 2 && !room.sdFinal && room.sdN > 2) { room.sdFinal = true; room.fx.push({ type: 'showdownFinal', ids: alive.map((p) => p.id), names: alive.map((p) => p.name) }); }   // 마지막 2명 → 쇼다운!
     if (alive.length <= 1) {
       const w = alive[0];
       if (w) w.rank = 1;

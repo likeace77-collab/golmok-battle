@@ -165,6 +165,10 @@
   #gdBox { position: fixed; inset: 0; z-index: 50; display: none; background: rgba(10,6,30,.92); touch-action: none; }
   #gdBox canvas { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(96vw, 980px); aspect-ratio: 2 / 1; max-height: 88vh; border: 4px solid #000; border-radius: 14px; box-shadow: 0 0 40px #7c5cff; }
   /* 결과 화면 (브롤스타즈처럼) */
+  #sdFinal { position: fixed; left: 50%; top: 38%; transform: translate(-50%, -50%) scale(3); z-index: 25; pointer-events: none; opacity: 0; text-align: center; font-weight: 900; }
+  #sdFinal b { display: block; font-size: 88px; line-height: 1; color: #ffd84a; letter-spacing: 2px; -webkit-text-stroke: 4px #000; paint-order: stroke fill; text-shadow: 0 6px 0 #000, 0 0 30px #ff4a1a; transform: skewX(-8deg) rotate(-4deg); }
+  #sdFinal span { display: inline-block; margin-top: 6px; font-size: 22px; color: #fff; background: rgba(0,0,0,.55); padding: 3px 14px; border-radius: 10px; }
+  @keyframes sdIn { 0% { opacity: 0; transform: translate(-50%, -50%) scale(3); } 15% { opacity: 1; transform: translate(-50%, -50%) scale(.9); } 22% { transform: translate(-50%, -50%) scale(1.05); } 28%, 80% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.15); } }
   #resBox { position: fixed; inset: 0; z-index: 30; display: none; background: linear-gradient(100deg, #1e46c8 0 50%, #be1e1e 50% 100%); font-weight: 900; color: #fff; overflow: auto; touch-action: pan-y; }
   #resBox.sd { background: linear-gradient(160deg, #281478, #6e1e8c); }
   #resBox .star, #resBox .star * { text-shadow: none !important; -webkit-text-stroke: 0 !important; paint-order: normal !important; }
@@ -390,6 +394,7 @@
 <div id="modeHud" class="stroke"></div>
 <div id="phaseMsg" class="stroke"></div>
 <div id="gdBox"><canvas id="gdCv" width="960" height="480"></canvas></div>
+<div id="sdFinal"></div>
 <div id="resBox" class="stroke"></div>
 <div id="queueBox" class="panel stroke"><div class="qt">👥 상대 기다리는 중…</div><div class="dots" id="qDots"></div><div class="qs" id="qSub"></div><button class="btn" id="qStart">▶ 바로 시작</button><div style="font-size:11px;opacity:.75;margin-top:6px">빈자리는 봇이 채워요 · 친구는 같은 모드를 고르고 플레이를 누르면 여기로 와요</div></div>
 <div id="feed" class="stroke"></div>
@@ -3311,6 +3316,12 @@ function handleFx(list) {
     else if (f.type === 'bulletHit') { flash(x, 2, z, '#ffffff', 0.7, 0.15); burst(x, 2, z, 4, ['#d8dce4', '#ffffff'], { speed: 4, size: 0.08, up: 2, life: 0.25 }); }
     else if (f.type === 'bulletWall') burst(x, 1.8, z, 3, ['#d8dce4'], { speed: 3, size: 0.08, up: 1, life: 0.2 });
     else if (f.type === 'eatStaple') { const v = views[f.id]; if (v) v.g1T = 0; popup('와그작📎 궁 충전!', { x, z }, 5.4, '#ffd84a', 28, 1.2); burst(x, 3, z, 20, ['#d8dce4', '#ffd84a', '#ffffff'], { speed: 4, size: 0.12, up: 5, life: 0.7 }); ringFx(x, z, 3, '#ffd84a', 0.5); }
+    else if (f.type === 'showdownFinal') {             // 마지막 2명: 쇼다운!
+      const el = $('sdFinal'), esc = (t) => String(t).replace(/</g, '&lt;');
+      el.innerHTML = `<b>쇼다운!</b><span>${esc(f.names[0])} ⚔️ ${esc(f.names[1])}</span>`;
+      el.style.animation = 'none'; void el.offsetWidth; el.style.animation = 'sdIn 2.6s ease-out forwards';
+      shake = Math.max(shake, 0.7);
+    }
     else if (f.type === 'throw67') { const v = views[f.id]; if (v) { v.atkT = 0; v.facing = Math.atan2(Math.cos(f.a), Math.sin(f.a)); } }
     else if (f.type === 'both67') { popup('67!!', { x, z }, 6.2, '#ffd84a', 40, 1.0); burst(x, 2, z, 18, ['#ffb02e', '#3cf0ff', '#ffffff'], { speed: 7, size: 0.3, up: 5, life: 0.6 }); }
     else if (f.type === 'gdShip') { popup('✈️ 지메 비행기', { x, z }, 6, '#ff4fd8', 26, 1.0); burst(x, 1.5, z, 20, ['#ff4fd8', '#3cf0ff'], { speed: 5, size: 0.3, up: 5, life: 0.6 }); }
