@@ -620,6 +620,7 @@ SKILLS.jinho = {
     const S = p.B.super, mul = hasSP(p, 'tall') ? SP(p, 'tall').mul : 1;
     say(p, 'sup', 1.6);
     room.fx.push({ type: 'kickStart', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3) });
+    const sx = p.x, sy = p.y;              // 돌진 시작점 — 돌진하며 지나친 상대도 맞게
     p.dash = { a, left: S.dash, speed: S.dash / S.dashTime, kind: 'kick', breakWalls: true, pass: true, onEnd: (t) => {
       const kr = S.kickR * mul, ca = Math.cos(a), sa = Math.sin(a);
       for (let d = 10; d <= kr; d += 10) {           // 뒷발 닿는 곳의 벽도 부숨
@@ -628,8 +629,13 @@ SKILLS.jinho = {
         if (w) { w.broken = true; room.fx.push({ type: 'wallBreak', i: room.map.walls.indexOf(w), x: w.x + w.w / 2, y: w.y + w.h / 2 }); }
       }
       const hits = [];
+      const segD = (q) => {                 // 돌진 경로(시작점→끝점)와 상대 사이 거리
+        const ex = p.x - sx, ey = p.y - sy, L2 = ex * ex + ey * ey || 1;
+        const k = Math.max(0, Math.min(1, ((q.x - sx) * ex + (q.y - sy) * ey) / L2));
+        return Math.hypot(q.x - (sx + ex * k), q.y - (sy + ey * k));
+      };
       for (const q of enemies(room, p)) {
-        if (!inCone(p, a, kr, S.kickHalf, q.x, q.y, q.B.radius)) continue;
+        if (!inCone(p, a, kr, S.kickHalf, q.x, q.y, q.B.radius) && segD(q) > q.B.radius + S.width) continue;
         const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1;
         for (let k = 0; k < S.knock; k += 8) { const nx = q.x + dx / d * 8, ny = q.y + dy / d * 8; if (hitsWall(room.map, nx, ny, q.B.radius)) break; q.x = nx; q.y = ny; }
         q.stunT = Math.max(q.stunT, 0.25);
