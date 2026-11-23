@@ -3060,14 +3060,15 @@ function refreshLobby() {
 }
 // 브롤러별 트로피 (계정 있을 때만)
 const btOf = (id) => (account && account.bt && account.bt[id]) || 0;
-// 브롤러 등급: 0 우드 · 250 브론즈 · 500 실버 · 750 골드 · 1000마다 프레스티지 1, 2, 3 …
-const TIERS = [[0, '우드', '🪵', '#b07a4a'], [250, '브론즈', '🥉', '#d98a4a'], [500, '실버', '🥈', '#cfd8e3'], [750, '골드', '🥇', '#ffcc33']];
+// 브롤러 등급: 0 우드 · 75 브론즈 · 150 실버 · 225 골드 · 300마다 프레스티지 1, 2, 3 … (n×300 이상 = 프레스티지 n)
+const PRESTIGE = 300;
+const TIERS = [[0, '우드', '🪵', '#b07a4a'], [75, '브론즈', '🥉', '#d98a4a'], [150, '실버', '🥈', '#cfd8e3'], [225, '골드', '🥇', '#ffcc33']];
 function tierOf(t) {
   t = t || 0;
-  if (t >= 1000) { const n = Math.floor(t / 1000); return { name: `프레스티지 ${n}`, icon: '💠', color: ['#ff4fd8', '#7c5cff', '#36d0ff', '#ff4a4a', '#3ce07f'][(n - 1) % 5], base: n * 1000, next: (n + 1) * 1000, pr: true }; }
+  if (t >= PRESTIGE) { const n = Math.floor(t / PRESTIGE); return { name: `프레스티지 ${n}`, icon: '💠', color: ['#ff4fd8', '#7c5cff', '#36d0ff', '#ff4a4a', '#3ce07f'][(n - 1) % 5], base: n * PRESTIGE, next: (n + 1) * PRESTIGE, pr: true }; }
   let i = 0; for (let k = 0; k < TIERS.length; k++) if (t >= TIERS[k][0]) i = k;
   const [base, name, icon, color] = TIERS[i];
-  return { name, icon, color, base, next: i + 1 < TIERS.length ? TIERS[i + 1][0] : 1000 };
+  return { name, icon, color, base, next: i + 1 < TIERS.length ? TIERS[i + 1][0] : PRESTIGE };
 }
 const tierBadge = (t) => { const r = tierOf(t); return `<span class="tier${r.pr ? ' pr' : ''}" style="--tc:${r.color}">${r.icon} ${r.name}</span>`; };
 const tierBar = (t) => { const r = tierOf(t); return `<div class="tbar" style="--tc:${r.color}"><i style="width:${Math.min(100, ((t - r.base) / (r.next - r.base)) * 100)}%"></i></div><div style="font-size:11px;opacity:.85">다음 등급까지 🏆 ${r.next - t}</div>`; };
