@@ -2094,7 +2094,7 @@ function makeMouse(color) {
 
 // 브롤러 id → 3D 모델 함수 (새 브롤러 추가 시 여기에 등록)
 // ── 과학쌤 3D 모델 ────────────────────────────────
-// 긴 생머리 + 양옆으로 갈라지는 앞머리 + 이마 위 보안경, 하얀 실험 가운(안에 하늘색 블라우스), 손엔 초록 플라스크
+// 긴 생머리 + 양옆으로 갈라지는 앞머리, 하얀 실험 가운(안에 하늘색 블라우스), 손엔 초록 플라스크
 // 표정: 안쪽으로 내려간 눈썹 + 살짝 처진 입꼬리 + 이마의 💢 → 약간 화난 얼굴
 function makeScience(teamColor) {
   const m = {
@@ -2162,11 +2162,11 @@ function makeScience(teamColor) {
   const face = new THREE.Mesh(new THREE.SphereGeometry(0.6, 28, 22), m.skin); face.scale.set(0.86, 1.1, 0.92); face.position.y = -0.02; head.add(face);
   const chin = new THREE.Mesh(new THREE.ConeGeometry(0.33, 0.52, 24), m.skin); chin.rotation.x = Math.PI + 0.12; chin.scale.set(1, 1, 0.75); chin.position.set(0, -0.55, 0.2); head.add(chin);   // 살짝 뾰족한 턱
   for (const s of [-1, 1]) {
-    const w = new THREE.Mesh(new THREE.SphereGeometry(0.105, 14, 10), m.white); w.scale.set(1.15, 0.58, 0.4); w.position.set(s * 0.19, 0.0, 0.515); head.add(w);   // 눈 조금 작게
-    const pu = new THREE.Mesh(new THREE.SphereGeometry(0.054, 12, 10), m.eye); pu.scale.set(1, 1, 0.4); pu.position.set(s * 0.178, -0.008, 0.553); head.add(pu);
+    const w = new THREE.Mesh(new THREE.SphereGeometry(0.085, 14, 10), m.white); w.scale.set(1.15, 0.55, 0.4); w.position.set(s * 0.19, 0.0, 0.52); head.add(w);   // 작은 눈
+    const pu = new THREE.Mesh(new THREE.SphereGeometry(0.043, 12, 10), m.eye); pu.scale.set(1, 1, 0.4); pu.position.set(s * 0.18, -0.006, 0.553); head.add(pu);
     // 눈을 살짝 덮는 윗눈꺼풀 (사납게 반쯤 감김) + 속눈썹 끝
-    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.045, 0.05), m.eye); lid.position.set(s * 0.19, 0.045, 0.54); lid.rotation.z = s * 0.2; head.add(lid);
-    const lash = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.03, 0.03), m.eye); lash.position.set(s * 0.32, 0.075, 0.49); lash.rotation.z = s * 0.6; head.add(lash);
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.04, 0.05), m.eye); lid.position.set(s * 0.19, 0.036, 0.54); lid.rotation.z = s * 0.2; head.add(lid);
+    const lash = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.03, 0.03), m.eye); lash.position.set(s * 0.29, 0.062, 0.5); lash.rotation.z = s * 0.6; head.add(lash);
     // ★ 화난 눈썹: 안쪽 끝이 아래로
     const brow = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.055, 0.05), m.brow); brow.position.set(s * 0.19, 0.17, 0.53); brow.rotation.z = s * 0.38; head.add(brow);
     const ear = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), m.skin); ear.scale.set(0.55, 1, 0.8); ear.position.set(s * 0.5, -0.04, 0); head.add(ear);
@@ -2204,17 +2204,10 @@ function makeScience(teamColor) {
     const temple2 = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), m.hair); temple2.scale.set(0.5, 0.62, 0.75); temple2.position.set(s * 0.38, 0.32, 0.14); head.add(temple2);   // 옆머리 위쪽 (빈틈 메우기)
     const hi = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.0, 0.02), m.hairHi); hi.position.set(s * 0.2, -0.75, -0.565); head.add(hi);   // 머릿결 윤기
   }
-  // 이마 위에 올려 쓴 보안경
-  const gog = new THREE.Group(); gog.position.set(0, 0.56, 0.5); gog.rotation.x = -0.75; head.add(gog);
-  for (const s of [-1, 1]) {
-    const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.15, 0.1, 18), m.gogF); cup.rotation.x = Math.PI / 2; cup.position.set(s * 0.16, 0, 0); gog.add(cup);
-    const ln = new THREE.Mesh(new THREE.CircleGeometry(0.12, 18), m.gogL); ln.position.set(s * 0.16, 0, 0.055); gog.add(ln);
-  }
-  const brg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.05, 0.06), m.gogF); gog.add(brg);
   const stars = new THREE.Group(); stars.position.y = 4.4; model.add(stars); stars.visible = false;
   for (let i = 0; i < 4; i++) { const st = new THREE.Mesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshBasicMaterial({ color: '#ffe23a' })); st.position.set(Math.cos(i * Math.PI / 2) * 0.8, 0, Math.sin(i * Math.PI / 2) * 0.8); stars.add(st); }
   shadowAll(model);
-  return { root, model, body, torso, head, legs, arms, stars, flask, vein, goggles: gog, flashMats: [m.skin, m.coat, m.blouse, m.pants] };
+  return { root, model, body, torso, head, legs, arms, stars, flask, vein, flashMats: [m.skin, m.coat, m.blouse, m.pants] };
 }
 
 const MODELS = { jungbo: makeTeacher, science: makeScience, hyeonsil: makeHyeonsil, junhoo: makeJunhoo, jaeyeol: makeJaeyeol, jinho: makeJinho, hyeonwoo: makeHyeonwoo, yedam: makeYedam, suho: makeSuho, suhun: makeSuhun, dojun: makeDojun, robot: (c) => makeRobot(c, false), bigrobot: (c) => makeRobot(c, true), safe: makeSafe, pbox: makePowerBox, doll: makeDoll };
