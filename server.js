@@ -1294,7 +1294,7 @@ function doGadget(room, p, slot, now, aim) {     // slot: 1 또는 2 (더블 가
   if (p.flyT > 0 && p.B.id === 'suhun' && room.phase === 'play') { planeCrash(room, p); return; }   // 지메 비행기에서 뛰어내림
   if (room.phase !== 'play' || !canAct(p) || p.gCd > 0) return;
   const idx = p.lo.g[slot - 1]; if (idx == null) return;
-  p.gCd = p.B.gadgetCd * (has(p, 'gadget') ? 0.8 : 1);
+  p.gCd = ((p.B.gadgets[idx] || {}).cd || p.B.gadgetCd) * (has(p, 'gadget') ? 0.8 : 1);   // 가젯마다 cd가 따로 있으면 그걸로
   if (p.confT > 0) { p.facing = Math.random() * Math.PI * 2; aim = { a: p.facing, d: Math.random() }; }   // 수면가루
   SKILLS[p.B.id].gadget(room, p, idx, now, aim || {});
 }
