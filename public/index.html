@@ -2094,7 +2094,7 @@ function makeMouse(color) {
 
 // 브롤러 id → 3D 모델 함수 (새 브롤러 추가 시 여기에 등록)
 // ── 과학쌤 3D 모델 ────────────────────────────────
-// 머리를 뒤로 질끈 묶은 포니테일 + 이마 위 보안경, 하얀 실험 가운(안에 하늘색 블라우스), 손엔 초록 플라스크
+// 긴 생머리 + 양옆으로 갈라지는 앞머리 + 이마 위 보안경, 하얀 실험 가운(안에 하늘색 블라우스), 손엔 초록 플라스크
 // 표정: 안쪽으로 내려간 눈썹 + 살짝 처진 입꼬리 + 이마의 💢 → 약간 화난 얼굴
 function makeScience(teamColor) {
   const m = {
@@ -2162,39 +2162,48 @@ function makeScience(teamColor) {
   const face = new THREE.Mesh(new THREE.SphereGeometry(0.6, 28, 22), m.skin); face.scale.set(0.86, 1.1, 0.92); face.position.y = -0.02; head.add(face);
   const chin = new THREE.Mesh(new THREE.ConeGeometry(0.33, 0.52, 24), m.skin); chin.rotation.x = Math.PI + 0.12; chin.scale.set(1, 1, 0.75); chin.position.set(0, -0.55, 0.2); head.add(chin);   // 살짝 뾰족한 턱
   for (const s of [-1, 1]) {
-    const w = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10), m.white); w.scale.set(1.15, 0.6, 0.4); w.position.set(s * 0.2, 0.0, 0.51); head.add(w);
-    const pu = new THREE.Mesh(new THREE.SphereGeometry(0.068, 12, 10), m.eye); pu.scale.set(1, 1, 0.4); pu.position.set(s * 0.185, -0.01, 0.555); head.add(pu);
+    const w = new THREE.Mesh(new THREE.SphereGeometry(0.105, 14, 10), m.white); w.scale.set(1.15, 0.58, 0.4); w.position.set(s * 0.19, 0.0, 0.515); head.add(w);   // 눈 조금 작게
+    const pu = new THREE.Mesh(new THREE.SphereGeometry(0.054, 12, 10), m.eye); pu.scale.set(1, 1, 0.4); pu.position.set(s * 0.178, -0.008, 0.553); head.add(pu);
     // 눈을 살짝 덮는 윗눈꺼풀 (사납게 반쯤 감김) + 속눈썹 끝
-    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.05, 0.05), m.eye); lid.position.set(s * 0.2, 0.055, 0.54); lid.rotation.z = s * 0.2; head.add(lid);
-    const lash = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.03, 0.03), m.eye); lash.position.set(s * 0.36, 0.09, 0.48); lash.rotation.z = s * 0.6; head.add(lash);
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.045, 0.05), m.eye); lid.position.set(s * 0.19, 0.045, 0.54); lid.rotation.z = s * 0.2; head.add(lid);
+    const lash = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.03, 0.03), m.eye); lash.position.set(s * 0.32, 0.075, 0.49); lash.rotation.z = s * 0.6; head.add(lash);
     // ★ 화난 눈썹: 안쪽 끝이 아래로
     const brow = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.055, 0.05), m.brow); brow.position.set(s * 0.19, 0.17, 0.53); brow.rotation.z = s * 0.38; head.add(brow);
     const ear = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), m.skin); ear.scale.set(0.55, 1, 0.8); ear.position.set(s * 0.5, -0.04, 0); head.add(ear);
     const er = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.022, 8, 28), m.gold); er.position.set(s * 0.53, -0.32, 0.02); er.rotation.y = Math.PI / 2; head.add(er);   // 큰 링 귀걸이
   }
   // 높은 코: 콧대 + 코끝
-  const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.3, 0.16), m.skin); bridge.position.set(0, -0.06, 0.56); bridge.rotation.x = -0.42; head.add(bridge);
-  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 10), m.shade); nose.scale.set(1, 0.85, 1.2); nose.position.set(0, -0.18, 0.645); head.add(nose);
-  const mole = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 6), m.mole); mole.position.set(0.07, -0.02, 0.555); head.add(mole);   // 코 조금 위 점
+  const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.34, 0.18), m.skin); bridge.position.set(0, -0.07, 0.565); bridge.rotation.x = -0.42; head.add(bridge);   // 콧대 조금 더 크게 (피부색 그대로라 튀지 않게)
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.075, 14, 12), m.skin); nose.scale.set(1, 0.85, 1.0); nose.position.set(0, -0.2, 0.65); head.add(nose);
+  for (const s of [-1, 1]) { const wing = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), m.shade); wing.scale.set(1, 0.8, 0.9); wing.position.set(s * 0.065, -0.225, 0.6); head.add(wing); }   // 콧볼
+  const mole = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 6), m.mole); mole.position.set(0.08, -0.02, 0.555); head.add(mole);   // 코 조금 위 점
   // 입: 살짝 처진 ㅅ자 입꼬리 (뾰로통)
   const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.025, 6, 16, Math.PI * 0.8), m.lip); mouth.rotation.z = Math.PI * 0.1; mouth.position.set(0, -0.37, 0.5); head.add(mouth);
   // 💢 이마 옆 핏줄 표시
-  const vein = new THREE.Group(); vein.position.set(0.36, 0.3, 0.44); vein.rotation.set(-0.2, 0.7, 0); head.add(vein);
+  const vein = new THREE.Group(); vein.position.set(0.09, 0.33, 0.52); vein.rotation.set(-0.25, 0.15, 0); vein.scale.setScalar(0.75); head.add(vein);
   for (let i = 0; i < 4; i++) {   // 바깥으로 볼록한 곡선 4개 (만화 화남 표시)
     const a = i * Math.PI / 2 + Math.PI / 4, v = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.016, 4, 10, Math.PI * 0.7), m.vein);
     v.position.set(Math.cos(a) * 0.085, Math.sin(a) * 0.085, 0); v.rotation.z = a - Math.PI * 0.35; vein.add(v);
   }
-  // ★ 뒤로 질끈 묶은 머리: 이마가 드러나게 뒤로 넘긴 머리 + 머리끈 + 뒤로 늘어진 포니테일
-  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.65, 30, 18, 0, Math.PI * 2, 0, Math.PI * 0.42), m.hair); cap.position.set(0, 0.16, -0.05); cap.scale.set(0.9, 1.0, 1.02); head.add(cap);
-  const back = new THREE.Mesh(new THREE.SphereGeometry(0.62, 20, 14), m.hair); back.scale.set(0.88, 0.95, 0.8); back.position.set(0, 0.04, -0.2); head.add(back);
-  for (const s of [-1, 1]) {      // 귀 위로 넘긴 옆머리
-    const side = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 10), m.hair); side.scale.set(0.28, 0.58, 1.0); side.position.set(s * 0.48, 0.22, -0.14); head.add(side);
+  // ★ 긴 생머리 + 양옆으로 갈라지는 앞머리 (가운데 이마가 살짝 보임)
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.65, 30, 18, 0, Math.PI * 2, 0, Math.PI * 0.36), m.hair); cap.position.set(0, 0.16, -0.04); cap.scale.set(0.92, 1.0, 1.02); head.add(cap);
+  const back = new THREE.Mesh(new THREE.SphereGeometry(0.62, 20, 14), m.hair); back.scale.set(0.95, 1.0, 0.82); back.position.set(0, 0.02, -0.2); head.add(back);
+  // 등 뒤로 곧게 내려오는 머리 (허리 위까지)
+  const longBack = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.66, 1.75, 24, 1, true, Math.PI * 0.55, Math.PI * 0.9), m.hair);
+  longBack.material = m.hair; longBack.position.set(0, -0.72, -0.08); longBack.scale.z = 0.78; head.add(longBack);
+  const backFill = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.7, 0.12), m.hair); backFill.position.set(0, -0.72, -0.5); head.add(backFill);
+  for (const s of [-1, 1]) {
+    // 귀 뒤로 해서 어깨 앞까지 내려오는 옆머리
+    const side = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.35, 0.34), m.hair); side.position.set(s * 0.5, -0.38, -0.02); side.rotation.z = s * 0.04; head.add(side);
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.25, 8), m.hair); tip.scale.set(0.6, 1, 1.4); tip.rotation.x = Math.PI; tip.position.set(s * 0.5, -1.17, -0.02); head.add(tip);
+    // 앞머리: 가운데 가르마에서 양옆으로 흘러내림
+    // 가운데서 시작해 관자놀이 쪽으로 비스듬히 흘러내리는 앞머리 (이마 가운데는 보임)
+    const bang = new THREE.Mesh(new THREE.SphereGeometry(0.3, 18, 12), m.hair); bang.scale.set(1.05, 0.26, 0.34); bang.position.set(s * 0.24, 0.3, 0.4); bang.rotation.set(-0.3, s * 0.35, -s * 0.72); head.add(bang);
+    const bangT = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10), m.hair); bangT.scale.set(0.55, 1.1, 0.5); bangT.position.set(s * 0.45, 0.02, 0.3); bangT.rotation.z = s * 0.25; head.add(bangT);
+    const temple = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), m.hair); temple.scale.set(0.42, 0.75, 1.0); temple.position.set(s * 0.44, 0.12, -0.1); head.add(temple);
+    const temple2 = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), m.hair); temple2.scale.set(0.5, 0.62, 0.75); temple2.position.set(s * 0.38, 0.32, 0.14); head.add(temple2);   // 옆머리 위쪽 (빈틈 메우기)
+    const hi = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.0, 0.02), m.hairHi); hi.position.set(s * 0.2, -0.75, -0.565); head.add(hi);   // 머릿결 윤기
   }
-  const tieBand = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.05, 8, 16), m.tie); tieBand.position.set(0, 0.32, -0.66); tieBand.rotation.x = 0.5; head.add(tieBand);   // 빨간 머리끈
-  const tail = new THREE.Group(); tail.position.set(0, 0.32, -0.7); head.add(tail);
-  const t1 = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 10), m.hair); t1.scale.set(1, 1.2, 1); t1.position.set(0, -0.06, -0.1); tail.add(t1);
-  const t2 = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.95, 14), m.hair); t2.position.set(0, -0.55, -0.2); t2.rotation.x = Math.PI - 0.32; tail.add(t2);
-  const t3 = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.35, 8), m.hairHi); t3.position.set(0.05, -0.55, -0.32); t3.rotation.x = Math.PI - 0.4; tail.add(t3);
   // 이마 위에 올려 쓴 보안경
   const gog = new THREE.Group(); gog.position.set(0, 0.56, 0.5); gog.rotation.x = -0.75; head.add(gog);
   for (const s of [-1, 1]) {
@@ -2205,7 +2214,7 @@ function makeScience(teamColor) {
   const stars = new THREE.Group(); stars.position.y = 4.4; model.add(stars); stars.visible = false;
   for (let i = 0; i < 4; i++) { const st = new THREE.Mesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshBasicMaterial({ color: '#ffe23a' })); st.position.set(Math.cos(i * Math.PI / 2) * 0.8, 0, Math.sin(i * Math.PI / 2) * 0.8); stars.add(st); }
   shadowAll(model);
-  return { root, model, body, torso, head, legs, arms, stars, tail, flask, vein, goggles: gog, flashMats: [m.skin, m.coat, m.blouse, m.pants] };
+  return { root, model, body, torso, head, legs, arms, stars, flask, vein, goggles: gog, flashMats: [m.skin, m.coat, m.blouse, m.pants] };
 }
 
 const MODELS = { jungbo: makeTeacher, science: makeScience, hyeonsil: makeHyeonsil, junhoo: makeJunhoo, jaeyeol: makeJaeyeol, jinho: makeJinho, hyeonwoo: makeHyeonwoo, yedam: makeYedam, suho: makeSuho, suhun: makeSuhun, dojun: makeDojun, robot: (c) => makeRobot(c, false), bigrobot: (c) => makeRobot(c, true), safe: makeSafe, pbox: makePowerBox, doll: makeDoll };
