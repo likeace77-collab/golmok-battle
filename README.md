@@ -175,6 +175,10 @@ PC: WASD 이동, Space/클릭 공격, Q·E 가젯 · 폰: 왼쪽 조이스틱 + 
 - `team`(기본, 온라인 목록에서 초대): 방장 ▶ → 같은 모드 매칭 대기방(`#q`)에 다 같이 (`partyGo`), 트로피 있음. 같은 파티 `p.grp` → `balanceTeams`/`assignSquads`가 같은 팀으로.
 - `friendly`(「🤝 친선 전투」): 전용 방 `#<pt.id>_…`, `partyCfg`(자리·AI 수), 트로피 없음. 방장이 `partyKind`로 전환.
 
+## 조작 편집
+- `#ctrlEdit` (로비 「🎮 조작 편집」): 조이스틱·공격·궁·가젯1·2를 끌어서 옮기고 슬라이더로 크기, 「이동 조이스틱 고정」, 「이동 ⇄ 공격」(좌우 반전), 재설정, 저장.
+- 배치는 `localStorage.jb_ctrl` = `{ fixed, items: { joy|atk|sup|g1|g2: { x, y (화면 비율, 가운데), s (배율) } } }`. `ctrlApply()`가 `#ctrl` 버튼(left/top + translate·scale)과 조이스틱에 적용. 조이스틱은 `items.joy.x`가 있는 쪽 화면 절반에서 터치로 시작.
+
 ## 렉 / 관전
 - 상태 전송: 30Hz 시뮬, `state`는 20Hz (`room.sendN`). `slimP`가 0·null·빈 배열 필드를 빼고 (false는 남김), 클라가 `P_NUM` 숫자 필드를 0으로 채움. 클라 보간 `INTERP_DELAY` 100ms.
 - `mergeModel`: 모델 안 같은 부모·같은 재질 메시를 하나로 합침 (머리(`M.head`)·`M.moai` 아래, M에 직접 들어 있는 조각·배열 조각·숨김·자식 있는 조각은 제외). 새 모델에서 따로 움직일 조각은 반환 객체에 넣어 둘 것.

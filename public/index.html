@@ -180,6 +180,24 @@
   #resBox .side { flex: 1; display: flex; gap: 8px; justify-content: center; align-items: flex-end; flex-wrap: wrap; }
   #resBox .pc { width: 150px; max-width: 30%; text-align: center; position: relative; }
   #resBox .pc img { width: 100%; display: block; filter: drop-shadow(0 6px 4px rgba(0,0,0,.4)); }
+  /* 조작 편집 (브롤스타즈 컨트롤 편집처럼): 눌러서 고르고 끌어서 옮기고, 슬라이더로 크기 */
+  #ctrlEdit { position: fixed; inset: 0; z-index: 70; display: none; background: rgba(8,14,40,.78); touch-action: none; user-select: none; }
+  #ctrlEdit .ceTop { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 2; color: #fff; font-weight: 900; text-align: center; width: min(92vw, 360px); }
+  #ctrlEdit .ceBtns { display: flex; gap: 8px; }
+  #ctrlEdit .ceBtns button, #ctrlEdit .ceSwap { font-family: inherit; font-weight: 900; font-size: 15px; padding: 7px 16px; border: 3px solid #000; border-radius: 10px; background: linear-gradient(#fff, #c9d6f0); cursor: pointer; }
+  #ctrlEdit .ceBtns .sv { background: linear-gradient(#b6ff7a, #4fd23a); }
+  #ctrlEdit label { display: flex; align-items: center; gap: 6px; font-size: 15px; cursor: pointer; }
+  #ctrlEdit label input { width: 20px; height: 20px; accent-color: #ff7a2a; }
+  #ctrlEdit input[type=range] { width: 100%; accent-color: #ffd84a; }
+  #ctrlEdit .hint { font-size: 12px; opacity: .85; }
+  #ctrlEdit .ceSwap { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 2; }
+  #ctrlEdit .ceItem { position: absolute; transform: translate(-50%, -50%); cursor: grab; }
+  #ctrlEdit .ceItem .cb { position: relative; pointer-events: none; }
+  #ctrlEdit .ceItem.sel::after { content: ''; position: absolute; inset: -12px; border-radius: 50%; border: 3px dashed #ffd84a; }
+  #ctrlEdit .ceItem .arr { position: absolute; color: #fff; font-size: 16px; opacity: 0; pointer-events: none; text-shadow: 0 0 4px #000; }
+  #ctrlEdit .ceItem.sel .arr { opacity: .9; }
+  #ctrlEdit .joyM { border-radius: 50%; border: 3px solid rgba(255,255,255,.7); background: rgba(60,200,220,.25); display: flex; align-items: center; justify-content: center; }
+  #ctrlEdit .joyM i { width: 42%; height: 42%; border-radius: 50%; background: rgba(120,230,240,.9); border: 3px solid #0a5a6a; }
   #boaPick { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 30; display: none; flex-direction: column; gap: 8px; width: min(92vw, 440px); background: rgba(20,10,40,.92); border: 4px solid #000; border-radius: 18px; padding: 12px; }
   #boaPick .bt { color: #ffd84a; font-weight: 900; font-size: 20px; text-align: center; }
   #boaPick button { position: relative; text-align: left; border: 3px solid #000; border-radius: 12px; padding: 8px 34px 8px 12px; background: linear-gradient(#fff1a8, #ffc83a); cursor: pointer; font-family: inherit; }
@@ -327,19 +345,19 @@
   #feed { position: fixed; top: 100px; left: 0; right: 0; z-index: 6; text-align: center; font-weight: 900; font-size: 15px; color: #ff9a9a; line-height: 1.6; }
   #dead { position: fixed; inset: 0; z-index: 7; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.45); font-size: 36px; font-weight: 900; }
 
-  #ctrl { position: fixed; right: 14px; bottom: 16px; z-index: 8; display: none; width: 160px; height: 160px; }
+  #ctrl { position: fixed; inset: 0; z-index: 8; display: none; pointer-events: none; }   /* 버튼 위치·크기는 JS(ctrlApply)가 조작 편집 설정대로 놓음 */
   .cb { position: absolute; border-radius: 50%; border: 3px solid #000; touch-action: none; font-weight: 900; color: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; line-height: 1.1; box-shadow: 0 5px 0 #000; cursor: pointer; pointer-events: auto; }
   .cb small { font-size: 8px; opacity: .7; }
   .cb .gi { font-size: 22px; line-height: 1; }
   .cb.puppet { outline: 3px solid #ff8af0; outline-offset: 2px; }
   .cb .n { position: absolute; top: -6px; right: -6px; background: #000; color: #fff; border-radius: 10px; font-size: 12px; padding: 1px 6px; }
   .cb .cd { position: absolute; inset: 0; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; display: none; align-items: center; justify-content: center; font-size: 13px; }
-  #bAtk { right: 0; bottom: 0; width: 80px; height: 80px; background: radial-gradient(circle at 40% 35%, #ffe98a, #ffb31f); font-size: 13px; }
-  #bG1 { right: 94px; bottom: 2px; width: 52px; height: 52px; background: radial-gradient(circle at 40% 35%, #c9f6ff, #4fd2ff); font-size: 10px; }
-  #bSup { right: 76px; bottom: 70px; width: 62px; height: 62px; font-size: 11px; color: #fff; background: #3a2a6a; }
+  #bAtk { width: 80px; height: 80px; background: radial-gradient(circle at 40% 35%, #ffe98a, #ffb31f); font-size: 13px; }
+  #bG1 { width: 52px; height: 52px; background: radial-gradient(circle at 40% 35%, #c9f6ff, #4fd2ff); font-size: 10px; }
+  #bSup { width: 62px; height: 62px; font-size: 11px; color: #fff; background: #3a2a6a; }
   #bSup.ready { animation: glow .7s infinite alternate; color: #111; }
   @keyframes glow { from { box-shadow: 0 5px 0 #000, 0 0 10px 3px #ffb31f; } to { box-shadow: 0 5px 0 #000, 0 0 26px 10px #ff5a1f; } }
-  #bG2 { right: 10px; bottom: 94px; width: 52px; height: 52px; background: radial-gradient(circle at 40% 35%, #d8ffd0, #63e65a); font-size: 10px; }
+  #bG2 { width: 52px; height: 52px; background: radial-gradient(circle at 40% 35%, #d8ffd0, #63e65a); font-size: 10px; }
   #frost { position: fixed; inset: 0; z-index: 4; pointer-events: none; opacity: 0; transition: opacity .4s; background: radial-gradient(ellipse at center, rgba(160,220,255,0) 45%, rgba(170,225,255,.55) 85%, rgba(230,250,255,.85)); }
   #ctrlMsg { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); z-index: 7; display: none; font-size: 22px; font-weight: 900; color: #ff8af0; text-align: center; pointer-events: none; }
   #ctrlFlash { position: fixed; inset: 0; z-index: 4; pointer-events: none; opacity: 0; box-shadow: inset 0 0 120px 40px rgba(200,60,255,.55); transition: opacity .3s; }
@@ -368,6 +386,7 @@
     <div class="lb panel stroke" id="openRank"><span class="ic">🏆</span>순위</div>
     <div class="lb panel stroke" id="openPlayers"><span class="ic">👥</span>플레이어</div>
     <div class="lb panel stroke" id="openHelp"><span class="ic">❔</span>조작법</div>
+    <div class="lb panel stroke" id="openCtrlEdit"><span class="ic">🎮</span>조작 편집</div>
   </div>
   <div id="showName" class="stroke"><span class="rbadge" id="sRar">전설</span><span class="role" id="sRole" style="display:none"></span><span class="role" id="sTro" style="display:none;background:linear-gradient(#ffe36b,#ffb31f);color:#3a2400"></span><div class="nm2" id="sName">정보쌤</div><div class="tt" id="sTitle"></div><div id="sLoad"></div></div>
   <div id="status" class="stroke"></div>
@@ -413,6 +432,15 @@
 <div id="frost"></div><div id="lookFlash"></div><div id="ctrlFlash"></div><div id="ctrlMsg" class="stroke"></div>
 <div id="aimJoy"><b class="stroke">취소</b><i></i></div>
 <div id="boaPick"></div>
+<div id="ctrlEdit">
+  <div class="ceTop">
+    <div class="ceBtns"><button id="ceReset">재설정</button><button id="ceSave" class="sv">저장</button><button id="ceClose">닫기</button></div>
+    <label><input type="checkbox" id="ceFixed">이동 조이스틱 고정</label>
+    <div style="width:100%">크기 <span id="ceSizeV"></span><input type="range" id="ceSize" min="60" max="170" step="1"></div>
+    <div class="hint" id="ceHint">버튼을 눌러 고른 뒤 끌어서 옮기고, 슬라이드해 크기를 변경하세요</div>
+  </div>
+  <button class="ceSwap" id="ceSwap">이동 ⇄ 공격</button>
+</div>
 <div id="specBar"><button id="specPrev">◀</button><span id="specName"></span><button id="specNext">▶</button></div>
 <div id="ctrl">
   <div class="cb" id="bAtk">공격<small>드래그</small></div>
@@ -3306,7 +3334,7 @@ function connect() {
     if (specOnly) setTimeout(() => { $('ctrl').style.display = 'none'; $('botBtn').style.display = $('clearBtn').style.display = 'none'; }, 0);
     $('lobby').style.display = 'none'; $('lobbyBg').style.display = 'none';
     $('top').style.display = 'flex';
-    $('ctrl').style.display = 'block';
+    $('ctrl').style.display = 'block'; setTimeout(ctrlApply, 0);
     const rounds = d.mode !== 'ffa' && META.modes[d.mode] && (META.modes[d.mode].rounds || META.modes[d.mode].training);   // 라운드 모드는 봇 자동, 훈련장은 로봇 고정 (난투는 봇 직접 추가)
     $('botBtn').style.display = $('clearBtn').style.display = rounds ? 'none' : '';
   });
@@ -4603,23 +4631,95 @@ function aimButton(el, kind, fire) {
 aimButton($('bAtk'), 'atk', 'attack');
 aimButton($('bSup'), 'sup', 'super');
 
+// ── 조작 배치 (조작 편집에서 바꿈, localStorage jb_ctrl) ──
+// 위치는 화면 비율(x,y = 0~1, 버튼 가운데), s = 크기 배율. fixed = 이동 조이스틱 고정
+const CTRL_KEY = 'jb_ctrl', CTRL_EL = { atk: 'bAtk', sup: 'bSup', g1: 'bG1', g2: 'bG2' };
+const CTRL_BASE = { joy: 100, atk: 80, sup: 62, g1: 52, g2: 52 };     // 크기 1배일 때 지름(px)
+function ctrlDefault() {      // 예전 기본 배치 (오른쪽 아래 버튼 묶음, 왼쪽 아래 조이스틱)
+  const W0 = innerWidth, H0 = innerHeight, at = (r, b) => ({ x: (W0 - r) / W0, y: (H0 - b) / H0, s: 1 });
+  return { fixed: false, items: { joy: { x: 120 / W0, y: (H0 - 120) / H0, s: 1 }, atk: at(54, 56), sup: at(121, 117), g1: at(134, 44), g2: at(50, 136) } };
+}
+function ctrlLayout() {
+  let L = null; try { L = JSON.parse(localStorage.getItem(CTRL_KEY)); } catch (e) {}
+  const D = ctrlDefault();
+  if (!L || !L.items) return D;
+  for (const k in D.items) if (!L.items[k]) L.items[k] = D.items[k];
+  return L;
+}
+let CTRL = ctrlLayout();
+const ctrlPx = (it) => ({ x: Math.max(0, Math.min(1, it.x)) * innerWidth, y: Math.max(0, Math.min(1, it.y)) * innerHeight });
+function ctrlApply() {
+  for (const k in CTRL_EL) { const el = $(CTRL_EL[k]), it = CTRL.items[k], p = ctrlPx(it); el.style.left = p.x + 'px'; el.style.top = p.y + 'px'; el.style.transform = `translate(-50%,-50%) scale(${it.s})`; }
+  const j = CTRL.items.joy, p = ctrlPx(j), d = CTRL_BASE.joy * j.s;
+  joyEl.style.width = joyEl.style.height = d + 'px'; joyEl.style.margin = `${-d / 2}px 0 0 ${-d / 2}px`;
+  knob.style.width = knob.style.height = d * 0.42 + 'px'; knob.style.margin = `${-d * 0.21}px`;
+  if (joy.id === null) { joyEl.style.left = p.x + 'px'; joyEl.style.top = p.y + 'px'; }
+  joyIdle();
+}
+// 고정 조이스틱이면 게임 중에 항상 보임 (흐리게), 아니면 누를 때만
+function joyIdle() { if (joy.id !== null) return; const show = CTRL.fixed && isTouch && $('ctrl').style.display !== 'none' && mode === 'game'; joyEl.style.display = show ? 'block' : 'none'; joyEl.style.opacity = show ? 0.55 : 1; knob.style.transform = ''; }
 const joy = { id: null, sx: 0, sy: 0, x: 0, y: 0 };
 const joyEl = document.createElement('div');
-joyEl.style.cssText = 'position:fixed;width:92px;height:92px;margin:-46px 0 0 -46px;border:3px solid rgba(255,255,255,.6);border-radius:50%;display:none;z-index:6;pointer-events:none';
+joyEl.style.cssText = 'position:fixed;width:100px;height:100px;margin:-50px 0 0 -50px;border:3px solid rgba(255,255,255,.6);background:rgba(60,200,220,.12);border-radius:50%;display:none;z-index:6;pointer-events:none';
 const knob = document.createElement('div');
-knob.style.cssText = 'position:absolute;left:50%;top:50%;width:38px;height:38px;margin:-19px;border-radius:50%;background:rgba(255,255,255,.75)';
+knob.style.cssText = 'position:absolute;left:50%;top:50%;width:42px;height:42px;margin:-21px;border-radius:50%;background:rgba(255,255,255,.75)';
 joyEl.appendChild(knob); document.body.appendChild(joyEl);
 const cvEl = renderer.domElement;
+// 조이스틱 쪽 화면 (이동 ⇄ 공격 바꾸면 오른쪽)
+const inJoySide = (x) => (CTRL.items.joy.x < 0.5 ? x < W * 0.6 : x > W * 0.4);
 cvEl.addEventListener('touchstart', (e) => {
-  for (const t of e.changedTouches) if (joy.id === null && t.clientX < W * 0.6) {
-    joy.id = t.identifier; joy.sx = joy.x = t.clientX; joy.sy = joy.y = t.clientY;
-    joyEl.style.display = 'block'; joyEl.style.left = joy.sx + 'px'; joyEl.style.top = joy.sy + 'px';
+  for (const t of e.changedTouches) if (joy.id === null && inJoySide(t.clientX)) {
+    joy.id = t.identifier; joy.x = t.clientX; joy.y = t.clientY;
+    if (CTRL.fixed) { const p = ctrlPx(CTRL.items.joy); joy.sx = p.x; joy.sy = p.y; }     // 고정: 제자리 조이스틱 기준
+    else { joy.sx = t.clientX; joy.sy = t.clientY; }
+    joyEl.style.display = 'block'; joyEl.style.opacity = 1; joyEl.style.left = joy.sx + 'px'; joyEl.style.top = joy.sy + 'px';
   }
   e.preventDefault();
 }, { passive: false });
 cvEl.addEventListener('touchmove', (e) => { for (const t of e.changedTouches) if (t.identifier === joy.id) { joy.x = t.clientX; joy.y = t.clientY; } e.preventDefault(); }, { passive: false });
-const endJoy = (e) => { for (const t of e.changedTouches) if (t.identifier === joy.id) { joy.id = null; joyEl.style.display = 'none'; } };
+const endJoy = (e) => { for (const t of e.changedTouches) if (t.identifier === joy.id) { joy.id = null; joyEl.style.display = 'none'; ctrlApply(); } };
 cvEl.addEventListener('touchend', endJoy); cvEl.addEventListener('touchcancel', endJoy);
+addEventListener('resize', () => ctrlApply());
+ctrlApply();
+
+// ── 조작 편집 화면 ──
+let ceDraft = null, ceSel = 'joy';
+function ceOpen() {
+  ceDraft = JSON.parse(JSON.stringify(CTRL)); ceSel = 'joy';
+  const box = $('ctrlEdit'); box.querySelectorAll('.ceItem').forEach((n) => n.remove());
+  for (const k of ['joy', 'atk', 'sup', 'g1', 'g2']) {
+    const it = document.createElement('div'); it.className = 'ceItem'; it.dataset.k = k;
+    if (k === 'joy') it.innerHTML = '<div class="joyM"><i></i></div>';
+    else { const src = $(CTRL_EL[k]), cs = getComputedStyle(src), c = document.createElement('div'); c.className = 'cb'; c.innerHTML = k === 'atk' ? '공격' : k === 'sup' ? '궁극기' : `<span class="gi">${src.querySelector('.gi') ? src.querySelector('.gi').textContent : '⚡'}</span><small>가젯${k === 'g2' ? ' 2' : ''}</small>`; c.style.background = cs.backgroundImage !== 'none' ? cs.backgroundImage : cs.backgroundColor; c.style.color = cs.color; c.style.fontSize = cs.fontSize; it.appendChild(c); }
+    for (const [t, cls] of [['▲', 'top:-30px;left:50%;transform:translateX(-50%)'], ['▼', 'bottom:-30px;left:50%;transform:translateX(-50%)'], ['◀', 'left:-30px;top:50%;transform:translateY(-50%)'], ['▶', 'right:-30px;top:50%;transform:translateY(-50%)']]) { const a = document.createElement('span'); a.className = 'arr'; a.textContent = t; a.style.cssText = cls; it.appendChild(a); }
+    box.appendChild(it);
+    it.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); ceSel = k; ceRender(); it.setPointerCapture(e.pointerId);
+      const p = ctrlPx(ceDraft.items[k]), ox = e.clientX - p.x, oy = e.clientY - p.y;
+      const mv = (ev) => { ceDraft.items[k].x = Math.max(0.03, Math.min(0.97, (ev.clientX - ox) / innerWidth)); ceDraft.items[k].y = Math.max(0.05, Math.min(0.97, (ev.clientY - oy) / innerHeight)); ceRender(); };
+      const up = () => { it.removeEventListener('pointermove', mv); it.removeEventListener('pointerup', up); it.removeEventListener('pointercancel', up); };
+      it.addEventListener('pointermove', mv); it.addEventListener('pointerup', up); it.addEventListener('pointercancel', up);
+    });
+  }
+  box.style.display = 'block'; ceRender();
+}
+function ceRender() {
+  for (const it of $('ctrlEdit').querySelectorAll('.ceItem')) {
+    const k = it.dataset.k, d = ceDraft.items[k], p = ctrlPx(d), sz = CTRL_BASE[k] * d.s;
+    it.style.left = p.x + 'px'; it.style.top = p.y + 'px'; it.style.width = it.style.height = sz + 'px';
+    const inner = it.firstChild; inner.style.width = inner.style.height = sz + 'px';
+    it.classList.toggle('sel', k === ceSel);
+  }
+  $('ceFixed').checked = !!ceDraft.fixed;
+  const s = ceDraft.items[ceSel].s; $('ceSize').value = Math.round(s * 100); $('ceSizeV').textContent = Math.round(s * 100) + '%';
+}
+$('openCtrlEdit').onclick = ceOpen;
+$('ceSize').oninput = () => { ceDraft.items[ceSel].s = $('ceSize').value / 100; ceRender(); };
+$('ceFixed').onchange = () => { ceDraft.fixed = $('ceFixed').checked; };
+$('ceSwap').onclick = () => { for (const k in ceDraft.items) ceDraft.items[k].x = 1 - ceDraft.items[k].x; ceRender(); };     // 이동 ⇄ 공격: 좌우 뒤집기
+$('ceReset').onclick = () => { ceDraft = ctrlDefault(); ceRender(); };
+$('ceClose').onclick = () => { $('ctrlEdit').style.display = 'none'; };
+$('ceSave').onclick = () => { CTRL = ceDraft; try { localStorage.setItem(CTRL_KEY, JSON.stringify(CTRL)); } catch (e) {} ctrlApply(); $('ctrlEdit').style.display = 'none'; toast('조작 배치를 저장했어요'); };
 
 let lastSent = '';
 setInterval(() => {
@@ -4632,7 +4732,7 @@ setInterval(() => {
   if (joy.id !== null) {
     const dx = joy.x - joy.sx, dy = joy.y - joy.sy, d = Math.hypot(dx, dy);
     if (d > 6) { mx = dx / d; my = dy / d; }
-    const kd = Math.min(d, 36); knob.style.transform = d ? `translate(${dx / d * kd}px,${dy / d * kd}px)` : '';
+    const kd = Math.min(d, CTRL_BASE.joy * CTRL.items.joy.s * 0.36); knob.style.transform = d ? `translate(${dx / d * kd}px,${dy / d * kd}px)` : '';
   }
   const ml = Math.hypot(mx, my); if (ml > 0) { mx /= ml; my /= ml; }
   const key = mx.toFixed(2) + ',' + my.toFixed(2);
