@@ -418,7 +418,7 @@
 <div id="tierUp" class="stroke"></div><div id="trPop" class="stroke"></div>
 <div id="modal"><div class="box panel" id="mBox"></div></div>
 <div id="ui"></div>
-<div id="top"><button id="exitBtn">◀ 로비</button><button id="botBtn">+ 봇 추가</button><button id="clearBtn">봇 삭제</button></div>
+<div id="top"><button id="exitBtn">◀ 로비</button><button id="bgmBtn" title="배경음악 켜기/끄기">🔊</button><button id="botBtn">+ 봇 추가</button><button id="clearBtn">봇 삭제</button></div>
 <div id="invite"></div>
 <div id="board" class="stroke"></div>
 <div id="modeHud" class="stroke"></div>
@@ -3335,6 +3335,7 @@ function connect() {
     $('lobby').style.display = 'none'; $('lobbyBg').style.display = 'none';
     $('top').style.display = 'flex';
     $('ctrl').style.display = 'block'; setTimeout(ctrlApply, 0);
+    bgmStart();          // 게임 브금 (관전도)
     const rounds = d.mode !== 'ffa' && META.modes[d.mode] && (META.modes[d.mode].rounds || META.modes[d.mode].training);   // 라운드 모드는 봇 자동, 훈련장은 로봇 고정 (난투는 봇 직접 추가)
     $('botBtn').style.display = $('clearBtn').style.display = rounds ? 'none' : '';
   });
@@ -4175,6 +4176,65 @@ function updateResult() {
     if (resShownFor !== key && resClosed !== key) { resShownFor = key; setTimeout(() => { if (resShownFor === key && resClosed !== key) showResult(r); }, 1200); }   // 트로피가 먼저 오게 살짝 늦게
   } else if (state && (state.phase === 'wait' || state.phase === 'play')) { $('resBox').style.display = 'none'; resShownFor = null; resClosed = null; }
 }
+// ── 게임 브금: 파일 없이 Web Audio로 만드는 신나는 8비트 루프 (저작권 걱정 없음) ──
+// 132BPM, 코드 C–Am–F–G / A–B 두 파트를 번갈아. 상단 🔊 버튼으로 끄고 켬 (localStorage jb_bgm)
+const BGM = { ctx: null, gain: null, on: localStorage.getItem('jb_bgm') !== '0', playing: false, next: 0, step: 0, timer: 0, VOL: 0.11 };
+const BGM_BPM = 132, BGM_STEP = 60 / BGM_BPM / 4;          // 16분음표
+const nf = (n) => 440 * Math.pow(2, (n - 69) / 12);          // MIDI 번호 → 주파수
+// 코드 (근음 MIDI) 마디마다: C Am F G / F G Em Am
+const BGM_CHORDS = [[48, [60, 64, 67]], [45, [57, 60, 64]], [41, [57, 60, 65]], [43, [59, 62, 67]], [41, [57, 60, 65]], [43, [59, 62, 67]], [40, [55, 59, 64]], [45, [57, 60, 64]]];
+// 멜로디 (16칸 × 8마디, 0 = 쉼)
+const BGM_MEL = [
+  [72, 0, 76, 0, 79, 0, 76, 74, 72, 0, 74, 76, 0, 79, 0, 0], [76, 0, 72, 0, 69, 0, 72, 74, 76, 0, 0, 72, 74, 0, 72, 0],
+  [77, 0, 76, 0, 74, 0, 72, 0, 69, 0, 72, 0, 77, 0, 81, 0], [79, 0, 0, 77, 79, 0, 81, 0, 83, 0, 81, 79, 0, 0, 74, 0],
+  [77, 0, 81, 0, 84, 0, 81, 79, 77, 0, 79, 81, 0, 84, 0, 0], [83, 0, 79, 0, 74, 0, 79, 83, 86, 0, 84, 0, 83, 0, 79, 0],
+  [79, 0, 76, 0, 71, 0, 76, 79, 83, 0, 79, 0, 76, 0, 79, 0], [81, 0, 0, 79, 76, 0, 72, 0, 76, 0, 79, 0, 81, 0, 0, 0],
+];
+function bgmNote(type, freq, t, dur, vol, slide) {
+  const c = BGM.ctx, o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(BGM.gain); o.start(t); o.stop(t + dur + 0.02);
+}
+function bgmNoise(t, dur, vol, hp) {
+  const c = BGM.ctx; if (!BGM.noise) { const b = c.createBuffer(1, c.sampleRate * 0.3, c.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; BGM.noise = b; }
+  const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+  s.buffer = BGM.noise; f.type = 'highpass'; f.frequency.value = hp; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(f); f.connect(g); g.connect(BGM.gain); s.start(t); s.stop(t + dur + 0.02);
+}
+function bgmSchedule() {
+  const c = BGM.ctx; if (!c) return;
+  while (BGM.next < c.currentTime + 0.25) {
+    const st = BGM.step, bar = Math.floor(st / 16) % 8, i = st % 16, t = BGM.next, [root, tri] = BGM_CHORDS[bar];
+    if (i % 4 === 0) bgmNote('sine', 150, t, 0.16, 0.9, 45);                                   // 킥
+    if (i === 4 || i === 12) bgmNoise(t, 0.12, 0.35, 1500);                                       // 스네어
+    if (i % 2 === 1) bgmNoise(t, 0.04, 0.18, 7000);                                               // 하이햇
+    if (i % 2 === 0) bgmNote('triangle', nf(root + (i % 8 === 6 ? 7 : 0)), t, BGM_STEP * 1.8, 0.55);   // 베이스
+    if (i % 4 === 2) for (const n of tri) bgmNote('square', nf(n), t, BGM_STEP * 0.9, 0.06);     // 코드 짧게 탁탁
+    const m = BGM_MEL[bar][i]; if (m) bgmNote('square', nf(m), t, BGM_STEP * 1.6, 0.16);           // 멜로디
+    if (m && Math.floor(st / 128) % 2) bgmNote('square', nf(m + 12), t + BGM_STEP * 0.5, BGM_STEP, 0.05);   // 두 번째 바퀴엔 메아리
+    BGM.step++; BGM.next += BGM_STEP;
+  }
+}
+function bgmUnlock() {          // 첫 터치/클릭 때 오디오 켜기 (브라우저 규칙)
+  if (BGM.ctx) { if (BGM.ctx.state === 'suspended') BGM.ctx.resume(); return; }
+  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+  BGM.ctx = new AC(); BGM.gain = BGM.ctx.createGain(); BGM.gain.gain.value = 0; BGM.gain.connect(BGM.ctx.destination);
+}
+function bgmStart() {
+  if (!BGM.on) return; bgmUnlock(); if (!BGM.ctx || BGM.playing) return;
+  BGM.playing = true; BGM.step = 0; BGM.next = BGM.ctx.currentTime + 0.1;
+  BGM.gain.gain.cancelScheduledValues(BGM.ctx.currentTime); BGM.gain.gain.setTargetAtTime(BGM.VOL, BGM.ctx.currentTime, 0.4);
+  clearInterval(BGM.timer); BGM.timer = setInterval(bgmSchedule, 60); bgmSchedule();
+}
+function bgmStop() {
+  if (!BGM.ctx || !BGM.playing) return; BGM.playing = false;
+  BGM.gain.gain.setTargetAtTime(0, BGM.ctx.currentTime, 0.15); clearInterval(BGM.timer);
+}
+function bgmToggle() { BGM.on = !BGM.on; try { localStorage.setItem('jb_bgm', BGM.on ? '1' : '0'); } catch (e) {} if (BGM.on && mode === 'game') bgmStart(); else bgmStop(); $('bgmBtn').textContent = BGM.on ? '🔊' : '🔇'; }
+addEventListener('pointerdown', bgmUnlock, { once: true });
+$('bgmBtn').onclick = (e) => { e.stopPropagation(); bgmUnlock(); bgmToggle(); };
+$('bgmBtn').textContent = BGM.on ? '🔊' : '🔇';
 // ── 효과음 (public/sfx). 가까울수록 크게 ──
 const SFX = { yedam: '/sfx/yedam_super.mp3' }, sfxCache = {};
 function playSfx(name, f) {
