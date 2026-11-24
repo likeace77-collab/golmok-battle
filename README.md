@@ -177,7 +177,7 @@ PC: WASD 이동, Space/클릭 공격, Q·E 가젯 · 폰: 왼쪽 조이스틱 + 
 
 ## 조작 편집
 - `#ctrlEdit` (로비 「🎮 조작 편집」): 조이스틱·공격·궁·가젯1·2를 끌어서 옮기고 슬라이더로 크기, 「이동 조이스틱 고정」, 「이동 ⇄ 공격」(좌우 반전), 재설정, 저장.
-- 배치는 `localStorage.jb_ctrl` = `{ fixed, items: { joy|atk|sup|g1|g2: { x, y (화면 비율, 가운데), s (배율) } } }`. `ctrlApply()`가 `#ctrl` 버튼(left/top + translate·scale)과 조이스틱에 적용. 조이스틱은 `items.joy.x`가 있는 쪽 화면 절반에서 터치로 시작.
+- 배치는 `localStorage.jb_ctrl` = `{ fixed, items: { joy|atk|sup|g1|g2: { x, y (화면 비율, 가운데), s (배율) } } }`. `ctrlApply()`가 `#ctrl` 버튼(left/top + translate·scale)과 조이스틱에 적용. 이동은 `items.joy.x`가 있는 쪽 화면 절반 어디서든 터치 시작점 기준 스와이프 방향(조이스틱 위치·크기 무관). 반대쪽 절반 빈 곳 터치 = 그 자리 공격 조이스틱(`aimStart`/`aimTrack`, 탭은 자동조준).
 
 ## 렉 / 관전
 - 상태 전송: 30Hz 시뮬, `state`는 20Hz (`room.sendN`). `slimP`가 0·null·빈 배열 필드를 빼고 (false는 남김), 클라가 `P_NUM` 숫자 필드를 0으로 채움. 클라 보간 `INTERP_DELAY` 100ms.

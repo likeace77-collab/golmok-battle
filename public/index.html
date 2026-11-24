@@ -4595,15 +4595,24 @@ for (const [id, slot] of [['bG1', 1], ['bG2', 2]]) {
 // 조준 조이스틱 (기본공격 · 궁극기 공통)
 // 버튼 누른 채 드래그 → 놓으면 발사 · 그냥 탭하면 자동조준 · 끌었다가 가운데로 되돌리면 취소
 const aimJoy = $('aimJoy'), aimKnob = aimJoy.querySelector('i');
+function aimStart(kind, e, cx, cy) {
+  const A = aims[kind];
+  Object.assign(A, { id: e.pointerId, sx: cx, sy: cy, px: e.clientX, py: e.clientY, drag: 0, maxDrag: 0, cancel: false, ang: null });
+  aimJoy.className = kind; aimJoy.style.left = A.sx + 'px'; aimJoy.style.top = A.sy + 'px'; aimJoy.style.display = 'block'; aimKnob.style.transform = '';
+}
 function aimButton(el, kind, fire) {
   const A = aims[kind];
   el.addEventListener('pointerdown', (e) => {
     e.preventDefault(); e.stopPropagation(); if (!socket) return;
     const r = el.getBoundingClientRect();
-    Object.assign(A, { id: e.pointerId, sx: r.left + r.width / 2, sy: r.top + r.height / 2, px: e.clientX, py: e.clientY, drag: 0, maxDrag: 0, cancel: false, ang: null });
+    aimStart(kind, e, r.left + r.width / 2, r.top + r.height / 2);
     try { el.setPointerCapture(e.pointerId); } catch (_) {}
-    aimJoy.className = kind; aimJoy.style.left = A.sx + 'px'; aimJoy.style.top = A.sy + 'px'; aimJoy.style.display = 'block'; aimKnob.style.transform = '';
   });
+  aimTrack(el, kind, fire);
+}
+// 조준 드래그·놓기 처리 (버튼에도, 화면 오른쪽 빈 곳 공격 조이스틱에도 씀)
+function aimTrack(el, kind, fire) {
+  const A = aims[kind];
   el.addEventListener('pointermove', (e) => {
     if (e.pointerId !== A.id) return;
     const dx = e.clientX - A.px, dy = e.clientY - A.py, d = Math.hypot(dx, dy);   // 처음 누른 자리 기준
@@ -4630,6 +4639,13 @@ function aimButton(el, kind, fire) {
 }
 aimButton($('bAtk'), 'atk', 'attack');
 aimButton($('bSup'), 'sup', 'super');
+// 화면 공격 쪽(기본 오른쪽) 빈 곳을 누르면 그 자리에서 공격 조이스틱 (끌면 조준, 그냥 떼면 자동조준). 궁·가젯 버튼은 버튼이 먼저 잡음
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'touch' || mode !== 'game' || !socket || inJoySide(e.clientX) || aims.atk.id != null) return;
+  aimStart('atk', e, e.clientX, e.clientY);
+  try { renderer.domElement.setPointerCapture(e.pointerId); } catch (_) {}
+});
+aimTrack(renderer.domElement, 'atk', 'attack');
 
 // ── 조작 배치 (조작 편집에서 바꿈, localStorage jb_ctrl) ──
 // 위치는 화면 비율(x,y = 0~1, 버튼 가운데), s = 크기 배율. fixed = 이동 조이스틱 고정
@@ -4666,13 +4682,13 @@ knob.style.cssText = 'position:absolute;left:50%;top:50%;width:42px;height:42px;
 joyEl.appendChild(knob); document.body.appendChild(joyEl);
 const cvEl = renderer.domElement;
 // 조이스틱 쪽 화면 (이동 ⇄ 공격 바꾸면 오른쪽)
-const inJoySide = (x) => (CTRL.items.joy.x < 0.5 ? x < W * 0.6 : x > W * 0.4);
+const inJoySide = (x) => (CTRL.items.joy.x < 0.5 ? x < W * 0.5 : x >= W * 0.5);   // 화면 절반: 이동 쪽
 cvEl.addEventListener('touchstart', (e) => {
   for (const t of e.changedTouches) if (joy.id === null && inJoySide(t.clientX)) {
-    joy.id = t.identifier; joy.x = t.clientX; joy.y = t.clientY;
-    if (CTRL.fixed) { const p = ctrlPx(CTRL.items.joy); joy.sx = p.x; joy.sy = p.y; }     // 고정: 제자리 조이스틱 기준
-    else { joy.sx = t.clientX; joy.sy = t.clientY; }
-    joyEl.style.display = 'block'; joyEl.style.opacity = 1; joyEl.style.left = joy.sx + 'px'; joyEl.style.top = joy.sy + 'px';
+    // 조이스틱이 어디 있든 크기가 어떻든: 처음 누른 자리에서 미는 방향으로 이동
+    joy.id = t.identifier; joy.x = joy.sx = t.clientX; joy.y = joy.sy = t.clientY;
+    const p = CTRL.fixed ? ctrlPx(CTRL.items.joy) : { x: t.clientX, y: t.clientY };     // 고정이면 조이스틱 그림은 제자리
+    joyEl.style.display = 'block'; joyEl.style.opacity = 1; joyEl.style.left = p.x + 'px'; joyEl.style.top = p.y + 'px';
   }
   e.preventDefault();
 }, { passive: false });
