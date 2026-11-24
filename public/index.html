@@ -3588,7 +3588,7 @@ function handleFx(list) {
     else if (f.type === 'tethBreak') { burst(x, 2.5, z, 6, ['#f3cfb2', '#ffffff'], { speed: 4, size: 0.1, up: 2, life: 0.3 }); }
     else if (f.type === 'sprint') { const v = views[f.id]; if (v) v.g1T = 0; popup('전력질주!! 🏃', { x, z }, 5.2, '#7cf0ff', 26, 1); ringFx(x, z, 3, '#7cf0ff', 0.4); burst(x, 0.6, z, 18, ['#d8c8a8', '#ffffff'], { speed: 6, size: 0.2, up: 2, life: 0.6 }); }
     else if (f.type === 'pencilThrow') { const v = views[f.id]; if (v) { v.g2T = 0; v.facing = Math.atan2(Math.cos(f.a), Math.sin(f.a)); } }
-    else if (f.type === 'song') fxSong(f);
+    else if (f.type === 'song') { fxSong(f); playSfx('yedam', f); }
     else if (f.type === 'songPulse') { { const m = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 56), addMat('#ff4ab0', 0.8)); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.16, z); addFx(0.6, m, (k) => { m.scale.setScalar(f.r * S * (0.2 + 0.8 * ease(k))); m.material.opacity = 0.8 * (1 - k); }); } for (const id of f.hits || []) { const tv = views[id]; if (tv) { const t = tv.model.root.position; burst(t.x, 3, t.z, 6, ['#ff7ac8', '#ffd84a'], { speed: 3, size: 0.15, up: 3, life: 0.5 }); } } }
     else if (f.type === 'economy') { popup('📈 기절!', { x, z }, 5.6, '#ffd84a', 24, 1); if (isNear(x, z, 26)) bigCaption('경제야 살아라!!!', '📈', '#ffe14a'); burst(x, 4, z, 16, ['#ffd84a', '#3ce07f'], { speed: 5, size: 0.2, up: 6, life: 1 }); }
     else if (f.type === 'geoji') { if (isNear(x, z, 26)) bigCaption('거지들!!!', '🪙', '#ffd84a'); fxCoins(x, z); }
@@ -4174,6 +4174,18 @@ function updateResult() {
     const key = r.stats.map((x) => x.id + x.k + x.d).join() + r.type;
     if (resShownFor !== key && resClosed !== key) { resShownFor = key; setTimeout(() => { if (resShownFor === key && resClosed !== key) showResult(r); }, 1200); }   // 트로피가 먼저 오게 살짝 늦게
   } else if (state && (state.phase === 'wait' || state.phase === 'play')) { $('resBox').style.display = 'none'; resShownFor = null; resClosed = null; }
+}
+// ── 효과음 (public/sfx). 가까울수록 크게 ──
+const SFX = { yedam: '/sfx/yedam_super.mp3' }, sfxCache = {};
+function playSfx(name, f) {
+  try {
+    const src = SFX[name]; if (!src) return;
+    const base = sfxCache[name] || (sfxCache[name] = Object.assign(new Audio(src), { preload: 'auto' }));
+    const meS = state && state.players && state.players.find((p) => p.id === myId);
+    const d = meS && f && f.x != null ? Math.hypot(meS.x - f.x, meS.y - f.y) : 0;
+    const a = base.cloneNode(); a.volume = Math.max(0.25, Math.min(1, 1.15 - d / 1400));
+    a.play().catch(() => {});
+  } catch (e) {}
 }
 // ── 결과 화면 포즈 (브롤러마다 이겼을 때 / 졌을 때 애니메이션) ──────────────
 // 카드마다 작은 3D 장면 하나 · 렌더러 하나를 돌려쓰며 각 카드 <canvas>에 복사, 글자·이모지는 2D로 위에 그림
