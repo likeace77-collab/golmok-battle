@@ -6,7 +6,7 @@ const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
 const { BRAWLERS, GEARS, AJAE, ROBOTS, publicBrawlers } = require('./brawlers');
-const { MAPS, MODES } = require('./modes');
+const { MAPS, MODES, todayMap } = require('./modes');
 const auth = require('./auth');
 
 const app = express();
@@ -43,11 +43,11 @@ function getRoom(modeId, rid = modeId, fixedMap = null) {
   if (!rooms.has(rid)) {
     const mode = MODES[modeId];
     const room = {
-      id: rid, mode, fixedMap, map: cloneMap(fixedMap || pick(mode.maps)),
+      id: rid, mode, fixedMap, map: cloneMap(fixedMap || todayMap(mode.id)),
       players: new Map(), mice: [], shards: [], gems: [], fx: [], pending: [], bullets: [], bulletSeq: 0, bigmacs: [], bmSeq: 0,
       mouseSeq: 0, botSeq: 0, colorIdx: 0, shardSeq: 0, gemSeq: 0, cubes: [], cubeSeq: 0,
       phase: mode.rounds ? 'wait' : 'play', phaseT: mode.rounds ? 4 : 0,
-      mapT: mode.rotate || 0, gemT: 0, holdT: 0, holdTeam: -1, safe: null, playT: 0, result: null,
+      mapT: mode.rotate ? 5 : 0, gemT: 0, holdT: 0, holdTeam: -1, safe: null, playT: 0, result: null,
     };
     rooms.set(rid, room);
     if (mode.training) for (const r of room.map.robots || []) addRobot(room, r);
@@ -1531,7 +1531,7 @@ function assignSquads(room) {
 // ── 라운드 진행 ────────────────────────────────────
 function startRound(room) {
   const mode = room.mode;
-  room.map = cloneMap(room.fixedMap || pick(mode.maps));
+  room.map = cloneMap(room.fixedMap || todayMap(mode.id));   // 오늘의 맵 (0시 넘으면 다음 판부터 바뀜)
   room.mice = []; room.shards = []; room.gems = []; room.cubes = []; room.pending = []; room.bullets = []; room.bigmacs = []; room.gds = {};
   room.gemT = 0; room.holdT = 0; room.holdTeam = -1; room.result = null; room.playT = 0; room.roundT = 0;
   room.score = [0, 0]; room.stars = [0, 0]; room.ko = [0, 0];
@@ -1630,9 +1630,8 @@ function endRound(room, result) {
   }
   room.fx.push({ type: 'end', result });
 }
-function changeMap(room) {   // 난투/더블가젯: 맵 로테이션
-  const others = room.mode.maps.filter((m) => m !== room.map.id);
-  room.map = cloneMap(pick(others.length ? others : room.mode.maps));
+function changeMap(room) {   // 난투/더블가젯: 0시 넘으면 오늘의 맵으로 바꿈
+  room.map = cloneMap(todayMap(room.mode.id));
   room.mice = []; room.shards = []; room.pending = []; room.bullets = []; room.bigmacs = [];
   for (const p of room.players.values()) resetBody(room, p);
   room.mapT = room.mode.rotate;
@@ -1642,9 +1641,9 @@ function changeMap(room) {   // 난투/더블가젯: 맵 로테이션
 function roundLogic(room, now) {
   const mode = room.mode;
   if (!mode.rounds) {
-    if (!mode.rotate || room.fixedMap) return;     // 훈련장 / 맵 고른 방: 맵 고정
+    if (!mode.rotate || room.fixedMap) return;     // 훈련장: 맵 고정
     room.mapT -= DT;
-    if (room.mapT <= 0) changeMap(room);
+    if (room.mapT <= 0) { room.mapT = 5; if (room.map.id !== todayMap(mode.id)) changeMap(room); }   // 5초마다 날짜 확인
     return;
   }
   if (room.phase === 'queue') {                       // 매칭 대기: 다 차거나, 누가 「바로 시작」 누르거나, 시간 다 되면 시작
@@ -1760,7 +1759,7 @@ function stepBall(room) {
   if (b.cd > 0) b.cd -= DT;
   if (b.holder) {
     const h = room.players.get(b.holder);
-    if (!h || h.dead || h.out || h.stunT > 0 || h.frozenT > 0 || h.ctrlBy || h.jailT > 0) { dropBall(room); }
+    if (!h || h.dead || h.out || h.stunT > 0 || h.frozenT > 0 || h.ctrlBy || h.jailT > 0 || h.flyT > 0 || h.gd) { dropBall(room); }   // 지메 비행기 타면 공 떨어뜨림
     else { b.x = h.x + Math.cos(h.facing) * (h.B.radius + 14); b.y = h.y + Math.sin(h.facing) * (h.B.radius + 14); }
   } else {
     const sp = Math.hypot(b.vx, b.vy), steps = Math.max(1, Math.ceil(sp * DT / 10));
@@ -1775,7 +1774,7 @@ function stepBall(room) {
     if (b.cd <= 0) {             // 공 줍기
       let best = null, bd = Infinity;
       for (const p of room.players.values()) {
-        if (p.dead || p.out || p.struct || b.noPick[p.id] || p.stunT > 0) continue;
+        if (p.dead || p.out || p.struct || b.noPick[p.id] || p.stunT > 0 || p.flyT > 0 || p.gd) continue;   // 지메 비행기 타는 중엔 못 주움
         const d = Math.hypot(p.x - b.x, p.y - b.y);
         if (d < p.B.radius + BALL_R + 6 && d < bd) { bd = d; best = p; }
       }
@@ -2104,7 +2103,7 @@ function step(room) {
   io.to(room.id).emit('state', {
     ts: Date.now(),          // 클라이언트 보간용 서버 시각
     mode: room.mode.id, map: room.map.id, phase: room.phase, phaseT: +room.phaseT.toFixed(1), queueT: room.phase === 'queue' ? Math.ceil(room.queueT) : undefined, cap: room.qBase ? roomCap(room) : undefined, nHum: room.phase === 'queue' ? humans(room).length : undefined, botD: room.phase === 'queue' || room.botLv ? +botLv(room).d.toFixed(2) : undefined,
-    mapT: Math.ceil(room.mapT), playT: Math.floor(room.playT), result: room.result, fixed: !!room.fixedMap,
+    mapT: Math.ceil(room.mapT), playT: Math.floor(room.playT), result: room.result, fixed: true,
     safe: room.safe ? { x1: r1(room.safe.x1), y1: r1(room.safe.y1), x2: r1(room.safe.x2), y2: r1(room.safe.y2) } : null,
     gems: room.gems.map((g) => [g.id, r1(g.x), r1(g.y)]),
     cubes: room.cubes.length ? room.cubes.map((c) => [c.id, r1(c.x), r1(c.y)]) : undefined, sq: room.mode.squad || undefined,
@@ -2298,7 +2297,7 @@ io.on('connection', (socket) => {
     if (!pt) { pt = makeParty(o.cid, mode, map); partySync(pt); }     // 팀이 없으면 바로 만들어서 초대
     if (pt.members.includes(tgt.cid)) return done({ ok: false, msg: '이미 같은 팀이에요' });
     const M = MODES[pt.mode];
-    io.to(to).emit('invited', { from: o.name, pid: pt.id, kind: pt.kind, modeName: M.icon + ' ' + M.name, mapName: MAPS[pt.map] ? MAPS[pt.map].name : '랜덤 맵' });
+    io.to(to).emit('invited', { from: o.name, pid: pt.id, kind: pt.kind, modeName: M.icon + ' ' + M.name, mapName: '오늘의 맵 ' + MAPS[todayMap(pt.mode)].name });
     done({ ok: true });
   });
   socket.on('inviteAccept', ({ pid } = {}) => {
@@ -2343,13 +2342,13 @@ io.on('connection', (socket) => {
     if (pt && pt.leader === oe.cid && SHARED(pt.mode)) {        // 방장 + 난투/더블 가젯: 모두 쓰는 공용 방으로 같이
       modeId = pt.mode; rid = modeId; pt.room = rid;
     } else if (pt && pt.leader === oe.cid && pt.kind !== 'friendly' && !MODES[pt.mode].training) {   // 방장 + 일반 전투 팀: 친구들이랑 같이 매칭 (트로피 있음)
-      modeId = pt.mode; fixed = MODES[modeId].maps.includes(pt.map) ? pt.map : null;
+      modeId = pt.mode; fixed = null;   // 맵은 오늘의 맵 (매일 0시에 바뀜)
       const base = ridFor(modeId, fixed), n = pt.members.filter((c) => sidOfCid(c)).length;
       const qr = [...rooms.values()].find((r) => r.qBase === base && r.phase === 'queue' && roomCap(r) - humans(r).length >= n);
       rid = qr ? qr.id : base + '#q' + (++qSeq).toString(36);
       pt.room = rid;
     } else if (pt && pt.leader === oe.cid) {                    // 방장: 친선 전투 전용 새 방 (처음부터 같이 시작)
-      modeId = pt.mode; fixed = MODES[modeId].maps.includes(pt.map) ? pt.map : null;
+      modeId = pt.mode; fixed = null;   // 맵은 오늘의 맵 (매일 0시에 바뀜)
       rid = ridFor(modeId, fixed) + '#' + pt.id + '_' + Date.now().toString(36);
       pt.room = rid;
     } else if (pt && wantRid === pt.room && rooms.has(wantRid)) {   // 파티원: 방장이 만든 방으로
@@ -2357,7 +2356,7 @@ io.on('connection', (socket) => {
     } else if (MODES[modeId].training) rid = 'training:' + socket.id;                          // 훈련장은 혼자만
     else if (SHARED(modeId)) rid = modeId;                                                     // 난투·더블 가젯: 맵 상관없이 다 같은 방
     else {                                                                                     // 매칭: 같은 모드(·맵)에서 사람 기다리는 방이 있으면 거기로, 없으면 새 대기방
-      fixed = MODES[modeId].maps.includes(map) ? map : null;
+      fixed = null;   // 맵은 고를 수 없음: 오늘의 맵
       const base = ridFor(modeId, fixed);
       const qr = [...rooms.values()].find((r) => r.qBase === base && r.phase === 'queue' && humans(r).length < roomCap(r));
       rid = qr ? qr.id : base + '#q' + (++qSeq).toString(36);
@@ -2392,7 +2391,7 @@ io.on('connection', (socket) => {
     else resetBody(room, p, Math.floor(Math.random() * 8));
     socket.join(room.id);
     socket.emit('joined', { id: socket.id, mode: room.mode.id });
-    online.set(socket.id, Object.assign(oe, { name: p.name, key: p.userKey || null, status: 'game', mode: room.mode.id, brawler: bid, rid: room.id, map: room.fixedMap })); onlineDirty = true;
+    online.set(socket.id, Object.assign(oe, { name: p.name, key: p.userKey || null, status: 'game', mode: room.mode.id, brawler: bid, rid: room.id, map: room.map.id })); onlineDirty = true;
     if (pt && pt.leader === oe.cid) for (const c of pt.members) {     // 파티원들 같이 입장
       if (c === oe.cid) continue; const sid = sidOfCid(c); if (sid) io.to(sid).emit('partyGo', { rid });
     }
