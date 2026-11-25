@@ -180,7 +180,7 @@ PC: WASD 이동, Space/클릭 공격, Q·E 가젯 · 폰: 왼쪽 조이스틱 + 
 - 배치는 `localStorage.jb_ctrl` = `{ fixed, items: { joy|atk|sup|g1|g2: { x, y (화면 비율, 가운데), s (배율) } } }`. `ctrlApply()`가 `#ctrl` 버튼(left/top + translate·scale)과 조이스틱에 적용. 이동은 `items.joy.x`가 있는 쪽 화면 절반 어디서든 터치 시작점 기준 스와이프 방향(조이스틱 위치·크기 무관). 반대쪽 절반 빈 곳 터치 = 그 자리 공격 조이스틱(`aimStart`/`aimTrack`, 탭은 자동조준).
 
 ## 효과음 · 브금
-- 브금: 클라 `BGM` (Web Audio로 직접 연주하는 132BPM 8비트 루프, `BGM_CHORDS`/`BGM_MEL` 8마디). 게임 들어가면 `bgmStart`, 상단 🔊 `bgmToggle` (`localStorage.jb_bgm`), 크기 `BGM.VOL`.
+- 브금: 클라 `BGM` + `BGM_SONGS` (Web Audio로 직접 연주, 직접 만든 곡). `lobby`(A단조 112BPM 그루브) · `battle`(E단조 150BPM 오케스트라풍, 16마디). `bgmPlay(이름)`, 로비는 첫 터치 때 시작, 게임 들어가면 `bgmStart`(=battle). 🔊 `bgmToggle`(`localStorage.jb_bgm`), 크기 `BGM.VOL`, 잔향 `BGM.rev`.
 - `public/sfx/*.mp3`, 클라 `SFX` 표 + `playSfx(이름, fx)` (내 위치에서 멀수록 작게). 지금: 방예담 궁(`song` fx) → `yedam_super.mp3`.
 
 ## 렉 / 관전
