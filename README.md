@@ -179,9 +179,14 @@ PC: WASD 이동, Space/클릭 공격, Q·E 가젯 · 폰: 왼쪽 조이스틱 + 
 - `#ctrlEdit` (로비 「🎮 조작 편집」): 조이스틱·공격·궁·가젯1·2를 끌어서 옮기고 슬라이더로 크기, 「이동 조이스틱 고정」, 「이동 ⇄ 공격」(좌우 반전), 재설정, 저장.
 - 배치는 `localStorage.jb_ctrl` = `{ fixed, items: { joy|atk|sup|g1|g2: { x, y (화면 비율, 가운데), s (배율) } } }`. `ctrlApply()`가 `#ctrl` 버튼(left/top + translate·scale)과 조이스틱에 적용. 이동은 `items.joy.x`가 있는 쪽 화면 절반 어디서든 터치 시작점 기준 스와이프 방향(조이스틱 위치·크기 무관). 반대쪽 절반 빈 곳 터치 = 그 자리 공격 조이스틱(`aimStart`/`aimTrack`, 탭은 자동조준).
 
-## 효과음 · 브금
-- 브금: 클라 `BGM` + `BGM_SONGS` (Web Audio로 직접 연주, 직접 만든 곡). `lobby`(A단조 112BPM 그루브) · `battle`(E단조 150BPM 오케스트라풍, 16마디). `bgmPlay(이름)`, 로비는 첫 터치 때 시작, 게임 들어가면 `bgmStart`(=battle). 🔊 `bgmToggle`(`localStorage.jb_bgm`), 크기 `BGM.VOL`, 잔향 `BGM.rev`.
+## 효과음
+- 브금은 뺐음 (1.27.0). 다시 넣으려면 git 기록 4602906의 `BGM`/`BGM_SONGS` 참고.
 - `public/sfx/*.mp3`, 클라 `SFX` 표 + `playSfx(이름, fx)` (내 위치에서 멀수록 작게). 지금: 방예담 궁(`song` fx) → `yedam_super.mp3`.
+
+## 핀 · 스프레이
+- 게임 오른쪽 위 💬(`#emoBtn`) → `#emoPick` 창(핀 8개 / 스프레이 8개). 고르면 `emote {k:'pin'|'spray', i}`.
+- 서버: 소켓마다 쿨 (핀 2.5초, 스프레이 6초), 죽었거나 지메 중이면 무시. fx `pin {id,i}` / `spray {id,x,y,i}` (스프레이는 바라보는 방향 70px 앞 바닥).
+- 클라: 그림은 `EMO_PINS` / `EMO_SPRAYS` (캔버스로 그림, 0번이 역따). 핀 = 머리 옆 말풍선 스프라이트 2.6초(`fxPin`, 따라다님), 스프레이 = 바닥 데칼 12초(`fxSpray`). 한 사람당 핀·스프레이는 하나씩만 (새로 쓰면 이전 것 사라짐). 새 그림은 배열 맨 뒤에 추가 (번호로 주고받음).
 
 ## 렉 / 관전
 - 상태 전송: 30Hz 시뮬, `state`는 20Hz (`room.sendN`). `slimP`가 0·null·빈 배열 필드를 빼고 (false는 남김), 클라가 `P_NUM` 숫자 필드를 0으로 채움. 클라 보간 `INTERP_DELAY` 100ms.

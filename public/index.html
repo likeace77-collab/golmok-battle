@@ -35,7 +35,6 @@
   #profile .av { width: 46px; height: 46px; border-radius: 9px; border: 3px solid #000; background: linear-gradient(#ffe36b, #ffb31f); display: flex; align-items: center; justify-content: center; font-size: 28px; }
   #profile .pn { font-weight: 900; font-size: 16px; }
   #profile .tr { font-weight: 900; font-size: 15px; color: #ffd84a; }
-  #bgmBtnL { position: absolute; right: 136px; top: 58px; z-index: 3; padding: 4px 10px; font-size: 20px; cursor: pointer; }
   #lbtns { position: absolute; left: 10px; top: 80px; display: flex; flex-direction: column; gap: 10px; max-height: calc(100% - 90px); overflow-y: auto; overflow-x: hidden; touch-action: pan-y; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 0 4px 8px 0; z-index: 2; }
   #lbtns::-webkit-scrollbar { display: none; }
   #lbtns .lb { flex: 0 0 auto; }   /* 화면이 낮으면 버튼 줄을 아래로 스크롤 */
@@ -332,14 +331,27 @@
 
   #top { position: fixed; top: 8px; left: 8px; z-index: 8; display: none; gap: 6px; pointer-events: auto; }   /* 버튼이 항상 맨 위 */
   #top button { padding: 7px 10px; font-size: 13px; font-weight: 800; border: 3px solid #000; border-radius: 9px; background: #fff; cursor: pointer; }
-  #board { position: fixed; top: 8px; right: 12px; z-index: 6; text-align: right; font-weight: 800; font-size: 14px; line-height: 1.5; pointer-events: none; }
+  #board { position: fixed; top: 64px; right: 12px; z-index: 6; text-align: right; font-weight: 800; font-size: 14px; line-height: 1.5; pointer-events: none; }
   #feed { pointer-events: none; }
+  /* 핀·스프레이: 오른쪽 위 💬 버튼 → 고르는 창 */
+  #emoBtn { position: fixed; top: 8px; right: 12px; z-index: 9; display: none; width: 52px; height: 44px; border: 3px solid #000; border-radius: 12px 12px 12px 4px; background: #fff; font-size: 22px; font-weight: 900; cursor: pointer; box-shadow: 0 3px 0 #000; padding: 0; }
+  #emoBtn.cd { background: #555; color: #999; }
+  #emoPick { position: fixed; top: 58px; right: 12px; z-index: 9; display: none; background: rgba(20,24,60,.92); border: 3px solid #000; border-radius: 14px; padding: 6px 8px 8px; color: #fff; font-weight: 900; font-size: 12px; }
+  #emoPick .row { display: grid; grid-template-columns: repeat(4, 58px); gap: 6px; margin: 2px 0 6px; }
+  #emoPick .it { width: 58px; height: 58px; border-radius: 10px; background: rgba(255,255,255,.12); border: 2px solid rgba(255,255,255,.25); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  #emoPick .it img { width: 52px; height: 52px; object-fit: contain; pointer-events: none; }
+  #emoPick .it:active { transform: scale(.9); }
+  #emoPick .it.off { opacity: .35; }
   /* 세로 폰 화면: 버튼 줄 → 그 아래 모드 정보 → 그 아래 점수판·킬피드 */
   @media (max-width: 720px) {
     #top button { padding: 6px 9px; font-size: 12px; }
     #modeHud { top: 50px; font-size: 13px; }
     #modeHud .gs { font-size: 15px; padding: 2px 10px; }
     #modeHud .gs[style] { font-size: 12px !important; }
+    #emoBtn { right: 8px; width: 46px; height: 40px; font-size: 19px; }
+    #emoPick { top: 52px; right: 8px; }
+    #emoPick .row { grid-template-columns: repeat(4, 50px); gap: 5px; }
+    #emoPick .it { width: 50px; height: 50px; } #emoPick .it img { width: 45px; height: 45px; }
     #board { top: 86px; right: 8px; font-size: 11px; line-height: 1.35; }
     #feed { top: 150px; font-size: 13px; }
   }
@@ -381,7 +393,6 @@
   <div id="onlineBtn" class="panel stroke"><i></i>온라인 <span id="oCnt">-</span>명</div>
   <div id="lrank" class="panel stroke" style="display:none"></div>
   <div id="patchBtn" class="panel stroke">📜 패치노트<b id="patchNew">N</b></div>
-  <div id="bgmBtnL" class="panel stroke" title="배경음악 켜기/끄기">🔊</div>
   <div id="lbtns">
     <div class="lb panel stroke" id="openB"><span class="ic">🧑‍🏫</span>브롤러</div>
     <div class="lb panel stroke" id="openFriendly"><span class="ic">🤝</span>친선전</div>
@@ -420,7 +431,7 @@
 <div id="tierUp" class="stroke"></div><div id="trPop" class="stroke"></div>
 <div id="modal"><div class="box panel" id="mBox"></div></div>
 <div id="ui"></div>
-<div id="top"><button id="exitBtn">◀ 로비</button><button id="bgmBtn" title="배경음악 켜기/끄기">🔊</button><button id="botBtn">+ 봇 추가</button><button id="clearBtn">봇 삭제</button></div>
+<div id="top"><button id="exitBtn">◀ 로비</button><button id="botBtn">+ 봇 추가</button><button id="clearBtn">봇 삭제</button></div>
 <div id="invite"></div>
 <div id="board" class="stroke"></div>
 <div id="modeHud" class="stroke"></div>
@@ -444,6 +455,8 @@
   <button class="ceSwap" id="ceSwap">이동 ⇄ 공격</button>
 </div>
 <div id="specBar"><button id="specPrev">◀</button><span id="specName"></span><button id="specNext">▶</button></div>
+<button id="emoBtn" title="핀·스프레이">💬</button>
+<div id="emoPick"><div>핀</div><div class="row" id="emoPins"></div><div>스프레이</div><div class="row" id="emoSprays"></div></div>
 <div id="ctrl">
   <div class="cb" id="bAtk">공격<small>드래그</small></div>
   <div class="cb" id="bSup">궁극기<small>드래그</small></div>
@@ -3337,7 +3350,7 @@ function connect() {
     $('lobby').style.display = 'none'; $('lobbyBg').style.display = 'none';
     $('top').style.display = 'flex';
     $('ctrl').style.display = 'block'; setTimeout(ctrlApply, 0);
-    bgmStart();          // 게임 브금 (관전도)
+    $('emoBtn').style.display = specOnly ? 'none' : 'block'; $('emoPick').style.display = 'none';
     const rounds = d.mode !== 'ffa' && META.modes[d.mode] && (META.modes[d.mode].rounds || META.modes[d.mode].training);   // 라운드 모드는 봇 자동, 훈련장은 로봇 고정 (난투는 봇 직접 추가)
     $('botBtn').style.display = $('clearBtn').style.display = rounds ? 'none' : '';
   });
@@ -3592,6 +3605,8 @@ function handleFx(list) {
     else if (f.type === 'sprint') { const v = views[f.id]; if (v) v.g1T = 0; popup('전력질주!! 🏃', { x, z }, 5.2, '#7cf0ff', 26, 1); ringFx(x, z, 3, '#7cf0ff', 0.4); burst(x, 0.6, z, 18, ['#d8c8a8', '#ffffff'], { speed: 6, size: 0.2, up: 2, life: 0.6 }); }
     else if (f.type === 'pencilThrow') { const v = views[f.id]; if (v) { v.g2T = 0; v.facing = Math.atan2(Math.cos(f.a), Math.sin(f.a)); } }
     else if (f.type === 'song') { fxSong(f); playSfx('yedam', f); }
+    else if (f.type === 'pin') fxPin(f);
+    else if (f.type === 'spray') fxSpray(f);
     else if (f.type === 'songPulse') { { const m = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 56), addMat('#ff4ab0', 0.8)); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.16, z); addFx(0.6, m, (k) => { m.scale.setScalar(f.r * S * (0.2 + 0.8 * ease(k))); m.material.opacity = 0.8 * (1 - k); }); } for (const id of f.hits || []) { const tv = views[id]; if (tv) { const t = tv.model.root.position; burst(t.x, 3, t.z, 6, ['#ff7ac8', '#ffd84a'], { speed: 3, size: 0.15, up: 3, life: 0.5 }); } } }
     else if (f.type === 'economy') { popup('📈 기절!', { x, z }, 5.6, '#ffd84a', 24, 1); if (isNear(x, z, 26)) bigCaption('경제야 살아라!!!', '📈', '#ffe14a'); burst(x, 4, z, 16, ['#ffd84a', '#3ce07f'], { speed: 5, size: 0.2, up: 6, life: 1 }); }
     else if (f.type === 'geoji') { if (isNear(x, z, 26)) bigCaption('거지들!!!', '🪙', '#ffd84a'); fxCoins(x, z); }
@@ -4178,147 +4193,111 @@ function updateResult() {
     if (resShownFor !== key && resClosed !== key) { resShownFor = key; setTimeout(() => { if (resShownFor === key && resClosed !== key) showResult(r); }, 1200); }   // 트로피가 먼저 오게 살짝 늦게
   } else if (state && (state.phase === 'wait' || state.phase === 'play')) { $('resBox').style.display = 'none'; resShownFor = null; resClosed = null; }
 }
-// ── 브금: 파일 없이 Web Audio로 직접 연주 (직접 만든 곡이라 저작권 걱정 없음) ──
-// 로비 = 모험 느낌 그루브 (A단조 112BPM) / 전투 = 긴장감 있는 오케스트라풍 (E단조 150BPM: 현악 스타카토 + 금관 + 타악기)
-// 상단·로비 🔊 버튼으로 끄고 켬 (localStorage jb_bgm). 곡은 BGM_SONGS에서 고침
-const BGM = { ctx: null, out: null, rev: null, on: localStorage.getItem('jb_bgm') !== '0', song: null, next: 0, step: 0, timer: 0, VOL: 0.16 };
-const nf = (n) => 440 * Math.pow(2, (n - 69) / 12);          // MIDI 번호 → 주파수
-// 악기 ─────────────────────────────
-function bSynth({ t, n, dur, vol = 0.2, type = 'sawtooth', cut = 1800, cutEnd = 600, q = 1, det = 7, atk = 0.006, rev = 0.15, vib = 0 }) {
-  const c = BGM.ctx, g = c.createGain(), f = c.createBiquadFilter();
-  f.type = 'lowpass'; f.Q.value = q; f.frequency.setValueAtTime(cut, t); f.frequency.exponentialRampToValueAtTime(Math.max(80, cutEnd), t + dur);
-  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + atk); g.gain.setValueAtTime(vol, t + Math.max(atk, dur * 0.6)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  for (const d of det ? [-det, det] : [0]) {
-    const o = c.createOscillator(); o.type = type; o.frequency.value = nf(n); o.detune.value = d;
-    if (vib) { const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = 5.5; lg.gain.value = vib; l.connect(lg); lg.connect(o.detune); l.start(t); l.stop(t + dur + 0.05); }
-    o.connect(f); o.start(t); o.stop(t + dur + 0.05);
-  }
-  f.connect(g); g.connect(BGM.out); if (rev) { const s = c.createGain(); s.gain.value = rev; g.connect(s); s.connect(BGM.rev); }
+// ── 핀·스프레이 (오른쪽 위 💬) ── 핀 = 머리 옆 말풍선 2.6초 / 스프레이 = 앞 바닥에 낙서 12초
+// 새 핀·스프레이는 EMO_PINS / EMO_SPRAYS 맨 뒤에 추가 (번호로 주고받으니 순서 바꾸지 말 것). 서버 쿨: 핀 2.5초, 스프레이 6초
+function emoRnd(seed) { let a = seed * 9301 + 49297; return () => ((a = (a * 9301 + 49297) % 233280) / 233280); }
+function emoCanvas(draw) { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'); g.lineJoin = g.lineCap = 'round'; draw(g); return c; }
+function emoBubble(g) {          // 말풍선 (꼬리는 왼쪽 아래 → 머리 쪽)
+  g.save(); g.lineWidth = 12; g.strokeStyle = '#000'; g.fillStyle = '#fff';
+  g.beginPath(); g.roundRect(22, 22, 212, 176, 46); g.moveTo(62, 190); g.lineTo(34, 246); g.lineTo(112, 194); g.closePath();
+  g.stroke(); g.fill(); g.lineWidth = 0; g.beginPath(); g.roundRect(28, 28, 200, 164, 40); g.fill(); g.restore();
 }
-function bNoise(t, dur, vol, type, freq, q = 1, rev = 0.1) {
-  const c = BGM.ctx; if (!BGM.noise) { const b = c.createBuffer(1, c.sampleRate * 0.5, c.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; BGM.noise = b; }
-  const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
-  s.buffer = BGM.noise; f.type = type; f.frequency.value = freq; f.Q.value = q; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  s.connect(f); f.connect(g); g.connect(BGM.out); if (rev) { const r = BGM.ctx.createGain(); r.gain.value = rev; g.connect(r); r.connect(BGM.rev); }
-  s.start(t); s.stop(t + dur + 0.02);
+function emoText(g, t, x, y, size, fill, line = 14, rot = 0) {
+  g.save(); g.translate(x, y); g.rotate(rot); g.font = `900 ${size}px "Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineWidth = line; g.strokeStyle = '#000'; g.strokeText(t, 0, 0);
+  if (Array.isArray(fill)) { const gr = g.createLinearGradient(0, -size / 2, 0, size / 2); fill.forEach((c, i) => gr.addColorStop(i / (fill.length - 1), c)); g.fillStyle = gr; } else g.fillStyle = fill;
+  g.fillText(t, 0, 0); g.restore();
 }
-function bDrum(t, f0, f1, dur, vol) {      // 킥·톰·팀파니: 음이 떨어지는 사인
-  const c = BGM.ctx, o = c.createOscillator(), g = c.createGain();
-  o.type = 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.7);
-  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g); g.connect(BGM.out); o.start(t); o.stop(t + dur + 0.02);
+function emoEmoji(g, e, x, y, size) { g.save(); g.font = `${size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, x, y); g.restore(); }
+const pinEmoji = (e) => emoCanvas((g) => { emoBubble(g); emoEmoji(g, e, 128, 116, 118); });
+const EMO_PINS = [
+  emoCanvas((g) => {             // 역따 (필수)
+    emoBubble(g);
+    emoText(g, '역따', 124, 112, 90, ['#fff27a', '#ffb020', '#ff4a2a'], 16, -0.08);
+    g.fillStyle = '#ff4a2a'; for (const [x, y, r] of [[206, 52, 9], [52, 56, 6], [214, 168, 6]]) { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); }
+    emoText(g, '!', 214, 104, 70, '#ff4a2a', 10, 0.2);
+  }),
+  pinEmoji('😂'), pinEmoji('😡'), pinEmoji('😭'), pinEmoji('👍'), pinEmoji('😎'),
+  emoCanvas((g) => { emoBubble(g); emoText(g, 'GG', 128, 112, 112, ['#9effa0', '#2fb84a'], 14); }),
+  emoCanvas((g) => { emoBubble(g); emoText(g, 'ㅋㅋㅋ', 128, 112, 76, ['#ffe14a', '#ff9a1a'], 12, -0.06); }),
+];
+function emoSplat(g, seed, col, r = 96) {      // 스프레이 바탕 얼룩 (번호마다 모양 고정)
+  const R = emoRnd(seed); g.save(); g.fillStyle = col; g.beginPath();
+  for (let i = 0; i <= 28; i++) { const a = i / 28 * Math.PI * 2, rr = r * (0.82 + R() * 0.3) * (i % 4 === 0 ? 1.12 : 1); g.lineTo(128 + Math.cos(a) * rr, 128 + Math.sin(a) * rr); }
+  g.closePath(); g.fill();
+  for (let i = 0; i < 14; i++) { const a = R() * 7, d = r * (1.05 + R() * 0.25); g.beginPath(); g.arc(128 + Math.cos(a) * d, 128 + Math.sin(a) * d, 3 + R() * 7, 0, 7); g.fill(); }   // 튄 방울
+  for (let i = 0; i < 4; i++) { const x = 128 + (R() - 0.5) * r * 1.3, h = 18 + R() * 30, w = 6 + R() * 5; g.fillRect(x - w / 2, 128 + r * 0.6, w, h); g.beginPath(); g.arc(x, 128 + r * 0.6 + h, w * 0.7, 0, 7); g.fill(); }   // 흘러내림
+  g.restore();
 }
-const kick = (t, v = 1) => bDrum(t, 140, 42, 0.32, v);
-const snare = (t, v = 0.5) => { bNoise(t, 0.16, v, 'bandpass', 1900, 0.8, 0.25); bDrum(t, 230, 160, 0.09, v * 0.6); };
-const hat = (t, v = 0.12) => bNoise(t, 0.035, v, 'highpass', 8000, 0.7, 0);
-const tom = (t, f, v = 0.7) => bDrum(t, f, f * 0.55, 0.28, v);
-const timp = (t, n, v = 0.8) => bDrum(t, nf(n) * 1.5, nf(n), 0.7, v);
-const cymbal = (t, v = 0.22) => bNoise(t, 1.3, v, 'highpass', 6000, 0.5, 0.4);
-// 곡 ─────────────────────────────
-// 각 곡: bpm, bars(마디 수), play(t, bar, i, step): 16분음표 한 칸마다 불림
-const BGM_SONGS = {
-  // 전투: E단조. Em Em C D | Em Em C B  (마지막 B장조로 긴장↑)  ·  두 바퀴째엔 금관 멜로디가 한 옥타브 위 + 심벌
-  battle: {
-    bpm: 150, bars: 16,
-    chords: [[40, [64, 67, 71]], [40, [64, 67, 71]], [36, [64, 67, 72]], [38, [62, 66, 69]], [40, [64, 67, 71]], [40, [64, 67, 71]], [36, [64, 67, 72]], [35, [63, 66, 71]]],
-    // 현악 스타카토 (근음 기준 반음 거리, 16칸)
-    ost: [0, 0, 7, 0, 0, 7, 0, 12, 0, 0, 7, 0, 3, 0, 7, 10],
-    // 금관 멜로디 (8마디 × 16칸, 0 = 쉼, -1 = 이어서)
-    mel: [
-      [76, -1, -1, 0, 79, -1, 78, -1, 76, -1, -1, -1, 71, -1, 0, 0], [74, -1, 76, -1, 78, -1, 79, -1, 78, -1, 74, -1, 71, -1, -1, 0],
-      [72, -1, -1, 0, 76, -1, 79, -1, 84, -1, -1, -1, 83, -1, 79, -1], [81, -1, -1, -1, 78, -1, 74, -1, 81, -1, 83, -1, 81, -1, 78, -1],
-      [79, -1, -1, 0, 83, -1, 81, -1, 79, -1, -1, -1, 76, -1, 0, 0], [78, -1, 79, -1, 81, -1, 83, -1, 84, -1, 83, -1, 79, -1, -1, 0],
-      [84, -1, -1, -1, 83, -1, 79, -1, 76, -1, 79, -1, 84, -1, 88, -1], [87, -1, -1, -1, 83, -1, -1, -1, 78, -1, 75, -1, 71, -1, -1, -1],
-    ],
-    play(t, bar, i, st, S) {
-      const b8 = bar % 8, lap = Math.floor(bar / 8), [root, tri] = this.chords[b8], step = S;
-      // 타악기: 킥 + 스네어 + 하이햇, 4마디마다 톰 필인, 8마디 시작 심벌·팀파니
-      if (i === 0 || i === 8 || i === 10) kick(t, i === 10 ? 0.6 : 1);
-      if (i === 4 || i === 12) snare(t);
-      if (i % 2 === 1 || (lap && i % 2 === 0)) hat(t, i % 4 === 2 ? 0.16 : 0.09);
-      if (b8 % 4 === 3 && i >= 12) tom(t, [180, 150, 120, 95][i - 12]);
-      if (b8 === 0 && i === 0) { cymbal(t, lap ? 0.3 : 0.2); timp(t, 28); }
-      if (b8 === 7 && i % 2 === 0) timp(t, 23 + (i >> 2), 0.35 + i * 0.03);          // 마지막 마디 팀파니 롤 → 다시 처음
-      // 저음 현악 스타카토 (긴장감의 핵심)
-      bSynth({ t, n: root + 12 + this.ost[i], dur: step * 0.8, vol: 0.13, cut: 1400, cutEnd: 300, det: 9, rev: 0.05 });
-      if (i % 4 === 0) bSynth({ t, n: root, dur: step * 3.5, vol: 0.18, type: 'triangle', cut: 600, cutEnd: 200, det: 0, rev: 0 });   // 베이스
-      // 금관 스탭 (화음 찌르기): 1·4·(7)번째 8분음표
-      if (i === 0 || i === 6 || (lap && i === 11)) for (const n of tri) bSynth({ t, n: n - 12, dur: step * 1.6, vol: 0.06, cut: 2600, cutEnd: 700, det: 12, q: 2, rev: 0.2 });
-      // 멜로디: 금관(톱니) + 위에 피리(사인) 겹침
-      const m = this.mel[b8][i];
-      if (m > 0) {
-        let len = 1; while (i + len < 16 && this.mel[b8][i + len] === -1) len++;
-        const n = m + (lap ? 0 : -12);
-        bSynth({ t, n, dur: step * len * 0.95, vol: lap ? 0.09 : 0.11, cut: 2400, cutEnd: 1400, det: 6, q: 1.5, atk: 0.03, rev: 0.25, vib: 12 });
-        if (lap) bSynth({ t, n: n + 12, dur: step * len * 0.9, vol: 0.035, type: 'sine', cut: 6000, cutEnd: 5000, det: 0, atk: 0.04, rev: 0.35, vib: 18 });
-      }
-    },
-  },
-  // 로비: A단조 그루브. Am F C G | Am F G E  · 마림바 멜로디 + 플럭 아르페지오 + 가벼운 드럼
-  lobby: {
-    bpm: 112, bars: 8,
-    chords: [[45, [57, 60, 64]], [41, [57, 60, 65]], [48, [55, 60, 64]], [43, [55, 59, 62]], [45, [57, 60, 64]], [41, [57, 60, 65]], [43, [55, 59, 62]], [40, [56, 59, 64]]],
-    mel: [
-      [69, 0, 72, 0, 76, 0, 0, 74, 72, 0, 74, 0, 72, 0, 69, 0], [72, 0, 0, 0, 77, 0, 76, 0, 74, 0, 72, 0, 69, 0, 0, 0],
-      [67, 0, 72, 0, 76, 0, 0, 79, 76, 0, 74, 0, 72, 0, 76, 0], [74, 0, 0, 0, 71, 0, 74, 0, 79, 0, 0, 0, 0, 0, 0, 0],
-      [81, 0, 79, 0, 76, 0, 0, 72, 74, 0, 76, 0, 72, 0, 69, 0], [77, 0, 76, 0, 74, 0, 72, 0, 69, 0, 72, 0, 77, 0, 0, 0],
-      [79, 0, 77, 0, 76, 0, 74, 0, 71, 0, 74, 0, 79, 0, 83, 0], [80, 0, 0, 0, 76, 0, 0, 0, 71, 0, 0, 0, 68, 0, 0, 0],
-    ],
-    play(t, bar, i, st, S) {
-      const b8 = bar % 8, [root, tri] = this.chords[b8], step = S;
-      if (i === 0 || i === 7 || i === 10) kick(t, 0.85);
-      if (i === 4 || i === 12) { snare(t, 0.28); bNoise(t, 0.09, 0.18, 'bandpass', 1200, 1.2, 0.3); }   // 스네어 + 손뼉
-      if (i % 2 === 0) hat(t, i % 4 === 2 ? 0.11 : 0.06);
-      if (i % 2 === 0) bSynth({ t, n: root + (i === 6 || i === 14 ? 12 : 0), dur: step * 1.7, vol: 0.27, type: 'triangle', cut: 900, cutEnd: 300, det: 0, rev: 0 });   // 통통 베이스
-      bSynth({ t, n: tri[(i * 3) % 3] + (i % 8 >= 4 ? 12 : 0), dur: step * 0.9, vol: 0.06, type: 'square', cut: 2200, cutEnd: 500, det: 4, rev: 0.25 });   // 플럭 아르페지오
-      const m = this.mel[b8][i];
-      if (m) { bSynth({ t, n: m, dur: step * 2.2, vol: 0.19, type: 'sine', cut: 5000, cutEnd: 2000, det: 0, atk: 0.003, rev: 0.3 }); bSynth({ t, n: m + 24, dur: step * 0.6, vol: 0.025, type: 'sine', cut: 8000, cutEnd: 6000, det: 0, atk: 0.002, rev: 0.2 }); }   // 마림바 느낌
-    },
-  },
-};
-function bgmSchedule() {
-  const c = BGM.ctx, S = BGM.song && BGM_SONGS[BGM.song]; if (!c || !S) return;
-  const step = 60 / S.bpm / 4;
-  while (BGM.next < c.currentTime + 0.3) {
-    const st = BGM.step, bar = Math.floor(st / 16) % S.bars, i = st % 16;
-    try { S.play(BGM.next, bar, i, st, step); } catch (e) {}
-    BGM.step++; BGM.next += step;
-  }
+function emoGraffiti(g, t, size, fill, seed, bg) {
+  emoSplat(g, seed, bg);
+  g.save(); g.translate(128, 124); g.rotate(-0.12); g.font = `900 ${size}px "Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineWidth = 30; g.strokeStyle = '#000'; g.strokeText(t, 4, 6);       // 그림자
+  g.lineWidth = 22; g.strokeStyle = '#fff'; g.strokeText(t, 0, 0);
+  g.lineWidth = 9; g.strokeStyle = '#000'; g.strokeText(t, 0, 0);
+  const gr = g.createLinearGradient(0, -size / 2, 0, size / 2); fill.forEach((c, i) => gr.addColorStop(i / (fill.length - 1), c)); g.fillStyle = gr; g.fillText(t, 0, 0);
+  g.fillStyle = 'rgba(255,255,255,.75)'; g.fillRect(-size * 0.9, -size * 0.28, size * 1.8, size * 0.07);   // 반짝 줄
+  g.restore();
 }
-function bgmUnlock() {          // 첫 터치/클릭 때 오디오 켜기 (브라우저 규칙)
-  if (BGM.ctx) { if (BGM.ctx.state === 'suspended') BGM.ctx.resume(); return; }
-  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-  const c = BGM.ctx = new AC();
-  const comp = c.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 4; comp.connect(c.destination);
-  BGM.master = c.createGain(); BGM.master.gain.value = 0; BGM.master.connect(comp);
-  BGM.out = c.createGain(); BGM.out.connect(BGM.master);
-  BGM.rev = c.createConvolver(); const L = c.sampleRate * 1.8, ir = c.createBuffer(2, L, c.sampleRate);   // 홀 잔향
-  for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < L; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / L, 2.6); }
-  BGM.rev.buffer = ir; BGM.rev.connect(BGM.master);
+const sprayEmoji = (e, seed, bg) => emoCanvas((g) => { emoSplat(g, seed, bg); g.save(); g.lineWidth = 10; g.strokeStyle = '#000'; g.beginPath(); g.arc(128, 128, 78, 0, 7); g.stroke(); g.restore(); emoEmoji(g, e, 128, 134, 112); });
+const EMO_SPRAYS = [
+  emoCanvas((g) => emoGraffiti(g, '역따', 100, ['#fff27a', '#ff9a1a', '#ff2a4a'], 3, '#7a2cff')),    // 역따 (필수)
+  emoCanvas((g) => emoGraffiti(g, '호수중', 72, ['#a8f0ff', '#2f9bff', '#1a3cff'], 7, '#ffcf2a')),
+  emoCanvas((g) => emoGraffiti(g, 'GG', 120, ['#c8ffb0', '#3ce07f', '#159a4a'], 11, '#ff4ab0')),
+  sprayEmoji('🔥', 13, '#ff7a1a'), sprayEmoji('👑', 17, '#ffd84a'), sprayEmoji('💀', 19, '#5a5f6a'), sprayEmoji('💯', 23, '#ff4a4a'), sprayEmoji('⭐', 29, '#3a8dff'),
+];
+const emoTex = (c) => c._t || (c._t = Object.assign(new THREE.CanvasTexture(c), { colorSpace: THREE.SRGBColorSpace, anisotropy: 4 }));
+const emoPinOf = {}, emoSprayOf = {};
+function fxPin(f) {
+  const c = EMO_PINS[f.i]; if (!c) return;
+  if (emoPinOf[f.id]) emoPinOf[f.id].dead = true;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: emoTex(c), transparent: true, depthTest: false, depthWrite: false })); sp.renderOrder = 20;
+  const st = { dead: false }; emoPinOf[f.id] = st;
+  let px = f.x * S, pz = f.y * S;
+  addFx(2.6, sp, (k) => {
+    const v = views[f.id]; if (v) { const q = v.model.root.position; px = q.x; pz = q.z; }
+    const t = k * 2.6, pop = t < 0.18 ? t / 0.18 * 1.15 : t < 0.3 ? 1.15 - (t - 0.18) / 0.12 * 0.15 : 1;
+    sp.scale.setScalar(st.dead ? 0 : 3.4 * pop * (1 + Math.sin(t * 7) * 0.025));
+    sp.position.set(px + 3.3, 4.7 + Math.sin(t * 3) * 0.08, pz);
+    sp.material.opacity = k > 0.88 ? (1 - k) / 0.12 : 1;
+  });
 }
-function bgmPlay(name) {          // 'lobby' / 'battle' — 곡 바꾸면 살짝 끊었다 이어서
-  if (!BGM.on) { BGM.want = name; return; }
-  bgmUnlock(); if (!BGM.ctx) return;
-  BGM.want = name;
-  if (BGM.song === name) return;
-  const c = BGM.ctx;
-  BGM.master.gain.cancelScheduledValues(c.currentTime); BGM.master.gain.setTargetAtTime(0, c.currentTime, 0.08);
-  setTimeout(() => {
-    BGM.song = name; BGM.step = 0; BGM.next = c.currentTime + 0.12;
-    BGM.master.gain.cancelScheduledValues(c.currentTime); BGM.master.gain.setTargetAtTime(BGM.VOL, c.currentTime + 0.1, 0.3);
-    clearInterval(BGM.timer); BGM.timer = setInterval(bgmSchedule, 50); bgmSchedule();
-  }, BGM.song ? 350 : 0);
+function fxSpray(f) {
+  const c = EMO_SPRAYS[f.i]; if (!c) return;
+  const x = f.x * S, z = f.y * S;
+  if (emoSprayOf[f.id]) emoSprayOf[f.id].dead = true;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: emoTex(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }));
+  m.rotation.x = -Math.PI / 2; m.position.set(x, 0.09, z); m.renderOrder = 2;
+  const st = { dead: false, t0: 0 }; emoSprayOf[f.id] = st;
+  addFx(12, m, (k) => {
+    const t = k * 12; if (st.dead && !st.t0) st.t0 = t;
+    const pop = t < 0.12 ? 0.5 + t / 0.12 * 0.6 : t < 0.22 ? 1.1 - (t - 0.12) : 1;
+    m.scale.setScalar(5.2 * pop);
+    m.material.opacity = st.dead ? Math.max(0, 1 - (t - st.t0) / 0.3) : k > 0.9 ? (1 - k) / 0.1 : 0.95;
+  });
+  burst(x, 0.8, z, 14, ['#ffffff', '#dddddd'], { speed: 3, size: 0.25, up: 2, life: 0.5 });     // 칙! 분사 연기
 }
-function bgmStop() { if (!BGM.ctx) return; BGM.master.gain.setTargetAtTime(0, BGM.ctx.currentTime, 0.15); clearInterval(BGM.timer); BGM.song = null; }
-const bgmStart = () => bgmPlay('battle');
-function bgmToggle() {
-  BGM.on = !BGM.on; try { localStorage.setItem('jb_bgm', BGM.on ? '1' : '0'); } catch (e) {}
-  if (BGM.on) bgmPlay(mode === 'game' ? 'battle' : 'lobby'); else bgmStop();
-  for (const id of ['bgmBtn', 'bgmBtnL']) if ($(id)) $(id).textContent = BGM.on ? '🔊' : '🔇';
+// 고르는 창
+let emoCdT = 0;
+function emoFill() {
+  const add = (box, list, k) => { $(box).innerHTML = ''; list.forEach((c, i) => { const d = document.createElement('div'); d.className = 'it'; d.dataset.k = k; d.innerHTML = `<img src="${c.toDataURL()}">`;
+    d.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); emoSend(k, i); }); $(box).appendChild(d); }); };
+  add('emoPins', EMO_PINS, 'pin'); add('emoSprays', EMO_SPRAYS, 'spray');
 }
-// 로비: 첫 터치/클릭에 로비 브금 시작 (브라우저가 소리는 터치 뒤에만 허락)
-addEventListener('pointerdown', () => { bgmUnlock(); if (BGM.on && !BGM.song) bgmPlay(mode === 'game' ? 'battle' : 'lobby'); }, true);
-for (const id of ['bgmBtn', 'bgmBtnL']) if ($(id)) { $(id).onclick = (e) => { e.stopPropagation(); bgmUnlock(); bgmToggle(); }; $(id).textContent = BGM.on ? '🔊' : '🔇'; }
+const emoCd = { pin: 0, spray: 0 };
+function emoSend(k, i) {
+  const now = performance.now(); if (now < emoCd[k] || !socket) return;
+  emoCd[k] = now + (k === 'pin' ? 2500 : 6000); socket.emit('emote', { k, i });
+  $('emoPick').style.display = 'none'; emoUi();
+}
+function emoUi() {
+  const now = performance.now(); $('emoBtn').classList.toggle('cd', now < emoCd.pin && now < emoCd.spray);
+  for (const d of document.querySelectorAll('#emoPick .it')) d.classList.toggle('off', now < emoCd[d.dataset.k]);
+  clearTimeout(emoCdT); if (now < Math.max(emoCd.pin, emoCd.spray)) emoCdT = setTimeout(emoUi, 200);
+}
+$('emoBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation();
+  const el = $('emoPick'); if (!el.dataset.ok) { emoFill(); el.dataset.ok = 1; } el.style.display = el.style.display === 'block' ? 'none' : 'block'; emoUi(); });
+addEventListener('pointerdown', (e) => { const el = $('emoPick'); if (el.style.display === 'block' && !el.contains(e.target) && e.target !== $('emoBtn')) el.style.display = 'none'; }, true);
 // ── 효과음 (public/sfx). 가까울수록 크게 ──
 const SFX = { yedam: '/sfx/yedam_super.mp3' }, sfxCache = {};
 function playSfx(name, f) {

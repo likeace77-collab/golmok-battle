@@ -2402,6 +2402,16 @@ io.on('connection', (socket) => {
     const g = room.gds[p.gd], el = Date.now() / 1000 - g.t0;
     if (g.crash[p.id] == null) g.crash[p.id] = Math.max(0, Math.min(+(d && d.t) || el, el + 0.5));
   });
+  // 핀(머리 위 말풍선)·스프레이(바닥 낙서). 종류는 클라가 정함(번호만 받음). 도배 막는 쿨타임: 핀 2.5초, 스프레이 6초
+  const emoCd = { pin: 0, spray: 0 };
+  socket.on('emote', (x) => {
+    const p = me(); if (!p || p.dead || p.out || p.gd || !x || typeof x !== 'object') return;
+    const k = x.k === 'spray' ? 'spray' : 'pin', i = x.i | 0, now = Date.now();
+    if (i < 0 || i > 40 || now < emoCd[k]) return;
+    emoCd[k] = now + (k === 'pin' ? 2500 : 6000);
+    if (k === 'pin') room.fx.push({ type: 'pin', id: p.id, x: p.x, y: p.y, i });
+    else { const s0 = { x: p.x + Math.cos(p.facing || 0) * 70, y: p.y + Math.sin(p.facing || 0) * 70 }; resolveWalls(room.map, s0, 20); room.fx.push({ type: 'spray', id: p.id, x: s0.x, y: s0.y, i }); }
+  });
   socket.on('startNow', () => { if (room && room.phase === 'queue') room.startReq = true; });   // 매칭 대기 → 바로 시작 (빈자리는 봇)
   socket.on('input', (inp) => {
     const p = me();
