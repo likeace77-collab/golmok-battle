@@ -2416,6 +2416,7 @@ function makeMusic(teamColor) {
       const L = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.08 + k * 0.025, 0.02), m.eye), a = 0.35 + k * 0.32;
       L.position.set(s * (0.21 + Math.cos(Math.PI / 2 - a) * 0.12), 0.02 + Math.sin(Math.PI / 2 - a) * 0.085 + 0.04, 0.58); L.rotation.z = -s * a; head.add(L);
     }
+    const pe = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), m.pearl); pe.position.set(s * 0.6, -0.52, 0.04); head.add(pe);   // 진주 귀걸이
     const brow = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.017, 4, 14, Math.PI * 0.8), m.brow); brow.position.set(s * 0.21, 0.17, 0.55); brow.rotation.z = Math.PI * 0.1; head.add(brow);   // 가늘게 그린 아치 눈썹
   }
   const nose = new THREE.Mesh(new THREE.SphereGeometry(0.085, 14, 12), m.skin); nose.scale.set(1.1, 0.85, 0.9); nose.position.set(0, -0.12, 0.62); head.add(nose);
@@ -2427,7 +2428,8 @@ function makeMusic(teamColor) {
   const cap = new THREE.Mesh(new THREE.SphereGeometry(0.655, 30, 18, 0, Math.PI * 2, 0, Math.PI * 0.45), m.hair); cap.position.set(0, 0.04, -0.01); head.add(cap);
   const wrap = new THREE.Mesh(new THREE.CylinderGeometry(0.655, 0.63, 0.66, 30, 1, true, Math.PI * 0.27, Math.PI * 1.46), m.hair); wrap.position.set(0, -0.14, -0.01); head.add(wrap);
   const wrapIn = new THREE.Mesh(new THREE.CylinderGeometry(0.645, 0.62, 0.66, 30, 1, true, Math.PI * 0.27, Math.PI * 1.46), m.hair); wrapIn.material = m.hair.clone(); wrapIn.material.side = THREE.BackSide; wrapIn.position.copy(wrap.position); head.add(wrapIn);
-  const bang = new THREE.Mesh(new THREE.SphereGeometry(0.5, 24, 14), m.hair); bang.scale.set(1.17, 0.3, 0.34); bang.position.set(0, 0.37, 0.33); bang.rotation.x = -0.45; head.add(bang);   // 이마 덮는 앞머리
+  const bangMat = m.hair.clone(); bangMat.side = THREE.DoubleSide;
+  const bang = new THREE.Mesh(new THREE.SphereGeometry(0.672, 30, 10, Math.PI / 2 - 0.85, 1.7, Math.PI * 0.12, Math.PI * 0.29), bangMat); bang.position.set(0, 0.04, -0.01); head.add(bang);   // 이마 덮는 앞머리 (머리에 딱 붙은 껍질 → 옆으로 안 튀어나옴)
   const shine = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.025, 4, 24, Math.PI * 0.5), m.hairHi); shine.position.set(0, 0.12, 0.05); shine.rotation.set(-0.5, 0, Math.PI * 0.25); head.add(shine);   // 윤기
   const stars = new THREE.Group(); stars.position.y = 3.9; model.add(stars); stars.visible = false;
   for (let i = 0; i < 4; i++) { const st = new THREE.Mesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshBasicMaterial({ color: '#ffe23a' })); st.position.set(Math.cos(i * Math.PI / 2) * 0.8, 0, Math.sin(i * Math.PI / 2) * 0.8); stars.add(st); }
