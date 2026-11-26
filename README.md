@@ -184,7 +184,7 @@ PC: WASD 이동, Space/클릭 공격, Q·E 가젯 · 폰: 왼쪽 조이스틱 + 
 
 ## 효과음
 - 브금은 뺐음 (1.27.0). 다시 넣으려면 git 기록 4602906의 `BGM`/`BGM_SONGS` 참고.
-- `public/sfx/*.mp3`, 클라 `SFX` 표 + `playSfx(이름, fx)` (내 위치에서 멀수록 작게). 지금: 방예담 궁(`song` fx) → `yedam_super.mp3`.
+- `public/sfx/*.mp3`, 클라 `SFX` 표 + `playSfx(이름, fx)` (내 위치에서 멀수록 작게). 지금: 방예담 궁(`song` fx) → `yedam_super.mp3`, 이진호 궁(`kickStart` fx) → `jinho_super.mp3`.
 
 ## 핀 · 스프레이
 - 게임 오른쪽 위 💬(`#emoBtn`) → `#emoPick` 창(핀 8개 / 스프레이 8개). 고르면 `emote {k:'pin'|'spray', i}`.

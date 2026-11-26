@@ -3754,7 +3754,7 @@ function handleFx(list) {
     else if (f.type === 'neckBend') fxNeckBend(f);
     else if (f.type === 'whip') fxWhip(f);
     else if (f.type === 'flailHit') { popup('퍽!', { x, z }, 4.4, '#fff', 26, 0.6); burst(x, 2, z, 10, ['#ffffff', '#f7c84a'], { speed: 6, size: 0.15, up: 3, life: 0.4 }); }
-    else if (f.type === 'kickStart') { const v = views[f.id]; if (v) { v.superT = 0; v.facing = Math.atan2(-Math.cos(f.a), -Math.sin(f.a)); } popup('기린 뒷발차기!!!', { x, z }, 7, '#ff9a1f', 40, 1.1); }
+    else if (f.type === 'kickStart') { const v = views[f.id]; if (v) { v.superT = 0; v.facing = Math.atan2(-Math.cos(f.a), -Math.sin(f.a)); } popup('기린 뒷발차기!!!', { x, z }, 7, '#ff9a1f', 40, 1.1); playSfx('jinho', f); }
     else if (f.type === 'kick') fxKick(f);
     else if (f.type === 'triBoth') { popup('더블 세모!! ▲▲', { x, z }, 6.2, '#ff6ad5', 34, 1.1); flash(x, 2, z, '#ff6ad5', 2.2, 0.35); }
     else if (f.type === 'shoulder') fxShoulder(f);
@@ -4384,7 +4384,7 @@ $('emoBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopP
   const el = $('emoPick'); if (!el.dataset.ok) { emoFill(); el.dataset.ok = 1; } el.style.display = el.style.display === 'block' ? 'none' : 'block'; emoUi(); });
 addEventListener('pointerdown', (e) => { const el = $('emoPick'); if (el.style.display === 'block' && !el.contains(e.target) && e.target !== $('emoBtn')) el.style.display = 'none'; }, true);
 // ── 효과음 (public/sfx). 가까울수록 크게 ──
-const SFX = { yedam: '/sfx/yedam_super.mp3' }, sfxCache = {};
+const SFX = { yedam: '/sfx/yedam_super.mp3', jinho: '/sfx/jinho_super.mp3' }, sfxCache = {};
 function playSfx(name, f) {
   try {
     const src = SFX[name]; if (!src) return;
