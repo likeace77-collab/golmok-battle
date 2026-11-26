@@ -397,7 +397,7 @@ const BRAWLERS = {
     role: '???',
     wip: true,               // 디자인만 — 스킬 정해지면 wip 빼고 역할 정하기
     title: '…',
-    desc: '키 작고 통통한 음악 선생님. 파란 아이섀도에 새빨간 입술, 화장이 늘 진하다. 뽀글 파마에 진주 목걸이, 손엔 지휘봉.',
+    desc: '키 작고 통통한 음악 선생님. 파란 아이섀도에 새빨간 입술, 화장이 늘 진하다. 검은 단발머리에 진주 목걸이, 손엔 지휘봉.',
     radius: 26, speed: 250, maxHp: 5000,
     attack: { name: '준비 중', ammo: 0, range: 0 }, gadgets: [], starPowers: [], super: null,
   },
