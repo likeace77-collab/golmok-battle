@@ -2773,7 +2773,7 @@ function fxMuay(f, x, z) {                   // 성악: 부채꼴로 퍼지는 �
     addFx(0.42, m, (k) => { m.scale.setScalar(Math.max(0.01, R0 * ease(k))); m.material.opacity = 0.9 * (1 - k); }, i * 0.07);
   }
   for (let i = 0; i < 4; i++) { const an = f.a + (Math.random() * 2 - 1) * H, d = R0 * (0.4 + Math.random() * 0.5); popup(['♪', '♫', '♬'][i % 3], { x: x + Math.cos(an) * d, z: z + Math.sin(an) * d }, 2.6, ['#ff7ad0', '#c08aff', '#ffd23a'][i % 3], 24, 0.6); }
-  const kx = x + ca * f.kl * S * 0.55, kz = z + sa * f.kl * S * 0.55;
+  const km = (f.kf + f.kt) / 2 * S, kx = x + ca * km, kz = z + sa * km;
   flash(kx, 1.4, kz, '#ff9a3a', 2.2, 0.22); burst(kx, 1.2, kz, 10, ['#ffffff', '#ffb02e'], { speed: 7, size: 0.16, up: 2, life: 0.35 });
   const vol = musVol(x, z); if (vol > 0.02) musTone([1, 3, 5][Math.floor(Math.random() * 3)], 1, vol * 0.7);
 }
@@ -5879,8 +5879,9 @@ function frame(nowMs) {
           }
           else if (B.attack.aim === 'muay') {        // 음악쌤: 부채꼴(성악) + 앞 네모(발차기+성악)
             shape = new THREE.Group();
-            shape.add(aimShape({ type: 'sector', r, half: B.attack.half, color: '#ff7ad0', edge: '#ffc0ea' }));
-            const kick = aimShape({ type: 'rect', r: (B.attack.kickLen + B.attack.lunge) * S, w: B.attack.kickW * S, color: '#ff8a2a', edge: '#ffd21a' }); kick.position.y = 0.01; shape.add(kick);
+            const A = B.attack, sec = aimShape({ type: 'sector', r: r + A.lunge * S, half: A.half, color: '#ff7ad0', edge: '#ffc0ea' }); shape.add(sec);   // 튀어나간 뒤 기준
+            const kick = aimShape({ type: 'rect', r: (A.kickTo - A.kickFrom) * S, w: A.kickW * S, color: '#ff8a2a', edge: '#ffd21a' }); kick.position.set((A.lunge + A.kickFrom) * S, 0.01, 0);
+            const cap = aimShape({ type: 'rect', r: 0.01, w: A.kickW * S, color: '#ff8a2a', edge: '#ffd21a' }); cap.position.set((A.lunge + A.kickFrom) * S, 0.01, 0); shape.add(kick, cap);   // 네모 앞쪽 변
           }
           else if (B.attack.aim === 'cone') shape = aimShape({ type: 'sector', r, half: B.attack.half, color: '#ff8a3a', edge: '#ffd21a' });   // 과학쌤 숨결: 부채꼴
           else if (B.attack.aim === 'line') shape = aimShape({ type: 'rect', r, w: B.attack.width * S, color: '#ffb800', edge: '#ffd21a' });

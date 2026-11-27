@@ -989,7 +989,7 @@ SKILLS.music = {
       const t = Date.now() / 1000, ca = Math.cos(a), sa = Math.sin(a);
       for (const q of enemies(room, p)) {
         const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy), along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca), r = q.B.radius;
-        const kick = along > -r && along < A.kickLen + r && perp < A.kickW + r;                 // 네모: 발차기 + 성악
+        const kick = along > A.kickFrom - r && along < A.kickTo + r && perp < A.kickW + r;      // 부채꼴 가운데 네모: 발차기 + 성악
         const voice = kick || (d < A.range + r && (d < r || Math.abs(angDiff(Math.atan2(dy, dx), a)) < A.half + Math.atan2(r, d)));   // 부채꼴: 성악
         if (!voice || !sees(room, p, q)) continue;
         let dmg = A.dmg + (kick ? A.kickDmg : 0);
@@ -997,7 +997,7 @@ SKILLS.music = {
         damage(room, p, q, dmg, t, kick ? 'muay' : 'voice'); chargeSuper(p, dmg);
         room.fx.push({ type: 'bulletHit', x: q.x, y: q.y, k: kick ? 'muay' : 'voice' });
       }
-      room.fx.push({ type: 'muay', id: p.id, x: Math.round(p.x), y: Math.round(p.y), a: +a.toFixed(3), r: A.range, h: A.half, kl: A.kickLen, kw: A.kickW });
+      room.fx.push({ type: 'muay', id: p.id, x: Math.round(p.x), y: Math.round(p.y), a: +a.toFixed(3), r: A.range, h: A.half, kf: A.kickFrom, kt: A.kickTo, kw: A.kickW });
     };
     p.dash = { a, left: A.lunge, speed: A.lunge / 0.1, kind: 'lunge', pass: true, onEnd: hit };   // 살짝 튀어나가며
     if (Math.random() < 0.3) say(p, 'atk', 1);
