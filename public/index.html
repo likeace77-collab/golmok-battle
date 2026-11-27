@@ -2763,6 +2763,27 @@ function musTone(n, hi, vol = 0.22) {       // 계이름 1~7 (도레미…) · '
     for (const [type, mul, v] of [['triangle', 1, 1], ['sine', 2, 0.35]]) { const o = musAC.createOscillator(), og = musAC.createGain(); o.type = type; o.frequency.value = f * mul; og.gain.value = v; o.connect(og); og.connect(g); o.start(t); o.stop(t + 0.34); }
   } catch (e) {}
 }
+// 1176 노래: 음 확 높인 할머니 목소리 (톱니파 + 콧소리 강조 + 크게 떨리는 비브라토 + 음 끝을 끌어올리기)
+function musVoice(n, hi, dur = 0.2, vol = 0.22) {
+  try {
+    musAC = musAC || new (window.AudioContext || window.webkitAudioContext)();
+    if (musAC.state === 'suspended') musAC.resume();
+    const semi = [0, 2, 4, 5, 7, 9, 11][(n - 1) % 7] + (hi ? 12 : 0), f = 1046.5 * Math.pow(2, semi / 12), t = musAC.currentTime, end = t + Math.max(0.1, dur * 0.92);
+    const out = musAC.createGain(); out.gain.setValueAtTime(0, t); out.gain.linearRampToValueAtTime(vol, t + 0.02); out.gain.setValueAtTime(vol, end - 0.04); out.gain.linearRampToValueAtTime(0, end);
+    const nasal = musAC.createBiquadFilter(); nasal.type = 'peaking'; nasal.frequency.value = 2600; nasal.Q.value = 3; nasal.gain.value = 10;
+    const lp = musAC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 5200;
+    nasal.connect(lp); lp.connect(out); out.connect(musAC.destination);
+    const trem = musAC.createGain(); trem.gain.value = 0.85; trem.connect(nasal);
+    const tl = musAC.createOscillator(), tg = musAC.createGain(); tl.frequency.value = 5.5; tg.gain.value = 0.15; tl.connect(tg); tg.connect(trem.gain); tl.start(t); tl.stop(end + 0.05);   // 목소리 떨림 (크기)
+    const vib = musAC.createOscillator(), vg = musAC.createGain(); vib.frequency.value = 7.2; vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(f * 0.045, t + 0.06); vib.connect(vg); vib.start(t); vib.stop(end + 0.05);   // 할머니 비브라토 (음 높이)
+    for (const [type, mul, v] of [['sawtooth', 1, 0.55], ['square', 1.004, 0.25], ['triangle', 2, 0.2]]) {
+      const o = musAC.createOscillator(), og = musAC.createGain(); o.type = type; og.gain.value = v;
+      o.frequency.setValueAtTime(f * mul * 0.89, t); o.frequency.exponentialRampToValueAtTime(f * mul, t + 0.05);   // 밑에서 끌어올리며 시작
+      o.frequency.setValueAtTime(f * mul, end - 0.05); o.frequency.exponentialRampToValueAtTime(f * mul * 1.03, end);   // 끝을 살짝 올림 (웃기게)
+      vg.connect(o.frequency); o.connect(og); og.connect(trem); o.start(t); o.stop(end + 0.02);
+    }
+  } catch (e) {}
+}
 const musVol = (x, z) => { const c = camTarget, d = Math.hypot(x - c.x, z - c.z); return d > 40 ? 0 : 0.22 * (1 - d / 40); };
 function fxMuay(f, x, z) {                   // 성악: 부채꼴로 퍼지는 소리 물결 + 무에타이 발차기 번쩍
   const v = views[f.id]; if (v) v.facing = Math.atan2(Math.cos(f.a), Math.sin(f.a));
@@ -2779,7 +2800,7 @@ function fxMuay(f, x, z) {                   // 성악: 부채꼴로 퍼지는 �
 }
 function fxNote(f, x, z) {                   // 1176: 음표가 상대에게 날아가며 숫자 × 50
   const v = views[f.id]; if (v) v.atkT = 9;
-  const vol = musVol(x, z); if (vol > 0.02) musTone(f.n, f.hi, vol);
+  const vol = musVol(x, z); if (vol > 0.02) musVoice(f.n, f.hi, f.d || 0.2, vol * 0.8);
   const label = f.n + (f.hi ? "'" : '');
   popup('🎵' + label, { x, z }, 4.4, f.hi ? '#ffd23a' : '#ff8ad8', 22, 0.5);
   if (!f.tid) return;

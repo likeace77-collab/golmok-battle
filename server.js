@@ -1016,19 +1016,20 @@ SKILLS.music = {
       if (!near()) { p.gCd = 0.5; room.fx.push({ type: 'noFoe', id: p.id, x: p.x, y: p.y }); return; }
       say(p, 'g2', 1.6);
       let t = 0, i = 0;
-      for (const grp of g.song) {
-        for (const n of grp.match(/\d'?/g)) {
-          const v = +n[0], hi = n.length > 1, k = i++;
+      g.song.forEach((grp, gi) => {
+        const notes = grp.match(/\d'?/g);
+        notes.forEach((n, ni) => {
+          const v = +n[0], hi = n.length > 1, k = i++, len = (ni === notes.length - 1 ? 1 : 0.5) * g.beat;   // 8분음표 … 끝음 4분음표
           later(room, t, () => {
             if (p.dead || !room.players.has(p.id)) return;
             const q = near();
-            room.fx.push({ type: 'note', id: p.id, x: p.x, y: p.y, n: v, hi: hi ? 1 : 0, k, tid: q ? q.id : null, tx: q ? Math.round(q.x) : 0, ty: q ? Math.round(q.y) : 0 });
+            room.fx.push({ type: 'note', id: p.id, x: p.x, y: p.y, n: v, hi: hi ? 1 : 0, k, d: +len.toFixed(2), tid: q ? q.id : null, tx: q ? Math.round(q.x) : 0, ty: q ? Math.round(q.y) : 0 });
             if (q) damage(room, p, q, v * g.per, Date.now() / 1000, 'note');
           });
-          t += g.every;
-        }
-        t += g.gap;
-      }
+          t += len;
+        });
+        if (gi % 2 === 1) t += g.beat * 0.5;          // 두 묶음마다 반 박 쉼
+      });
       p.singT = t;
     }
   },
