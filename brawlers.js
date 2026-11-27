@@ -400,8 +400,8 @@ const BRAWLERS = {
     radius: 26, speed: 250, maxHp: 5000,
     attack: {
       name: '무에타이 성악', aim: 'muay',
-      desc: '살짝 앞으로 튀어나가며 무에타이 발차기 + 성악. 앞쪽 부채꼴(성악)에 닿은 상대는 700, 부채꼴 가운데 네모(발차기+성악이 겹친 곳)에 있는 상대는 1100 + 700 = 1800 피해.',
-      range: 380, half: 0.6, dmg: 700, kickDmg: 1100, kickFrom: 110, kickTo: 230, kickW: 76, lunge: 70, ammo: 3, reload: 1.6, cd: 0.5,
+      desc: '앞으로 돌진한 뒤 무에타이 발차기 + 성악. 넓은 부채꼴(성악)에 닿은 상대는 700, 바로 앞 네모(발차기+성악이 겹친 곳)에 있는 상대는 1100 + 700 = 1800 피해.',
+      range: 380, half: 0.75, dmg: 700, kickDmg: 1100, kickFrom: 0, kickTo: 170, kickW: 70, lunge: 130, ammo: 3, reload: 1.6, cd: 0.5,
     },
     gadgets: [
       { name: '눈 뜬거야 안 뜬거야', icon: '👀', desc: '주변(반경 450)의 나와 아군은 10초 동안 시야가 넓어지고, 상대는 2초 동안 눈을 감아서 아무것도 못 본다.', range: 450, visDur: 10, blind: 2 },

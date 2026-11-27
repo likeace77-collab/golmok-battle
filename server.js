@@ -999,7 +999,7 @@ SKILLS.music = {
       }
       room.fx.push({ type: 'muay', id: p.id, x: Math.round(p.x), y: Math.round(p.y), a: +a.toFixed(3), r: A.range, h: A.half, kf: A.kickFrom, kt: A.kickTo, kw: A.kickW });
     };
-    p.dash = { a, left: A.lunge, speed: A.lunge / 0.1, kind: 'lunge', pass: true, onEnd: hit };   // 살짝 튀어나가며
+    p.dash = { a, left: A.lunge, speed: A.lunge / 0.13, kind: 'lunge', pass: true, onEnd: hit };   // 앞으로 돌진한 뒤
     if (Math.random() < 0.3) say(p, 'atk', 1);
   },
   gadget(room, p, idx, now) {

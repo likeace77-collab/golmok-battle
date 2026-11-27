@@ -5879,7 +5879,8 @@ function frame(nowMs) {
           }
           else if (B.attack.aim === 'muay') {        // 음악쌤: 부채꼴(성악) + 앞 네모(발차기+성악)
             shape = new THREE.Group();
-            const A = B.attack, sec = aimShape({ type: 'sector', r: r + A.lunge * S, half: A.half, color: '#ff7ad0', edge: '#ffc0ea' }); shape.add(sec);   // 튀어나간 뒤 기준
+            const A = B.attack, L = A.lunge * S, sec = aimShape({ type: 'sector', r, half: A.half, color: '#ff7ad0', edge: '#ffc0ea' }); sec.position.x = L; shape.add(sec);   // 돌진한 자리에서 부채꼴
+            const path = aimShape({ type: 'rect', r: L, w: 0.12, color: '#ffffff', edge: '#ffffff' }); shape.add(path);                                                               // 얇은 선 = 돌진 거리
             const kick = aimShape({ type: 'rect', r: (A.kickTo - A.kickFrom) * S, w: A.kickW * S, color: '#ff8a2a', edge: '#ffd21a' }); kick.position.set((A.lunge + A.kickFrom) * S, 0.01, 0);
             const cap = aimShape({ type: 'rect', r: 0.01, w: A.kickW * S, color: '#ff8a2a', edge: '#ffd21a' }); cap.position.set((A.lunge + A.kickFrom) * S, 0.01, 0); shape.add(kick, cap);   // 네모 앞쪽 변
           }
