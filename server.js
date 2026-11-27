@@ -1017,20 +1017,17 @@ SKILLS.music = {
       say(p, 'g2', 1.6);
       let t = 0, i = 0;
       room.fx.push({ type: 'singStart', id: p.id, x: p.x, y: p.y });     // 노래 소리 파일은 클라가 이때 틂 (박자 똑같음)
-      g.song.forEach((grp, gi) => {
-        const notes = grp.match(/\d'?/g), durs = { 4: [0.5, 0.5, 0.5, 0.5], 3: [0.5, 0.5, 1], 2: [1, 1] }[notes.length] || notes.map(() => 0.5);
-        notes.forEach((n, ni) => {
-          const v = +n[0], hi = n.length > 1, k = i++, len = durs[ni] * g.beat;
-          later(room, t, () => {
+      const all = g.song.join('').match(/\d'?/g);
+      all.forEach((n, k) => {
+          const v = +n[0], hi = n.length > 1, at = g.times[k], len = (g.times[k + 1] != null ? g.times[k + 1] : g.end) - at;   // 흥얼거린 녹음 박자 그대로
+          later(room, at, () => {
             if (p.dead || !room.players.has(p.id)) return;
             const q = near();
             room.fx.push({ type: 'note', id: p.id, x: p.x, y: p.y, n: v, hi: hi ? 1 : 0, k, d: +len.toFixed(2), tid: q ? q.id : null, tx: q ? Math.round(q.x) : 0, ty: q ? Math.round(q.y) : 0 });
             if (q) damage(room, p, q, v * g.per, Date.now() / 1000, 'note');
           });
-          t += len;
-        });
       });
-      p.singT = t + g.beat;                            // 마지막 음 한 박 더 끌기
+      p.singT = g.end;
     }
   },
   super(room, p, a, now) {               // 쉿: 주변 상대 밀쳐내고 5초 결계

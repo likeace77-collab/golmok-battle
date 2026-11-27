@@ -4,27 +4,26 @@ from scipy.signal import lfilter
 SR = 44100
 rng = np.random.default_rng(7)
 song = ['1176', '655', '555', '716', '666', "3'2'1'", "3'1'1'", '56', '6712']
-BEAT = float(sys.argv[1]) if len(sys.argv) > 1 else 0.33
+# 박자: brawlers.js 음악쌤 가젯2의 times / end 그대로 (사용자가 흥얼거린 녹음에서 뽑음)
+TIMES = [0, 0.76, 1.1, 1.43, 2.09, 2.59, 3.11, 3.96, 4.14, 4.63, 5.21, 5.72, 6.21, 7.65, 8.12, 8.64, 8.96, 9.4, 9.83, 10.17, 10.45, 10.6, 11.7, 12.17, 12.88, 13.08, 13.67, 14.19]
+END = 14.99
+HUM_END = [0.32, 1.1, 1.43, 1.87, 2.37, 2.87, 3.49, 4.14, 4.41, 4.99, 5.72, 6.21, 6.83, 7.99, 8.47, 8.89, 9.04, 9.78, 10.17, 10.45, 10.6, 11.29, 12.17, 12.46, 13.04, 13.67, 14.19, END]   # 녹음에서 소리가 끊긴 곳 (쉼 살리기)
 BASE = 1046.5                      # 1 = 도 (C6) — 음 확 높게
 SEMI = [0, 2, 4, 5, 7, 9, 11]
-notes = []                          # (semitone, dur)
-for gi, g in enumerate(song):
-    ns = [(int(m[0]), len(m) > 1) for m in __import__('re').findall(r"\d'?", g)]
-    durs = {4: [.5, .5, .5, .5], 3: [.5, .5, 1], 2: [1, 1]}[len(ns)]
-    for (n, hi), d in zip(ns, durs):
-        notes.append((SEMI[n - 1] - (12 if n >= 5 else 0), d * BEAT))   # 5·6·7은 도 아래 (솔라시), '는 '앞 음보다 위'라는 뜻
-notes[-1] = (notes[-1][0], notes[-1][1] + BEAT)     # 마지막 음은 한 박 더 끌기
-total = sum(d for _, d in notes) + 0.25
-N = int(total * SR)
+pitches = [SEMI[int(m[0]) - 1] - (12 if int(m[0]) >= 5 else 0) for m in __import__('re').findall(r"\d'?", ''.join(song))]   # 5·6·7은 도 아래 (솔라시), '는 '앞 음보다 위'라는 뜻
+assert len(pitches) == len(TIMES)
+nxt = TIMES[1:] + [END]
+ends = [max(h, t0 + 0.18) if (n - h) > 0.12 else n for h, n, t0 in zip(HUM_END, nxt, TIMES)]   # 녹음에서 끊어 부른 곳은 똑같이 끊음
+N = int((END + 0.3) * SR)
 t = np.arange(N) / SR
-# 음 높이 곡선: 음마다 밑에서 끌어올리고(스쿱) 사이를 살짝 미끄러지듯 (레가토)
-semi = np.zeros(N); onset = np.zeros(N); pos = 0.0; starts = []
-for k, (s, d) in enumerate(notes):
-    a, b = int(pos * SR), int((pos + d) * SR); starts.append(a)
-    seg = np.full(b - a, float(s))
-    sc = min(b - a, int(0.07 * SR)); seg[:sc] = s - 1.8 * (1 - np.linspace(0, 1, sc)) ** 2      # 스쿱
-    semi[a:b] = seg; pos += d
-semi[int(pos * SR):] = notes[-1][0]
+semi = np.full(N, float(pitches[0])); starts = []; voiced = np.zeros(N)
+for k, s0 in enumerate(pitches):
+    a, b = int(TIMES[k] * SR), int(nxt[k] * SR); starts.append(a)
+    seg = np.full(b - a, float(s0))
+    sc = min(b - a, int(0.07 * SR)); seg[:sc] = s0 - 1.8 * (1 - np.linspace(0, 1, sc)) ** 2      # 스쿱 (밑에서 끌어올림)
+    semi[a:b] = seg; voiced[a:int(ends[k] * SR)] = 1
+semi[int(END * SR):] = pitches[-1]
+pos = END
 # 할머니 비브라토: 느리고 크게 떨림 (음 시작 뒤 천천히 커짐) + 떨림 속도도 살짝 흔들림
 vib_rate = 5.6 + 0.6 * np.sin(2 * np.pi * 0.7 * t)
 vib_phase = 2 * np.pi * np.cumsum(vib_rate) / SR
@@ -69,13 +68,12 @@ F3 = np.full(N, 2850.0); F4 = np.full(N, 3900.0)
 y = reson(x, F1, 130) * 1.0 + reson(x, F2, 160) * 0.55 + reson(x, F3, 220) * 0.35 + reson(x, F4, 300) * 0.15
 y += reson(x, np.full(N, 2500.0), 120) * 0.25          # 콧소리 살짝
 # 크기: 음마다 살짝 숨 쉬듯 + ㄹ에서 살짝 줄었다가 + 떨림
-env = np.ones(N)
-st0 = int(0.03 * SR); env[:st0] = np.linspace(0, 1, st0)
+env = np.convolve(voiced, np.ones(int(0.03 * SR)) / int(0.03 * SR), 'same')   # 쉬는 곳은 부드럽게 끊김
 env *= 1 - 0.45 * lmix
 env *= 1 + 0.12 * np.sin(vib_phase + 0.5)
 end = int(pos * SR); fade = int(0.12 * SR); env[end - fade:end] *= np.linspace(1, 0, fade); env[end:] = 0
 y *= env
 y = np.tanh(y / np.max(np.abs(y)) * 1.6)            # 살짝 거칠게
 y = y / np.max(np.abs(y)) * 0.9
-open(sys.argv[2] if len(sys.argv) > 2 else '/tmp/sing/out.raw', 'wb').write((y * 32767).astype('<i2').tobytes())
-print(json.dumps({'dur': round(pos, 3), 'notes': len(notes)}))
+open(sys.argv[1] if len(sys.argv) > 1 else '/tmp/sing/out.raw', 'wb').write((y * 32767).astype('<i2').tobytes())
+print(json.dumps({'dur': round(pos, 3), 'notes': len(pitches)}))
