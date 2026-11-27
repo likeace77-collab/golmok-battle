@@ -39,6 +39,8 @@ function parseRid(rid) {
   if (!MODES[m] || MODES[m].training) return null;
   return { modeId: m, mapId: mp && MODES[m].maps.includes(mp) ? mp : null };
 }
+// 브금 기준점: 클라가 (지금 서버 시각 - t0)와 seed로 지금 틀 곡·위치를 똑같이 계산 (index.html BGM)
+const newBgm = () => ({ t0: Date.now(), seed: (Math.random() * 1e9) | 0 });
 function getRoom(modeId, rid = modeId, fixedMap = null) {
   if (!rooms.has(rid)) {
     const mode = MODES[modeId];
@@ -47,6 +49,7 @@ function getRoom(modeId, rid = modeId, fixedMap = null) {
       players: new Map(), mice: [], shards: [], gems: [], fx: [], pending: [], bullets: [], bulletSeq: 0, bigmacs: [], bmSeq: 0,
       mouseSeq: 0, botSeq: 0, colorIdx: 0, shardSeq: 0, gemSeq: 0, cubes: [], cubeSeq: 0,
       phase: mode.rounds ? 'wait' : 'play', phaseT: mode.rounds ? 4 : 0,
+      bgm: newBgm(),   // 브금 기준 (모든 사람 같은 곡·같은 위치)
       mapT: mode.rotate ? 5 : 0, gemT: 0, holdT: 0, holdTeam: -1, safe: null, playT: 0, result: null,
     };
     rooms.set(rid, room);
@@ -1642,6 +1645,7 @@ function assignSquads(room) {
 // ── 라운드 진행 ────────────────────────────────────
 function startRound(room) {
   const mode = room.mode;
+  room.bgm = newBgm();   // 판 시작 = 브금 처음부터
   room.map = cloneMap(room.fixedMap || todayMap(mode.id));
   room.domes = [];   // 오늘의 맵 (0시 넘으면 다음 판부터 바뀜)
   room.mice = []; room.shards = []; room.gems = []; room.cubes = []; room.pending = []; room.bullets = []; room.bigmacs = []; room.gds = {};
@@ -2246,6 +2250,7 @@ function step(room) {
       bl: p.blindT > 0 ? +p.blindT.toFixed(1) : undefined, ro: p.B.roll ? +(p.roll || 0).toFixed(2) : undefined, fly: p.flyT > 0 || undefined, gd: p.gd ? 1 : undefined, dance: p.danceT > 0 || undefined, dup: p.dmgUp > 0 ? +p.dmgUp.toFixed(2) : undefined, bst: p.boostT > 0 || undefined, muk: p.mukT > 0 || undefined, au: p.aura != null && hasSP(p, 'aura') ? +p.aura.toFixed(2) : undefined,
       ec: p.eyeT > 0 ? +p.eyeT.toFixed(1) : undefined, vu: p.visT > 0 ? +p.visT.toFixed(1) : undefined, sng: p.singT > 0 ? 1 : undefined, mk: p.marks && p.marks.length ? p.marks : undefined,
     })),
+    bgm: room.bgm ? [room.bgm.t0, room.bgm.seed] : undefined,   // 브금: 시작 시각(서버 ms) + 곡 순서 시드
     dm: room.domes && room.domes.length ? room.domes.map((d) => [d.id, r1(d.x), r1(d.y), d.r, +d.t.toFixed(1), d.owner, d.team]) : undefined,
     bm: room.bigmacs.length ? room.bigmacs.map((m) => [m.id, r1(m.x), r1(m.y)]) : undefined,
     mice: room.mice.map((m) => ({ id: m.id, x: r1(m.x), y: r1(m.y), a: +m.ang.toFixed(2), c: m.color, hp: +(m.hp / m.maxHp).toFixed(2) })),

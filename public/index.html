@@ -333,6 +333,8 @@
   #emoBtn { position: fixed; top: 8px; right: 12px; z-index: 9; display: none; width: 52px; height: 44px; border: 3px solid #000; border-radius: 12px 12px 12px 4px; background: #fff; font-size: 22px; font-weight: 900; cursor: pointer; box-shadow: 0 3px 0 #000; padding: 0; }
   #eyesShut { position: fixed; inset: 0; z-index: 8; display: none; flex-direction: column; align-items: center; justify-content: center; background: #05030a; color: #fff; pointer-events: none; font-size: 64px; }
   #eyesShut b { font-size: 26px; margin-top: 8px; }
+  #bgmBtn { position: fixed; top: 12px; right: 72px; z-index: 9; display: none; width: 36px; height: 36px; border: 3px solid #000; border-radius: 50%; background: #fff; font-size: 16px; cursor: pointer; box-shadow: 0 2px 0 #000; padding: 0; line-height: 1; }
+  #bgmBtn.off { background: #777; }
   #emoBtn.cd { background: #555; color: #999; }
   #emoPick { position: fixed; top: 58px; right: 12px; z-index: 9; display: none; background: rgba(20,24,60,.92); border: 3px solid #000; border-radius: 14px; padding: 6px 8px 8px; color: #fff; font-weight: 900; font-size: 12px; }
   #emoPick .row { display: grid; grid-template-columns: repeat(4, 58px); gap: 6px; margin: 2px 0 6px; }
@@ -347,6 +349,7 @@
     #modeHud .gs { font-size: 15px; padding: 2px 10px; }
     #modeHud .gs[style] { font-size: 12px !important; }
     #emoBtn { right: 8px; width: 46px; height: 40px; font-size: 19px; }
+    #bgmBtn { right: 60px; top: 10px; width: 32px; height: 32px; font-size: 14px; }
     #emoPick { top: 52px; right: 8px; }
     #emoPick .row { grid-template-columns: repeat(4, 50px); gap: 5px; }
     #emoPick .it { width: 50px; height: 50px; } #emoPick .it img { width: 45px; height: 45px; }
@@ -454,6 +457,7 @@
 </div>
 <div id="specBar"><button id="specPrev">◀</button><span id="specName"></span><button id="specNext">▶</button></div>
 <div id="eyesShut"><div>😑</div><b>눈 감았다!</b></div>
+<button id="bgmBtn" title="브금 켜기/끄기">🔊</button>
 <button id="emoBtn" title="핀·스프레이">💬</button>
 <div id="emoPick"><div>핀</div><div class="row" id="emoPins"></div><div>스프레이</div><div class="row" id="emoSprays"></div></div>
 <div id="ctrl">
@@ -3637,13 +3641,13 @@ function connect() {
     $('lobby').style.display = 'none'; $('lobbyBg').style.display = 'none';
     $('top').style.display = 'flex';
     $('ctrl').style.display = 'block'; setTimeout(ctrlApply, 0);
-    $('emoBtn').style.display = specOnly ? 'none' : 'block'; $('emoPick').style.display = 'none';
+    $('emoBtn').style.display = specOnly ? 'none' : 'block'; $('emoPick').style.display = 'none'; $('bgmBtn').style.display = 'block';
     const rounds = d.mode !== 'ffa' && META.modes[d.mode] && (META.modes[d.mode].rounds || META.modes[d.mode].training);   // 라운드 모드는 봇 자동, 훈련장은 로봇 고정 (난투는 봇 직접 추가)
     $('botBtn').style.display = $('clearBtn').style.display = rounds ? 'none' : '';
   });
   socket.on('state', (s) => {
     for (const p of s.players) for (const k of P_NUM) if (p[k] === undefined) p[k] = 0;    // 서버가 0인 값은 빼고 보냄
-    state = s; onSnap(s);
+    state = s; onSnap(s); bgmState(s);
     updateResult();
     if (gdS && !gdS.result) { const m = s.players.find((q) => q.id === myId); if (m && !m.gd) { gdS.noT = (gdS.noT || 0) + 1; if (gdS.noT > 60) gdClose(); } else gdS.noT = 0; }   // 판이 끝나 지메가 취소되면 닫기
     if (s.map !== curMapId && META.maps[s.map]) { MAP = META.maps[s.map]; buildMap(MAP); }
@@ -4594,6 +4598,49 @@ function emoUi() {
 $('emoBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation();
   const el = $('emoPick'); if (!el.dataset.ok) { emoFill(); el.dataset.ok = 1; } el.style.display = el.style.display === 'block' ? 'none' : 'block'; emoUi(); });
 addEventListener('pointerdown', (e) => { const el = $('emoPick'); if (el.style.display === 'block' && !el.contains(e.target) && e.target !== $('emoBtn')) el.style.display = 'none'; }, true);
+// ── 브금: public/bgm 4곡을 랜덤으로 이어서 (방금 곡 빼고). 서버가 준 기준(state.bgm = [시작 서버시각 ms, 시드])으로
+//    모든 기기가 같은 곡·같은 위치를 계산 → 중간에 들어오거나 새로고침해도 진행 중인 곳부터. 볼륨 고정, 켜기/끄기 버튼만.
+const BGM_TRACKS = [['/bgm/bgm1.mp3', 79.8], ['/bgm/bgm2.mp3', 60.44], ['/bgm/bgm3.mp3', 63.53], ['/bgm/bgm4.mp3', 53.44]];   // [파일, 길이(초)]
+const BGM_VOL = 0.35;
+const bgmEl = new Audio(); bgmEl.preload = 'auto'; bgmEl.volume = BGM_VOL; bgmEl.setAttribute('playsinline', '');
+let bgmOn = LS0('jb_bgm', '1') !== '0', bgmUnlocked = false, bgmRef = null, bgmCur = -1, srvOff = null, bgmSeekTo = null;
+function bgmRng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t ^= t + Math.imul(t ^ (t >>> 7), 61 | t); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function bgmWhere(nowSrv) {          // 지금 틀어야 할 곡 번호 + 위치(초)
+  const [t0, seed] = bgmRef, r = bgmRng(seed), n = BGM_TRACKS.length;
+  let el = Math.max(0, (nowSrv - t0) / 1000), i = Math.floor(r() * n);
+  for (let k = 0; k < 100000 && el >= BGM_TRACKS[i][1]; k++) { el -= BGM_TRACKS[i][1]; const j = Math.floor(r() * (n - 1)); i = j >= i ? j + 1 : j; }   // 방금 곡 빼고 랜덤
+  return { i, off: el };
+}
+function bgmSync(ahead = 0) {
+  if (!bgmOn || !bgmRef || !bgmUnlocked || srvOff == null || document.hidden) { if (!bgmEl.paused) bgmEl.pause(); return; }
+  const w = bgmWhere(Date.now() + srvOff + ahead);
+  if (bgmCur !== w.i) { bgmCur = w.i; bgmSeekTo = w.off; bgmEl.muted = false; bgmEl.src = BGM_TRACKS[w.i][0]; bgmEl.volume = BGM_VOL; bgmEl.play().catch(() => {}); return; }
+  if (bgmEl.readyState >= 1 && Math.abs(bgmEl.currentTime - w.off) > 1.2) bgmEl.currentTime = w.off;   // 많이 어긋나면 맞춤
+  if (bgmEl.paused) bgmEl.play().catch(() => {});
+}
+bgmEl.addEventListener('loadedmetadata', () => { if (bgmSeekTo != null) { try { bgmEl.currentTime = Math.min(bgmSeekTo, Math.max(0, bgmEl.duration - 0.2)); } catch (e) {} bgmSeekTo = null; } });
+bgmEl.addEventListener('ended', () => { bgmCur = -1; bgmSync(400); });   // 끝나면 다음 곡 (조금 앞당겨 계산 → 같은 곡 다시 안 잡히게)
+setInterval(() => bgmSync(), 1000);
+document.addEventListener('visibilitychange', () => bgmSync());
+function bgmState(s) {               // state마다: 서버 시각 차이(부드럽게) + 기준점
+  const off = s.ts - Date.now(); srvOff = srvOff == null ? off : srvOff + (off - srvOff) * 0.1;
+  const r = s.bgm || null;
+  if (!r) { if (bgmRef) { bgmRef = null; bgmCur = -1; bgmEl.pause(); } return; }
+  if (!bgmRef || bgmRef[0] !== r[0] || bgmRef[1] !== r[1]) { bgmRef = r; bgmCur = -1; bgmSync(); }
+}
+function bgmStop() { bgmRef = null; bgmCur = -1; bgmEl.pause(); }
+// 폰·태블릿 자동재생 막힘 풀기: 처음 화면 터치(게임 시작 버튼 포함) 때 같은 오디오를 한 번 재생해서 잠금 해제
+function bgmUnlock() {
+  if (bgmUnlocked) return; bgmUnlocked = true;
+  if (bgmRef && bgmOn) { bgmSync(); return; }
+  bgmEl.src = BGM_TRACKS[0][0]; bgmEl.muted = true;
+  bgmEl.play().then(() => { bgmEl.muted = false; if (!bgmRef) bgmEl.pause(); else { bgmCur = -1; bgmSync(); } })
+    .catch((e) => { bgmEl.muted = false; if (e && e.name === 'NotAllowedError') bgmUnlocked = false; else { bgmCur = -1; bgmSync(); } });   // 다른 곡 로드로 끊긴 건 실패 아님
+}
+for (const ev of ['pointerdown', 'touchend', 'keydown']) document.addEventListener(ev, bgmUnlock, { capture: true, passive: true });
+function bgmBtnDraw() { $('bgmBtn').textContent = bgmOn ? '🔊' : '🔇'; $('bgmBtn').classList.toggle('off', !bgmOn); }
+$('bgmBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); bgmUnlock(); bgmOn = !bgmOn; try { localStorage.setItem('jb_bgm', bgmOn ? '1' : '0'); } catch (er) {} bgmBtnDraw(); bgmCur = -1; bgmSync(); });
+bgmBtnDraw();
 // ── 효과음 (public/sfx). 가까울수록 크게 ──
 const SFX = { yedam: '/sfx/yedam_super.mp3', jinho: '/sfx/jinho_super.mp3', musicSong: '/sfx/music_song.mp3' }, sfxCache = {};
 function playSfx(name, f) {
