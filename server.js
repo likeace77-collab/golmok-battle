@@ -1016,10 +1016,11 @@ SKILLS.music = {
       if (!near()) { p.gCd = 0.5; room.fx.push({ type: 'noFoe', id: p.id, x: p.x, y: p.y }); return; }
       say(p, 'g2', 1.6);
       let t = 0, i = 0;
+      room.fx.push({ type: 'singStart', id: p.id, x: p.x, y: p.y });     // 노래 소리 파일은 클라가 이때 틂 (박자 똑같음)
       g.song.forEach((grp, gi) => {
-        const notes = grp.match(/\d'?/g);
+        const notes = grp.match(/\d'?/g), durs = { 4: [0.5, 0.5, 0.5, 0.5], 3: [0.5, 0.5, 1], 2: [1, 1] }[notes.length] || notes.map(() => 0.5);
         notes.forEach((n, ni) => {
-          const v = +n[0], hi = n.length > 1, k = i++, len = (ni === notes.length - 1 ? 1 : 0.5) * g.beat;   // 8분음표 … 끝음 4분음표
+          const v = +n[0], hi = n.length > 1, k = i++, len = durs[ni] * g.beat;
           later(room, t, () => {
             if (p.dead || !room.players.has(p.id)) return;
             const q = near();
@@ -1028,9 +1029,8 @@ SKILLS.music = {
           });
           t += len;
         });
-        if (gi % 2 === 1) t += g.beat * 0.5;          // 두 묶음마다 반 박 쉼
       });
-      p.singT = t;
+      p.singT = t + g.beat;                            // 마지막 음 한 박 더 끌기
     }
   },
   super(room, p, a, now) {               // 쉿: 주변 상대 밀쳐내고 5초 결계
