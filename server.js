@@ -178,7 +178,7 @@ function resetBody(room, p, slot) {
   const s = spawnPoint(room, p, slot);
   Object.assign(p, {
     x: s.x, y: s.y, hp: mhp(p), dead: false, ammo: p.B.attack.ammo, stunT: 0, frozenT: 0, acT: 0,
-    rf: 0, gems: 0, shield: 0, fullT: 0, respawnT: 0, input: { mx: 0, my: 0 }, aw: false, dash: null, noAtkT: 0, flailT: 0, jailT: 0, teths: [], sprintT: 0, spdUpT: 0, slowT: 0, confT: 0, frictT: 0, burnT: 0, flameT: 0, spinT: 0, invT: 0, moaiT: 0, roll: 0, rollA: null, boostT: 0, mukT: 0, rhit: {}, flyT: 0, danceT: 0, gd: null, dmgUp: 0, tk: 0, lUp: 0,   // 쫄 게이지는 부활해도 유지
+    rf: 0, gems: 0, shield: 0, fullT: 0, respawnT: 0, input: { mx: 0, my: 0 }, aw: false, dash: null, noAtkT: 0, flailT: 0, jailT: 0, teths: [], sprintT: 0, spdUpT: 0, slowT: 0, confT: 0, frictT: 0, burnT: 0, flameT: 0, spinT: 0, invT: 0, moaiT: 0, roll: 0, rollA: null, boostT: 0, mukT: 0, rhit: {}, flyT: 0, danceT: 0, gd: null, dmgUp: 0, tk: 0, lUp: 0, eyeT: 0, visT: 0, singT: 0, dPrev: null, mcombo: {},   // 쫄 게이지는 부활해도 유지
   });
   releaseCtrl(room, p, false);
 }
@@ -210,6 +210,11 @@ const chargeSuper = (p, dmg) => { if (p.B.super) p.sup = Math.min(1, p.sup + dmg
 function damage(room, attacker, target, dmg, now, kind) {
   if (!target || target.dead || target.out) return;
   if (attacker && attacker !== target && !isEnemy(room, attacker, target)) return;
+  if (attacker && attacker !== target && domeBlocks(room, attacker, target)) { room.fx.push({ type: 'domeBlock', x: target.x, y: target.y }); return; }   // 음악쌤 결계: 상대 팀 공격 막힘
+  if (attacker && attacker !== target && !target.struct && hasSP(target, 'catch')) {        // 음악쌤 스파1: 나를 때린 상대 표시
+    const src = attacker.struct && attacker.owner ? room.players.get(attacker.owner) : attacker;
+    if (src && !src.struct && src.id !== target.id) { target.marks = target.marks || []; if (!target.marks.includes(src.id)) target.marks.push(src.id); }
+  }
   if (attacker && has(attacker, 'dmg') && attacker.hp <= mhp(attacker) * 0.5) dmg = Math.round(dmg * 1.15);
   if (attacker && attacker.cubes) dmg = Math.round(dmg * (1 + CUBE.dmg * attacker.cubes));      // 파워 큐브
   if (attacker && attacker !== target && jjang(attacker)) dmg = Math.round(dmg * SP(attacker, 'jjang').dmgMul);
@@ -254,6 +259,7 @@ function kill(room, attacker, target, kind) {
     return;
   }
   target.hp = 0; target.dead = true; target.deaths++; target.speech = null;
+  for (const o of room.players.values()) if (o.marks && o.marks.length) o.marks = o.marks.filter((id) => id !== target.id);   // 음악쌤 스파1: 죽으면 표시 끝
   target.respawnT = target.home ? 1.5 : G.respawn;
   if (attacker && attacker.id !== target.id) {
     attacker.kills++; if (Math.random() < 0.5) say(attacker, 'kill');
@@ -774,6 +780,7 @@ function stepBullets(room, now) {
         b.x = b.ox + Math.cos(b.a) * b.t - Math.sin(b.a) * w; b.y = b.oy + Math.sin(b.a) * b.t + Math.cos(b.a) * w;
       } else { b.x += Math.cos(b.a) * st; b.y += Math.sin(b.a) * st; }
       if (!b.lock && hitsWall(room.map, b.x, b.y, 3)) { b.left = 0; room.fx.push({ type: 'bulletWall', x: b.x, y: b.y }); break; }   // 벽에 막힘
+      if (room.domes && room.domes.length && owner && domeCross(room, owner, b.x - Math.cos(b.a) * st, b.y - Math.sin(b.a) * st, b.x, b.y)) { b.left = 0; room.fx.push({ type: 'domeBlock', x: b.x, y: b.y }); break; }   // 음악쌤 결계에 막힘
       const q = owner && (b.lock ? [room.players.get(b.tgt)].filter((q) => q && Math.hypot(q.x - b.x, q.y - b.y) < q.B.radius + 14)[0]
         : [...enemies(room, owner), ...(b.ally ? allies(room, owner) : [])].find((q) => Math.hypot(q.x - b.x, q.y - b.y) < q.B.radius + (b.hitR || 8)));
       if (b.pierce && owner) {           // 과학쌤 숨결: 뚫고 지나가며 상대마다 1번
@@ -941,6 +948,111 @@ SKILLS.hyeonwoo = {
   },
 };
 const later = (room, t, fn) => room.pending.push({ t, fn });
+
+// ── 음악쌤: 무에타이 성악 / 눈 뜬거야 안 뜬거야 / 1176 / 쉿 결계 ──
+// 결계 안팎: 상대 팀(결계 주인 팀이 아닌 사람)만 막힘
+const domeFoe = (room, d, q) => q.id !== d.owner && q.owner !== d.owner && !((room.mode.team || room.mode.squad) && q.team != null && d.team != null && teamOf(room, q) === d.team);
+const inDome = (d, x, y) => Math.hypot(x - d.x, y - d.y) < d.r;
+function domeBlocks(room, a, t) {        // a의 공격이 t에게 가는 길이 결계 벽을 넘나?
+  if (!room.domes || !room.domes.length) return false;
+  const src = a.struct && a.owner ? room.players.get(a.owner) || a : a;
+  for (const d of room.domes) if (domeFoe(room, d, src) && inDome(d, a.x, a.y) !== inDome(d, t.x, t.y)) return true;
+  return false;
+}
+function domeCross(room, owner, x0, y0, x1, y1) {
+  for (const d of room.domes) if (domeFoe(room, d, owner) && inDome(d, x0, y0) !== inDome(d, x1, y1)) return true;
+  return false;
+}
+function domeStep(room) {
+  if (!room.domes || !room.domes.length) { for (const q of room.players.values()) q.dPrev = null; return; }
+  for (const d of room.domes) d.t -= DT;
+  room.domes = room.domes.filter((d) => d.t > 0);
+  for (const q of room.players.values()) {
+    if (q.dead || q.out || q.struct) { q.dPrev = null; continue; }
+    const pv = q.dPrev || { x: q.x, y: q.y }, rad = q.B.radius;
+    for (const d of room.domes) {
+      if (!domeFoe(room, d, q)) continue;
+      const was = inDome(d, pv.x, pv.y), dx = q.x - d.x, dy = q.y - d.y, dd = Math.hypot(dx, dy) || 1;
+      if (!was && dd < d.r + rad) { q.x = d.x + dx / dd * (d.r + rad); q.y = d.y + dy / dd * (d.r + rad); q.dash = q.dash && q.dash.kind === 'push' ? q.dash : null; }   // 못 들어옴
+      else if (was && dd > d.r - rad) { q.x = d.x + dx / dd * (d.r - rad); q.y = d.y + dy / dd * (d.r - rad); q.dash = null; }                                         // 못 나감
+    }
+    q.dPrev = { x: q.x, y: q.y };
+  }
+}
+SKILLS.music = {
+  attack(room, p, a, now) {
+    const A = p.B.attack;
+    p.ammo -= 1; p.atkCd = A.cd; p.facing = a;
+    room.fx.push({ type: 'muayGo', id: p.id, x: p.x, y: p.y, a: +a.toFixed(3) });
+    const hit = () => {
+      if (p.dead || !room.players.has(p.id)) return;
+      const t = Date.now() / 1000, ca = Math.cos(a), sa = Math.sin(a);
+      for (const q of enemies(room, p)) {
+        const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy), along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca), r = q.B.radius;
+        const kick = along > -r && along < A.kickLen + r && perp < A.kickW + r;                 // 네모: 발차기 + 성악
+        const voice = kick || (d < A.range + r && (d < r || Math.abs(angDiff(Math.atan2(dy, dx), a)) < A.half + Math.atan2(r, d)));   // 부채꼴: 성악
+        if (!voice || !sees(room, p, q)) continue;
+        let dmg = A.dmg + (kick ? A.kickDmg : 0);
+        if (hasSP(p, 'combo')) { const S = SP(p, 'combo'); if (t - (p.mcombo[q.id] || -99) <= S.win) dmg = Math.round(dmg * S.mul); p.mcombo[q.id] = t; }
+        damage(room, p, q, dmg, t, kick ? 'muay' : 'voice'); chargeSuper(p, dmg);
+        room.fx.push({ type: 'bulletHit', x: q.x, y: q.y, k: kick ? 'muay' : 'voice' });
+      }
+      room.fx.push({ type: 'muay', id: p.id, x: Math.round(p.x), y: Math.round(p.y), a: +a.toFixed(3), r: A.range, h: A.half, kl: A.kickLen, kw: A.kickW });
+    };
+    p.dash = { a, left: A.lunge, speed: A.lunge / 0.1, kind: 'lunge', pass: true, onEnd: hit };   // 살짝 튀어나가며
+    if (Math.random() < 0.3) say(p, 'atk', 1);
+  },
+  gadget(room, p, idx, now) {
+    const g = p.B.gadgets[idx];
+    if (idx === 0) {                       // 눈 뜬거야 안 뜬거야
+      const blind = [], buff = [p.id];
+      p.visT = g.visDur;
+      for (const q of allies(room, p)) if (Math.hypot(q.x - p.x, q.y - p.y) < g.range) { q.visT = g.visDur; buff.push(q.id); }
+      for (const q of enemies(room, p)) if (!q.struct && Math.hypot(q.x - p.x, q.y - p.y) < g.range) { q.eyeT = g.blind; blind.push(q.id); }
+      room.fx.push({ type: 'eyes', id: p.id, x: p.x, y: p.y, r: g.range, hits: blind, buff });
+      say(p, 'g1', 1.6);
+    } else {                               // 1176 노래: 주변에 상대가 있어야 씀
+      const near = () => { let t = null, bd = g.range; for (const q of enemies(room, p)) { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < bd + q.B.radius && sees(room, p, q)) { bd = d; t = q; } } return t; };
+      if (!near()) { p.gCd = 0.5; room.fx.push({ type: 'noFoe', id: p.id, x: p.x, y: p.y }); return; }
+      say(p, 'g2', 1.6);
+      let t = 0, i = 0;
+      for (const grp of g.song) {
+        for (const n of grp.match(/\d'?/g)) {
+          const v = +n[0], hi = n.length > 1, k = i++;
+          later(room, t, () => {
+            if (p.dead || !room.players.has(p.id)) return;
+            const q = near();
+            room.fx.push({ type: 'note', id: p.id, x: p.x, y: p.y, n: v, hi: hi ? 1 : 0, k, tid: q ? q.id : null, tx: q ? Math.round(q.x) : 0, ty: q ? Math.round(q.y) : 0 });
+            if (q) damage(room, p, q, v * g.per, Date.now() / 1000, 'note');
+          });
+          t += g.every;
+        }
+        t += g.gap;
+      }
+      p.singT = t;
+    }
+  },
+  super(room, p, a, now) {               // 쉿: 주변 상대 밀쳐내고 5초 결계
+    const S = p.B.super, d = { id: ++room.botSeq, x: p.x, y: p.y, r: S.range, t: S.dur, owner: p.id, team: (room.mode.team || room.mode.squad) && p.team != null ? teamOf(room, p) : null };
+    room.domes = room.domes || [];
+    room.domes.push(d);
+    for (const q of room.players.values()) {
+      if (q.dead || q.out || q.struct || !domeFoe(room, d, q) || q.flyT > 0 || q.gd) continue;
+      const dx = q.x - d.x, dy = q.y - d.y, dd = Math.hypot(dx, dy);
+      if (dd >= d.r + q.B.radius) { q.dPrev = { x: q.x, y: q.y }; continue; }
+      const ang = dd > 1 ? Math.atan2(dy, dx) : Math.random() * Math.PI * 2;
+      q.x = d.x + Math.cos(ang) * (d.r + q.B.radius + 6); q.y = d.y + Math.sin(ang) * (d.r + q.B.radius + 6);   // 결계 밖으로 휙
+      resolveWalls(room.map, q, q.B.radius);
+      if (Math.hypot(q.x - d.x, q.y - d.y) < d.r + q.B.radius) {           // 벽에 걸려 다시 안쪽이면 다른 방향으로
+        for (let k = 1; k < 16; k++) { const b = ang + k * Math.PI / 8; const o = { x: d.x + Math.cos(b) * (d.r + q.B.radius + 6), y: d.y + Math.sin(b) * (d.r + q.B.radius + 6) }; if (!hitsWall(room.map, o.x, o.y, q.B.radius)) { q.x = o.x; q.y = o.y; break; } }
+      }
+      q.dash = null; q.stunT = Math.max(q.stunT, 0.2); q.dPrev = { x: q.x, y: q.y };
+      room.fx.push({ type: 'shush', id: p.id, tid: q.id, x: q.x, y: q.y });
+    }
+    room.fx.push({ type: 'dome', id: p.id, x: d.x, y: d.y, r: d.r });
+    say(p, 'sup', 2);
+  },
+};
 
 // ── 이수훈: 67!! / 지메하세요 / 지메 비행기 / 블록 ──
 SKILLS.suhun = {
@@ -1360,6 +1472,7 @@ function botThink(room, p, now) {
     if (t.sup >= 1 && bd < 300 && Math.random() < 0.1) doSuper(room, t, Math.atan2(dy, dx), now);
     return;
   }
+  if (p.eyeT > 0) { p.input = { mx: 0, my: 0 }; return; }   // 음악쌤 가젯1: 눈 감아서 아무것도 못 봄
   let target = null, best = Infinity;
   for (const q of enemies(room, p)) { if (q.invT > 0 || (mode.team && q.team === p.team)) continue; const d = Math.hypot(q.x - p.x, q.y - p.y) * (q.box ? 1.6 : 1) + (q.box ? 120 : 0); if (d < best) { best = d; target = q; } }   // 은신한 적은 못 봄 · 봇은 팀킬 안 함
   // 지금 노리는 상대가 아직 가까이 있으면 계속 노림 (여럿이 엉켜 있을 때 목표가 계속 바뀌어서 공격을 못 하던 버그)
@@ -1531,7 +1644,8 @@ function assignSquads(room) {
 // ── 라운드 진행 ────────────────────────────────────
 function startRound(room) {
   const mode = room.mode;
-  room.map = cloneMap(room.fixedMap || todayMap(mode.id));   // 오늘의 맵 (0시 넘으면 다음 판부터 바뀜)
+  room.map = cloneMap(room.fixedMap || todayMap(mode.id));
+  room.domes = [];   // 오늘의 맵 (0시 넘으면 다음 판부터 바뀜)
   room.mice = []; room.shards = []; room.gems = []; room.cubes = []; room.pending = []; room.bullets = []; room.bigmacs = []; room.gds = {};
   room.gemT = 0; room.holdT = 0; room.holdTeam = -1; room.result = null; room.playT = 0; room.roundT = 0;
   room.score = [0, 0]; room.stars = [0, 0]; room.ko = [0, 0];
@@ -1632,6 +1746,7 @@ function endRound(room, result) {
 }
 function changeMap(room) {   // 난투/더블가젯: 0시 넘으면 오늘의 맵으로 바꿈
   room.map = cloneMap(todayMap(room.mode.id));
+  room.domes = [];
   room.mice = []; room.shards = []; room.pending = []; room.bullets = []; room.bigmacs = [];
   for (const p of room.players.values()) resetBody(room, p);
   room.mapT = room.mode.rotate;
@@ -1909,6 +2024,9 @@ function step(room) {
     if (p.invT > 0) p.invT = Math.max(0, p.invT - DT);
     if (p.moaiT > 0) p.moaiT = Math.max(0, p.moaiT - DT);
     if (p.blindT > 0) p.blindT = Math.max(0, p.blindT - DT);
+    if (p.eyeT > 0) p.eyeT = Math.max(0, p.eyeT - DT);        // 음악쌤 가젯1: 눈 감음
+    if (p.visT > 0) p.visT = Math.max(0, p.visT - DT);        //              시야 넓어짐
+    if (p.singT > 0) p.singT = Math.max(0, p.singT - DT);     // 음악쌤 가젯2: 노래 중
     if (p.danceT > 0) p.danceT = Math.max(0, p.danceT - DT);         // L을 가져가 춤 (춤추면서도 움직이고 공격 가능)
     if (p.flyT > 0) {                                  // 지메 비행기 끝 → 벽 안이면 빈 곳으로 착지
       p.flyT = Math.max(0, p.flyT - DT);
@@ -2092,6 +2210,7 @@ function step(room) {
   }
   room.mice = room.mice.filter((m) => m.life > 0 && m.hp > 0 && room.players.has(m.owner));
   if (room.bigmacs.length) room.bigmacs = room.bigmacs.filter((m) => { const o = room.players.get(m.owner); return o && hasSP(o, 'bigmacroad'); });
+  domeStep(room);
   stepBullets(room, now);
   stepGD(room, now);
   if (room.ball && room.phase === 'play') stepBall(room);
@@ -2127,7 +2246,9 @@ function step(room) {
       cf: p.confT > 0 || undefined, bn: p.burnT > 0 || undefined, fr: p.frictT > 0 || undefined, flm: p.flameT > 0 ? 1 : undefined, spn: p.spinT > 0 ? 1 : undefined, pee: p.peeTo || undefined,
       fm: p.form, mo: p.moaiT > 0 ? +p.moaiT.toFixed(1) : undefined, inv: p.invT > 0 || undefined, up: p.spdUpT > 0 || undefined, sl: p.slowT > 0 || undefined,
       bl: p.blindT > 0 ? +p.blindT.toFixed(1) : undefined, ro: p.B.roll ? +(p.roll || 0).toFixed(2) : undefined, fly: p.flyT > 0 || undefined, gd: p.gd ? 1 : undefined, dance: p.danceT > 0 || undefined, dup: p.dmgUp > 0 ? +p.dmgUp.toFixed(2) : undefined, bst: p.boostT > 0 || undefined, muk: p.mukT > 0 || undefined, au: p.aura != null && hasSP(p, 'aura') ? +p.aura.toFixed(2) : undefined,
+      ec: p.eyeT > 0 ? +p.eyeT.toFixed(1) : undefined, vu: p.visT > 0 ? +p.visT.toFixed(1) : undefined, sng: p.singT > 0 ? 1 : undefined, mk: p.marks && p.marks.length ? p.marks : undefined,
     })),
+    dm: room.domes && room.domes.length ? room.domes.map((d) => [d.id, r1(d.x), r1(d.y), d.r, +d.t.toFixed(1), d.owner, d.team]) : undefined,
     bm: room.bigmacs.length ? room.bigmacs.map((m) => [m.id, r1(m.x), r1(m.y)]) : undefined,
     mice: room.mice.map((m) => ({ id: m.id, x: r1(m.x), y: r1(m.y), a: +m.ang.toFixed(2), c: m.color, hp: +(m.hp / m.maxHp).toFixed(2) })),
     fx: room.fx,

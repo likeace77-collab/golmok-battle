@@ -331,6 +331,8 @@
   #feed { pointer-events: none; }
   /* 핀·스프레이: 오른쪽 위 💬 버튼 → 고르는 창 */
   #emoBtn { position: fixed; top: 8px; right: 12px; z-index: 9; display: none; width: 52px; height: 44px; border: 3px solid #000; border-radius: 12px 12px 12px 4px; background: #fff; font-size: 22px; font-weight: 900; cursor: pointer; box-shadow: 0 3px 0 #000; padding: 0; }
+  #eyesShut { position: fixed; inset: 0; z-index: 8; display: none; flex-direction: column; align-items: center; justify-content: center; background: #05030a; color: #fff; pointer-events: none; font-size: 64px; }
+  #eyesShut b { font-size: 26px; margin-top: 8px; }
   #emoBtn.cd { background: #555; color: #999; }
   #emoPick { position: fixed; top: 58px; right: 12px; z-index: 9; display: none; background: rgba(20,24,60,.92); border: 3px solid #000; border-radius: 14px; padding: 6px 8px 8px; color: #fff; font-weight: 900; font-size: 12px; }
   #emoPick .row { display: grid; grid-template-columns: repeat(4, 58px); gap: 6px; margin: 2px 0 6px; }
@@ -451,6 +453,7 @@
   <button class="ceSwap" id="ceSwap">이동 ⇄ 공격</button>
 </div>
 <div id="specBar"><button id="specPrev">◀</button><span id="specName"></span><button id="specNext">▶</button></div>
+<div id="eyesShut"><div>😑</div><b>눈 감았다!</b></div>
 <button id="emoBtn" title="핀·스프레이">💬</button>
 <div id="emoPick"><div>핀</div><div class="row" id="emoPins"></div><div>스프레이</div><div class="row" id="emoSprays"></div></div>
 <div id="ctrl">
@@ -2749,6 +2752,108 @@ function ringFx(x, z, r, color, dur = 0.45, delay = 0) {
   const m = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 56), addMat(color, 1, true)); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.15, z);
   addFx(dur, m, (k) => { m.scale.setScalar(r * (0.2 + 0.8 * ease(k))); m.material.opacity = 1 - k; }, delay);
 }
+// ── 음악쌤 이펙트 ──
+let musAC = null;
+function musTone(n, hi, vol = 0.22) {       // 계이름 1~7 (도레미…) · ' 붙으면 한 옥타브 위
+  try {
+    musAC = musAC || new (window.AudioContext || window.webkitAudioContext)();
+    if (musAC.state === 'suspended') musAC.resume();
+    const semi = [0, 2, 4, 5, 7, 9, 11][(n - 1) % 7] + (hi ? 12 : 0), f = 523.25 * Math.pow(2, semi / 12), t = musAC.currentTime;
+    const g = musAC.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.015); g.gain.exponentialRampToValueAtTime(0.001, t + 0.32); g.connect(musAC.destination);
+    for (const [type, mul, v] of [['triangle', 1, 1], ['sine', 2, 0.35]]) { const o = musAC.createOscillator(), og = musAC.createGain(); o.type = type; o.frequency.value = f * mul; og.gain.value = v; o.connect(og); og.connect(g); o.start(t); o.stop(t + 0.34); }
+  } catch (e) {}
+}
+const musVol = (x, z) => { const c = camTarget, d = Math.hypot(x - c.x, z - c.z); return d > 40 ? 0 : 0.22 * (1 - d / 40); };
+function fxMuay(f, x, z) {                   // 성악: 부채꼴로 퍼지는 소리 물결 + 무에타이 발차기 번쩍
+  const v = views[f.id]; if (v) v.facing = Math.atan2(Math.cos(f.a), Math.sin(f.a));
+  const R0 = f.r * S, H = f.h, ca = Math.cos(f.a), sa = Math.sin(f.a);
+  for (let i = 0; i < 3; i++) {
+    const m = new THREE.Mesh(new THREE.RingGeometry(0.86, 1, 40, 1, -f.a - H, H * 2), addMat(['#ff7ad0', '#c08aff', '#ffd2f0'][i], 0.9, true));
+    m.rotation.x = -Math.PI / 2; m.position.set(x, 1.6 + i * 0.25, z);
+    addFx(0.42, m, (k) => { m.scale.setScalar(Math.max(0.01, R0 * ease(k))); m.material.opacity = 0.9 * (1 - k); }, i * 0.07);
+  }
+  for (let i = 0; i < 4; i++) { const an = f.a + (Math.random() * 2 - 1) * H, d = R0 * (0.4 + Math.random() * 0.5); popup(['♪', '♫', '♬'][i % 3], { x: x + Math.cos(an) * d, z: z + Math.sin(an) * d }, 2.6, ['#ff7ad0', '#c08aff', '#ffd23a'][i % 3], 24, 0.6); }
+  const kx = x + ca * f.kl * S * 0.55, kz = z + sa * f.kl * S * 0.55;
+  flash(kx, 1.4, kz, '#ff9a3a', 2.2, 0.22); burst(kx, 1.2, kz, 10, ['#ffffff', '#ffb02e'], { speed: 7, size: 0.16, up: 2, life: 0.35 });
+  const vol = musVol(x, z); if (vol > 0.02) musTone([1, 3, 5][Math.floor(Math.random() * 3)], 1, vol * 0.7);
+}
+function fxNote(f, x, z) {                   // 1176: 음표가 상대에게 날아가며 숫자 × 50
+  const v = views[f.id]; if (v) v.atkT = 9;
+  const vol = musVol(x, z); if (vol > 0.02) musTone(f.n, f.hi, vol);
+  const label = f.n + (f.hi ? "'" : '');
+  popup('🎵' + label, { x, z }, 4.4, f.hi ? '#ffd23a' : '#ff8ad8', 22, 0.5);
+  if (!f.tid) return;
+  const tx = f.tx * S, tz = f.ty * S, m = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 8), addMat(f.hi ? '#ffd23a' : '#ff7ad0', 1, true));
+  addFx(0.16, m, (k) => { m.position.set(x + (tx - x) * k, 2.4 + Math.sin(k * Math.PI) * 1.2, z + (tz - z) * k); m.scale.setScalar(1 + k * 0.5); });
+  later(0.16, () => burst(tx, 2, tz, 6, [f.hi ? '#ffd23a' : '#ff7ad0', '#ffffff'], { speed: 4, size: 0.14, up: 3, life: 0.4 }));
+}
+function fxEyes(f, x, z) {                   // 눈 뜬거야 안 뜬거야: 퍼지는 고리 + 감긴 눈 / 번쩍 눈
+  const v = views[f.id]; if (v) v.g1T = 0;
+  ringFx(x, z, f.r * S, '#7ad8ff', 0.6); ringFx(x, z, f.r * S * 0.7, '#ffffff', 0.5, 0.08);
+  popup('👀 눈 떴어 안 떴어?', { x, z }, 5.2, '#7ad8ff', 22, 1.2);
+  for (const id of f.hits || []) { const q = views[id]; if (q) { const o = q.model.root.position; popup('😑', { x: o.x, z: o.z }, 4.6, '#ffffff', 30, 1.8); } }
+  for (const id of f.buff || []) { const q = views[id]; if (q && id !== f.id) { const o = q.model.root.position; popup('👁️ 시야↑', { x: o.x, z: o.z }, 4.6, '#7ad8ff', 18, 1.2); } }
+}
+function fxDome(f, x, z) {
+  const v = views[f.id]; if (v) v.superT = 0;
+  popup('쉿!!! 🤫', { x, z }, 6, '#ffffff', 34, 1.4); ringFx(x, z, f.r * S * 1.15, '#ffffff', 0.5); shake = Math.max(shake, 0.25);
+}
+// 결계 (state.dm: [id, x, y, r, 남은 시간, 주인, 팀])
+const domeViews = {};
+function updateDomes(now) {
+  const alive = new Set(), me = state.players.find((p) => p.id === myId);
+  for (const d of state.dm || []) {
+    const [id, dx, dy, r, t, owner, team] = d; alive.add(id);
+    let dv = domeViews[id];
+    if (!dv) {
+      const friend = owner === myId || (team != null && me && me.team === team && (state.sq || ['gem', 'heist', 'brawlball', 'bounty', 'knockout'].includes(state.mode)));
+      const col = friend ? '#5ab4ff' : '#ff5a6a', g = new THREE.Group();
+      const shell = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 20, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false }));
+      const wire = new THREE.Mesh(new THREE.SphereGeometry(1.002, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.35, wireframe: true, depthWrite: false }));
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(1, 0.012, 6, 64), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.9 })); rim.rotation.x = Math.PI / 2;
+      const cv = document.createElement('canvas'); cv.width = cv.height = 128; const cx = cv.getContext('2d'); cx.font = '96px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('🤫', 64, 70);
+      const sign = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false })); sign.position.y = 1.06; sign.scale.setScalar(0.16);
+      g.add(shell, wire, rim, sign); g.scale.setScalar(r * S); g.position.set(dx * S, 0.05, dy * S); g.scale.y = r * S * 0.75; scene.add(g);
+      dv = domeViews[id] = { g, shell, wire, born: now };
+    }
+    const pop = Math.min(1, (now - dv.born) / 0.25), fade = t < 0.6 ? t / 0.6 : 1;
+    dv.g.scale.set(r * S * pop, r * S * 0.75 * pop, r * S * pop);
+    dv.shell.material.opacity = 0.16 * fade + Math.sin(now * 4) * 0.03; dv.wire.material.opacity = 0.35 * fade; dv.wire.rotation.y = now * 0.3;
+  }
+  for (const id in domeViews) if (!alive.has(+id)) { scene.remove(domeViews[id].g); delete domeViews[id]; }
+}
+// 스파1 '내가 꼭 잡아낼거야': 나를 때린 상대 발광 + 나침반 (나한테만)
+const markViews = {}; let markCompass = null;
+function updateMarks(now) {
+  const me = state.players.find((p) => p.id === myId), ids = me && !me.dead && me.mk ? me.mk : [], alive = new Set();
+  for (const id of ids) {
+    const v = views[id], p = state.players.find((q) => q.id === id); if (!v || !p || p.dead) continue; alive.add(id);
+    let mv = markViews[id];
+    if (!mv) {
+      const g = new THREE.Group();
+      const ring = new THREE.Mesh(new THREE.RingGeometry(1.5, 2.0, 40), addMat('#ffe23a', 0.9, true)); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.12;
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.6, 6, 24, 1, true), addMat('#ffe23a', 0.18, true)); beam.position.y = 3;
+      g.add(ring, beam); scene.add(g); mv = markViews[id] = { g, ring, beam };
+    }
+    const o = v.model.root.position; mv.g.position.set(o.x, 0, o.z); mv.g.visible = true;
+    mv.ring.material.opacity = 0.6 + Math.sin(now * 8) * 0.3; mv.ring.rotation.z = now * 2; mv.beam.material.opacity = 0.14 + Math.sin(now * 8) * 0.06;
+  }
+  for (const id in markViews) if (!alive.has(id)) { scene.remove(markViews[id].g); delete markViews[id]; }
+  // 나침반: 가장 가까운 표시된 상대 쪽 화살표 (내 발밑)
+  const mv0 = me && views[myId];
+  let best = null, bd = Infinity;
+  if (mv0) for (const id of alive) { const o = views[id].model.root.position, m = mv0.model.root.position, d = Math.hypot(o.x - m.x, o.z - m.z); if (d < bd) { bd = d; best = o; } }
+  if (!best) { if (markCompass) markCompass.visible = false; return; }
+  if (!markCompass) {
+    markCompass = new THREE.Group();
+    const sh = new THREE.Shape(); sh.moveTo(0, 0.9); sh.lineTo(0.55, 0); sh.lineTo(0.2, 0.05); sh.lineTo(0.2, -0.5); sh.lineTo(-0.2, -0.5); sh.lineTo(-0.2, 0.05); sh.lineTo(-0.55, 0); sh.lineTo(0, 0.9);
+    const ar = new THREE.Mesh(new THREE.ShapeGeometry(sh), addMat('#ffe23a', 0.95)); ar.rotation.x = -Math.PI / 2; ar.position.set(0, 0.2, -3.2); ar.scale.setScalar(1.3);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(2.6, 2.75, 48), addMat('#ffe23a', 0.45)); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.15;
+    markCompass.add(ar, ring); scene.add(markCompass);
+  }
+  const m = mv0.model.root.position; markCompass.visible = true; markCompass.position.set(m.x, 0, m.z);
+  markCompass.rotation.y = Math.atan2(-(best.x - m.x), -(best.z - m.z));
+}
 // ── 김재열 이펙트 ──
 function triMesh(size, color, op = 1) {
   const sh = new THREE.Shape(); sh.moveTo(size, 0); sh.lineTo(-size * 0.6, size * 0.75); sh.lineTo(-size * 0.6, -size * 0.75); sh.lineTo(size, 0);
@@ -3264,6 +3369,7 @@ async function api(method, url, body) {
   return j;
 }
 let state = { players: [], mice: [] };
+let camFar = 1;
 const views = {}, mviews = {};
 
 // ── 로비 UI ──────────────────────────────────────
@@ -3907,6 +4013,14 @@ function handleFx(list) {
         });
       }
     }
+    else if (f.type === 'muayGo') { const v = views[f.id]; if (v) { v.atkT = 0; v.facing = Math.atan2(Math.cos(f.a), Math.sin(f.a)); } }
+    else if (f.type === 'muay') fxMuay(f, x, z);
+    else if (f.type === 'note') fxNote(f, x, z);
+    else if (f.type === 'eyes') fxEyes(f, x, z);
+    else if (f.type === 'dome') fxDome(f, x, z);
+    else if (f.type === 'shush') { popup('쉿!', { x, z }, 4.4, '#ffffff', 22, 0.8); burst(x, 1.5, z, 8, ['#ffffff', '#c8d8ff'], { speed: 6, size: 0.15, up: 2, life: 0.4 }); }
+    else if (f.type === 'domeBlock') { flash(x, 1.5, z, '#9ad0ff', 1.3, 0.2); }
+    else if (f.type === 'noFoe') popup('근처에 상대가 없어요', { x, z }, 4.6, '#ffffff', 18, 1);
     else if (f.type === 'sleepy') { popup('💤 무의식!', { x, z }, 4.6, '#c9b4ff', 22, 1.1); burst(x, 3.5, z, 14, ['#e8d8ff', '#c9b4ff', '#fff6a8'], { speed: 3, size: 0.12, up: 3, life: 0.9, grav: 2 }); }
     else if (f.type === 'friction') { popup('🧱 마찰력 체험!', { x, z }, 4.6, '#ffb02e', 22, 1.1); burst(x, 0.4, z, 18, ['#b9a58a', '#8a7a64'], { speed: 6, size: 0.22, up: 2, life: 0.6 }); }
     else if (f.type === 'boa') { const SONG = [['🪐 중력 Gravity', '#b48cff'], ['🔥 불타오르네', '#ff7a2a'], ['🌀 자전은 찐이야', '#5ad8ff']][f.k] || ['🎤', '#fff']; popup('🎤 ' + SONG[0], { x, z }, 5.2, SONG[1], 26, 1.6); burst(x, 3.5, z, 16, ['#ff4ab0', '#ffd84a', '#5ad8ff'], { speed: 5, size: 0.18, up: 6, life: 0.9 }); }
@@ -5146,7 +5260,7 @@ function animateTeacher(v, p, dt, now) {
   M.torso.rotation.z = Math.sin(v.phase) * 0.07 * walk;
   M.head.rotation.y = 0;
 
-  const H = v.kind === 'hyeonsil', K = v.kind === 'junhoo', JY = v.kind === 'jaeyeol', JH = v.kind === 'jinho', HW = v.kind === 'hyeonwoo', YD = v.kind === 'yedam', RB = v.kind === 'robot' || v.kind === 'bigrobot' || v.kind === 'safe' || v.kind === 'pbox' || v.kind === 'doll', DJ = v.kind === 'dojun', SH = v.kind === 'suho', SU = v.kind === 'suhun', J = !H && !K && !JY && !JH && !HW && !RB && !YD && !DJ && !SH && !SU;
+  const H = v.kind === 'hyeonsil', K = v.kind === 'junhoo', JY = v.kind === 'jaeyeol', JH = v.kind === 'jinho', HW = v.kind === 'hyeonwoo', YD = v.kind === 'yedam', RB = v.kind === 'robot' || v.kind === 'bigrobot' || v.kind === 'safe' || v.kind === 'pbox' || v.kind === 'doll', DJ = v.kind === 'dojun', SH = v.kind === 'suho', SU = v.kind === 'suhun', MU = v.kind === 'music', J = !H && !K && !JY && !JH && !HW && !RB && !YD && !DJ && !SH && !SU && !MU;
   if (RB && M.bulb) M.bulb.visible = Math.sin(now * 5) > 0 || v.hitT < 0.4;   // 맞으면 경고등
   // 편도준: 폼별 옷 / 모아이 / 수플렉스(뒤로 젖히기) / 물감 던지기 / 동기부여(주먹 번쩍)
   if (DJ) {
@@ -5339,8 +5453,21 @@ function animateTeacher(v, p, dt, now) {
       sx = 1 + Math.sin(t * 50) * 0.05 * (1 - r); sy = 1 - 0.08 * (1 - r);
       M.head.rotation.y = Math.sin(now * 50) * 0.1 * (1 - r); }
   }
+  // 음악쌤: 무에타이 발차기(공격) / 지휘(1176 노래 중) / 쉿(궁) / 눈 크게(가젯1)
+  if (MU) {
+    M.legs[1].rotation.z = 0; M.head.rotation.x = 0;
+    if (v.atkT < 0.45) {
+      const t = v.atkT, q = t < 0.1 ? ease(t / 0.1) : 1 - Math.max(0, t - 0.28) / 0.17;
+      v.kickLeg = -1.7 * q; M.legs[1].rotation.z = 0.5 * q;              // 오른발 높이 앞차기
+      armX = [-1.9 * q, -1.5 * q]; armZ = [0.7 * q, -0.6 * q];           // 가드 올림
+      lean = -0.3 * q; M.head.rotation.x = -0.25 * q; bodyY += 0.15 * q;   // 몸 젖히며 노래
+    } else v.kickLeg = 0;
+    if (p.sng && !p.dead) { armX[1] = -1.9 + Math.sin(now * 14) * 0.6; armZ[1] = -0.3 + Math.cos(now * 14) * 0.4; armX[0] = -1.0 + Math.sin(now * 14 + 1) * 0.3; M.head.rotation.x = -0.2; }
+    if (v.superT < 1.0) { const q = v.superT < 0.15 ? v.superT / 0.15 : 1 - Math.max(0, v.superT - 0.75) / 0.25; armX[1] = -2.75 * q; armZ[1] = 0.62 * q; lean = 0.15 * q; }
+    if (v.g1T < 0.8) { const q = v.g1T < 0.12 ? v.g1T / 0.12 : 1 - Math.max(0, v.g1T - 0.55) / 0.25; armX = [-2.7 * q, -2.7 * q]; armZ = [0.75 * q, -0.75 * q]; }
+  }
   M.arms[0].rotation.x = armX[0]; M.arms[1].rotation.x = armX[1];
-  if (JH && v.kickLeg) M.legs[1].rotation.x = v.kickLeg;
+  if ((JH || MU) && v.kickLeg) M.legs[1].rotation.x = v.kickLeg;
   M.arms[0].rotation.z = armZ[0]; M.arms[1].rotation.z = armZ[1];
   M.body.position.y = bodyY;
   M.body.scale.set(sx, sy, sx);
@@ -5641,6 +5768,7 @@ function frame(nowMs) {
     for (const id in mviews) if (!malive.has(id)) { const g = mviews[id].obj.g; burst(g.position.x, 0.5, g.position.z, 10, ['#f2f2f6', '#7dff8a'], { speed: 4, size: 0.12, up: 5, life: 0.5 }); scene.remove(g); delete mviews[id]; }
 
     updateStrings(now);
+    updateDomes(now); updateMarks(now);
     // 카메라 (브롤스타즈처럼 비스듬히 위에서) — 조종 중이면 꼭두각시를 따라감
     const meS = state.players.find((p) => p.id === myId);
     let mp = meS && meS.ctrl && views[meS.ctrl] ? views[meS.ctrl].model.root.position : myPos();
@@ -5648,7 +5776,8 @@ function frame(nowMs) {
     updateSpecBar(meS, sp);
     updateWorld(now);
     if (mp) camTarget.lerp(mp, Math.min(1, dt * 6));
-    const far = camera.aspect < 1 ? 1.75 : 1;
+    const far = (camera.aspect < 1 ? 1.75 : 1) * (camFar += ((meS && meS.vu > 0 ? 1.3 : 1) - camFar) * Math.min(1, dt * 3));   // 음악쌤 가젯1: 시야 넓어짐
+    $('eyesShut').style.display = meS && meS.ec > 0 && !meS.dead ? 'flex' : 'none';
     camera.position.set(camTarget.x, 20 * far, camTarget.z + 20 * far);
     if (shake > 0) { camera.position.x += (Math.random() - 0.5) * shake; camera.position.y += (Math.random() - 0.5) * shake; shake = Math.max(0, shake - dt * 2.2); }
     camera.lookAt(camTarget.x, 1.2, camTarget.z + 1);
@@ -5729,7 +5858,7 @@ function frame(nowMs) {
         const a = aimAngle('sup'); if (a != null) aimInd.rotation.y = -a;
       }
       // 기본공격 조준: 범위 고정(정보쌤) → 주변 원 / 방향 공격(현실쌤) → 부채꼴
-      const dirAtk = B.attack.aim === 'dir' || B.attack.aim === 'tri' || B.attack.aim === 'line' || B.attack.aim === 'lob' || B.attack.aim === 'zig' || B.attack.aim === 'cone';
+      const dirAtk = B.attack.aim === 'dir' || B.attack.aim === 'tri' || B.attack.aim === 'line' || B.attack.aim === 'lob' || B.attack.aim === 'zig' || B.attack.aim === 'cone' || B.attack.aim === 'muay';
       atkInd.visible = !src.dead && !!v && (aims.atk.id !== null ? !aims.atk.cancel : (dirAtk && !isTouch));
       if (atkInd.visible) {
         if (!atkMesh) {
@@ -5747,6 +5876,11 @@ function frame(nowMs) {
             }
             const end = aimShape({ type: 'circle', r: 1.0, color: '#ffffff', edge: '#ffffff' }); end.position.set(r, 0.02, 0); atkMesh.add(end);
             atkMesh.userData.land = end; atkMesh.userData.r = r; atkMesh.userData.zig = shape;      // 드래그 길이 = 6·7이 만나는 거리
+          }
+          else if (B.attack.aim === 'muay') {        // 음악쌤: 부채꼴(성악) + 앞 네모(발차기+성악)
+            shape = new THREE.Group();
+            shape.add(aimShape({ type: 'sector', r, half: B.attack.half, color: '#ff7ad0', edge: '#ffc0ea' }));
+            const kick = aimShape({ type: 'rect', r: (B.attack.kickLen + B.attack.lunge) * S, w: B.attack.kickW * S, color: '#ff8a2a', edge: '#ffd21a' }); kick.position.y = 0.01; shape.add(kick);
           }
           else if (B.attack.aim === 'cone') shape = aimShape({ type: 'sector', r, half: B.attack.half, color: '#ff8a3a', edge: '#ffd21a' });   // 과학쌤 숨결: 부채꼴
           else if (B.attack.aim === 'line') shape = aimShape({ type: 'rect', r, w: B.attack.width * S, color: '#ffb800', edge: '#ffd21a' });
