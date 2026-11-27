@@ -192,7 +192,7 @@ PC: WASD 이동, Space/클릭 공격, Q·E 가젯 · 폰: 왼쪽 조이스틱 + 
 - 배치는 `localStorage.jb_ctrl` = `{ fixed, items: { joy|atk|sup|g1|g2: { x, y (화면 비율, 가운데), s (배율) } } }`. `ctrlApply()`가 `#ctrl` 버튼(left/top + translate·scale)과 조이스틱에 적용. 이동은 `items.joy.x`가 있는 쪽 화면 절반 어디서든 터치 시작점 기준 스와이프 방향(조이스틱 위치·크기 무관). 반대쪽 절반 빈 곳 터치 = 그 자리 공격 조이스틱(`aimStart`/`aimTrack`, 탭은 자동조준).
 
 ## 브금 · 효과음
-- 브금 (1.31.0): `public/bgm/bgm1~4.mp3` (사용자가 준 파일). 게임 판이 시작되면 재생, 한 곡 끝나면 방금 곡 빼고 랜덤으로 다음 곡.
+- 브금 (1.31.0): `public/bgm/bgm1~6.mp3` (사용자가 준 파일). 게임 판이 시작되면 재생, 한 곡 끝나면 방금 곡 빼고 랜덤으로 다음 곡.
   - 동기화: 서버가 방마다 `room.bgm = {t0: 서버 ms, seed}` (방 만들 때·`startRound` 때 새로) → state `bgm: [t0, seed]`. 클라 `bgmWhere`가 (서버 시각 − t0)와 seed로 곡 순서·위치를 똑같이 계산 → 중간에 들어오거나 새로고침해도 진행 중인 위치부터, 모든 기기 같은 곡. 서버 시각은 state `ts`로 맞춤(`srvOff`). 1초마다 1.2초 넘게 어긋나면 맞춤.
   - 곡 길이는 `BGM_TRACKS`에 적어 둠 (곡 바꾸면 ffprobe로 길이 다시 적을 것). 볼륨 고정 `BGM_VOL` 0.35.
   - 폰·태블릿: 처음 화면 터치/키 입력(게임 시작 버튼 포함) 때 `bgmUnlock`이 같은 오디오를 음소거로 한 번 재생해서 잠금 해제.

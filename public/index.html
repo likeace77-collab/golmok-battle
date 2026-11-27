@@ -4600,7 +4600,7 @@ $('emoBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopP
 addEventListener('pointerdown', (e) => { const el = $('emoPick'); if (el.style.display === 'block' && !el.contains(e.target) && e.target !== $('emoBtn')) el.style.display = 'none'; }, true);
 // ── 브금: public/bgm 4곡을 랜덤으로 이어서 (방금 곡 빼고). 서버가 준 기준(state.bgm = [시작 서버시각 ms, 시드])으로
 //    모든 기기가 같은 곡·같은 위치를 계산 → 중간에 들어오거나 새로고침해도 진행 중인 곳부터. 볼륨 고정, 켜기/끄기 버튼만.
-const BGM_TRACKS = [['/bgm/bgm1.mp3', 79.8], ['/bgm/bgm2.mp3', 60.44], ['/bgm/bgm3.mp3', 63.53], ['/bgm/bgm4.mp3', 53.44]];   // [파일, 길이(초)]
+const BGM_TRACKS = [['/bgm/bgm1.mp3', 79.8], ['/bgm/bgm2.mp3', 60.44], ['/bgm/bgm3.mp3', 63.53], ['/bgm/bgm4.mp3', 53.44], ['/bgm/bgm5.mp3', 59.14], ['/bgm/bgm6.mp3', 77.32]];   // [파일, 길이(초)]
 const BGM_VOL = 0.35;
 const bgmEl = new Audio(); bgmEl.preload = 'auto'; bgmEl.volume = BGM_VOL; bgmEl.setAttribute('playsinline', '');
 let bgmOn = LS0('jb_bgm', '1') !== '0', bgmUnlocked = false, bgmRef = null, bgmCur = -1, srvOff = null, bgmSeekTo = null;
