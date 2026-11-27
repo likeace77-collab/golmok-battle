@@ -83,9 +83,9 @@ function addTrophies(key, n, field, bid) {
   const u = db.users[key]; if (!u) return null;
   fixBt(u);
   if (bid) {
-    // 프레스티지: 그 브롤러가 한 번 넘은 300 단위(프레스티지 n = n×300) 아래로는 안 떨어짐
+    // 프레스티지: 그 브롤러가 한 번 넘은 500 단위(프레스티지 n = n×500) 아래로는 안 떨어짐
     u.bbest = u.bbest || {};
-    const floor = Math.floor((u.bbest[bid] || 0) / 300) * 300;
+    const floor = Math.floor((u.bbest[bid] || 0) / 500) * 500;
     u.bt[bid] = Math.max(0, floor, (u.bt[bid] || 0) + n);
     u.bbest[bid] = Math.max(u.bbest[bid] || 0, u.bt[bid]);
   }

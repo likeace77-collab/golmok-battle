@@ -3395,9 +3395,9 @@ function refreshLobby() {
 }
 // 브롤러별 트로피 (계정 있을 때만)
 const btOf = (id) => (account && account.bt && account.bt[id]) || 0;
-// 브롤러 등급: 0 우드 · 75 브론즈 · 150 실버 · 225 골드 · 300마다 프레스티지 1, 2, 3 … (n×300 이상 = 프레스티지 n)
-const PRESTIGE = 300;
-const TIERS = [[0, '우드', '🪵', '#b07a4a'], [75, '브론즈', '🥉', '#d98a4a'], [150, '실버', '🥈', '#cfd8e3'], [225, '골드', '🥇', '#ffcc33']];
+// 브롤러 등급: 0 우드 · 125 브론즈 · 250 실버 · 375 골드 · 500마다 프레스티지 1, 2, 3 … (n×500 이상 = 프레스티지 n)
+const PRESTIGE = 500;
+const TIERS = [[0, '우드', '🪵', '#b07a4a'], [125, '브론즈', '🥉', '#d98a4a'], [250, '실버', '🥈', '#cfd8e3'], [375, '골드', '🥇', '#ffcc33']];
 function tierOf(t) {
   t = t || 0;
   if (t >= PRESTIGE) { const n = Math.floor(t / PRESTIGE); return { name: `프레스티지 ${n}`, icon: '💠', color: ['#ff4fd8', '#7c5cff', '#36d0ff', '#ff4a4a', '#3ce07f'][(n - 1) % 5], base: n * PRESTIGE, next: (n + 1) * PRESTIGE, pr: true }; }
