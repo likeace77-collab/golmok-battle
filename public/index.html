@@ -4601,25 +4601,26 @@ addEventListener('pointerdown', (e) => { const el = $('emoPick'); if (el.style.d
 // ── 브금: public/bgm 4곡을 랜덤으로 이어서 (방금 곡 빼고). 서버가 준 기준(state.bgm = [시작 서버시각 ms, 시드])으로
 //    모든 기기가 같은 곡·같은 위치를 계산 → 중간에 들어오거나 새로고침해도 진행 중인 곳부터. 볼륨 고정, 켜기/끄기 버튼만.
 const BGM_TRACKS = [['/bgm/bgm1.mp3', 79.8], ['/bgm/bgm2.mp3', 60.44], ['/bgm/bgm3.mp3', 63.53], ['/bgm/bgm4.mp3', 53.44], ['/bgm/bgm5.mp3', 59.14], ['/bgm/bgm6.mp3', 77.32]];   // [파일, 길이(초)]
-const BGM_VOL = 0.35;
+const BGM_VOL = 0.35, BGM_REP = 2;   // 한 곡을 2번 연속으로 튼 뒤 다음 곡
 const bgmEl = new Audio(); bgmEl.preload = 'auto'; bgmEl.volume = BGM_VOL; bgmEl.setAttribute('playsinline', '');
 let bgmOn = LS0('jb_bgm', '1') !== '0', bgmUnlocked = false, bgmRef = null, bgmCur = -1, srvOff = null, bgmSeekTo = null;
 function bgmRng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t ^= t + Math.imul(t ^ (t >>> 7), 61 | t); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function bgmWhere(nowSrv) {          // 지금 틀어야 할 곡 번호 + 위치(초)
   const [t0, seed] = bgmRef, r = bgmRng(seed), n = BGM_TRACKS.length;
   let el = Math.max(0, (nowSrv - t0) / 1000), i = Math.floor(r() * n);
-  for (let k = 0; k < 100000 && el >= BGM_TRACKS[i][1]; k++) { el -= BGM_TRACKS[i][1]; const j = Math.floor(r() * (n - 1)); i = j >= i ? j + 1 : j; }   // 방금 곡 빼고 랜덤
-  return { i, off: el };
+  for (let k = 0; k < 100000 && el >= BGM_TRACKS[i][1] * BGM_REP; k++) { el -= BGM_TRACKS[i][1] * BGM_REP; const j = Math.floor(r() * (n - 1)); i = j >= i ? j + 1 : j; }   // 같은 곡 2번 → 방금 곡 빼고 랜덤
+  const rep = Math.min(BGM_REP - 1, Math.floor(el / BGM_TRACKS[i][1]));
+  return { i, rep, off: el - rep * BGM_TRACKS[i][1] };
 }
 function bgmSync(ahead = 0) {
   if (!bgmOn || !bgmRef || !bgmUnlocked || srvOff == null || document.hidden) { if (!bgmEl.paused) bgmEl.pause(); return; }
   const w = bgmWhere(Date.now() + srvOff + ahead);
-  if (bgmCur !== w.i) { bgmCur = w.i; bgmSeekTo = w.off; bgmEl.muted = false; bgmEl.src = BGM_TRACKS[w.i][0]; bgmEl.volume = BGM_VOL; bgmEl.play().catch(() => {}); return; }
+  if (bgmCur !== w.i * 10 + w.rep) { const same = Math.floor(bgmCur / 10) === w.i && bgmCur >= 0; bgmCur = w.i * 10 + w.rep; if (same && bgmEl.readyState >= 1) { bgmEl.currentTime = w.off; bgmEl.play().catch(() => {}); return; } bgmSeekTo = w.off; bgmEl.muted = false; bgmEl.src = BGM_TRACKS[w.i][0]; bgmEl.volume = BGM_VOL; bgmEl.play().catch(() => {}); return; }
   if (bgmEl.readyState >= 1 && Math.abs(bgmEl.currentTime - w.off) > 1.2) bgmEl.currentTime = w.off;   // 많이 어긋나면 맞춤
   if (bgmEl.paused) bgmEl.play().catch(() => {});
 }
 bgmEl.addEventListener('loadedmetadata', () => { if (bgmSeekTo != null) { try { bgmEl.currentTime = Math.min(bgmSeekTo, Math.max(0, bgmEl.duration - 0.2)); } catch (e) {} bgmSeekTo = null; } });
-bgmEl.addEventListener('ended', () => { bgmCur = -1; bgmSync(400); });   // 끝나면 다음 곡 (조금 앞당겨 계산 → 같은 곡 다시 안 잡히게)
+bgmEl.addEventListener('ended', () => bgmSync(400));   // 끝나면 같은 곡 한 번 더 / 다음 곡 (조금 앞당겨 계산)
 setInterval(() => bgmSync(), 1000);
 document.addEventListener('visibilitychange', () => bgmSync());
 function bgmState(s) {               // state마다: 서버 시각 차이(부드럽게) + 기준점
